@@ -1,5 +1,8 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiBlock;
+import net.globulus.simi.api.SimiStatement;
+
 import java.util.List;
 
 abstract class Expr {
@@ -21,7 +24,7 @@ abstract class Expr {
     R visitObjectLiteralExpr(ObjectLiteral expr);
   }
 
-    static class Block extends Expr {
+    static class Block extends Expr implements SimiBlock {
         Block(List<Token> params, List<Stmt> statements) {
             this.params = params;
             this.statements = statements;
@@ -33,6 +36,11 @@ abstract class Expr {
 
         final List<Token> params;
         final List<Stmt> statements;
+
+      @Override
+      public List<? extends SimiStatement> getStatements() {
+        return statements;
+      }
     }
 
   static class Assign extends Expr {

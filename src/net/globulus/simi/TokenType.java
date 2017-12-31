@@ -26,5 +26,7 @@ enum TokenType {
   IN, IS, NOT, ELSIF, END, ISNOT, NOTIN, NATIVE,
   IMPORT,
 
+  GU,
+
   EOF
 }

@@ -1,9 +1,11 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiEnvironment;
+
 import java.util.HashMap;
 import java.util.Map;
 
-class Environment {
+class Environment implements SimiEnvironment {
 
   final Environment enclosing;
   private final Map<String, Object> values = new HashMap<>();

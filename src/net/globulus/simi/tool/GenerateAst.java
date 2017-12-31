@@ -1,5 +1,5 @@
 //> Representing Code generate-ast
-package net.globulus.tool;
+package net.globulus.simi.tool;
 
 import java.io.IOException;
 import java.io.PrintWriter;

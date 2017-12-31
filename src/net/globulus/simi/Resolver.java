@@ -8,11 +8,13 @@ import java.util.Stack;
 class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   private final Interpreter interpreter;
+  private final NativeModulesManager nativeModulesManager;
   private final Stack<Map<String, Boolean>> scopes = new Stack<>();
     private FunctionType currentFunction = FunctionType.NONE;
 
-  Resolver(Interpreter interpreter) {
+  Resolver(Interpreter interpreter, NativeModulesManager nativeModulesManager) {
     this.interpreter = interpreter;
+    this.nativeModulesManager = nativeModulesManager;
   }
 
   private enum FunctionType {

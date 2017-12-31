@@ -1,10 +1,13 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiCallable;
+import net.globulus.simi.api.SimiInterpreter;
+
 import java.util.List;
 
-class SimiFunction extends SimiValue<Stmt.Function, SimiFunction> implements SimiCallable {
+class SimiFunction extends Value<Stmt.Function, SimiFunction> implements SimiCallable {
 
-  private final SimiBlock block;
+  private final Block block;
   private final boolean isInitializer;
   private final boolean isNative;
 
@@ -13,13 +16,13 @@ class SimiFunction extends SimiValue<Stmt.Function, SimiFunction> implements Sim
                boolean isInitializer,
                boolean isNative) {
     super(declaration);
-    this.block = new SimiBlock(declaration.block, closure);
+    this.block = new Block(declaration.block, closure);
     this.isInitializer = isInitializer;
     this.isNative = isNative;
   }
 
   private SimiFunction(Stmt.Function declaration,
-                       SimiBlock block,
+                       Block block,
                        boolean isInitializer,
                        boolean isNative) {
       super(declaration);
@@ -45,7 +48,7 @@ class SimiFunction extends SimiValue<Stmt.Function, SimiFunction> implements Sim
   }
 
   @Override
-  public Object call(Interpreter interpreter, List<Object> arguments, boolean immutable) {
+  public Object call(SimiInterpreter interpreter, List<Object> arguments, boolean immutable) {
     block.call(interpreter, arguments, immutable);
     if (isInitializer) {
         return block.closure.getAt(0, Constants.SELF);

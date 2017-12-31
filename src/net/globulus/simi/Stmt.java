@@ -1,8 +1,10 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiStatement;
+
 import java.util.List;
 
-abstract class Stmt {
+abstract class Stmt implements SimiStatement {
 
   interface Visitor<R> {
     R visitClassStmt(Class stmt);

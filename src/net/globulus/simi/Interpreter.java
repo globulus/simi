@@ -1,5 +1,7 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.*;
+
 import java.util.ArrayList;
 //< Functions import-array-list
 //> Resolving and Binding import-hash-map
@@ -10,7 +12,7 @@ import java.util.List;
 //< Statements and State import-list
 //> Resolving and Binding import-map
 import java.util.Map;
-class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
+class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
   final Environment globals = new Environment();
   private Environment environment = globals;
@@ -24,7 +26,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
       }
 
       @Override
-      public Object call(Interpreter interpreter,
+      public Object call(SimiInterpreter interpreter,
                          List<Object> arguments,
                          boolean immutable) {
         return (double)System.currentTimeMillis() / 1000.0;
@@ -54,13 +56,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     locals.put(expr, depth);
   }
 
-  void executeBlock(Expr.Block block, Environment environment) {
+  @Override
+  public void executeBlock(SimiBlock block, SimiEnvironment environment) {
     Environment previous = this.environment;
     try {
-      this.environment = environment;
+      this.environment = (Environment) environment;
 
-      for (Stmt statement : block.statements) {
-        execute(statement);
+      for (SimiStatement statement : block.getStatements()) {
+        execute((Stmt) statement);
       }
     } finally {
       this.environment = previous;
@@ -90,11 +93,11 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
       environment = new Environment(environment);
       environment.define(Constants.SUPER, superclasses);
 
-      Map<String, SimiValue> constants = new HashMap<>();
+      Map<String, Value> constants = new HashMap<>();
       for (Expr.Assign constant : stmt.constants) {
           String key = constant.name.lexeme;
           Object value = evaluate(constant.value);
-          constants.put(key, (SimiValue) value);
+          constants.put(key, (Value) value);
       }
 
     Map<String, SimiFunction> methods = new HashMap<>();

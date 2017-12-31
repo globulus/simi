@@ -1,10 +1,12 @@
 package net.globulus.simi;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +15,6 @@ public class Simi {
   private static final Interpreter interpreter = new Interpreter();
   static boolean hadError = false;
   static boolean hadRuntimeError = false;
-  static List<String> imports;
 
   public static void main(String[] args) throws IOException {
     if (args.length > 1) {
@@ -49,17 +50,18 @@ public class Simi {
   }
 
   private static void run(String source) throws IOException {
-    imports = new ArrayList<>();
+      NativeModulesManager nativeModulesManager = new NativeModulesManager();
+      List<String> imports = new ArrayList<>();
 
     Scanner scanner = new Scanner(source);
-    List<Token> tokens = scanImports(scanner.scanTokens());
+    List<Token> tokens = scanImports(scanner.scanTokens(), imports, nativeModulesManager);
     Parser parser = new Parser(tokens);
     List<Stmt> statements = parser.parse();
 
     // Stop if there was a syntax error.
     if (hadError) return;
 
-    Resolver resolver = new Resolver(interpreter);
+    Resolver resolver = new Resolver(interpreter, nativeModulesManager);
     resolver.resolve(statements);
 
     // Stop if there was a resolution error.
@@ -67,7 +69,10 @@ public class Simi {
     interpreter.interpret(statements);
   }
 
-  private static List<Token> scanImports(List<Token> input) throws IOException {
+  private static List<Token> scanImports(List<Token> input,
+                                         List<String> imports,
+                                         NativeModulesManager nativeModulesManager) throws IOException {
+    List<Token> result = new ArrayList<>();
     int len = input.size();
     for (int i = 0; i < len; i++) {
       Token token = input.get(i);
@@ -75,14 +80,21 @@ public class Simi {
         continue;
       }
       i++;
-      String path = (String) input.get(i).literal;
-      if (imports.contains(path)) {
+      String location = (String) input.get(i).literal;
+      if (imports.contains(location)) {
         continue;
       }
-      List<Token> tokens = new Scanner(readFile(path)).scanTokens();
-      input.addAll(scanImports(tokens));
+      Path path = Paths.get(location);
+      String pathString = path.toString().toLowerCase();
+      if (pathString.endsWith(".jar")) {
+          nativeModulesManager.loadJar(path.toUri().toURL());
+      } else if (pathString.endsWith(".simi")) {
+          List<Token> tokens = new Scanner(readFile(location)).scanTokens();
+          result.addAll(scanImports(tokens, imports, nativeModulesManager));
+      }
     }
-    return input;
+    result.addAll(input);
+    return result;
   }
 
   static void error(int line, String message) {

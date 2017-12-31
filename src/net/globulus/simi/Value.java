@@ -1,10 +1,10 @@
 package net.globulus.simi;
 
-public abstract class SimiValue<S extends Expr, T extends SimiValue> {
+public abstract class Value<S extends Expr, T extends Value> {
 
     protected final S declaration;
 
-    protected SimiValue(S declaration) {
+    protected Value(S declaration) {
         this.declaration = declaration;
     }
 

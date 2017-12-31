@@ -19,6 +19,7 @@ class Scanner {
     keywords.put("elsif",  TokenType.ELSIF);
     keywords.put("false",  TokenType.FALSE);
     keywords.put("for",    TokenType.FOR);
+    keywords.put("gu",     TokenType.GU);
     keywords.put("if",     TokenType.IF);
     keywords.put("import",     TokenType.IMPORT);
     keywords.put("in",     TokenType.IN);

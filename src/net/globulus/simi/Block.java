@@ -1,21 +1,24 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiCallable;
+import net.globulus.simi.api.SimiInterpreter;
+
 import java.util.List;
 
-class SimiBlock extends SimiValue<Expr.Block, SimiBlock> implements SimiCallable {
+class Block extends Value<Expr.Block, Block> implements SimiCallable {
 
   final Environment closure;
 
-  SimiBlock(Expr.Block declaration, Environment closure) {
+  Block(Expr.Block declaration, Environment closure) {
     super(declaration);
     this.closure = closure;
   }
 
   @Override
-  SimiBlock bind(SimiObjectImpl instance) {
+  Block bind(SimiObjectImpl instance) {
     Environment environment = new Environment(closure);
     environment.assign(Token.self(), instance);
-    return new SimiBlock(declaration, environment);
+    return new Block(declaration, environment);
   }
 
   @Override
@@ -29,7 +32,7 @@ class SimiBlock extends SimiValue<Expr.Block, SimiBlock> implements SimiCallable
   }
 
   @Override
-  public Object call(Interpreter interpreter, List<Object> arguments, boolean immutable) {
+  public Object call(SimiInterpreter interpreter, List<Object> arguments, boolean immutable) {
     Environment environment = new Environment(closure);
     for (int i = 0; i < declaration.params.size(); i++) {
       environment.define(declaration.params.get(i).lexeme,

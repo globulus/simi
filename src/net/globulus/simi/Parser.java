@@ -27,7 +27,7 @@ class Parser {
             advance(); // skip path string
             continue;
         }
-        if (match(NEWLINE, PASS)) {
+        if (match(NEWLINE, PASS, GU)) {
             continue;
         }
         statements.add(declaration());
@@ -319,6 +319,7 @@ class Parser {
 //                if (arguments.size() >= 8) {
 //                    Simi.error(peek(), "Cannot have more than 8 arguments.");
 //                }
+                matchSequence(IDENTIFIER, EQUAL); // allows for named params, e.g substr(start=1,end=2)
                 arguments.add(expression());
             } while (match(COMMA));
         }
@@ -386,7 +387,7 @@ class Parser {
       return new Expr.ObjectLiteral(opener, props);
   }
 
-    private boolean matchAll(TokenType... types) {
+    private boolean matchSequence(TokenType... types) {
       for (int i = 0; i < types.length; i++) {
           int index = current + i;
           if (index >= tokens.size()) {
@@ -434,6 +435,18 @@ class Parser {
 
   private Token peek() {
     return tokens.get(current);
+  }
+
+  private boolean peekSequence(TokenType... tokenTypes) {
+    if (current + tokenTypes.length >= tokens.size()) {
+      return false;
+    }
+    for (int i = 0; i < tokenTypes.length; i++) {
+      if (tokens.get(current + i).type != tokenTypes[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private Token previous() {

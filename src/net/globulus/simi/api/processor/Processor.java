@@ -4,7 +4,7 @@ import net.globulus.simi.api.SimiJavaClass;
 import net.globulus.simi.api.SimiJavaGlobal;
 import net.globulus.simi.api.SimiJavaMethod;
 import net.globulus.simi.api.processor.codegen.SimiJavaCodeGen;
-import net.globulus.simi.api.processor.util.FrameworkUtil;
+import net.globulus.simi.api.Constants;
 import net.globulus.simi.api.processor.util.ProcessorLog;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -65,7 +65,7 @@ public class Processor extends AbstractProcessor {
 			globals.add(new ExposedMethod(element));
 		}
 		if (!globals.isEmpty()) {
-			exposedClasses.add(new ExposedClass("Globals", globals));
+			exposedClasses.add(new ExposedClass(Constants.GLOBALS_CLASS_NAME, globals));
 		}
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaClass.class)) {
@@ -111,15 +111,15 @@ public class Processor extends AbstractProcessor {
 
 	private boolean isValidMethod(Element element, boolean global) {
 		String masterError = global
-				? "A Simi API method must of of format: public static SimiValue NAME(SimiObject sender, ...)!"
-				: "A Simi API global function must of of format: public static SimiValue NAME(...)!";
+				? "A Simi API method must of of format: public static Value NAME(SimiObject sender, ...)!"
+				: "A Simi API global function must of of format: public static Value NAME(...)!";
 		if (!element.getModifiers().contains(Modifier.PUBLIC)
 				|| !element.getModifiers().contains(Modifier.STATIC)) {
 			ProcessorLog.error(element, masterError);
 			return false;
 		}
 		ExecutableType method = (ExecutableType) element.asType();
-		TypeMirror simiValue = mElementUtils.getTypeElement(FrameworkUtil.IMPORT_SIMI_VALUE).asType();
+		TypeMirror simiValue = mElementUtils.getTypeElement(Constants.IMPORT_SIMI_VALUE).asType();
 		if (!mTypeUtils.isSameType(method.getReturnType(), simiValue)) {
 			ProcessorLog.error(element, masterError);
 			return false;
@@ -131,7 +131,7 @@ public class Processor extends AbstractProcessor {
 				return false;
 			}
 			TypeMirror param0 = method.getParameterTypes().get(0);
-			TypeMirror simiObject = mElementUtils.getTypeElement(FrameworkUtil.IMPORT_SIMI_OBJECT).asType();
+			TypeMirror simiObject = mElementUtils.getTypeElement(Constants.IMPORT_SIMI_OBJECT).asType();
 			if (!mTypeUtils.isSameType(param0, simiObject)) {
 				ProcessorLog.error(element, masterError);
 				return false;
