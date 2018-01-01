@@ -12,26 +12,26 @@ import java.util.List;
 //< Statements and State import-list
 //> Resolving and Binding import-map
 import java.util.Map;
-class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor<Object> {
+class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Visitor<Object> {
 
   final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
 
   Interpreter() {
-    globals.define("clock", new SimiCallable() {
+    globals.define("clock", new SimiValue.Callable(new SimiCallable() {
       @Override
       public int arity() {
         return 0;
       }
 
       @Override
-      public Object call(SimiInterpreter interpreter,
-                         List<Object> arguments,
+      public Object call(BlockInterpreter interpreter,
+                         List<SimiValue> arguments,
                          boolean immutable) {
         return (double)System.currentTimeMillis() / 1000.0;
       }
-    });
+    }));
   }
 
   void interpret(List<Stmt> statements) {
@@ -44,7 +44,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
     }
   }
 
-  private Object evaluate(Expr expr) {
+  private SimiValue evaluate(Expr expr) {
     return expr.accept(this);
   }
 
@@ -71,7 +71,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
   @Override
-  public Void visitBlockExpr(Expr.Block stmt) {
+  public SimiValue visitBlockExpr(Expr.Block stmt) {
     executeBlock(stmt, new Environment(environment));
     return null;
   }
@@ -93,11 +93,11 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
       environment = new Environment(environment);
       environment.define(Constants.SUPER, superclasses);
 
-      Map<String, Value> constants = new HashMap<>();
+      Map<String, SimiValue> constants = new HashMap<>();
       for (Expr.Assign constant : stmt.constants) {
           String key = constant.name.lexeme;
-          Object value = evaluate(constant.value);
-          constants.put(key, (Value) value);
+          SimiValue value = evaluate(constant.value);
+          constants.put(key, value);
       }
 
     Map<String, SimiFunction> methods = new HashMap<>();
@@ -113,7 +113,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
 //      environment = environment.enclosing;
 //    }
 
-    environment.assign(stmt.name, klass);
+    environment.assign(stmt.name, new SimiValue.Callable(klass));
     return null;
   }
 
@@ -126,14 +126,14 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
     SimiFunction function = new SimiFunction(stmt, environment, false, stmt.declaration.type == TokenType.NATIVE);
-    environment.define(stmt.name.lexeme, function);
+    environment.define(stmt.name.lexeme, new SimiValue.Callable(function));
     return null;
   }
 
   @Override
   public Object visitElsifStmt(Stmt.Elsif stmt) {
     if (isTruthy(evaluate(stmt.condition))) {
-      execute(stmt.thenBranch);
+      evaluate(stmt.thenBranch);
       return true;
     }
     return false;
@@ -150,7 +150,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
       }
     }
     if (stmt.elseBranch != null) {
-      execute(stmt.elseBranch);
+      evaluate(stmt.elseBranch);
     }
     return null;
   }
@@ -173,7 +173,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
     while (isTruthy(evaluate(stmt.condition))) {
-      execute(stmt.body);
+      evaluate(stmt.body);
     }
     return null;
   }
@@ -184,8 +184,8 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
     @Override
-  public Object visitAssignExpr(Expr.Assign expr) {
-    Object value = evaluate(expr.value);
+  public SimiValue visitAssignExpr(Expr.Assign expr) {
+    SimiValue value = evaluate(expr.value);
 
     Integer distance = locals.get(expr);
     if (distance != null) {
@@ -198,56 +198,56 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
   @Override
-  public Object visitBinaryExpr(Expr.Binary expr) {
-    Object left = evaluate(expr.left);
-    Object right = evaluate(expr.right); // [left]
+  public SimiValue visitBinaryExpr(Expr.Binary expr) {
+    SimiValue left = evaluate(expr.left);
+    SimiValue right = evaluate(expr.right); // [left]
 
     switch (expr.operator.type) {
-      case BANG_EQUAL: return !isEqual(left, right);
-      case EQUAL_EQUAL: return isEqual(left, right);
+      case BANG_EQUAL: return new SimiValue.Number(!isEqual(left, right));
+      case EQUAL_EQUAL: return new SimiValue.Number(isEqual(left, right));
         case IS:
-            return isInstance(left, right, expr);
+            return new SimiValue.Number(isInstance(left, right, expr));
         case ISNOT:
-            return !isInstance(left, right, expr);
+            return new SimiValue.Number(!isInstance(left, right, expr));
         case IN:
-            return isIn(left, right, expr);
+            return new SimiValue.Number(isIn(left, right, expr));
         case NOTIN:
-            return !isIn(left, right, expr);
+            return new SimiValue.Number(!isIn(left, right, expr));
       case GREATER:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left > (double)right;
+        return new SimiValue.Number(left.getNumber() > right.getNumber());
       case GREATER_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left >= (double)right;
+          return new SimiValue.Number(left.getNumber() >= right.getNumber());
       case LESS:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left < (double)right;
+          return new SimiValue.Number(left.getNumber() < right.getNumber());
       case LESS_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left <= (double)right;
+          return new SimiValue.Number(left.getNumber() <= right.getNumber());
       case MINUS:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left - (double)right;
+          return new SimiValue.Number(left.getNumber() - right.getNumber());
       case PLUS:
-        if (left instanceof Double && right instanceof Double) {
-          return (double)left + (double)right;
+        if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
+            return new SimiValue.Number(left.getNumber() + right.getNumber());
         } // [plus]
 
-        if (left instanceof String && right instanceof String) {
-          return left + (String)right;
+        if (left instanceof SimiValue.String && right instanceof SimiValue.String) {
+            return new SimiValue.String(left.getString() + right.getString());
         }
 
         throw new RuntimeError(expr.operator,
             "Operands must be two numbers or two strings.");
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left / (double)right;
+          return new SimiValue.Number(left.getNumber() / right.getNumber());
       case STAR:
         checkNumberOperands(expr.operator, left, right);
-        return (double)left * (double)right;
+          return new SimiValue.Number(left.getNumber() * right.getNumber());
         case MOD:
             checkNumberOperands(expr.operator, left, right);
-            return (double)left % (double)right;
+            return new SimiValue.Number(left.getNumber() % right.getNumber());
     }
 
     // Unreachable.
@@ -255,7 +255,7 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
   @Override
-  public Object visitCallExpr(Expr.Call expr) {
+  public SimiValue visitCallExpr(Expr.Call expr) {
     Object callee = evaluate(expr.callee);
 
     List<Object> arguments = new ArrayList<>();
@@ -279,29 +279,28 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
   @Override
-  public Object visitGetExpr(Expr.Get expr) {
-    Object object = evaluate(expr.object);
-    if (object instanceof SimiObjectImpl) {
-      return ((SimiObjectImpl) object).get(expr.name, environment);
+  public SimiValue visitGetExpr(Expr.Get expr) {
+    SimiValue object = evaluate(expr.object);
+    try {
+        return ((SimiObjectImpl) object.getObject()).get(expr.name, environment);
+    } catch (SimiValue.IncompatibleValuesException e) {
+        throw new RuntimeError(expr.name,"Only instances have properties.");
     }
-
-    throw new RuntimeError(expr.name,
-        "Only instances have properties.");
   }
 
   @Override
-  public Object visitGroupingExpr(Expr.Grouping expr) {
+  public SimiValue visitGroupingExpr(Expr.Grouping expr) {
     return evaluate(expr.expression);
   }
 
   @Override
-  public Object visitLiteralExpr(Expr.Literal expr) {
+  public SimiValue visitLiteralExpr(Expr.Literal expr) {
     return expr.value;
   }
 
   @Override
-  public Object visitLogicalExpr(Expr.Logical expr) {
-    Object left = evaluate(expr.left);
+  public SimiValue visitLogicalExpr(Expr.Logical expr) {
+    SimiValue left = evaluate(expr.left);
 
     if (expr.operator.type == TokenType.OR) {
       if (isTruthy(left)) return left;
@@ -313,27 +312,27 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
   }
 
   @Override
-  public Object visitSetExpr(Expr.Set expr) {
-    Object object = evaluate(expr.object);
+  public SimiValue visitSetExpr(Expr.Set expr) {
+    SimiValue object = evaluate(expr.object);
 
-    if (!(object instanceof SimiObjectImpl)) { // [order]
+    if (!(object instanceof SimiValue.Object)) { // [order]
       throw new RuntimeError(expr.name, "Only objects have fields.");
     }
 
-    Object value = evaluate(expr.value);
-    ((SimiObjectImpl)object).set(expr.name, value, environment);
+    SimiValue value = evaluate(expr.value);
+    ((SimiObjectImpl) object.getObject()).set(expr.name, value, environment);
     return value;
   }
 
   @Override
-  public Object visitSuperExpr(Expr.Super expr) {
+  public SimiValue visitSuperExpr(Expr.Super expr) {
     int distance = locals.get(expr);
-    SimiClassImpl superclass = (SimiClassImpl)environment.getAt(
-        distance, Constants.SUPER);
+    SimiClassImpl superclass = (SimiClassImpl) environment.getAt(
+        distance, Constants.SUPER).getObject();
 
     // "self" is always one level nearer than "super"'s environment.
     SimiObjectImpl object = (SimiObjectImpl)environment.getAt(
-        distance - 1, Constants.SELF);
+        distance - 1, Constants.SELF).getObject();
 
     SimiFunction method = superclass.findMethod(
         object, expr.method.lexeme);
@@ -343,67 +342,73 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
           "Undefined property '" + expr.method.lexeme + "'.");
     }
 
-    return method;
+    return new SimiValue.Callable(method);
   }
 
   @Override
-  public Object visitSelfExpr(Expr.Self expr) {
+  public SimiValue visitSelfExpr(Expr.Self expr) {
     return lookUpVariable(expr.keyword, expr);
   }
 
   @Override
-  public Object visitUnaryExpr(Expr.Unary expr) {
-    Object right = evaluate(expr.right);
+  public SimiValue visitUnaryExpr(Expr.Unary expr) {
+    SimiValue right = evaluate(expr.right);
 
     switch (expr.operator.type) {
         case NOT:
-        return !isTruthy(right);
+        return new SimiValue.Number(!isTruthy(right));
       case MINUS:
         checkNumberOperand(expr.operator, right);
-        return -(double)right;
+        return new SimiValue.Number(-right.getNumber());
     }
     // Unreachable.
     return null;
   }
 
   @Override
-  public Object visitVariableExpr(Expr.Variable expr) {
+  public SimiValue visitVariableExpr(Expr.Variable expr) {
     return lookUpVariable(expr.name, expr);
   }
 
     @Override
-    public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
+    public SimiValue visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
         return null;
     }
 
-    private Object lookUpVariable(Token name, Expr expr) {
-    Integer distance = locals.get(expr);
-    if (distance != null) {
-      return environment.getAt(distance, name.lexeme);
-    } else {
-      return globals.get(name);
+    private SimiValue lookUpVariable(Token name, Expr expr) {
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+          return environment.getAt(distance, name.lexeme);
+        } else {
+          return globals.get(name);
+        }
     }
-  }
 
-  private void checkNumberOperand(Token operator, Object operand) {
-    if (operand instanceof Double) return;
+  private void checkNumberOperand(Token operator, SimiValue operand) {
+    if (operand instanceof SimiValue.Number) return;
     throw new RuntimeError(operator, "Operand must be a number.");
   }
 
   private void checkNumberOperands(Token operator,
-                                   Object left, Object right) {
-    if (left instanceof Double && right instanceof Double) return;
+                                   SimiValue left, SimiValue right) {
+    if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) return;
     // [operand]
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
-  private boolean isTruthy(Object object) {
-    if (object == null) return false;
-    if (object instanceof Boolean) return (boolean)object;
-    return true;
+  private boolean isTruthy(SimiValue object) {
+    if (object == null) {
+        return false;
+    }
+    try {
+        double value = object.getNumber();
+        return value != 0;
+    } catch (SimiValue.IncompatibleValuesException e) {
+        return true;
+    }
   }
 
-  private boolean isEqual(Object a, Object b) {
+  private boolean isEqual(SimiValue a, SimiValue b) {
     // nil is only equal to nil.
     if (a == null && b == null) return true;
     if (a == null) return false;
@@ -411,24 +416,24 @@ class Interpreter implements SimiInterpreter, Expr.Visitor<Object>, Stmt.Visitor
     return a.equals(b);
   }
 
-  private boolean isInstance(Object a, Object b, Expr.Binary expr) {
+  private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {
     if (a == null || b == null) {
       return false;
     }
-    if (!(a instanceof SimiObjectImpl)) {
+    if (!(a instanceof SimiValue.Object)) {
       throw new RuntimeError(expr.operator, "Left side must be an Object!");
     }
-    if (!(b instanceof SimiClassImpl)) {
+    if (!(b instanceof SimiValue.Object)) {
         throw new RuntimeError(expr.operator, "Right side must be a Class!");
     }
-    return ((SimiObjectImpl) a).is((SimiClassImpl) b);
+    return ((SimiObjectImpl) a.getObject()).is((SimiClassImpl) b.getObject());
   }
 
-  private boolean isIn(Object a, Object b, Expr.Binary expr) {
-      if (!(b instanceof SimiObjectImpl)) {
+  private boolean isIn(SimiValue a, SimiValue b, Expr.Binary expr) {
+      if (!(b instanceof SimiValue.Object)) {
           throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
-      return ((SimiObjectImpl) b).contains(a, expr.operator);
+      return ((SimiObjectImpl) b.getObject()).contains(a, expr.operator);
   }
 
   private String stringify(Object object) {

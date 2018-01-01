@@ -1,5 +1,7 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiValue;
+
 import java.util.ArrayList;
 //< Statements and State parser-imports
 //> Control Flow import-arrays
@@ -329,10 +331,10 @@ class Parser {
 
   private Expr primary() {
     if (match(FALSE)) {
-        return new Expr.Literal(false);
+        return new Expr.Literal(new SimiValue.Number(false));
     }
     if (match(TRUE)) {
-        return new Expr.Literal(true);
+        return new Expr.Literal(new SimiValue.Number(true));
     }
     if (match(NIL)) {
         return new Expr.Literal(null);

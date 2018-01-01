@@ -1,5 +1,7 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiValue;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -161,7 +163,7 @@ class Scanner {
     }
 
     addToken(TokenType.NUMBER,
-        Double.parseDouble(source.substring(start, current)));
+        new SimiValue.Number(Double.parseDouble(source.substring(start, current))));
   }
 
   protected void string() {
@@ -181,7 +183,7 @@ class Scanner {
 
     // Trim the surrounding quotes.
     String value = source.substring(start + 1, current - 1);
-    addToken(TokenType.STRING, value);
+    addToken(TokenType.STRING, new SimiValue.String(value));
   }
 
     private String keywordString(TokenType type) {
@@ -252,7 +254,7 @@ class Scanner {
     addToken(type, null);
   }
 
-  private void addToken(TokenType type, Object literal) {
+  private void addToken(TokenType type, SimiValue literal) {
     String text = source.substring(start, current);
     tokens.add(new Token(type, text, literal, line));
   }

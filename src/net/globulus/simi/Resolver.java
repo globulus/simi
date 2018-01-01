@@ -135,15 +135,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
-  @Override
-  public Void visitVarStmt(Stmt.Var stmt) {
-    declare(stmt.name);
-    if (stmt.initializer != null) {
-      resolve(stmt.initializer);
-    }
-    define(stmt.name);
-    return null;
-  }
+//  @Override
+//  public Void visitVarStmt(Stmt.Var stmt) {
+//    declare(stmt.name);
+//    if (stmt.initializer != null) {
+//      resolve(stmt.initializer);
+//    }
+//    define(stmt.name);
+//    return null;
+//  }
 
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
@@ -256,6 +256,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
+  @Override
+  public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
+    resolve(expr);
+    return null;
+  }
+
   private void resolve(Stmt stmt) {
     stmt.accept(this);
   }
@@ -264,15 +270,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     expr.accept(this);
   }
 
-    private void resolveBlock(Stmt.Block block) {
-        beginScope();
-        for (Token param : block.params) {
-            declare(param);
-            define(param);
-        }
-        resolve(block);
-        endScope();
-    }
+  private void resolveBlock(Expr.Block block) {
+      beginScope();
+      for (Token param : block.params) {
+          declare(param);
+          define(param);
+      }
+      resolve(block);
+      endScope();
+  }
 
   private void resolveFunction(
       Stmt.Function function, FunctionType type) {
@@ -290,16 +296,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     scopes.pop();
   }
 
-  private void declare(Token name) {
-    if (scopes.isEmpty()) return;
-
-    Map<String, Boolean> scope = scopes.peek();
-    if (scope.containsKey(name.lexeme)) {
-      Simi.error(name,
-          "Variable with this name already declared in this scope.");
+  private boolean declare(Token name) {
+    if (scopes.isEmpty()) {
+      return false;
     }
-
-    scope.put(name.lexeme, false);
+    String var = name.lexeme;
+    Map<String, Boolean> scope = scopes.peek();
+    boolean mutable = var.startsWith(Constants.MUTABLE);
+    if (scope.containsKey(var)) {
+      if (!mutable) {
+        Simi.error(name,
+                "Constant with this name already declared in this scope.");
+        return false;
+      }
+    } else {
+      scope.put(var, false);
+    }
+    return true;
   }
 
   private void define(Token name) {

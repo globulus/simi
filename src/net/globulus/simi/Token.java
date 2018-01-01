@@ -1,13 +1,15 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiValue;
+
 class Token {
 
   final TokenType type;
   final String lexeme;
-  final Object literal;
+  final SimiValue literal;
   final int line; // [location]
 
-  Token(TokenType type, String lexeme, Object literal, int line) {
+  Token(TokenType type, String lexeme, SimiValue literal, int line) {
     this.type = type;
     this.lexeme = lexeme;
     this.literal = literal;
@@ -16,6 +18,10 @@ class Token {
 
   static Token self() {
     return new Token(TokenType.SELF, Constants.SELF, null, 0);
+  }
+
+  static Token nativeCall(String name) {
+    return new Token(TokenType.NATIVE, name, null, 0);
   }
 
   @Override

@@ -1,6 +1,7 @@
 package net.globulus.simi;
 
 import net.globulus.simi.api.SimiEnvironment;
+import net.globulus.simi.api.SimiValue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Map;
 class Environment implements SimiEnvironment {
 
   final Environment enclosing;
-  private final Map<String, Object> values = new HashMap<>();
+  private final Map<String, SimiValue> values = new HashMap<>();
 
   Environment() {
     enclosing = null;
@@ -18,7 +19,7 @@ class Environment implements SimiEnvironment {
     this.enclosing = enclosing;
   }
 
-  Object get(Token name) {
+  SimiValue get(Token name) {
     if (values.containsKey(name.lexeme)) {
       return values.get(name.lexeme);
     }
@@ -29,7 +30,7 @@ class Environment implements SimiEnvironment {
         "Undefined variable '" + name.lexeme + "'.");
   }
 
-  void assign(Token name, Object value) {
+  void assign(Token name, SimiValue value) {
       String key = name.lexeme;
     if (values.containsKey(key)) {
         if (key.startsWith(Constants.MUTABLE)) {
@@ -51,7 +52,7 @@ class Environment implements SimiEnvironment {
         "Undefined variable '" + key + "'.");
   }
 
-  void define(String name, Object value) {
+  void define(String name, SimiValue value) {
     values.put(name, value);
   }
 
@@ -64,11 +65,11 @@ class Environment implements SimiEnvironment {
     return environment;
   }
 
-  Object getAt(int distance, String name) {
+  SimiValue getAt(int distance, String name) {
     return ancestor(distance).values.get(name);
   }
 
-  void assignAt(int distance, Token name, Object value) {
+  void assignAt(int distance, Token name, SimiValue value) {
     ancestor(distance).assign(name, value);
   }
 

@@ -80,7 +80,7 @@ public class Simi {
         continue;
       }
       i++;
-      String location = (String) input.get(i).literal;
+      String location = input.get(i).literal.getString();
       if (imports.contains(location)) {
         continue;
       }

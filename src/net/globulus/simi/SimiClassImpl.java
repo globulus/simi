@@ -1,24 +1,37 @@
 package net.globulus.simi;
 
+import com.sun.tools.internal.jxc.ap.Const;
 import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiInterpreter;
+import net.globulus.simi.api.BlockInterpreter;
+import net.globulus.simi.api.SimiClass;
+import net.globulus.simi.api.SimiValue;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-class SimiClassImpl extends SimiObjectImpl implements SimiCallable {
+class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
 
   final String name;
   final List<SimiClassImpl> superclasses;
 
   private final Map<String, SimiFunction> methods;
 
+  static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
+
+    private SimiClassImpl(String name) {
+       super(null, new LinkedHashMap<>(), true);
+       this.name = name;
+       superclasses = null;
+       methods = new HashMap<>();
+    }
+
   SimiClassImpl(String name,
                 List<SimiClassImpl> superclasses,
-                Map<String, Value> constants,
+                Map<String, SimiValue> constants,
                 Map<String, SimiFunction> methods) {
-    super(new LinkedHashMap<>(constants), name.startsWith(Constants.MUTABLE));
+    super(CLASS, new LinkedHashMap<>(constants), name.startsWith(Constants.MUTABLE));
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
@@ -51,7 +64,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiCallable {
   }
 
   @Override
-  public Object call(SimiInterpreter interpreter, List<Object> arguments, boolean immutable) {
+  public Object call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean immutable) {
     SimiObjectImpl instance = new SimiObjectImpl(this, immutable);
     SimiFunction initializer = methods.get(Constants.INIT);
     if (initializer != null) {

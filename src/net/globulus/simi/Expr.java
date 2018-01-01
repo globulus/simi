@@ -2,6 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.SimiBlock;
 import net.globulus.simi.api.SimiStatement;
+import net.globulus.simi.api.SimiValue;
 
 import java.util.List;
 
@@ -112,7 +113,7 @@ abstract class Expr {
     final Expr expression;
   }
   static class Literal extends Expr {
-    Literal(Object value) {
+    Literal(SimiValue value) {
       this.value = value;
     }
 
@@ -120,7 +121,7 @@ abstract class Expr {
       return visitor.visitLiteralExpr(this);
     }
 
-    final Object value;
+    final SimiValue value;
   }
 
   static class Logical extends Expr {

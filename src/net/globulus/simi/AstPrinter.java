@@ -130,10 +130,6 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     return null;
   }
 
-  @Override
-  public String visitImportStmt(Stmt.Import stmt) {
-    return null;
-  }
 //< Control Flow omit
 //> Statements and State omit
 

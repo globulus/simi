@@ -51,7 +51,7 @@ public class GenerateAst {
 
     defineAst(outputDir, "Stmt", Arrays.asList(
 //> block-ast
-      "Block      : List<Stmt> statements",
+      "Callable      : List<Stmt> statements",
 //< block-ast
 /* Classes class-ast < Inheritance superclass-ast
       "Class      : Token name, List<Stmt.Function> methods",

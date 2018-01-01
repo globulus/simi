@@ -2,6 +2,6 @@ package net.globulus.simi.api;
 
 public interface SimiObject {
     SimiClass getSimiClass();
-    Object get(String key);
-    void set(String key, Object value);
+    SimiValue get(String key, SimiEnvironment environment);
+    void set(String key, SimiValue value, SimiEnvironment environment);
 }

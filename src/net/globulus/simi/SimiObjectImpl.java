@@ -1,15 +1,20 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiClass;
+import net.globulus.simi.api.SimiEnvironment;
+import net.globulus.simi.api.SimiObject;
+import net.globulus.simi.api.SimiValue;
+
 import java.util.LinkedHashMap;
 
-class SimiObjectImpl {
+class SimiObjectImpl implements SimiObject {
 
   final SimiClassImpl clazz;
-  private final LinkedHashMap<String, Object> fields;
+  private final LinkedHashMap<String, SimiValue> fields;
   final boolean immutable;
 
   SimiObjectImpl(SimiClassImpl clazz,
-                 LinkedHashMap<String, Object> fields,
+                 LinkedHashMap<String, SimiValue> fields,
                  boolean immutable) {
       this.clazz = clazz;
       this.fields = fields;
@@ -22,7 +27,7 @@ class SimiObjectImpl {
     this.immutable = immutable;
   }
 
-  Object get(Token name, Environment environment) {
+  SimiValue get(Token name, Environment environment) {
       String key = name.lexeme;
       try {
           int index = Integer.parseInt(key);
@@ -40,7 +45,7 @@ class SimiObjectImpl {
           return fields.get(Constants.IMPLICIT + index);
       } catch (NumberFormatException ignored) { }
 
-      if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()) != this) {
+      if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
           throw new RuntimeError(name, "Trying to access a private property!");
       }
     if (fields.containsKey(key)) {
@@ -50,7 +55,7 @@ class SimiObjectImpl {
     if (clazz != null) {
         SimiFunction method = clazz.findMethod(this, key);
         if (method != null) {
-            return method;
+            return new SimiValue.Callable(method);
         }
     }
 
@@ -59,14 +64,14 @@ class SimiObjectImpl {
 //        "Undefined property '" + name.lexeme + "'.");
   }
 
-  void set(Token name, Object value, Environment environment) {
+  void set(Token name, SimiValue value, Environment environment) {
       checkMutability(name);
       String key = name.lexeme;
       try {
           int index = Integer.parseInt(key);
           key = Constants.IMPLICIT + index;
       } catch (NumberFormatException ignored) { }
-      if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()) != this) {
+      if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
           throw new RuntimeError(name, "Trying to access a private property!");
       }
       if (value == null) {
@@ -80,14 +85,14 @@ class SimiObjectImpl {
       return clazz.name.equals(this.clazz.name);
   }
 
-  boolean contains(Object object, Token at) {
+  boolean contains(SimiValue object, Token at) {
       if (isArray()) {
           return fields.values().contains(object);
       }
-      if (!(object instanceof String)) {
+      if (!(object instanceof SimiValue.String)) {
           throw new RuntimeError(at, "Left side must be a string!");
       }
-      return fields.keySet().contains(object);
+      return fields.keySet().contains(object.getString());
   }
 
   boolean isNumber() {
@@ -137,4 +142,19 @@ class SimiObjectImpl {
       }
       return sb.toString();
   }
+
+    @Override
+    public SimiClass getSimiClass() {
+        return clazz;
+    }
+
+    @Override
+    public SimiValue get(String key, SimiEnvironment environment) {
+        return get(Token.nativeCall(key), (Environment) environment);
+    }
+
+    @Override
+    public void set(String key, SimiValue value, SimiEnvironment environment) {
+      set(Token.nativeCall(key), value, (Environment) environment);
+    }
 }

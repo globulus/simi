@@ -1,24 +1,23 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiInterpreter;
+import net.globulus.simi.api.*;
 
 import java.util.List;
 
-class Block extends Value<Expr.Block, Block> implements SimiCallable {
+class BlockImp implements SimiBlock, SimiCallable {
 
+  final Expr.Block declaration;
   final Environment closure;
 
-  Block(Expr.Block declaration, Environment closure) {
-    super(declaration);
+  BlockImp(Expr.Block declaration, Environment closure) {
+    this.declaration = declaration;
     this.closure = closure;
   }
 
-  @Override
-  Block bind(SimiObjectImpl instance) {
+  BlockImp bind(SimiObjectImpl instance) {
     Environment environment = new Environment(closure);
-    environment.assign(Token.self(), instance);
-    return new Block(declaration, environment);
+    environment.assign(Token.self(), new SimiValue.Object(instance));
+    return new BlockImp(declaration, environment);
   }
 
   @Override
@@ -32,7 +31,7 @@ class Block extends Value<Expr.Block, Block> implements SimiCallable {
   }
 
   @Override
-  public Object call(SimiInterpreter interpreter, List<Object> arguments, boolean immutable) {
+  public Object call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean immutable) {
     Environment environment = new Environment(closure);
     for (int i = 0; i < declaration.params.size(); i++) {
       environment.define(declaration.params.get(i).lexeme,
@@ -46,5 +45,10 @@ class Block extends Value<Expr.Block, Block> implements SimiCallable {
     }
 
     return null;
+  }
+
+  @Override
+  public List<? extends SimiStatement> getStatements() {
+    return declaration.getStatements();
   }
 }
