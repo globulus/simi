@@ -6,10 +6,7 @@
 
 class Car:
 
-    def init(capacity):
-        self.capacity = capacity
-        self.tank = 0
-    end
+    def init(capacity, tank): pass
 
     def refill(amount):
         if self.tank + amount > self.capacity: self.tank = self.capacity
@@ -19,6 +16,8 @@ class Car:
     def refill(amount, doprint):
         self.tank = 0
      end
+
+     def f(): pass
 end
 
 #def min3(a, b, c):
@@ -31,7 +30,7 @@ end
 
 #d = min3(4, 5, 3)
 
-car = Car(30)
+car = Car(40, 10)
 print(car.tank)
 car.refill(20)
 print(car.tank)

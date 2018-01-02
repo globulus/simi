@@ -43,6 +43,21 @@ abstract class Expr {
       public List<? extends SimiStatement> getStatements() {
         return statements;
       }
+
+      public boolean isEmpty() {
+        if (statements.size() != 1) {
+          return false;
+        }
+        Stmt stmt = statements.get(0);
+        if (!(stmt instanceof Stmt.Expression)) {
+          return false;
+        }
+        Stmt.Expression expr = (Stmt.Expression) stmt;
+        if (!(expr.expression instanceof Expr.Literal)) {
+          return false;
+        }
+        return ((Expr.Literal) expr.expression).value instanceof Pass;
+      }
     }
 
   static class Assign extends Expr {

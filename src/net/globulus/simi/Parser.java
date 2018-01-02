@@ -174,6 +174,14 @@ class Parser {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     Expr.Block block = block(kind, false);
+    if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
+      List<Stmt> statements = new ArrayList<>();
+      for (Token param : block.params) {
+        statements.add(new Stmt.Expression(new Expr.Set(
+                new Expr.Self(Token.self()), param, new Expr.Variable(param))));
+      }
+      block = new Expr.Block(block.params, statements);
+    }
     return new Stmt.Function(declaration, name, block);
   }
 
@@ -369,6 +377,10 @@ class Parser {
     }
     if (match(NIL)) {
         return new Expr.Literal(null);
+    }
+
+    if (match(PASS)) {
+      return new Expr.Literal(new Pass());
     }
 
     if (match(NUMBER, STRING)) {
