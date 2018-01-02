@@ -210,6 +210,33 @@ class Parser {
     return params;
   }
 
+  private Integer peekParams() {
+    if (!check(LEFT_PAREN)) {
+      return null;
+    }
+    if (peekSequence(LEFT_PAREN, RIGHT_PAREN)) {
+      return 0;
+    }
+    int len = tokens.size();
+    int count = 1;
+    int parenCount = 0;
+    for (int i = current + 1; i < len; i++) {
+      TokenType type = tokens.get(i).type;
+      if (type == LEFT_PAREN) {
+        parenCount++;
+      } else if (type == RIGHT_PAREN) {
+        if (parenCount == 0) {
+          break;
+        } else {
+          parenCount--;
+        }
+      } else if (type == COMMA) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   private Expr assignment() {
     Expr expr = or();
     if (match(EQUAL)) {
@@ -309,7 +336,8 @@ class Parser {
           } else {
               name = consume(IDENTIFIER, "Expected a number of id after '.'.");
           }
-        expr = new Expr.Get(expr, name);
+          Integer arity = peekParams();
+        expr = new Expr.Get(expr, name, arity);
       } else {
         break;
       }
@@ -352,7 +380,8 @@ class Parser {
       consume(DOT, "Expect '.' after 'super'.");
       Token method = consume(IDENTIFIER,
           "Expect superclass method name.");
-      return new Expr.Super(keyword, method);
+      Integer arity = peekParams();
+      return new Expr.Super(keyword, method, arity);
     }
 
     if (match(SELF)) {

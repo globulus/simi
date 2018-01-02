@@ -99,11 +99,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
           constants.put(key, value);
       }
 
-    Map<String, SimiFunction> methods = new HashMap<>();
+    Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
+        String name = method.name.lexeme;
       SimiFunction function = new SimiFunction(method, environment,
-          method.name.lexeme.equals(Constants.INIT), method.declaration.type == TokenType.NATIVE);
-      methods.put(method.name.lexeme, function);
+          name.equals(Constants.INIT), method.declaration.type == TokenType.NATIVE);
+      methods.put(new OverloadableFunction(name, function.arity()), function);
     }
 
     SimiClassImpl klass = new SimiClassImpl(stmt.name.lexeme, superclasses, constants, methods);
@@ -112,7 +113,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 //      environment = environment.enclosing;
 //    }
 
-    environment.assign(stmt.name, new SimiValue.Callable(klass));
+    environment.assign(stmt.name, new SimiValue.Object(klass));
     return null;
   }
 
@@ -271,10 +272,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     SimiCallable function;
     if (callee instanceof SimiValue.Object) {
       SimiObject value = callee.getObject();
-      if (!(value instanceof SimiCallable)) {
+      if (!(value instanceof SimiClassImpl)) {
         throw new RuntimeError(expr.paren,"Can only call functions and classes.");
       }
-      function = (SimiCallable) value;
+      return ((SimiClassImpl) value).init(this, arguments);
     } else if (callee instanceof SimiValue.Callable) {
       function = callee.getCallable();
     } else {
@@ -293,7 +294,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public SimiValue visitGetExpr(Expr.Get expr) {
     SimiValue object = evaluate(expr.object);
     try {
-        return ((SimiObjectImpl) object.getObject()).get(expr.name, environment);
+        return ((SimiObjectImpl) object.getObject()).get(expr.name, expr.arity, environment);
     } catch (SimiValue.IncompatibleValuesException e) {
         throw new RuntimeError(expr.name,"Only instances have properties.");
     }
@@ -338,15 +339,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiValue visitSuperExpr(Expr.Super expr) {
     int distance = locals.get(expr);
-    SimiClassImpl superclass = (SimiClassImpl) environment.getAt(
-        distance, Constants.SUPER).getObject();
+    SimiClassImpl superclass = (SimiClassImpl) environment.getAt(distance, Constants.SUPER).getObject();
 
     // "self" is always one level nearer than "super"'s environment.
-    SimiObjectImpl object = (SimiObjectImpl)environment.getAt(
-        distance - 1, Constants.SELF).getObject();
+    SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getObject();
 
-    SimiFunction method = superclass.findMethod(
-        object, expr.method.lexeme);
+    SimiFunction method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
 
     if (method == null) {
       throw new RuntimeError(expr.method,

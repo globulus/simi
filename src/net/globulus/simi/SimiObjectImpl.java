@@ -27,7 +27,7 @@ class SimiObjectImpl implements SimiObject {
     this.immutable = immutable;
   }
 
-  SimiValue get(Token name, Environment environment) {
+  SimiValue get(Token name, Integer arity, Environment environment) {
       String key = name.lexeme;
       try {
           int index = Integer.parseInt(key);
@@ -53,7 +53,7 @@ class SimiObjectImpl implements SimiObject {
     }
 
     if (clazz != null) {
-        SimiFunction method = clazz.findMethod(this, key);
+        SimiFunction method = clazz.findMethod(this, key, arity);
         if (method != null) {
             return new SimiValue.Callable(method);
         }
@@ -150,7 +150,7 @@ class SimiObjectImpl implements SimiObject {
 
     @Override
     public SimiValue get(String key, SimiEnvironment environment) {
-        return get(Token.nativeCall(key), (Environment) environment);
+        return get(Token.nativeCall(key), null, (Environment) environment);
     }
 
     @Override

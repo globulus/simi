@@ -91,9 +91,10 @@ abstract class Expr {
   }
 
   static class Get extends Expr {
-    Get(Expr object, Token name) {
+    Get(Expr object, Token name, Integer arity) {
       this.object = object;
       this.name = name;
+      this.arity = arity;
     }
 
     <R> R accept(Visitor<R> visitor, Object... params) {
@@ -102,6 +103,7 @@ abstract class Expr {
 
     final Expr object;
     final Token name;
+    final Integer arity;
   }
   static class Grouping extends Expr {
     Grouping(Expr expression) {
@@ -159,9 +161,10 @@ abstract class Expr {
   }
 
   static class Super extends Expr {
-    Super(Token keyword, Token method) {
+    Super(Token keyword, Token method, Integer arity) {
       this.keyword = keyword;
       this.method = method;
+      this.arity = arity;
     }
 
     <R> R accept(Visitor<R> visitor, Object... params) {
@@ -170,6 +173,7 @@ abstract class Expr {
 
     final Token keyword;
     final Token method;
+    final Integer arity;
   }
   static class Self extends Expr {
     Self(Token keyword) {

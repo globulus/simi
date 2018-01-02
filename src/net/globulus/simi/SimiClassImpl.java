@@ -1,22 +1,17 @@
 package net.globulus.simi;
 
-import com.sun.tools.internal.jxc.ap.Const;
-import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.BlockInterpreter;
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.stream.Collectors;
 
-class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
+class SimiClassImpl extends SimiObjectImpl implements SimiClass {
 
   final String name;
   final List<SimiClassImpl> superclasses;
 
-  private final Map<String, SimiFunction> methods;
+  private final Map<OverloadableFunction, SimiFunction> methods;
 
   static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
 
@@ -30,28 +25,72 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
   SimiClassImpl(String name,
                 List<SimiClassImpl> superclasses,
                 Map<String, SimiValue> constants,
-                Map<String, SimiFunction> methods) {
+                Map<OverloadableFunction, SimiFunction> methods) {
     super(CLASS, new LinkedHashMap<>(constants), !name.startsWith(Constants.MUTABLE));
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
   }
 
-  SimiFunction findMethod(SimiObjectImpl instance, String name) {
-    if (methods.containsKey(name)) {
-      return methods.get(name).bind(instance);
-    }
+  SimiFunction findMethod(SimiObjectImpl instance, String name, Integer arity) {
+        if (arity == null) {
+            Optional<SimiFunction> candidate = methods.entrySet().stream()
+                    .filter(e -> e.getKey().name.equals(name))
+                    .map(Map.Entry::getValue)
+                    .findFirst();
+            if (candidate.isPresent()) {
+                return candidate.get();
+            }
+        } else {
+            OverloadableFunction of = new OverloadableFunction(name, arity);
+            if (methods.containsKey(of)) {
+                return methods.get(of).bind(instance);
+            }
+        }
 
     if (superclasses != null) {
         for (SimiClassImpl superclass : superclasses) {
-            SimiFunction method  = superclass.findMethod(instance, name);
+            SimiFunction method  = superclass.findMethod(instance, name, arity);
             if (method != null) {
                 return method;
             }
         }
     }
 
-    return null;
+    if (arity == null) {
+        return null;
+    } else {
+        return findClosestVarargMethod(instance, name, arity);
+    }
+  }
+
+  private SimiFunction findClosestVarargMethod(SimiObjectImpl instance, String name, int arity) {
+        Optional<SimiFunction> candidate = methods.entrySet().stream()
+                .filter(e -> e.getKey().name.equals(name) && e.getKey().arity <= arity)
+                .sorted(Comparator.comparingInt(l -> Math.abs(l.getKey().arity - arity)))
+                .map(Map.Entry::getValue)
+                .findFirst();
+        if (candidate.isPresent()) {
+            return candidate.get().bind(instance);
+        }
+        if (superclasses != null) {
+          for (SimiClassImpl superclass : superclasses) {
+              SimiFunction method  = superclass.findClosestVarargMethod(instance, name, arity);
+              if (method != null) {
+                  return method;
+              }
+          }
+      }
+      return null;
+  }
+
+  SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
+      SimiObjectImpl instance = new SimiObjectImpl(this, true);
+      SimiFunction initializer = findMethod(instance, Constants.INIT, arguments.size());
+      if (initializer != null) {
+          initializer.call(interpreter, arguments);
+      }
+      return new SimiValue.Object(instance);
   }
 
   @Override
@@ -63,24 +102,24 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
       return sb.toString();
   }
 
-  @Override
-  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
-    SimiObjectImpl instance = new SimiObjectImpl(this, true);
-    SimiFunction initializer = methods.get(Constants.INIT);
-    if (initializer != null) {
-      initializer.bind(instance).call(interpreter, arguments);
-    }
-    return new SimiValue.Object(instance);
-  }
-
-  @Override
-  public int arity() {
-    SimiFunction initializer = methods.get(Constants.INIT);
-    if (initializer == null) {
-        return 0;
-    }
-    return initializer.arity();
-  }
+//  @Override
+//  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+//      SimiObjectImpl instance = new SimiObjectImpl(this, true);
+//      SimiFunction initializer = methods.get(Constants.INIT);
+//      if (initializer != null) {
+//          initializer.bind(instance).call(interpreter, arguments);
+//      }
+//      return new SimiValue.Object(instance);
+//  }
+//
+//  @Override
+//  public int arity() {
+//    SimiFunction initializer = methods.get(Constants.INIT);
+//    if (initializer == null) {
+//        return 0;
+//    }
+//    return initializer.arity();
+//  }
 
   static class SuperClassesList extends SimiValue {
 
