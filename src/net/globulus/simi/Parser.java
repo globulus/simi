@@ -72,6 +72,9 @@ class Parser {
     List<Expr.Assign> constants = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(END) && !isAtEnd()) {
+        if (match(NEWLINE)) {
+          continue;
+        }
         if (match(DEF, NATIVE)) {
             methods.add(function("method"));
         } else {

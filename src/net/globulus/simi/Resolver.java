@@ -38,10 +38,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitBlockExpr(Expr.Block stmt) {
-    beginScope();
+  public Void visitBlockExpr(Expr.Block stmt, boolean newScope) {
+    if (newScope) {
+      beginScope();
+    }
     resolve(stmt.statements);
-    endScope();
+    if (newScope) {
+      endScope();
+    }
     return null;
   }
 
@@ -68,7 +72,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       if (method.name.lexeme.equals(Constants.INIT)) {
         declaration = FunctionType.INITIALIZER;
       }
-
       resolveFunction(method, declaration); // [local]
     }
 
@@ -226,6 +229,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     resolveLocal(expr, expr.keyword);
     return null;
   }
+
   @Override
   public Void visitSelfExpr(Expr.Self expr) {
     if (currentClass == ClassType.NONE) {
@@ -266,17 +270,17 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     stmt.accept(this);
   }
 
-  private void resolve(Expr expr) {
-    expr.accept(this);
+  private void resolve(Expr expr, Object... params) {
+    expr.accept(this, params);
   }
 
-  private void resolveBlock(Expr.Block block) {
+  private void resolveFunctionBlock(Expr.Block block) {
       beginScope();
       for (Token param : block.params) {
           declare(param);
           define(param);
       }
-      resolve(block);
+      resolve(block, false);
       endScope();
   }
 
@@ -284,7 +288,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       Stmt.Function function, FunctionType type) {
     FunctionType enclosingFunction = currentFunction;
     currentFunction = type;
-    resolveBlock(function.block);
+    resolveFunctionBlock(function.block);
     currentFunction = enclosingFunction;
   }
 
@@ -322,6 +326,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
+      Map<String, Boolean> scope = scopes.get(i);
       if (scopes.get(i).containsKey(name.lexeme)) {
         interpreter.resolve(expr, scopes.size() - 1 - i);
         return;

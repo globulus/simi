@@ -2,7 +2,7 @@ package net.globulus.simi.api;
 
 public class SimiValue {
 
-    private SimiValue() { }
+    protected SimiValue() { }
 
     public java.lang.String getString() {
         if (this instanceof String) {
@@ -39,6 +39,11 @@ public class SimiValue {
         public String(java.lang.String value) {
             this.value = value;
         }
+
+        @Override
+        public java.lang.String toString() {
+            return value;
+        }
     }
 
     public static class Number extends SimiValue {
@@ -52,6 +57,15 @@ public class SimiValue {
         public Number(boolean value) {
             this.value = value ? 1 : 0;
         }
+
+        @Override
+        public java.lang.String toString() {
+            java.lang.String text = "" + value;
+            if (text.endsWith(".0")) {
+                text = text.substring(0, text.length() - 2);
+            }
+            return text;
+        }
     }
 
     public static class Object extends SimiValue {
@@ -61,6 +75,11 @@ public class SimiValue {
         public Object(SimiObject value) {
             this.value = value;
         }
+
+        @Override
+        public java.lang.String toString() {
+            return value.toString();
+        }
     }
 
     public static class Callable extends SimiValue {
@@ -69,6 +88,11 @@ public class SimiValue {
 
         public Callable(SimiCallable value) {
             this.value = value;
+        }
+
+        @Override
+        public java.lang.String toString() {
+            return value.toString();
         }
     }
 

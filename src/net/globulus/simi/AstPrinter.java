@@ -20,7 +20,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 //> Statements and State omit
 
   @Override
-  public String visitBlockExpr(Expr.Block stmt) {
+  public String visitBlockExpr(Expr.Block stmt, boolean newScope) {
     StringBuilder builder = new StringBuilder();
     builder.append("(block ");
 

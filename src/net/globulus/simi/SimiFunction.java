@@ -9,7 +9,7 @@ import java.util.List;
 class SimiFunction implements SimiCallable {
 
   private Stmt.Function declaration;
-  private final BlockImp block;
+  private final BlockImpl block;
   private final boolean isInitializer;
   private final boolean isNative;
 
@@ -18,13 +18,13 @@ class SimiFunction implements SimiCallable {
                boolean isInitializer,
                boolean isNative) {
     this.declaration = declaration;
-    this.block = new BlockImp(declaration.block, closure);
+    this.block = new BlockImpl(declaration.block, closure);
     this.isInitializer = isInitializer;
     this.isNative = isNative;
   }
 
   private SimiFunction(Stmt.Function declaration,
-                       BlockImp block,
+                       BlockImpl block,
                        boolean isInitializer,
                        boolean isNative) {
       this.declaration = declaration;
@@ -34,8 +34,8 @@ class SimiFunction implements SimiCallable {
   }
 
   SimiFunction bind(SimiObjectImpl instance) {
-      block.bind(instance);
-      return new SimiFunction(declaration, block, isInitializer, isNative);
+//      block.bind(instance);
+      return new SimiFunction(declaration, block.bind(instance), isInitializer, isNative);
   }
 
   @Override
@@ -49,11 +49,11 @@ class SimiFunction implements SimiCallable {
   }
 
   @Override
-  public Object call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean immutable) {
-    block.call(interpreter, arguments, immutable);
+  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+    SimiValue value = block.call(interpreter, arguments);
     if (isInitializer) {
         return block.closure.getAt(0, Constants.SELF);
     }
-    return null;
+    return value;
   }
 }

@@ -1,10 +1,12 @@
 //> Functions return-exception
 package net.globulus.simi;
 
-class Return extends RuntimeException {
-  final Object value;
+import net.globulus.simi.api.SimiValue;
 
-  Return(Object value) {
+class Return extends RuntimeException {
+  final SimiValue value;
+
+  Return(SimiValue value) {
     super(null, null, false, false);
     this.value = value;
   }

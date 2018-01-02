@@ -26,10 +26,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
 
       @Override
-      public Object call(BlockInterpreter interpreter,
-                         List<SimiValue> arguments,
-                         boolean immutable) {
-        return (double)System.currentTimeMillis() / 1000.0;
+      public SimiValue call(BlockInterpreter interpreter,
+                         List<SimiValue> arguments) {
+        return new SimiValue.Number((double)System.currentTimeMillis() / 1000.0);
       }
     }));
   }
@@ -71,7 +70,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public SimiValue visitBlockExpr(Expr.Block stmt) {
+  public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
     executeBlock(stmt, new Environment(environment));
     return null;
   }
@@ -83,7 +82,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       if (stmt.superclasses != null) {
         superclasses = new ArrayList<>();
         for (Expr superclass : stmt.superclasses) {
-            Object clazz = evaluate(superclass);
+            SimiObject clazz = evaluate(superclass).getObject();
             if (!(clazz instanceof SimiClassImpl)) {
                 throw new RuntimeError(stmt.name, "Superclass must be a class.");
             }
@@ -91,7 +90,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         }
       }
       environment = new Environment(environment);
-      environment.define(Constants.SUPER, superclasses);
+      environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
       Map<String, SimiValue> constants = new HashMap<>();
       for (Expr.Assign constant : stmt.constants) {
@@ -124,10 +123,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public Void visitFunctionStmt(Stmt.Function stmt) {
+  public SimiValue visitFunctionStmt(Stmt.Function stmt) {
     SimiFunction function = new SimiFunction(stmt, environment, false, stmt.declaration.type == TokenType.NATIVE);
-    environment.define(stmt.name.lexeme, new SimiValue.Callable(function));
-    return null;
+    SimiValue value = new SimiValue.Callable(function);
+    environment.define(stmt.name.lexeme, value);
+    return value;
   }
 
   @Override
@@ -157,15 +157,17 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
-    Object value = evaluate(stmt.expression);
+    SimiValue value = evaluate(stmt.expression);
     System.out.println(stringify(value));
     return null;
   }
 
   @Override
   public Void visitReturnStmt(Stmt.Return stmt) {
-    Object value = null;
-    if (stmt.value != null) value = evaluate(stmt.value);
+    SimiValue value = null;
+    if (stmt.value != null) {
+      value = evaluate(stmt.value);
+    }
 
     throw new Return(value);
   }
@@ -185,15 +187,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
     @Override
   public SimiValue visitAssignExpr(Expr.Assign expr) {
-    SimiValue value = evaluate(expr.value);
-
+    SimiValue value;
+    if (expr.value instanceof Expr.Block) {
+      value = visitFunctionStmt(new Stmt.Function(expr.name, expr.name, (Expr.Block) expr.value));
+    } else {
+      value = evaluate(expr.value);
+    }
     Integer distance = locals.get(expr);
     if (distance != null) {
       environment.assignAt(distance, expr.name, value);
     } else {
       globals.assign(expr.name, value);
     }
-
     return value;
   }
 
@@ -256,25 +261,31 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public SimiValue visitCallExpr(Expr.Call expr) {
-    Object callee = evaluate(expr.callee);
+    SimiValue callee = evaluate(expr.callee);
 
-    List<Object> arguments = new ArrayList<>();
+    List<SimiValue> arguments = new ArrayList<>();
     for (Expr argument : expr.arguments) { // [in-order]
       arguments.add(evaluate(argument));
     }
 
-    if (!(callee instanceof SimiCallable)) {
-      throw new RuntimeError(expr.paren,
-          "Can only call functions and classes.");
+    SimiCallable function;
+    if (callee instanceof SimiValue.Object) {
+      SimiObject value = callee.getObject();
+      if (!(value instanceof SimiCallable)) {
+        throw new RuntimeError(expr.paren,"Can only call functions and classes.");
+      }
+      function = (SimiCallable) value;
+    } else if (callee instanceof SimiValue.Callable) {
+      function = callee.getCallable();
+    } else {
+      throw new RuntimeError(expr.paren,"Can only call functions and classes.");
     }
 
-    SimiCallable function = (SimiCallable)callee;
    if (arguments.size() != function.arity()) {
       throw new RuntimeError(expr.paren, "Expected " +
           function.arity() + " arguments but got " +
           arguments.size() + ".");
     }
-
     return function.call(this, arguments);
   }
 
@@ -380,19 +391,25 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         if (distance != null) {
           return environment.getAt(distance, name.lexeme);
         } else {
-          return globals.get(name);
+          SimiValue value = environment.tryGet(name.lexeme);
+          if (value == null) {
+            return globals.get(name);
+          }
+          return value;
         }
     }
 
   private void checkNumberOperand(Token operator, SimiValue operand) {
-    if (operand instanceof SimiValue.Number) return;
+    if (operand instanceof SimiValue.Number) {
+      return;
+    }
     throw new RuntimeError(operator, "Operand must be a number.");
   }
 
-  private void checkNumberOperands(Token operator,
-                                   SimiValue left, SimiValue right) {
-    if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) return;
-    // [operand]
+  private void checkNumberOperands(Token operator, SimiValue left, SimiValue right) {
+    if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
+      return;
+    }
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
@@ -410,9 +427,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   private boolean isEqual(SimiValue a, SimiValue b) {
     // nil is only equal to nil.
-    if (a == null && b == null) return true;
-    if (a == null) return false;
-
+    if (a == null && b == null) {
+      return true;
+    }
+    if (a == null) {
+      return false;
+    }
     return a.equals(b);
   }
 
@@ -436,18 +456,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       return ((SimiObjectImpl) b.getObject()).contains(a, expr.operator);
   }
 
-  private String stringify(Object object) {
-    if (object == null) return "nil";
-
-    // Hack. Work around Java adding ".0" to integer-valued doubles.
-    if (object instanceof Double) {
-      String text = object.toString();
-      if (text.endsWith(".0")) {
-        text = text.substring(0, text.length() - 2);
-      }
-      return text;
+  private String stringify(SimiValue object) {
+    if (object == null) {
+      return "nil";
     }
-
     return object.toString();
   }
 }

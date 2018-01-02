@@ -41,15 +41,16 @@ class Environment implements SimiEnvironment {
         }
     } else {
         define(key, value);
+        return;
     }
 
-    if (enclosing != null) {
-      enclosing.assign(name, value);
-      return;
-    }
-
-    throw new RuntimeError(name,
-        "Undefined variable '" + key + "'.");
+//    if (enclosing != null) {
+//      enclosing.assign(name, value);
+//      return;
+//    }
+//
+//    throw new RuntimeError(name,
+//        "Undefined variable '" + key + "'.");
   }
 
   void define(String name, SimiValue value) {
@@ -71,6 +72,16 @@ class Environment implements SimiEnvironment {
 
   void assignAt(int distance, Token name, SimiValue value) {
     ancestor(distance).assign(name, value);
+  }
+
+  SimiValue tryGet(String name) {
+    for (Environment env = this; env != null; env = env.enclosing) {
+      SimiValue value = env.values.get(name);
+      if (value != null) {
+        return value;
+      }
+    }
+    return null;
   }
 
   @Override

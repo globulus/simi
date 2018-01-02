@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface SimiCallable {
   int arity();
-  Object call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean immutable);
+  SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments);
 }

@@ -1,0 +1,35 @@
+#$a = 3
+#b = 5
+#c = $a + b
+#$a = 4
+#print c
+
+class Car:
+
+    def init(capacity):
+        self.capacity = capacity
+        self.tank = 0
+    end
+
+    def refill(amount):
+        if self.tank + amount > self.capacity: self.tank = self.capacity
+        else: self.tank = self.tank + amount
+    end
+end
+
+#def min3(a, b, c):
+#    min2 = def (a, b):
+#        if a < b: return a
+#        else: return b
+#    end
+#    return min2(min2(a, b), c)
+#end
+
+#d = min3(4, 5, 3)
+
+car = Car(30)
+print(car.tank)
+car.refill(20)
+print(car.tank)
+car.refill(20)
+print(car.tank)

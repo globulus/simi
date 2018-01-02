@@ -65,7 +65,7 @@ class SimiObjectImpl implements SimiObject {
   }
 
   void set(Token name, SimiValue value, Environment environment) {
-      checkMutability(name);
+      checkMutability(name, environment);
       String key = name.lexeme;
       try {
           int index = Integer.parseInt(key);
@@ -112,8 +112,8 @@ class SimiObjectImpl implements SimiObject {
       return true;
   }
 
-  private void checkMutability(Token name) {
-      if (this.immutable) {
+  private void checkMutability(Token name, Environment environment) {
+      if (this.immutable && environment.get(Token.self()).getObject() != this) {
           throw new RuntimeError(name, "Trying to alter an immutable object!");
       }
   }

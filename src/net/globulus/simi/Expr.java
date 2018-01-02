@@ -9,7 +9,7 @@ import java.util.List;
 abstract class Expr {
 
   interface Visitor<R> {
-    R visitBlockExpr(Block expr);
+    R visitBlockExpr(Block expr, boolean newScope);
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
     R visitCallExpr(Call expr);
@@ -31,8 +31,9 @@ abstract class Expr {
             this.statements = statements;
         }
 
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitBlockExpr(this);
+        <R> R accept(Visitor<R> visitor, Object... params) {
+            boolean newScope = (params.length == 0) ? true : (Boolean) params[0];
+            return visitor.visitBlockExpr(this, newScope);
         }
 
         final List<Token> params;
@@ -50,7 +51,7 @@ abstract class Expr {
       this.value = value;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitAssignExpr(this);
     }
 
@@ -64,7 +65,7 @@ abstract class Expr {
       this.right = right;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitBinaryExpr(this);
     }
 
@@ -72,6 +73,7 @@ abstract class Expr {
     final Token operator;
     final Expr right;
   }
+
   static class Call extends Expr {
     Call(Expr callee, Token paren, List<Expr> arguments) {
       this.callee = callee;
@@ -79,7 +81,7 @@ abstract class Expr {
       this.arguments = arguments;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitCallExpr(this);
     }
 
@@ -94,7 +96,7 @@ abstract class Expr {
       this.name = name;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitGetExpr(this);
     }
 
@@ -106,7 +108,7 @@ abstract class Expr {
       this.expression = expression;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitGroupingExpr(this);
     }
 
@@ -117,7 +119,7 @@ abstract class Expr {
       this.value = value;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitLiteralExpr(this);
     }
 
@@ -131,7 +133,7 @@ abstract class Expr {
       this.right = right;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitLogicalExpr(this);
     }
 
@@ -147,7 +149,7 @@ abstract class Expr {
       this.value = value;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitSetExpr(this);
     }
 
@@ -162,7 +164,7 @@ abstract class Expr {
       this.method = method;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitSuperExpr(this);
     }
 
@@ -174,7 +176,7 @@ abstract class Expr {
       this.keyword = keyword;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitSelfExpr(this);
     }
 
@@ -186,7 +188,7 @@ abstract class Expr {
       this.right = right;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitUnaryExpr(this);
     }
 
@@ -198,7 +200,7 @@ abstract class Expr {
             this.name = name;
         }
 
-        <R> R accept(Visitor<R> visitor) {
+        <R> R accept(Visitor<R> visitor, Object... params) {
             return visitor.visitVariableExpr(this);
         }
 
@@ -211,7 +213,7 @@ abstract class Expr {
             this.props = props;
         }
 
-        <R> R accept(Visitor<R> visitor) {
+        <R> R accept(Visitor<R> visitor, Object... params) {
             return visitor.visitObjectLiteralExpr(this);
         }
 
@@ -219,5 +221,5 @@ abstract class Expr {
         final List<Expr> props;
     }
 
-  abstract <R> R accept(Visitor<R> visitor);
+  abstract <R> R accept(Visitor<R> visitor, Object... params);
 }

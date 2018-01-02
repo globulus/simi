@@ -31,7 +31,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
                 List<SimiClassImpl> superclasses,
                 Map<String, SimiValue> constants,
                 Map<String, SimiFunction> methods) {
-    super(CLASS, new LinkedHashMap<>(constants), name.startsWith(Constants.MUTABLE));
+    super(CLASS, new LinkedHashMap<>(constants), !name.startsWith(Constants.MUTABLE));
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
@@ -64,13 +64,13 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
   }
 
   @Override
-  public Object call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean immutable) {
-    SimiObjectImpl instance = new SimiObjectImpl(this, immutable);
+  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+    SimiObjectImpl instance = new SimiObjectImpl(this, true);
     SimiFunction initializer = methods.get(Constants.INIT);
     if (initializer != null) {
-      initializer.bind(instance).call(interpreter, arguments, immutable);
+      initializer.bind(instance).call(interpreter, arguments);
     }
-    return instance;
+    return new SimiValue.Object(instance);
   }
 
   @Override
@@ -80,5 +80,14 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, SimiCallable {
         return 0;
     }
     return initializer.arity();
+  }
+
+  static class SuperClassesList extends SimiValue {
+
+        public final List<SimiClassImpl> value;
+
+        public SuperClassesList(List<SimiClassImpl> value) {
+            this.value = value;
+        }
   }
 }
