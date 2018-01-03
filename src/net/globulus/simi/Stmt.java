@@ -139,7 +139,7 @@ abstract class Stmt implements SimiStatement {
   }
 
     static class For extends Stmt {
-        For(Token var, Stmt iterable, Expr.Block body) {
+        For(Expr.Variable var, Expr iterable, Expr.Block body) {
             this.var = var;
             this.iterable = iterable;
             this.body = body;
@@ -149,8 +149,8 @@ abstract class Stmt implements SimiStatement {
             return visitor.visitForStmt(this);
         }
 
-        final Token var;
-        final Stmt iterable;
+        final Expr.Variable var;
+        final Expr iterable;
         final Expr.Block body;
     }
 

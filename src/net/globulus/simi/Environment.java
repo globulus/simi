@@ -30,10 +30,10 @@ class Environment implements SimiEnvironment {
         "Undefined variable '" + name.lexeme + "'.");
   }
 
-  void assign(Token name, SimiValue value) {
+  void assign(Token name, SimiValue value, boolean allowImmutable) {
       String key = name.lexeme;
     if (values.containsKey(key)) {
-        if (key.startsWith(Constants.MUTABLE)) {
+        if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
             values.put(key, value);
             return;
         } else {
@@ -71,7 +71,7 @@ class Environment implements SimiEnvironment {
   }
 
   void assignAt(int distance, Token name, SimiValue value) {
-    ancestor(distance).assign(name, value);
+    ancestor(distance).assign(name, value, false);
   }
 
   SimiValue tryGet(String name) {

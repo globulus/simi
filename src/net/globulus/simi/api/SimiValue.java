@@ -44,6 +44,14 @@ public class SimiValue {
         public java.lang.String toString() {
             return value;
         }
+
+        @Override
+        public boolean equals(java.lang.Object obj) {
+            if (obj == null || !(obj instanceof SimiValue.String)) {
+                return false;
+            }
+            return value.equals(((String) obj).value);
+        }
     }
 
     public static class Number extends SimiValue {
@@ -65,6 +73,14 @@ public class SimiValue {
                 text = text.substring(0, text.length() - 2);
             }
             return text;
+        }
+
+        @Override
+        public boolean equals(java.lang.Object obj) {
+            if (obj == null || !(obj instanceof SimiValue.Number)) {
+                return false;
+            }
+            return value == ((Number) obj).value;
         }
     }
 

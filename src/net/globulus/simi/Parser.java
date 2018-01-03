@@ -112,9 +112,9 @@ class Parser {
   private Stmt forStatement() {
       Token var = consume(IDENTIFIER, "Expected identifier.");
       consume(IN, "Expected 'in'.");
-      Stmt iterable = expressionStatement();
+      Expr iterable = expression();
       Expr.Block body = block("for", true);
-      return new Stmt.For(var, iterable, body);
+      return new Stmt.For(new Expr.Variable(var), iterable, body);
   }
 
   private Stmt ifStatement() {
@@ -132,7 +132,7 @@ class Parser {
   }
 
   private Stmt printStatement() {
-    Expr value = expression();
+    Expr value = expressionStatement().expression;
     return new Stmt.Print(value);
   }
 
@@ -160,11 +160,11 @@ class Parser {
 
   private Stmt whileStatement() {
     Expr condition = expression();
-    Expr.Block block = block("while", false);
+    Expr.Block block = block("while", true);
     return new Stmt.While(condition, block);
   }
 
-  private Stmt expressionStatement() {
+  private Stmt.Expression expressionStatement() {
     Expr expr = expression();
     consume(NEWLINE, "Expect newline after expression.");
     return new Stmt.Expression(expr);
@@ -174,6 +174,8 @@ class Parser {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     Expr.Block block = block(kind, false);
+
+    // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
       List<Stmt> statements = new ArrayList<>();
       for (Token param : block.params) {
@@ -182,6 +184,7 @@ class Parser {
       }
       block = new Expr.Block(block.params, statements);
     }
+
     return new Stmt.Function(declaration, name, block);
   }
 
@@ -191,6 +194,9 @@ class Parser {
     List<Stmt> statements = new ArrayList<>();
     if (match(NEWLINE)) {
         while (!check(END) && !isAtEnd()) {
+            if (match(NEWLINE, PASS, GU)) {
+              continue;
+            }
             statements.add(declaration());
         }
         consume(END, "Expect 'end' after block.");

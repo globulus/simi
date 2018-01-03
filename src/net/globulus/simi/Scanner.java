@@ -48,14 +48,16 @@ class Scanner {
   Scanner(String source) {
     this.source = source;
   }
-  List<Token> scanTokens() {
+  List<Token> scanTokens(boolean addEof) {
     while (!isAtEnd()) {
       // We are at the beginning of the next lexeme.
       start = current;
       scanToken();
     }
 
-    tokens.add(new Token(TokenType.EOF, "", null, line));
+    if (addEof) {
+      tokens.add(new Token(TokenType.EOF, "", null, line));
+    }
     return tokens;
   }
 

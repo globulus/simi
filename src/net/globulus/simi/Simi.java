@@ -27,13 +27,18 @@ public class Simi {
     }
   }
 
-  private static String readFile(String path) throws IOException {
+  private static String readFile(String path, boolean prepend) throws IOException {
     byte[] bytes = Files.readAllBytes(Paths.get(path));
-    return new String(bytes, Charset.defaultCharset());
+    String content = new String(bytes, Charset.defaultCharset());
+    if (prepend) {
+        return "import \"/Users/gordanglavas/Desktop/github/simi/stdlib/Stdlib.simi\"\n"
+                + content;
+    }
+    return content;
   }
 
   private static void runFile(String path) throws IOException {
-    run(readFile(path));
+    run(readFile(path, true));
 
     if (hadError) System.exit(65);
     if (hadRuntimeError) System.exit(70);
@@ -55,7 +60,7 @@ public class Simi {
       List<String> imports = new ArrayList<>();
 
     Scanner scanner = new Scanner(source);
-    List<Token> tokens = scanImports(scanner.scanTokens(), imports, nativeModulesManager);
+    List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManager);
     Parser parser = new Parser(tokens);
     List<Stmt> statements = parser.parse();
 
@@ -90,7 +95,7 @@ public class Simi {
       if (pathString.endsWith(".jar")) {
           nativeModulesManager.loadJar(path.toUri().toURL());
       } else if (pathString.endsWith(".simi")) {
-          List<Token> tokens = new Scanner(readFile(location)).scanTokens();
+          List<Token> tokens = new Scanner(readFile(location, false)).scanTokens(false);
           result.addAll(scanImports(tokens, imports, nativeModulesManager));
       }
     }

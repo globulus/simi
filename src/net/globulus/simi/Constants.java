@@ -11,7 +11,7 @@ class Constants {
     public static final String SUPER = "super";
 
     public static final String ITERATE = "iterate";
-    public static final String NEXR = "next";
+    public static final String NEXT = "next";
 
     public static final String CLASS_OBJECT = "$Object";
     public static final String CLASS_STRING = "$String";

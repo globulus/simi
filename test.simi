@@ -30,6 +30,12 @@ end
 
 #d = min3(4, 5, 3)
 
+$a = 2
+while $a < 10:
+    print $a
+    $a = $a + 1
+end
+
 car = Car(40, 10)
 print(car.tank)
 car.refill(20)
@@ -38,3 +44,7 @@ car.refill(20)
 print(car.tank)
 car.refill(20, 10)
 print car.tank
+
+for i in Range(10, 20):
+    print i
+end

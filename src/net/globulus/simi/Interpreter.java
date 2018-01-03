@@ -113,7 +113,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 //      environment = environment.enclosing;
 //    }
 
-    environment.assign(stmt.name, new SimiValue.Object(klass));
+    environment.assign(stmt.name, new SimiValue.Object(klass), false);
     return null;
   }
 
@@ -183,6 +183,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitForStmt(Stmt.For stmt) {
+    List<Expr> emptyArgs = new ArrayList<>();
+    SimiObjectImpl iterable = (SimiObjectImpl) evaluate(stmt.iterable).getObject();
+    Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
+    SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), iterateToken, emptyArgs).getObject();
+    Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
+    SimiValue nextMethod = iterator.get(nextToken, 0, environment);
+    while (true) {
+      SimiValue var = call(nextMethod, nextToken, emptyArgs);
+      if (var == null) {
+        break;
+      }
+      environment.assign(stmt.var.name, var, true);
+      evaluate(stmt.body);
+    }
     return null;
   }
 
@@ -198,7 +212,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (distance != null) {
       environment.assignAt(distance, expr.name, value);
     } else {
-      globals.assign(expr.name, value);
+      globals.assign(expr.name, value, false);
     }
     return value;
   }
@@ -263,9 +277,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiValue visitCallExpr(Expr.Call expr) {
     SimiValue callee = evaluate(expr.callee);
+    return call(callee, expr.paren, expr.arguments);
+  }
 
+  private SimiValue call(SimiValue callee, Token paren, List<Expr> args) {
     List<SimiValue> arguments = new ArrayList<>();
-    for (Expr argument : expr.arguments) { // [in-order]
+    for (Expr argument : args) { // [in-order]
       arguments.add(evaluate(argument));
     }
 
@@ -273,19 +290,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (callee instanceof SimiValue.Object) {
       SimiObject value = callee.getObject();
       if (!(value instanceof SimiClassImpl)) {
-        throw new RuntimeError(expr.paren,"Can only call functions and classes.");
+        throw new RuntimeError(paren,"Can only call functions and classes.");
       }
       return ((SimiClassImpl) value).init(this, arguments);
     } else if (callee instanceof SimiValue.Callable) {
       function = callee.getCallable();
     } else {
-      throw new RuntimeError(expr.paren,"Can only call functions and classes.");
+      throw new RuntimeError(paren,"Can only call functions and classes.");
     }
 
-   if (arguments.size() != function.arity()) {
-      throw new RuntimeError(expr.paren, "Expected " +
-          function.arity() + " arguments but got " +
-          arguments.size() + ".");
+    if (arguments.size() != function.arity()) {
+      throw new RuntimeError(paren, "Expected " +
+              function.arity() + " arguments but got " +
+              arguments.size() + ".");
     }
     return function.call(this, arguments);
   }
