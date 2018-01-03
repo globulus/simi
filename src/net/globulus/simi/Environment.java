@@ -19,6 +19,10 @@ class Environment implements SimiEnvironment {
     this.enclosing = enclosing;
   }
 
+  boolean has(String key) {
+    return values.containsKey(key);
+  }
+
   SimiValue get(Token name) {
     if (values.containsKey(name.lexeme)) {
       return values.get(name.lexeme);
@@ -35,13 +39,11 @@ class Environment implements SimiEnvironment {
     if (values.containsKey(key)) {
         if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
             values.put(key, value);
-            return;
         } else {
             throw new RuntimeError(name, "Cannot assign to a const, use " + Constants.MUTABLE + " at the start of var name!");
         }
     } else {
         define(key, value);
-        return;
     }
 
 //    if (enclosing != null) {

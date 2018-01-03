@@ -1,14 +1,12 @@
 package net.globulus.simi;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   private final Interpreter interpreter;
   private final NativeModulesManager nativeModulesManager;
+  Set<String> globalScope = new HashSet<>();
   private final Stack<Map<String, Boolean>> scopes = new Stack<>();
     private FunctionType currentFunction = FunctionType.NONE;
 
@@ -51,7 +49,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitClassStmt(Stmt.Class stmt) {
-    declare(stmt.name);
+    declare(stmt.name, false);
     define(stmt.name);
     ClassType enclosingClass = currentClass;
     currentClass = ClassType.CLASS;
@@ -91,7 +89,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
-    declare(stmt.name);
+    declare(stmt.name, false);
     define(stmt.name);
     resolveFunction(stmt, FunctionType.FUNCTION);
     return null;
@@ -165,6 +163,9 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitAssignExpr(Expr.Assign expr) {
+    if (!declare(expr.name, true)) {
+      Simi.error(expr.name, "Constant with this name already declared in this scope.");
+    }
     resolve(expr.value);
     resolveLocal(expr, expr.name);
     return null;
@@ -280,7 +281,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private void resolveFunctionBlock(Expr.Block block) {
       beginScope();
       for (Token param : block.params) {
-          declare(param);
+          declare(param, false);
           define(param);
       }
       resolve(block, false);
@@ -303,22 +304,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     scopes.pop();
   }
 
-  private boolean declare(Token name) {
-    if (scopes.isEmpty()) {
-      return false;
-    }
+  private boolean declare(Token name, boolean autodefine) {
     String var = name.lexeme;
-    Map<String, Boolean> scope = scopes.peek();
     boolean mutable = var.startsWith(Constants.MUTABLE);
-    if (scope.containsKey(var)) {
-      if (!mutable) {
-        Simi.error(name,
-                "Constant with this name already declared in this scope.");
-        return false;
+    if (scopes.isEmpty()) {
+      if (globalScope.contains(var)) {
+        return mutable;
       }
-    } else {
-      scope.put(var, false);
+      globalScope.add(var);
+      return true;
     }
+    for (Map<String, Boolean> scope : scopes) {
+      if (scope.containsKey(var)) {
+        return mutable;
+      }
+    }
+    Map<String, Boolean> scope = scopes.peek();
+    scope.put(var, autodefine);
     return true;
   }
 
@@ -328,13 +330,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   private void resolveLocal(Expr expr, Token name) {
+    if (globalScope.contains(name.lexeme)) {
+      return;
+    }
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
         interpreter.resolve(expr, scopes.size() - 1 - i);
         return;
       }
     }
-
     // Not found. Assume it is global.
   }
 }

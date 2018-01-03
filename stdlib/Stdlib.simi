@@ -14,12 +14,12 @@ class RangeIterator(Iterator):
     end
 
     def next():
-        if self.current == self.range.stop:
+        if self.range.stop > self.range.start and self.current >= self.range.stop or self.range.stop < self.range.start and self.current <= self.range.stop:
             return nil
         end else:
-            $c = self.current
+            c = self.current
             self.current = self.current + self.range.step
-            return $c
+            return c
         end
     end
 end
@@ -35,6 +35,8 @@ class Range(Iterable):
             self.step = -1
         end
     end
+
+    def init(start, stop, step): pass
 
     def iterate():
         return RangeIterator(self)

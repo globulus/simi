@@ -183,6 +183,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitForStmt(Stmt.For stmt) {
+    Environment previous = this.environment;
+    this.environment = new Environment(this.environment);
     List<Expr> emptyArgs = new ArrayList<>();
     SimiObjectImpl iterable = (SimiObjectImpl) evaluate(stmt.iterable).getObject();
     Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
@@ -197,6 +199,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       environment.assign(stmt.var.name, var, true);
       evaluate(stmt.body);
     }
+    this.environment = previous;
     return null;
   }
 

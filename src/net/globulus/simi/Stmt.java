@@ -47,9 +47,7 @@ abstract class Stmt implements SimiStatement {
 
     final Expr expression;
   }
-//< stmt-expression
 
-//> stmt-function
   static class Function extends Stmt {
     Function(Token declaration, Token name, Expr.Block block) {
         this.declaration = declaration;
@@ -65,7 +63,6 @@ abstract class Stmt implements SimiStatement {
     final Token name;
     final Expr.Block block;
   }
-//< stmt-function
 
     static class Elsif extends Stmt {
         Elsif(Expr condition, Expr.Block thenBranch) {
