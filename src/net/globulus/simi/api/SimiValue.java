@@ -1,8 +1,10 @@
 package net.globulus.simi.api;
 
-public class SimiValue {
+public abstract class SimiValue {
 
     protected SimiValue() { }
+
+    public abstract SimiValue copy();
 
     public java.lang.String getString() {
         if (this instanceof String) {
@@ -52,6 +54,11 @@ public class SimiValue {
             }
             return value.equals(((String) obj).value);
         }
+
+        @Override
+        public SimiValue copy() {
+            return new String(value);
+        }
     }
 
     public static class Number extends SimiValue {
@@ -82,6 +89,11 @@ public class SimiValue {
             }
             return value == ((Number) obj).value;
         }
+
+        @Override
+        public SimiValue copy() {
+            return new Number(value);
+        }
     }
 
     public static class Object extends SimiValue {
@@ -96,19 +108,33 @@ public class SimiValue {
         public java.lang.String toString() {
             return value.toString();
         }
+
+        @Override
+        public SimiValue copy() {
+            return new Object(value);
+        }
     }
 
     public static class Callable extends SimiValue {
 
         public final SimiCallable value;
+        public final java.lang.String name;
+        public final SimiObject instance;
 
-        public Callable(SimiCallable value) {
+        public Callable(SimiCallable value, java.lang.String name, SimiObject instance) {
             this.value = value;
+            this.name = name;
+            this.instance = instance;
         }
 
         @Override
         public java.lang.String toString() {
             return value.toString();
+        }
+
+        @Override
+        public SimiValue copy() {
+            return new Callable(value, name, instance);
         }
     }
 

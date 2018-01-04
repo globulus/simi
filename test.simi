@@ -30,13 +30,31 @@ end
 
 #d = min3(4, 5, 3)
 
+arr = [1, 2, 3]
+
+len = arr.len()
+print len
+
+keys = arr.keys()
+print keys
+
+print arr
+for i in arr: print i
+
+dict = [a = 1, b = "str", c = Range(1, 10, 3)]
+print dict
+for i in dict: print i
+
+str = "this is a 'string'"
+print str
+
 $a = 2
 while $a < 10:
     print $a
     $a = $a + 1
 end
 
-for i in Range(10, -20, -3):
+for i in Range(start=10, stop=-20, step=-3):
     print i
 end
 

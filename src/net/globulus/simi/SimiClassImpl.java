@@ -4,6 +4,7 @@ import net.globulus.simi.api.*;
 
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 class SimiClassImpl extends SimiObjectImpl implements SimiClass {
@@ -14,6 +15,8 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   private final Map<OverloadableFunction, SimiFunction> methods;
 
   static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
+  static final SimiClassImpl NUMBER = new SimiClassImpl(Constants.CLASS_NUMBER);
+  static final SimiClassImpl STRING = new SimiClassImpl(Constants.CLASS_STRING);
 
     private SimiClassImpl(String name) {
        super(null, new LinkedHashMap<>(), true);
@@ -96,7 +99,19 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   @Override
   public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append(name).append(" = [\n");
+      sb.append(name);
+      if (superclasses != null) {
+          sb.append("(").append(superclasses.stream().map(c -> c.name).reduce("", (l, r) -> l + ", " + r)).append(")");
+      }
+      sb.append(" = [\n");
+//      for (String key : constants.keySet()) {
+//          sb.append("\t").append(key).append(" = ").append(fields.get(key)).append("\n");
+//      }
+      for (OverloadableFunction key : methods.keySet()) {
+          sb.append("\t")
+                  .append(key.name).append("(").append(key.arity).append(")")
+                  .append(" = ").append(methods.get(key)).append("\n");
+      }
       sb.append(printFields());
       sb.append("]");
       return sb.toString();
@@ -128,5 +143,10 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
         public SuperClassesList(List<SimiClassImpl> value) {
             this.value = value;
         }
+
+      @Override
+      public SimiValue copy() {
+          return new SuperClassesList(value);
+      }
   }
 }

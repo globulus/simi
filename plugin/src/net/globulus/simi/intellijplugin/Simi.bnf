@@ -1,0 +1,20 @@
+{
+  parserClass="net.globulus.simi.intellijplugin.parser.SimiParser"
+
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="Simi"
+  psiImplClassSuffix="Impl"
+  psiPackage="net.globulus.simi.intellijplugin.psi"
+  psiImplPackage="net.globulus.simi.intellijplugin.psi.impl"
+
+  elementTypeHolderClass="net.globulus.simi.intellijplugin.psi.SimiTypes"
+  elementTypeClass="net.globulus.simi.intellijplugin.psi.SimiElementType"
+  tokenTypeClass="net.globulus.simi.intellijplugin.psi.SimiTokenType"
+}
+
+simiFile ::= item_*
+
+private item_ ::= (property|COMMENT|CRLF)
+
+property ::= (KEY? SEPARATOR VALUE?) | KEY

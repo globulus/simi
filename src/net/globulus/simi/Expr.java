@@ -227,9 +227,10 @@ abstract class Expr {
     }
 
     static class ObjectLiteral extends Expr {
-        ObjectLiteral(Token opener, List<Expr> props) {
+        ObjectLiteral(Token opener, List<Expr> props, boolean isDictionary) {
             this.opener = opener;
             this.props = props;
+            this.isDictionary = isDictionary;
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
@@ -238,6 +239,7 @@ abstract class Expr {
 
         final Token opener;
         final List<Expr> props;
+        final boolean isDictionary;
     }
 
   abstract <R> R accept(Visitor<R> visitor, Object... params);

@@ -5,12 +5,15 @@ import net.globulus.simi.api.SimiEnvironment;
 import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiValue;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
 
 class SimiObjectImpl implements SimiObject {
 
   final SimiClassImpl clazz;
-  private final LinkedHashMap<String, SimiValue> fields;
+  final LinkedHashMap<String, SimiValue> fields;
   final boolean immutable;
 
   SimiObjectImpl(SimiClassImpl clazz,
@@ -26,6 +29,18 @@ class SimiObjectImpl implements SimiObject {
     this.fields = new LinkedHashMap<>();
     this.immutable = immutable;
   }
+
+  static SimiObjectImpl fromMap(SimiClassImpl clazz, LinkedHashMap<String, SimiValue> fields) {
+      return new SimiObjectImpl(clazz, fields, true);
+  }
+
+    static SimiObjectImpl fromArray(SimiClassImpl clazz, List<SimiValue> fields) {
+        LinkedHashMap<String, SimiValue> map = new LinkedHashMap<>();
+        for (int i = 0; i < fields.size(); i++) {
+            map.put(Constants.IMPLICIT + i, fields.get(i));
+        }
+        return new SimiObjectImpl(clazz, map, true);
+    }
 
   SimiValue get(Token name, Integer arity, Environment environment) {
       String key = name.lexeme;
@@ -55,7 +70,7 @@ class SimiObjectImpl implements SimiObject {
     if (clazz != null) {
         SimiFunction method = clazz.findMethod(this, key, arity);
         if (method != null) {
-            return new SimiValue.Callable(method);
+            return new SimiValue.Callable(method, key, this);
         }
     }
 
@@ -112,6 +127,10 @@ class SimiObjectImpl implements SimiObject {
       return true;
   }
 
+  int length() {
+      return fields.size();
+  }
+
   private void checkMutability(Token name, Environment environment) {
       if (this.immutable && environment.get(Token.self()).getObject() != this) {
           throw new RuntimeError(name, "Trying to alter an immutable object!");
@@ -122,13 +141,13 @@ class SimiObjectImpl implements SimiObject {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[\n");
-    sb.append("immutable").append(immutable);
+    sb.append("\timmutable: ").append(immutable).append("\n");
     if (clazz != null) {
-        sb.append("class: ")
+        sb.append("\tclass: ")
                 .append(clazz.name)
-                .append("\n>>")
+                .append("\n\t>>")
                 .append(clazz.toString())
-                .append("\n");
+                .append(";\n");
     }
     sb.append(printFields());
     sb.append("]");
@@ -138,7 +157,7 @@ class SimiObjectImpl implements SimiObject {
   protected String printFields() {
       StringBuilder sb = new StringBuilder();
       for (String key : fields.keySet()) {
-          sb.append(key).append(" = ").append(fields.get(key)).append("\n");
+          sb.append("\t").append(key).append(" = ").append(fields.get(key)).append("\n");
       }
       return sb.toString();
   }

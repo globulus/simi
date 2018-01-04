@@ -124,7 +124,7 @@ class Scanner {
       default:
 
       if (isStringDelim(c)) {
-        string();
+        string(c);
       } else if (isDigit(c)) {
           number();
         } else if (isAlpha(c)) {
@@ -168,8 +168,8 @@ class Scanner {
         new SimiValue.Number(Double.parseDouble(source.substring(start, current))));
   }
 
-  protected void string() {
-    while (!isStringDelim(peek()) && !isAtEnd()) {
+  protected void string(char opener) {
+    while (peek() != opener && !isAtEnd()) {
       if (peek() == '\n') line++;
       advance();
     }

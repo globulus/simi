@@ -24,6 +24,10 @@ class Token {
     return new Token(TokenType.NATIVE, name, null, 0);
   }
 
+  static Token named(String name) {
+    return new Token(TokenType.IDENTIFIER, name, null, 0);
+  }
+
   @Override
   public String toString() {
     return type + " " + lexeme + " " + literal;

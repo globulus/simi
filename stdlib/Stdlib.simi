@@ -1,3 +1,20 @@
+class $Object:
+    native len(): pass
+    native keys(): pass
+    native values(): pass
+
+    native iterate(): pass
+    native has(): pass
+end
+
+class $Number:
+
+end
+
+class $String:
+
+end
+
 class Iterator:
     def next(): pass
 end
@@ -29,11 +46,8 @@ class Range(Iterable):
     def init(start, stop):
         self.start = start
         self.stop = stop
-        if start < stop:
-            self.step = 1
-        end else:
-            self.step = -1
-        end
+        if start < stop: self.step = 1
+        else: self.step = -1
     end
 
     def init(start, stop, step): pass
