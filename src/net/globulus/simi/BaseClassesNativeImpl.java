@@ -1,5 +1,6 @@
 package net.globulus.simi;
 
+import com.sun.tools.internal.jxc.ap.Const;
 import net.globulus.simi.api.BlockInterpreter;
 import net.globulus.simi.api.SimiCallable;
 import net.globulus.simi.api.SimiObject;
@@ -46,7 +47,21 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(keys);
             }
         });
+        methods.put(new OverloadableFunction("values", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
 
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiObjectImpl keys = SimiObjectImpl.fromArray(
+                        (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject(),
+                        new ArrayList<>(self.fields.values()));
+                return new SimiValue.Object(keys);
+            }
+        });
         methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -83,6 +98,18 @@ class BaseClassesNativeImpl {
                     }
                 }, null, null));
                 return new SimiValue.Object(new SimiNativeObject(fields));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.HAS, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                return new SimiValue.Number(self.contains(arguments.get(1), Token.nativeCall(Constants.HAS)));
             }
         });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);

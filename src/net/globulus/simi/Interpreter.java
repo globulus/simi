@@ -204,11 +204,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     List<Expr> emptyArgs = new ArrayList<>();
     SimiObjectImpl iterable = (SimiObjectImpl) evaluate(stmt.iterable).getObject();
     Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
-    SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), iterateToken, emptyArgs).getObject();
+    SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
     SimiValue nextMethod = iterator.get(nextToken, 0, environment);
     while (true) {
-      SimiValue var = call(nextMethod, nextToken, emptyArgs);
+      SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
         break;
       }
@@ -299,15 +299,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiValue visitCallExpr(Expr.Call expr) {
     SimiValue callee = evaluate(expr.callee);
-    return call(callee, expr.paren, expr.arguments);
+    return call(callee, expr.arguments, expr.paren);
   }
 
-  private SimiValue call(SimiValue callee, Token paren, List<Expr> args) {
+  private SimiValue call(SimiValue callee, List<Expr> args, Token paren) {
     List<SimiValue> arguments = new ArrayList<>();
     for (Expr argument : args) { // [in-order]
       arguments.add(evaluate(argument));
     }
+    return call(callee, paren, arguments);
+  }
 
+  private SimiValue call(SimiValue callee, Token paren, List<SimiValue> arguments) {
     SimiCallable callable;
     String methodName;
     SimiObject instance;
@@ -545,7 +548,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       if (!(b instanceof SimiValue.Object)) {
           throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
-      return ((SimiObjectImpl) b.getObject()).contains(a, expr.operator);
+      SimiObjectImpl object = ((SimiObjectImpl) b.getObject());
+      Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line);
+      return call(object.get(has, 1, environment), has, Collections.singletonList(a)).getNumber() != 0;
   }
 
   private String stringify(SimiValue object) {

@@ -12,6 +12,7 @@ class Constants {
 
     public static final String ITERATE = "iterate";
     public static final String NEXT = "next";
+    public static final String HAS = "has";
 
     public static final String CLASS_OBJECT = "$Object";
     public static final String CLASS_STRING = "$String";

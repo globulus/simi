@@ -4,7 +4,7 @@ class $Object:
     native values(): pass
 
     native iterate(): pass
-    native has(): pass
+    native has(obj): pass
 end
 
 class $Number:
@@ -19,10 +19,6 @@ class Iterator:
     def next(): pass
 end
 
-class Iterable:
-    def iterate(): pass
-end
-
 class RangeIterator(Iterator):
 
     def init(range):
@@ -31,17 +27,16 @@ class RangeIterator(Iterator):
     end
 
     def next():
-        if self.range.stop > self.range.start and self.current >= self.range.stop or self.range.stop < self.range.start and self.current <= self.range.stop:
-            return nil
-        end else:
+        if self.current in self.range:
             c = self.current
             self.current = self.current + self.range.step
             return c
         end
+        return nil
     end
 end
 
-class Range(Iterable):
+class Range:
 
     def init(start, stop):
         self.start = start
@@ -54,5 +49,9 @@ class Range(Iterable):
 
     def iterate():
         return RangeIterator(self)
+    end
+
+    def has(val):
+        return self.stop > self.start and val < self.stop or self.stop < self.start and val > self.stop
     end
 end

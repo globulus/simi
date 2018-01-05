@@ -41,12 +41,18 @@ print keys
 print arr
 for i in arr: print i
 
+print "arr has value:"
+print 22 in arr
+
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
 print dict
 for i in dict:
     print i
     print dict.(i)
 end
+
+print "dict has key:"
+print "gg" in dict
 
 str = "this is a 'string'"
 print str
