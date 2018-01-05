@@ -49,7 +49,7 @@ class Parser {
       if (match(DEF, NATIVE)) {
           return function("function");
       }
-      return statement();
+      return statement(false);
     } catch (ParseError error) {
       synchronize();
       return null;
@@ -87,7 +87,7 @@ class Parser {
     return new Stmt.Class(name, superclasses, constants, methods);
   }
 
-  private Stmt statement() {
+  private Stmt statement(boolean lambda) {
     if (match(FOR)) {
         return forStatement();
     }
@@ -95,10 +95,10 @@ class Parser {
         return ifStatement();
     }
     if (match(PRINT)) {
-        return printStatement();
+        return printStatement(lambda);
     }
     if (match(RETURN)) {
-        return returnStatement();
+        return returnStatement(lambda);
     }
     if (match(WHILE)) {
         return whileStatement();
@@ -106,7 +106,7 @@ class Parser {
 //    if (match(COLON)) {
 //        return block("block", true);
 //    }
-    return expressionStatement();
+    return expressionStatement(lambda);
   }
 
   private Stmt forStatement() {
@@ -131,18 +131,18 @@ class Parser {
     return new Stmt.If(new Stmt.Elsif(condition, thenBranch), elsifs, elseBranch);
   }
 
-  private Stmt printStatement() {
-    Expr value = expressionStatement().expression;
+  private Stmt printStatement(boolean lambda) {
+    Expr value = expressionStatement(lambda).expression;
     return new Stmt.Print(value);
   }
 
-  private Stmt returnStatement() {
+  private Stmt returnStatement(boolean lambda) {
     Token keyword = previous();
     Expr value = null;
     if (!check(NEWLINE)) {
       value = expression();
     }
-    consume(NEWLINE, "Expect newline after return value.");
+    checkStatementEnd(lambda);
     return new Stmt.Return(keyword, value);
   }
 
@@ -164,10 +164,23 @@ class Parser {
     return new Stmt.While(condition, block);
   }
 
-  private Stmt.Expression expressionStatement() {
+  private Stmt.Expression expressionStatement(boolean lambda) {
     Expr expr = expression();
-    consume(NEWLINE, "Expect newline after expression.");
+    checkStatementEnd(lambda);
     return new Stmt.Expression(expr);
+  }
+
+  private void checkStatementEnd(boolean lambda) {
+    if (match(NEWLINE)) {
+      return;
+    }
+    if (lambda) {
+      Token token = peek();
+      if (token.type == COMMA || token.type == RIGHT_PAREN) {
+        return;
+      }
+    }
+    throw new RuntimeError(peek(), "Unterminated lambda expression!");
   }
 
   private Stmt.Function function(String kind) {
@@ -201,7 +214,7 @@ class Parser {
         }
         consume(END, "Expect 'end' after block.");
     } else {
-        statements.add(statement());
+        statements.add(statement(true));
     }
     return new Expr.Block(params, statements);
   }

@@ -1,9 +1,6 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiEnvironment;
-import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -57,17 +54,21 @@ class SimiObjectImpl implements SimiObject {
 //              index--;
 //          }
 //          throw new RuntimeError(name, "Invalid index!");
-          return fields.get(Constants.IMPLICIT + index);
+          String implicitKey = Constants.IMPLICIT + index;
+          return bind(implicitKey, fields.get(implicitKey));
       } catch (NumberFormatException ignored) { }
 
       if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
           throw new RuntimeError(name, "Trying to access a private property!");
       }
     if (fields.containsKey(key)) {
-      return fields.get(key);
+      return bind(key, fields.get(key));
     }
 
     if (clazz != null) {
+          if (clazz.fields.containsKey(key)) {
+              return bind(key, clazz.fields.get(key));
+          }
         SimiFunction method = clazz.findMethod(this, key, arity);
         if (method != null) {
             return new SimiValue.Callable(method, key, this);
@@ -77,6 +78,16 @@ class SimiObjectImpl implements SimiObject {
     return null;
 //    throw new RuntimeError(name, // [hidden]
 //        "Undefined property '" + name.lexeme + "'.");
+  }
+
+  private SimiValue bind(String key, SimiValue value) {
+      if (value instanceof SimiValue.Callable) {
+          SimiCallable callable = value.getCallable();
+          if (callable instanceof BlockImpl) {
+              return new SimiValue.Callable(((BlockImpl) callable).bind(this), key, this);
+          }
+      }
+      return value;
   }
 
   void set(Token name, SimiValue value, Environment environment) {
@@ -133,6 +144,8 @@ class SimiObjectImpl implements SimiObject {
 
   private void checkMutability(Token name, Environment environment) {
       if (this.immutable && environment.get(Token.self()).getObject() != this) {
+          SimiObject obj = environment.get(Token.self()).getObject();
+          boolean a = obj == this;
           throw new RuntimeError(name, "Trying to alter an immutable object!");
       }
   }

@@ -304,8 +304,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   private SimiValue call(SimiValue callee, List<Expr> args, Token paren) {
     List<SimiValue> arguments = new ArrayList<>();
-    for (Expr argument : args) { // [in-order]
-      arguments.add(evaluate(argument));
+    for (Expr arg : args) { // [in-order]
+      SimiValue value;
+      if (arg instanceof Expr.Block) {
+        value = new SimiValue.Callable(new BlockImpl((Expr.Block) arg, environment), null, null);
+      } else {
+        value = evaluate(arg);
+      }
+      arguments.add(value);
     }
     return call(callee, paren, arguments);
   }
@@ -324,7 +330,6 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       callable = callee.getCallable();
       methodName = ((SimiValue.Callable) callee).name;
       instance = ((SimiValue.Callable) callee).instance;
-
     } else {
       throw new RuntimeError(paren,"Can only call functions and classes.");
     }
@@ -347,7 +352,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             return nativeMethod.call(this, nativeArgs);
           }
         } else {
-
+// TODO globals
         }
       }
     }
@@ -413,8 +418,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       throw new RuntimeError(expr.origin, "Only objects have fields.");
     }
 
-    SimiValue value = evaluate(expr.value);
     Token name = evaluateGetSetName(expr.origin, expr.name);
+    SimiValue value;
+    if (expr.value instanceof Expr.Block) {
+      value = new SimiValue.Callable(new BlockImpl((Expr.Block) expr.value, environment), name.lexeme, object.getObject());
+    } else {
+      value = evaluate(expr.value);
+    }
     ((SimiObjectImpl) object.getObject()).set(name, value, environment);
     return value;
   }

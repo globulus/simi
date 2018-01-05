@@ -222,13 +222,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitSuperExpr(Expr.Super expr) {
-    if (currentClass == ClassType.NONE) {
-      Simi.error(expr.keyword,
-          "Cannot use 'super' outside of a class.");
-    } else if (currentClass != ClassType.SUBCLASS) {
-      Simi.error(expr.keyword,
-          "Cannot use 'super' in a class with no superclass.");
-    }
+//    if (currentClass == ClassType.NONE) {
+//      Simi.error(expr.keyword,
+//          "Cannot use 'super' outside of a class.");
+//    } else if (currentClass != ClassType.SUBCLASS) {
+//      Simi.error(expr.keyword,
+//          "Cannot use 'super' in a class with no superclass.");
+//    }
 
     resolveLocal(expr, expr.keyword);
     return null;
@@ -236,11 +236,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitSelfExpr(Expr.Self expr) {
-    if (currentClass == ClassType.NONE) {
-      Simi.error(expr.keyword,
-          "Cannot use 'self' outside of a class.");
-      return null;
-    }
+//    if (currentClass == ClassType.NONE) {
+//      Simi.error(expr.keyword,
+//          "Cannot use 'self' outside of a class.");
+//      return null;
+//    }
 
     resolveLocal(expr, expr.keyword);
     return null;

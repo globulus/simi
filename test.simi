@@ -30,10 +30,16 @@ end
 
 #d = min3(4, 5, 3)
 
+$Object.each = def f:
+    for item in self: f(item)
+end
+
 arr = [1, 2, 3]
 
 len = arr.len()
 print len
+
+arr.each(def i: print i * 2)
 
 keys = arr.keys()
 print keys
