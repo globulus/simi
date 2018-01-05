@@ -179,8 +179,8 @@ class Parser {
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
       List<Stmt> statements = new ArrayList<>();
       for (Token param : block.params) {
-        statements.add(new Stmt.Expression(new Expr.Set(
-                new Expr.Self(Token.self()), param, new Expr.Variable(param))));
+        statements.add(new Stmt.Expression(new Expr.Set(name,
+                new Expr.Self(Token.self()), new Expr.Variable(param), new Expr.Variable(param))));
       }
       block = new Expr.Block(block.params, statements);
     }
@@ -262,7 +262,7 @@ class Parser {
         return new Expr.Assign(name, value);
       } else if (expr instanceof Expr.Get) {
         Expr.Get get = (Expr.Get)expr;
-        return new Expr.Set(get.object, get.name, value);
+        return new Expr.Set(get.origin, get.object, get.name, value);
       }
       Simi.error(equals, "Invalid assignment target.");
     }
@@ -344,14 +344,17 @@ class Parser {
       if (match(LEFT_PAREN)) {
         expr = finishCall(expr);
       } else if (match(DOT)) {
-          Token name;
+          Token dot = previous();
+          Expr name;
           if (peek().type == NUMBER) {
-              name = consume(NUMBER, "Expected a number or id after '.'.");
+              name = new Expr.Variable(consume(NUMBER, "Expected a number or id after '.'."));
+          } else if (peek().type == LEFT_PAREN) {
+            name = or();
           } else {
-              name = consume(IDENTIFIER, "Expected a number of id after '.'.");
+            name = new Expr.Variable(consume(IDENTIFIER, "Expected a number of id after '.'."));
           }
           Integer arity = peekParams();
-        expr = new Expr.Get(expr, name, arity);
+        expr = new Expr.Get(dot, expr, name, arity);
       } else {
         break;
       }

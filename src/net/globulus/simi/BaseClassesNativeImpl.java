@@ -5,16 +5,14 @@ import net.globulus.simi.api.SimiCallable;
 import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiValue;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-class BaseClassesImpl {
+class BaseClassesNativeImpl {
 
     private Map<String, SimiNativeClass> classes;
 
-    BaseClassesImpl() {
+    BaseClassesNativeImpl() {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
     }
@@ -46,6 +44,45 @@ class BaseClassesImpl {
                         (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject(),
                         self.fields.keySet().stream().map(SimiValue.String::new).collect(Collectors.toList()));
                 return new SimiValue.Object(keys);
+            }
+        });
+
+        methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                final boolean isArray = self.isArray();
+                final Iterator<?> iterator;
+                if (isArray) {
+                    iterator = self.fields.values().iterator();
+                } else {
+                    iterator = self.fields.keySet().iterator();
+                }
+                LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+                fields.put(Constants.NEXT, new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                        if (iterator.hasNext()) {
+                            if (isArray) {
+                                return (SimiValue) iterator.next();
+                            } else {
+                                return new SimiValue.String((String) iterator.next());
+                            }
+                        }
+                        return null;
+                    }
+                }, null, null));
+                return new SimiValue.Object(new SimiNativeObject(fields));
             }
         });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);

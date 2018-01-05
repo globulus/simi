@@ -43,7 +43,10 @@ for i in arr: print i
 
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
 print dict
-for i in dict: print i
+for i in dict:
+    print i
+    print dict.(i)
+end
 
 str = "this is a 'string'"
 print str

@@ -1,6 +1,6 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiCallable;
+import net.globulus.simi.api.*;
 
 import java.util.Map;
 

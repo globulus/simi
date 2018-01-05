@@ -15,7 +15,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
-  private BaseClassesImpl baseClassesImpl = new BaseClassesImpl();
+  private BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
 
   Interpreter() {
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
@@ -309,8 +309,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
 
     SimiCallable callable;
-    String methodName = null;
-    SimiObject instance = null;
+    String methodName;
+    SimiObject instance;
     if (callee instanceof SimiValue.Object) {
       SimiObject value = callee.getObject();
       if (!(value instanceof SimiClassImpl)) {
@@ -337,7 +337,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         if (instance != null) {
           SimiClassImpl clazz = (SimiClassImpl) instance.getSimiClass();
           if (isBaseClass(clazz.name)) {
-            SimiCallable nativeMethod = baseClassesImpl.get(clazz.name, methodName, callable.arity());
+            SimiCallable nativeMethod = baseClassesNativeImpl.get(clazz.name, methodName, callable.arity());
             List<SimiValue> nativeArgs = new ArrayList<>();
             nativeArgs.add(new SimiValue.Object(instance));
             nativeArgs.addAll(arguments);
@@ -354,10 +354,28 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiValue visitGetExpr(Expr.Get expr) {
     SimiValue object = evaluate(expr.object);
+    Token name = evaluateGetSetName(expr.origin, expr.name);
     try {
-        return ((SimiObjectImpl) object.getObject()).get(expr.name, expr.arity, environment);
+        return ((SimiObjectImpl) object.getObject()).get(name, expr.arity, environment);
     } catch (SimiValue.IncompatibleValuesException e) {
-        throw new RuntimeError(expr.name,"Only instances have properties.");
+        throw new RuntimeError(expr.origin,"Only instances have properties.");
+    }
+  }
+
+  private Token evaluateGetSetName(Token origin, Expr name) {
+    if (name instanceof Expr.Variable) {
+      return ((Expr.Variable) name).name;
+    } else {
+      SimiValue val = evaluate(name);
+      String lexeme;
+      if (val instanceof SimiValue.Number) {
+        lexeme = "" + val.getNumber();
+      } else if (val instanceof SimiValue.String) {
+        lexeme = val.getString();
+      } else {
+        throw new RuntimeError(origin,"Unable to parse getter/setter, invalid value: " + val.toString());
+      }
+      return new Token(TokenType.IDENTIFIER, lexeme, null, origin.line);
     }
   }
 
@@ -389,11 +407,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     SimiValue object = evaluate(expr.object);
 
     if (!(object instanceof SimiValue.Object)) { // [order]
-      throw new RuntimeError(expr.name, "Only objects have fields.");
+      throw new RuntimeError(expr.origin, "Only objects have fields.");
     }
 
     SimiValue value = evaluate(expr.value);
-    ((SimiObjectImpl) object.getObject()).set(expr.name, value, environment);
+    Token name = evaluateGetSetName(expr.origin, expr.name);
+    ((SimiObjectImpl) object.getObject()).set(name, value, environment);
     return value;
   }
 

@@ -106,7 +106,8 @@ abstract class Expr {
   }
 
   static class Get extends Expr {
-    Get(Expr object, Token name, Integer arity) {
+    Get(Token origin, Expr object, Expr name, Integer arity) {
+      this.origin = origin;
       this.object = object;
       this.name = name;
       this.arity = arity;
@@ -116,8 +117,9 @@ abstract class Expr {
       return visitor.visitGetExpr(this);
     }
 
+    final Token origin;
     final Expr object;
-    final Token name;
+    final Expr name;
     final Integer arity;
   }
   static class Grouping extends Expr {
@@ -160,7 +162,8 @@ abstract class Expr {
   }
 
   static class Set extends Expr {
-    Set(Expr object, Token name, Expr value) {
+    Set(Token origin, Expr object, Expr name, Expr value) {
+      this.origin = origin;
       this.object = object;
       this.name = name;
       this.value = value;
@@ -170,8 +173,9 @@ abstract class Expr {
       return visitor.visitSetExpr(this);
     }
 
+    final Token origin;
     final Expr object;
-    final Token name;
+    final Expr name;
     final Expr value;
   }
 

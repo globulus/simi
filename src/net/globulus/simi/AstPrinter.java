@@ -154,7 +154,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
   @Override
   public String visitGetExpr(Expr.Get expr) {
-    return parenthesize2(".", expr.object, expr.name.lexeme);
+    return parenthesize2(".", expr.object, expr.name);
   }
 //< Classes omit
 
@@ -179,7 +179,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
   @Override
   public String visitSetExpr(Expr.Set expr) {
-    return parenthesize2("=", expr.object, expr.name.lexeme, expr.value);
+    return parenthesize2("=", expr.object, expr.name, expr.value);
   }
 //< Classes omit
 //> Inheritance omit
