@@ -141,7 +141,7 @@ public abstract class SimiValue {
     public static class IncompatibleValuesException extends RuntimeException {
 
         IncompatibleValuesException(Class<? extends SimiValue> value, Class<? extends SimiValue> expected) {
-            super("Incompatible types, expected " + expected.getSimpleName() + ", expected " + value.getSimpleName());
+            super("Incompatible types, expected " + expected.getSimpleName() + ", got " + value.getSimpleName());
         }
     }
 }

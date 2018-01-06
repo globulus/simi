@@ -55,7 +55,8 @@ class Environment implements SimiEnvironment {
 //        "Undefined variable '" + key + "'.");
   }
 
-  void define(String name, SimiValue value) {
+  @Override
+  public void define(String name, SimiValue value) {
     values.put(name, value);
   }
 

@@ -74,6 +74,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
+  public SimiEnvironment getEnvironment() {
+    return environment;
+  }
+
+  @Override
   public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
     executeBlock(stmt, new Environment(environment));
     return null;
@@ -202,11 +207,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     Environment previous = this.environment;
     this.environment = new Environment(this.environment);
     List<Expr> emptyArgs = new ArrayList<>();
-    SimiObjectImpl iterable = (SimiObjectImpl) evaluate(stmt.iterable).getObject();
-    Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
-    SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
+    SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiValue nextMethod = iterator.get(nextToken, 0, environment);
+    SimiValue nextMethod = iterable.get(nextToken, 0, environment);
+    if (nextMethod == null) {
+      Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
+      SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
+      nextMethod = iterator.get(nextToken, 0, environment);
+    }
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
@@ -366,7 +374,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     SimiValue object = evaluate(expr.object);
     Token name = evaluateGetSetName(expr.origin, expr.name);
     try {
-        return ((SimiObjectImpl) object.getObject()).get(name, expr.arity, environment);
+        return ((SimiObjectImpl) SimiObjectImpl.getOrConvertObject(object, this)).get(name, expr.arity, environment);
     } catch (SimiValue.IncompatibleValuesException e) {
         throw new RuntimeError(expr.origin,"Only instances have properties.");
     }
@@ -557,10 +565,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   private boolean isIn(SimiValue a, SimiValue b, Expr.Binary expr) {
-      if (!(b instanceof SimiValue.Object)) {
-          throw new RuntimeError(expr.operator, "Right side must be an Object!");
+      SimiObjectImpl object;
+      if (b instanceof SimiValue.Object) {
+        object = ((SimiObjectImpl) b.getObject());
+      } else {
+        object = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(b, this);
+//          throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
-      SimiObjectImpl object = ((SimiObjectImpl) b.getObject());
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line);
       return call(object.get(has, 1, environment), has, Collections.singletonList(a)).getNumber() != 0;
   }

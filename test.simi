@@ -34,6 +34,12 @@ $Object.each = def f:
     for item in self: f(item)
 end
 
+for i in 6.times(): print i
+
+for c in "abcdef": print c
+print "cde" in "abcd"
+print "afe" + "pde"
+
 arr = [1, 2, 3]
 
 len = arr.len()

@@ -1,10 +1,11 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.BlockInterpreter;
-import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.*;
+import java.util.concurrent.BlockingDeque;
 import java.util.stream.Collectors;
 
 class BaseClassesNativeImpl {
@@ -14,6 +15,7 @@ class BaseClassesNativeImpl {
     BaseClassesNativeImpl() {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
+        classes.put(Constants.CLASS_STRING, getStringClass());
     }
 
     private SimiNativeClass getObjectClass() {
@@ -133,6 +135,73 @@ class BaseClassesNativeImpl {
             }
         });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
+    }
+
+    private SimiNativeClass getStringClass() {
+        Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction("len", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                return new SimiValue.Number(value.length());
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                StringCharacterIterator iterator = new StringCharacterIterator(value);
+                LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+                fields.put(Constants.NEXT, new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                       char next = iterator.next();
+                       if (next != CharacterIterator.DONE) {
+                           return new SimiValue.String("" + next);
+                       }
+                        return null;
+                    }
+                }, null, null));
+                return new SimiValue.Object(new SimiNativeObject(fields));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.HAS, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String str = arguments.get(1).getString();
+                return new SimiValue.Number(value.contains(str));
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
+    }
+
+    private String prepareStringNativeCall(BlockInterpreter interpreter, List<SimiValue> arguments) {
+        SimiValue arg0 = arguments.get(0);
+        SimiObjectImpl self = (SimiObjectImpl) arg0.getObject();
+        SimiEnvironment environment = interpreter.getEnvironment();
+        environment.define(Constants.SELF, arg0);
+        return self.get(Constants.PRIVATE, environment).getString();
     }
 
     SimiNativeClass get(String className) {

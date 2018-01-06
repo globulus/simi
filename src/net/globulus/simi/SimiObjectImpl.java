@@ -2,10 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.*;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 class SimiObjectImpl implements SimiObject {
 
@@ -55,7 +52,11 @@ class SimiObjectImpl implements SimiObject {
 //          }
 //          throw new RuntimeError(name, "Invalid index!");
           String implicitKey = Constants.IMPLICIT + index;
-          return bind(implicitKey, fields.get(implicitKey));
+          if (fields.containsKey(implicitKey)) {
+              return bind(implicitKey, fields.get(implicitKey));
+          } else {
+              return bind(implicitKey, new ArrayList<>(fields.values()).get(index));
+          }
       } catch (NumberFormatException ignored) { }
 
       if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
@@ -188,5 +189,16 @@ class SimiObjectImpl implements SimiObject {
     @Override
     public void set(String key, SimiValue value, SimiEnvironment environment) {
       set(Token.nativeCall(key), value, (Environment) environment);
+    }
+
+    static SimiObject getOrConvertObject(SimiValue value, Interpreter interpreter) {
+      if (value instanceof SimiValue.Number || value instanceof SimiValue.String) {
+          LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+          fields.put(Constants.PRIVATE, value);
+          return new SimiObjectImpl((SimiClassImpl) interpreter.getGlobal(
+                    value instanceof SimiValue.Number ? Constants.CLASS_NUMBER : Constants.CLASS_STRING).getObject(),
+                  fields, true);
+      }
+      return value.getObject();
     }
 }

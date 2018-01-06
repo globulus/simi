@@ -15,8 +15,6 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   private final Map<OverloadableFunction, SimiFunction> methods;
 
   static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
-  static final SimiClassImpl NUMBER = new SimiClassImpl(Constants.CLASS_NUMBER);
-  static final SimiClassImpl STRING = new SimiClassImpl(Constants.CLASS_STRING);
 
     private SimiClassImpl(String name) {
        super(null, new LinkedHashMap<>(), true);
