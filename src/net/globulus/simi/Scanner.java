@@ -71,6 +71,10 @@ class Scanner {
       case ',': addToken(TokenType.COMMA); break;
       case '.': addToken(TokenType.DOT); break;
       case ':': addToken(TokenType.COLON); break;
+      case '@':
+        addToken(TokenType.SELF);
+        addToken(TokenType.DOT);
+      break;
 //> two-char-tokens
       case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;

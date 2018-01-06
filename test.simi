@@ -9,12 +9,12 @@ class Car:
     def init(capacity, tank): pass
 
     def refill(amount):
-        if self.tank + amount > self.capacity: self.tank = self.capacity
-        else: self.tank = self.tank + amount
+        if @tank + amount > @capacity: @tank = @capacity
+        else: @tank = @tank + amount
     end
 
     def refill(amount, doprint):
-        self.tank = 0
+        @tank = 0
      end
 
      def f(): pass

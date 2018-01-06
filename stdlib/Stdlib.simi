@@ -2,6 +2,8 @@ class $Object:
     native len(): pass
     native keys(): pass
     native values(): pass
+    native isMutable(): pass
+    native isArray(): pass
 
     native iterate(): pass
     native has(obj): pass
@@ -22,14 +24,14 @@ end
 class RangeIterator(Iterator):
 
     def init(range):
-        self.range = range
-        self.current = range.start
+        @range = range
+        @current = @range.start
     end
 
     def next():
-        if self.current in self.range:
-            c = self.current
-            self.current = self.current + self.range.step
+        if @current in @range:
+            c = @current
+            @current = @current + @range.step
             return c
         end
         return nil
@@ -39,10 +41,10 @@ end
 class Range:
 
     def init(start, stop):
-        self.start = start
-        self.stop = stop
-        if start < stop: self.step = 1
-        else: self.step = -1
+        @start = start
+        @stop = stop
+        if start < stop: @step = 1
+        else: @step = -1
     end
 
     def init(start, stop, step): pass
@@ -52,6 +54,6 @@ class Range:
     end
 
     def has(val):
-        return self.stop > self.start and val < self.stop or self.stop < self.start and val > self.stop
+        return @stop > @start and val < @stop or @stop < @start and val > @stop
     end
 end

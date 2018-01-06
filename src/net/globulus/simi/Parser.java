@@ -419,7 +419,8 @@ class Parser {
     }
 
     if (match(SELF)) {
-        return new Expr.Self(previous());
+      Token previous = previous();
+        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line));
     }
 
     if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {

@@ -62,6 +62,28 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(keys);
             }
         });
+        methods.put(new OverloadableFunction("isMutable", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(!((SimiObjectImpl) arguments.get(0).getObject()).immutable);
+            }
+        });
+        methods.put(new OverloadableFunction("isArray", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(((SimiObjectImpl) arguments.get(0).getObject()).isArray());
+            }
+        });
         methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
             @Override
             public int arity() {
