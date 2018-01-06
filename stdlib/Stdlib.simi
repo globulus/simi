@@ -9,6 +9,11 @@ class $Object:
     native has(obj): pass
 end
 
+def ife(condition, ifval, elseval):
+    if condition: return ifval
+    else: return elseval
+end
+
 class $Number:
 
 end
@@ -43,8 +48,7 @@ class Range:
     def init(start, stop):
         @start = start
         @stop = stop
-        if start < stop: @step = 1
-        else: @step = -1
+        @step = ife(start < stop, 1, -1)
     end
 
     def init(start, stop, step): pass
@@ -54,6 +58,7 @@ class Range:
     end
 
     def has(val):
-        return @stop > @start and val < @stop or @stop < @start and val > @stop
+        if @start < @stop: return val >= @start and val < @stop
+        else: return val <= @start and val > @stop
     end
 end

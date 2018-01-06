@@ -290,6 +290,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         case MOD:
             checkNumberOperands(expr.operator, left, right);
             return new SimiValue.Number(left.getNumber() % right.getNumber());
+      case QUESTION_QUESTION:
+        return (left != null) ? left : right;
     }
 
     // Unreachable.

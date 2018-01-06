@@ -1,9 +1,7 @@
 package net.globulus.simi;
 
-import com.sun.tools.internal.jxc.ap.Const;
 import net.globulus.simi.api.BlockInterpreter;
 import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.*;

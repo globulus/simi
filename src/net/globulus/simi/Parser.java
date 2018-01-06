@@ -333,8 +333,18 @@ class Parser {
   }
 
   private Expr multiplication() {
-    Expr expr = unary();
+    Expr expr = nilCoalescence();
     while (match(SLASH, STAR, MOD)) {
+      Token operator = previous();
+      Expr right = nilCoalescence();
+      expr = new Expr.Binary(expr, operator, right);
+    }
+    return expr;
+  }
+
+  private Expr nilCoalescence() {
+    Expr expr = unary();
+    while (match(QUESTION_QUESTION)) {
       Token operator = previous();
       Expr right = unary();
       expr = new Expr.Binary(expr, operator, right);

@@ -1,6 +1,5 @@
 package net.globulus.simi;
 
-import com.sun.tools.internal.jxc.ap.Const;
 import net.globulus.simi.api.Constants;
 
 import java.lang.reflect.Method;

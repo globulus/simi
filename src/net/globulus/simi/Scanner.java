@@ -76,6 +76,7 @@ class Scanner {
         addToken(TokenType.DOT);
       break;
 //> two-char-tokens
+      case '?': addToken(match('?') ? TokenType.QUESTION_QUESTION : TokenType.QUESTION); break;
       case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
       case '<': addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS); break;
