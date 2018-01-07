@@ -466,15 +466,20 @@ class Parser {
       List<Expr> props = new ArrayList<>();
       boolean dictionary = true;
       if (!check(RIGHT_BRACKET)) {
-        match(NEWLINE);
+        matchAllNewlines();
         dictionary = peekSequence(IDENTIFIER, EQUAL);
         do {
+          matchAllNewlines();
           props.add(dictionary ? assignment() : or());
         } while (match(COMMA));
-        match(NEWLINE);
+        matchAllNewlines();
       }
       consume(RIGHT_BRACKET, "Expect ']' at the end of object.");
       return new Expr.ObjectLiteral(opener, props, dictionary);
+  }
+
+  private void matchAllNewlines() {
+    while (match(NEWLINE)) { }
   }
 
     private boolean matchSequence(TokenType... types) {

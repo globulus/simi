@@ -5,6 +5,10 @@ import net.globulus.simi.api.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 class BaseClassesNativeImpl {
@@ -198,17 +202,70 @@ class BaseClassesNativeImpl {
 
     private SimiNativeClass getGlobalsClass() {
         Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
-        methods.put(new OverloadableFunction("pow", 2), new SimiCallable() {
+        Map<String, BiFunction<Double, Double, Double>> binaries = new HashMap<>();
+        binaries.put("pow", Math::pow);
+        binaries.put("min", Math::min);
+        binaries.put("max", Math::max);
+        binaries.put("atan2", Math::atan2);
+        binaries.put("hypot", Math::hypot);
+        for (Map.Entry<String, BiFunction<Double, Double, Double>> binary : binaries.entrySet()) {
+            methods.put(new OverloadableFunction(binary.getKey(), 2), new SimiCallable() {
+                @Override
+                public int arity() {
+                    return 2;
+                }
+
+                @Override
+                public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                    return doMath(arguments, binary.getValue());
+                }
+            });
+        }
+        Map<String, Function<Double, Double>> unaries = new HashMap<>();
+        unaries.put("abs", Math::abs);
+        unaries.put("acos", Math::acos);
+        unaries.put("asin", Math::asin);
+        unaries.put("atan", Math::atan);
+        unaries.put("cbrt", Math::cbrt);
+        unaries.put("ceil", Math::ceil);
+        unaries.put("cos", Math::cos);
+        unaries.put("cosh", Math::cosh);
+        unaries.put("exp", Math::exp);
+        unaries.put("floor", Math::floor);
+        unaries.put("log", Math::log);
+        unaries.put("log10", Math::log10);
+        unaries.put("log1p", Math::log1p);
+        unaries.put("signum", Math::signum);
+        unaries.put("sin", Math::sin);
+        unaries.put("sinh", Math::sinh);
+        unaries.put("sqrt", Math::sqrt);
+        unaries.put("tan", Math::tan);
+        unaries.put("tanh", Math::tanh);
+        unaries.put("toDegrees", Math::toDegrees);
+        unaries.put("toRadians", Math::toRadians);
+        for (Map.Entry<String, Function<Double, Double>> unary : unaries.entrySet()) {
+            methods.put(new OverloadableFunction(unary.getKey(), 1), new SimiCallable() {
+                @Override
+                public int arity() {
+                    return 1;
+                }
+
+                @Override
+                public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                    return doMath(arguments, unary.getValue());
+                }
+            });
+        }
+        methods.put(new OverloadableFunction("round", 1), new SimiCallable() {
             @Override
             public int arity() {
-                return 2;
+                return 1;
             }
 
             @Override
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 double a = arguments.get(1).getNumber();
-                double b = arguments.get(2).getNumber();
-                return new SimiValue.Number(Math.pow(a, b));
+                return new SimiValue.Number(Math.round(a));
             }
         });
         return new SimiNativeClass(Constants.CLASS_GLOBALS, methods);
@@ -220,6 +277,17 @@ class BaseClassesNativeImpl {
         SimiEnvironment environment = interpreter.getEnvironment();
         environment.define(Constants.SELF, arg0);
         return self.get(Constants.PRIVATE, environment).getString();
+    }
+
+    private SimiValue doMath(List<SimiValue> arguments, BiFunction<Double, Double, Double> op) {
+        double a = arguments.get(1).getNumber();
+        double b = arguments.get(2).getNumber();
+        return new SimiValue.Number(op.apply(a, b));
+    }
+
+    private SimiValue doMath(List<SimiValue> arguments, Function<Double, Double> op) {
+        double a = arguments.get(1).getNumber();
+        return new SimiValue.Number(op.apply(a));
     }
 
     SimiNativeClass get(String className) {

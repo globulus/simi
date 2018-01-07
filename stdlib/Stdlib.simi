@@ -69,5 +69,31 @@ class $String:
 end
 
 Math = [
-    pow = native (a, b): pass
+    pow = native (a, b): pass,
+    max = native (a, b): pass,
+    min = native (a, b): pass,
+    atan2 = native (a, b): pass,
+
+    abs = native (a): pass,
+    acos = native (a): pass,
+    asin = native (a): pass,
+    atan = native (a): pass,
+    cbrt = native (a): pass,
+    ceil = native (a): pass,
+    cos = native (a): pass,
+    cosh = native (a): pass,
+    exp = native (a): pass,
+    floor = native (a): pass,
+    log = native (a): pass,
+    log10 = native (a): pass,
+    log1p = native (a): pass,
+    round = native (a): pass,
+    signum = native (a): pass,
+    sin = native (a): pass,
+    sinh = native (a): pass,
+    sqrt = native (a): pass,
+    tan = native (a): pass,
+    tanh = native (a): pass,
+    toDegrees = native (a): pass,
+    toRadians = native (a): pass
 ]
