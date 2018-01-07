@@ -9,7 +9,7 @@ import java.util.List;
 
 class SimiFunction implements SimiCallable {
 
-  private Stmt.Function declaration;
+  Stmt.Function declaration;
   private final BlockImpl block;
   private final boolean isInitializer;
   public final boolean isNative;

@@ -7,6 +7,8 @@ class $Object:
 
     native iterate(): pass
     native has(obj): pass
+
+    native builder(): pass
 end
 
 def ife(condition, ifval, elseval):

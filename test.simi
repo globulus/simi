@@ -4,8 +4,6 @@
 #$a = 4
 #print c
 
-print Math.pow(2, 3)
-
 class Car:
 
     def init(capacity, tank): pass
@@ -31,6 +29,13 @@ end
 #end
 
 #d = min3(4, 5, 3)
+
+#njuKar = Car.builder().capacity(10).tank(20).build()
+#print njuKar.capacity
+#print njuKar.tank
+
+
+print Math.pow(2, 3)
 
 $Object.each = def f:
     for item in self: f(item)

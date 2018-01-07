@@ -353,17 +353,21 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             || callable instanceof BlockImpl && ((BlockImpl) callable).isNative();
     if (isNative) {
       if (instance != null) {
-        SimiClassImpl clazz = (SimiClassImpl) instance.getSimiClass();
-        if (isBaseClass(clazz.name)) {
-          SimiCallable nativeMethod = baseClassesNativeImpl.get(clazz.name, methodName, callable.arity());
-          if (nativeMethod == null) {
-            nativeMethod = baseClassesNativeImpl.get(Constants.CLASS_GLOBALS, methodName, callable.arity());
-          }
-          List<SimiValue> nativeArgs = new ArrayList<>();
-          nativeArgs.add(new SimiValue.Object(instance));
-          nativeArgs.addAll(arguments);
-          return nativeMethod.call(this, nativeArgs);
+        SimiClassImpl clazz;
+        if (instance instanceof SimiClassImpl) {
+          clazz = (SimiClassImpl) instance;
+        } else {
+          clazz = (SimiClassImpl) instance.getSimiClass();
         }
+        String className = isBaseClass(clazz.name) ? clazz.name : Constants.CLASS_OBJECT; // TODO fix to check external JARs before attempting $Object
+        SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
+        if (nativeMethod == null) {
+          nativeMethod = baseClassesNativeImpl.get(Constants.CLASS_GLOBALS, methodName, callable.arity());
+        }
+        List<SimiValue> nativeArgs = new ArrayList<>();
+        nativeArgs.add(new SimiValue.Object(instance));
+        nativeArgs.addAll(arguments);
+        return nativeMethod.call(this, nativeArgs);
       } else {
         // TODO globals
       }

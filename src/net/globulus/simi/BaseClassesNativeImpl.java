@@ -6,9 +6,7 @@ import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 class BaseClassesNativeImpl {
@@ -136,6 +134,67 @@ class BaseClassesNativeImpl {
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
                 return new SimiValue.Number(self.contains(arguments.get(1), Token.nativeCall(Constants.HAS)));
+            }
+        });
+        methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiClassImpl clazz = (SimiClassImpl) arguments.get(0).getObject();
+                Set<SimiFunction> constructors = clazz.getConstructors();
+                final Set<String> params = constructors.stream()
+                        .map(f -> f.declaration.block.params)
+                        .flatMap(Collection::stream)
+                        .map(t -> t.lexeme)
+                        .collect(Collectors.toSet());
+                LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+                SimiNativeObject object = new SimiNativeObject(fields);
+                SimiValue objectValue = new SimiValue.Object(object);
+                List<SimiValue> initArgs = new ArrayList<>();
+                for (String param : params) {
+                    fields.put(param, new SimiValue.Callable(new SimiCallable() {
+                        @Override
+                        public int arity() {
+                            return 1;
+                        }
+
+                        @Override
+                        public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                            SimiValue arg = arguments.get(0);
+                            fields.put(Constants.PRIVATE + param, arg);
+                            initArgs.add(arg);
+                            return objectValue;
+                        }
+                    }, param, object));
+                }
+                fields.put("build", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                        int size = params.size();
+                        Optional<SimiFunction> closest = constructors.stream()
+                                .min(Comparator.comparingInt(f -> Math.abs(f.arity() - size)));
+                        if (closest.isPresent()) {
+                            List<String> closestParams = closest.get().declaration.block.params.stream()
+                                    .map(t -> t.lexeme).collect(Collectors.toList());
+                            List<SimiValue> args = new ArrayList<>();
+                            for (String param : closestParams) {
+                                args.add(fields.get(Constants.PRIVATE + param));
+                            }
+                            return clazz.init(interpreter, args);
+                        }
+                        return clazz.init(interpreter, initArgs);
+                    }
+                }, "build", object));
+                return objectValue;
             }
         });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);

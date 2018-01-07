@@ -1,10 +1,10 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.*;
+import net.globulus.simi.api.BlockInterpreter;
+import net.globulus.simi.api.SimiClass;
+import net.globulus.simi.api.SimiValue;
 
 import java.util.*;
-import java.util.concurrent.BlockingDeque;
-import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 class SimiClassImpl extends SimiObjectImpl implements SimiClass {
@@ -32,6 +32,19 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
     this.name = name;
     this.methods = methods;
   }
+
+    @Override
+    SimiValue get(Token name, Integer arity, Environment environment) {
+        SimiValue value = super.get(name, arity, environment);
+        if (value != null) {
+            return value;
+        }
+        SimiFunction method = findMethod(null, name.lexeme, arity);
+        if (method != null) {
+            return new SimiValue.Callable(method, name.lexeme, this);
+        }
+        return null;
+    }
 
   SimiFunction findMethod(SimiObjectImpl instance, String name, Integer arity) {
         if (arity == null) {
@@ -88,6 +101,9 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
       SimiObjectImpl instance = new SimiObjectImpl(this, true);
       SimiFunction initializer = findMethod(instance, Constants.INIT, arguments.size());
+      if (initializer == null) {
+          initializer = findMethod(instance, Constants.PRIVATE + Constants.INIT, arguments.size());
+      }
       if (initializer != null) {
           initializer.call(interpreter, arguments);
       }
@@ -113,6 +129,19 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
       sb.append(printFields());
       sb.append("]");
       return sb.toString();
+  }
+
+  Set<SimiFunction> getConstructors() {
+        Set<SimiFunction> constructors = methods.entrySet().stream()
+                .filter(e -> e.getKey().name.equals(Constants.INIT) || e.getKey().name.equals(Constants.PRIVATE + Constants.INIT))
+                .map(Map.Entry::getValue)
+                .collect(Collectors.toSet());
+        if (superclasses != null) {
+            for (SimiClassImpl superclass : superclasses) {
+                constructors.addAll(superclass.getConstructors());
+            }
+        }
+        return constructors;
   }
 
 //  @Override
