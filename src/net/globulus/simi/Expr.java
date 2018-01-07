@@ -26,7 +26,8 @@ abstract class Expr {
   }
 
     static class Block extends Expr implements SimiBlock {
-        Block(List<Token> params, List<Stmt> statements) {
+        Block(Token declaration, List<Token> params, List<Stmt> statements) {
+            this.declaration = declaration;
             this.params = params;
             this.statements = statements;
         }
@@ -36,8 +37,13 @@ abstract class Expr {
             return visitor.visitBlockExpr(this, newScope);
         }
 
+        final Token declaration;
         final List<Token> params;
         final List<Stmt> statements;
+
+      boolean isNative() {
+        return declaration.type == TokenType.NATIVE;
+      }
 
       @Override
       public List<? extends SimiStatement> getStatements() {

@@ -176,7 +176,7 @@ class Parser {
     }
     if (lambda) {
       Token token = peek();
-      if (token.type == COMMA || token.type == RIGHT_PAREN) {
+      if (token.type == COMMA || token.type == RIGHT_PAREN || token.type == RIGHT_BRACKET) {
         return;
       }
     }
@@ -186,7 +186,7 @@ class Parser {
   private Stmt.Function function(String kind) {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-    Expr.Block block = block(kind, false);
+    Expr.Block block = block(declaration, kind, false);
 
     // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
@@ -195,13 +195,20 @@ class Parser {
         statements.add(new Stmt.Expression(new Expr.Set(name,
                 new Expr.Self(Token.self()), new Expr.Variable(param), new Expr.Variable(param))));
       }
-      block = new Expr.Block(block.params, statements);
+      block = new Expr.Block(declaration, block.params, statements);
     }
 
-    return new Stmt.Function(declaration, name, block);
+    return new Stmt.Function(name, block);
   }
 
   private Expr.Block block(String kind, boolean lambda) {
+    return block(null, kind, lambda);
+  }
+
+  private Expr.Block block(Token declaration, String kind, boolean lambda) {
+    if (declaration == null) {
+      declaration = previous();
+    }
     List<Token> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
     List<Stmt> statements = new ArrayList<>();
@@ -216,7 +223,7 @@ class Parser {
     } else {
         statements.add(statement(true));
     }
-    return new Expr.Block(params, statements);
+    return new Expr.Block(declaration, params, statements);
   }
 
   private List<Token> params(String kind, boolean lambda) {
@@ -459,10 +466,12 @@ class Parser {
       List<Expr> props = new ArrayList<>();
       boolean dictionary = true;
       if (!check(RIGHT_BRACKET)) {
+        match(NEWLINE);
         dictionary = peekSequence(IDENTIFIER, EQUAL);
         do {
           props.add(dictionary ? assignment() : or());
         } while (match(COMMA));
+        match(NEWLINE);
       }
       consume(RIGHT_BRACKET, "Expect ']' at the end of object.");
       return new Expr.ObjectLiteral(opener, props, dictionary);

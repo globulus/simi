@@ -4,6 +4,8 @@
 #$a = 4
 #print c
 
+print Math.pow(2, 3)
+
 class Car:
 
     def init(capacity, tank): pass
@@ -34,11 +36,13 @@ $Object.each = def f:
     for item in self: f(item)
 end
 
+#print [a = "1", b = def a: return a * a].b(2)
+
 for i in 6.times(): print i
 
 for c in "abcdef": print c
 print "cde" in "abcd"
-print "afe" + "pde"
+print "afe" + "pde".1
 
 arr = [1, 2, 3]
 

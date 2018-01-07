@@ -20,6 +20,10 @@ class BlockImpl implements SimiBlock, SimiCallable {
     return new BlockImpl(declaration, environment);
   }
 
+  boolean isNative() {
+    return declaration.isNative();
+  }
+
   @Override
   public String toString() {
     return "<block>";

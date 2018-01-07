@@ -119,7 +119,7 @@ public abstract class SimiValue {
 
         public final SimiCallable value;
         public final java.lang.String name;
-        public final SimiObject instance;
+        private SimiObject instance;
 
         public Callable(SimiCallable value, java.lang.String name, SimiObject instance) {
             this.value = value;
@@ -135,6 +135,14 @@ public abstract class SimiValue {
         @Override
         public SimiValue copy() {
             return new Callable(value, name, instance);
+        }
+
+        public SimiObject getInstance() {
+            return instance;
+        }
+
+        public void bind(SimiObject instance) {
+            this.instance = instance;
         }
     }
 

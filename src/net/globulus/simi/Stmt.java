@@ -49,8 +49,7 @@ abstract class Stmt implements SimiStatement {
   }
 
   static class Function extends Stmt {
-    Function(Token declaration, Token name, Expr.Block block) {
-        this.declaration = declaration;
+    Function(Token name, Expr.Block block) {
       this.name = name;
       this.block = block;
     }
@@ -59,7 +58,6 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitFunctionStmt(this);
     }
 
-    final Token declaration;
     final Token name;
     final Expr.Block block;
   }

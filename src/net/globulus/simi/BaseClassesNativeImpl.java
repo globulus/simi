@@ -5,7 +5,6 @@ import net.globulus.simi.api.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.*;
-import java.util.concurrent.BlockingDeque;
 import java.util.stream.Collectors;
 
 class BaseClassesNativeImpl {
@@ -16,6 +15,7 @@ class BaseClassesNativeImpl {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
         classes.put(Constants.CLASS_STRING, getStringClass());
+        classes.put(Constants.CLASS_GLOBALS, getGlobalsClass());
     }
 
     private SimiNativeClass getObjectClass() {
@@ -125,7 +125,7 @@ class BaseClassesNativeImpl {
         methods.put(new OverloadableFunction(Constants.HAS, 1), new SimiCallable() {
             @Override
             public int arity() {
-                return 0;
+                return 1;
             }
 
             @Override
@@ -183,7 +183,7 @@ class BaseClassesNativeImpl {
         methods.put(new OverloadableFunction(Constants.HAS, 1), new SimiCallable() {
             @Override
             public int arity() {
-                return 0;
+                return 1;
             }
 
             @Override
@@ -194,6 +194,24 @@ class BaseClassesNativeImpl {
             }
         });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
+    }
+
+    private SimiNativeClass getGlobalsClass() {
+        Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction("pow", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                double a = arguments.get(1).getNumber();
+                double b = arguments.get(2).getNumber();
+                return new SimiValue.Number(Math.pow(a, b));
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_GLOBALS, methods);
     }
 
     private String prepareStringNativeCall(BlockInterpreter interpreter, List<SimiValue> arguments) {

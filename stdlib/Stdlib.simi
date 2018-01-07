@@ -67,3 +67,7 @@ class $String:
     native iterate(): pass
     native has(obj): pass
 end
+
+Math = [
+    pow = native (a, b): pass
+]

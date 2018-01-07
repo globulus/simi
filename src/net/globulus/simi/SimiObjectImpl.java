@@ -55,6 +55,10 @@ class SimiObjectImpl implements SimiObject {
           if (fields.containsKey(implicitKey)) {
               return bind(implicitKey, fields.get(implicitKey));
           } else {
+              if (clazz != null && clazz.name.equals(Constants.CLASS_STRING)) {
+                  String value = fields.get(Constants.PRIVATE).getString();
+                  return new SimiValue.String("" + value.charAt(index));
+              }
               return bind(implicitKey, new ArrayList<>(fields.values()).get(index));
           }
       } catch (NumberFormatException ignored) { }
