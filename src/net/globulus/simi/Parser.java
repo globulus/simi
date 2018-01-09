@@ -13,6 +13,8 @@ import static net.globulus.simi.TokenType.*;
 
 class Parser {
 
+  private static final String LAMBDA = "lambda";
+
   private static class ParseError extends RuntimeException {}
 
   private final List<Token> tokens;
@@ -180,13 +182,14 @@ class Parser {
         return;
       }
     }
-    throw new RuntimeError(peek(), "Unterminated lambda expression!");
+    error(peek(), "Unterminated lambda expression!");
   }
 
   private Stmt.Function function(String kind) {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-    Expr.Block block = block(declaration, kind, false);
+    String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
+    Expr.Block block = block(declaration, blockKind, false);
 
     // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
@@ -221,7 +224,11 @@ class Parser {
         }
         consume(END, "Expect 'end' after block.");
     } else {
-        statements.add(statement(true));
+        Stmt stmt = statement(true);
+        if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
+          stmt = new Stmt.Return(declaration, ((Stmt.Expression) stmt).expression);
+        }
+        statements.add(stmt);
     }
     return new Expr.Block(declaration, params, statements);
   }
@@ -445,7 +452,7 @@ class Parser {
     }
 
     if (match(DEF, NATIVE)) {
-        return block("lambda", true);
+        return block(LAMBDA, true);
     }
 
     if (match(IDENTIFIER)) {

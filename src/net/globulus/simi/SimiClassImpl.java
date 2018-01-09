@@ -180,5 +180,10 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
       public SimiValue clone(boolean mutable) {
           throw new AssertionError();
       }
+
+      @Override
+      public int compareTo(SimiValue o) {
+          throw new AssertionError();
+      }
   }
 }

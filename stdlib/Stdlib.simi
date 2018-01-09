@@ -5,6 +5,11 @@ class $Object:
     native enumerate(): pass
     native zip(): pass
 
+    native iterate(): pass
+    native has(obj): pass
+    native equals(other): pass
+    native compareTo(other): pass
+
     native append(elem): pass
     native addAll(obj): pass
     native indexOf(elem): pass
@@ -17,12 +22,9 @@ class $Object:
     native isMutable(): pass
     native isArray(): pass
 
-    native iterate(): pass
-    native has(obj): pass
-
     native builder(): pass
 
-    def isEmpty(): return @length() == 0
+    def isEmpty(): @length() == 0
     def first():
         if @isEmpty(): return nil
         else: return @0
@@ -161,6 +163,9 @@ class $Number:
     def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
+
+    native equals(other): pass
+    native compareTo(other): pass
 end
 
 class $String:
@@ -168,6 +173,8 @@ class $String:
 
     native iterate(): pass
     native has(obj): pass
+    native equals(other): pass
+    native compareTo(other): pass
 end
 
 Math = [

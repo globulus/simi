@@ -17,6 +17,7 @@ class BaseClassesNativeImpl {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
         classes.put(Constants.CLASS_STRING, getStringClass());
+        classes.put(Constants.CLASS_NUMBER, getNumberClass());
         classes.put(Constants.CLASS_GLOBALS, getGlobalsClass());
     }
 
@@ -250,6 +251,28 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(self.contains(arguments.get(1), Token.nativeCall(Constants.HAS)));
             }
         });
+        methods.put(new OverloadableFunction(Constants.EQUALS, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).equals(arguments.get(1)));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.COMPARE_TO, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
+            }
+        });
         methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -370,7 +393,56 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(value.contains(str));
             }
         });
+        methods.put(new OverloadableFunction(Constants.EQUALS, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).equals(arguments.get(1)));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.COMPARE_TO, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
+            }
+        });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
+    }
+
+    private SimiNativeClass getNumberClass() {
+        Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction(Constants.EQUALS, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).equals(arguments.get(1)));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.COMPARE_TO, 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_NUMBER, methods);
     }
 
     private SimiNativeClass getGlobalsClass() {

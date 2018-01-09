@@ -253,8 +253,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     SimiValue right = evaluate(expr.right); // [left]
 
     switch (expr.operator.type) {
-      case BANG_EQUAL: return new SimiValue.Number(!isEqual(left, right));
-      case EQUAL_EQUAL: return new SimiValue.Number(isEqual(left, right));
+      case BANG_EQUAL: return new SimiValue.Number(!isEqual(left, right, expr));
+      case EQUAL_EQUAL: return new SimiValue.Number(isEqual(left, right, expr));
+      case LESS_GREATER: return compare(left, right, expr);
         case IS:
             return new SimiValue.Number(isInstance(left, right, expr));
         case ISNOT:
@@ -529,16 +530,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
 
     private SimiValue lookUpVariable(Token name, Expr expr) {
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-          return environment.getAt(distance, name.lexeme);
-        } else {
-          SimiValue value = environment.tryGet(name.lexeme);
-          if (value == null) {
-            return globals.get(name);
+//        Integer distance = locals.get(expr);
+        SimiValue value = null;
+//        if (distance != null) {
+//          value = environment.getAt(distance, name.lexeme);
+//        }
+//        if (value == null) {
+          value = environment.tryGet(name.lexeme);
+          if (value != null) {
+            return value;
           }
-          return value;
-        }
+//        }
+        return globals.get(name);
     }
 
   private void checkNumberOperand(Token operator, SimiValue operand) {
@@ -567,7 +570,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
   }
 
-  private boolean isEqual(SimiValue a, SimiValue b) {
+  private boolean isEqual(SimiValue a, SimiValue b, Expr.Binary expr) {
     // nil is only equal to nil.
     if (a == null && b == null) {
       return true;
@@ -575,7 +578,26 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (a == null) {
       return false;
     }
+    if (a instanceof SimiValue.Object) {
+      Token equals = new Token(TokenType.IDENTIFIER, Constants.EQUALS, null, expr.operator.line);
+      return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment), equals, Arrays.asList(a, b)).getNumber() != 0;
+    }
     return a.equals(b);
+  }
+
+  private SimiValue compare(SimiValue a, SimiValue b, Expr.Binary expr) {
+    // nil is only equal to nil.
+    if (a == null && b == null) {
+      return SimiValue.Number.TRUE;
+    }
+    if (a == null) {
+      return SimiValue.Number.FALSE;
+    }
+    if (a instanceof SimiValue.Object) {
+      Token compareTo = new Token(TokenType.IDENTIFIER, Constants.COMPARE_TO, null, expr.operator.line);
+      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment), compareTo, Arrays.asList(a, b));
+    }
+    return new SimiValue.Number(a.compareTo(b));
   }
 
   private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {

@@ -35,6 +35,9 @@ end
 #print njuKar.tank
 
 
+arr = [1, 2, 3].reversed().joined([5, 6, 7]).filter(def i: i <= 5).map(def i: i * 2)
+print arr
+
 print Math.pow(2, 3)
 
 #$Object.each = def f:
@@ -48,8 +51,6 @@ for i in 6.times(): print i
 for c in "abcdef": print c
 print "cde" in "abcd"
 print "afe" + "pde".1
-
-arr = [1, 2, 3].reversed().joined([5, 6, 7])
 
 len = arr.len()
 print len

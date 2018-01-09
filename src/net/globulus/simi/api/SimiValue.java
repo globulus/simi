@@ -1,6 +1,6 @@
 package net.globulus.simi.api;
 
-public abstract class SimiValue {
+public abstract class SimiValue implements Comparable<SimiValue> {
 
     protected SimiValue() { }
 
@@ -65,11 +65,22 @@ public abstract class SimiValue {
         public SimiValue clone(boolean mutable) {
             return copy();
         }
+
+        @Override
+        public int compareTo(SimiValue o) {
+            if (!(o instanceof String)) {
+                throw new IncompatibleValuesException(this.getClass(), o.getClass());
+            }
+            return this.value.compareTo(((String) o).value);
+        }
     }
 
     public static class Number extends SimiValue {
 
         public final double value;
+
+        public static final Number TRUE = new Number(true);
+        public static final Number FALSE = new Number(false);
 
         public Number(double value) {
             this.value = value;
@@ -105,6 +116,14 @@ public abstract class SimiValue {
         public SimiValue clone(boolean mutable) {
             return copy();
         }
+
+        @Override
+        public int compareTo(SimiValue o) {
+            if (!(o instanceof Number)) {
+                throw new IncompatibleValuesException(this.getClass(), o.getClass());
+            }
+            return Double.compare(this.value, ((Number) o).value);
+        }
     }
 
     public static class Object extends SimiValue {
@@ -121,6 +140,11 @@ public abstract class SimiValue {
         }
 
         @Override
+        public boolean equals(java.lang.Object obj) {
+            return this == obj;
+        }
+
+        @Override
         public SimiValue copy() {
             return new Object(value);
         }
@@ -128,6 +152,11 @@ public abstract class SimiValue {
         @Override
         public SimiValue clone(boolean mutable) {
             return new Object(value.clone(mutable));
+        }
+
+        @Override
+        public int compareTo(SimiValue o) {
+            throw new RuntimeException("Unable to compare objects by default, implement in subclass!");
         }
     }
 
@@ -149,6 +178,11 @@ public abstract class SimiValue {
         }
 
         @Override
+        public boolean equals(java.lang.Object obj) {
+            return this == obj;
+        }
+
+        @Override
         public SimiValue copy() {
             return new Callable(value, name, instance);
         }
@@ -164,6 +198,11 @@ public abstract class SimiValue {
 
         public void bind(SimiObject instance) {
             this.instance = instance;
+        }
+
+        @Override
+        public int compareTo(SimiValue o) {
+            throw new RuntimeException("Unable to compare callables!");
         }
     }
 

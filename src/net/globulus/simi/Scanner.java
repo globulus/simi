@@ -79,7 +79,15 @@ class Scanner {
       case '?': addToken(match('?') ? TokenType.QUESTION_QUESTION : TokenType.QUESTION); break;
       case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
-      case '<': addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS); break;
+      case '<': {
+        if (match('>')) {
+          addToken(TokenType.LESS_GREATER);
+        } else if (match('=')) {
+          addToken(TokenType.LESS_EQUAL);
+        } else {
+          addToken(TokenType.LESS);
+        }
+      } break;
       case '>': addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;
       case '+': addToken(match('=') ? TokenType.PLUS_EQUAL : TokenType.PLUS); break;
       case '-': addToken(match('=') ? TokenType.MINUS_EQUAL : TokenType.MINUS); break;
