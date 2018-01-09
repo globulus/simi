@@ -5,6 +5,7 @@ public abstract class SimiValue {
     protected SimiValue() { }
 
     public abstract SimiValue copy();
+    public abstract SimiValue clone(boolean mutable);
 
     public java.lang.String getString() {
         if (this instanceof String) {
@@ -59,6 +60,11 @@ public abstract class SimiValue {
         public SimiValue copy() {
             return new String(value);
         }
+
+        @Override
+        public SimiValue clone(boolean mutable) {
+            return copy();
+        }
     }
 
     public static class Number extends SimiValue {
@@ -94,6 +100,11 @@ public abstract class SimiValue {
         public SimiValue copy() {
             return new Number(value);
         }
+
+        @Override
+        public SimiValue clone(boolean mutable) {
+            return copy();
+        }
     }
 
     public static class Object extends SimiValue {
@@ -112,6 +123,11 @@ public abstract class SimiValue {
         @Override
         public SimiValue copy() {
             return new Object(value);
+        }
+
+        @Override
+        public SimiValue clone(boolean mutable) {
+            return new Object(value.clone(mutable));
         }
     }
 
@@ -135,6 +151,11 @@ public abstract class SimiValue {
         @Override
         public SimiValue copy() {
             return new Callable(value, name, instance);
+        }
+
+        @Override
+        public SimiValue clone(boolean mutable) {
+            return copy();
         }
 
         public SimiObject getInstance() {

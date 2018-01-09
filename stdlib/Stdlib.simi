@@ -2,6 +2,18 @@ class $Object:
     native len(): pass
     native keys(): pass
     native values(): pass
+    native enumerate(): pass
+    native zip(): pass
+
+    native append(elem): pass
+    native addAll(obj): pass
+    native indexOf(elem): pass
+    native reversed(): pass
+    native sorted(): pass
+    native sorted(comparator): pass
+
+    native clone(): pass
+    native clone(mutable): pass
     native isMutable(): pass
     native isArray(): pass
 
@@ -9,6 +21,94 @@ class $Object:
     native has(obj): pass
 
     native builder(): pass
+
+    def isEmpty(): return @length() == 0
+    def first():
+        if @isEmpty(): return nil
+        else: return @0
+    end
+    def last():
+        len = @length()
+        if len == 0: return nil
+        else: return @(len - 1)
+    end
+    def push(elem): @append(elem)
+    def every(predicate):
+        for item in self:
+            if not condition(item): return false
+        end
+        return true
+    end
+    def filter(predicate):
+        buffer = $[]
+        for item in self:
+            if predicate(item): buffer.append(item)
+        end
+        if @isArray(): return buffer
+        else: return buffer.zip()
+    end
+    def find(predicate):
+        for item in self:
+            if predicate(item): return item
+        end
+        return nil
+    end
+    def findIndex(predicate):
+        if not @isArray(): return nil
+        item = @find(predicate)
+        if item != nil: return item.key
+        else: return nil
+    end
+    def forEach(function):
+        for item in self: function(self)
+    end
+    def joined(with):
+        clone = @clone()
+        clone.addAll(with)
+        return clone
+    end
+    def map(function):
+        buffer = $[]
+        for item in self: buffer.append(function(item))
+        if @isArray(): return buffer
+        else: return buffer.zip()
+    end
+    def pop():
+        len = @length()
+        if len == 0: return nil
+        else:
+            val = @(len - 1)
+            @(len - 1) = nil
+            return val
+        end
+   end
+   def reduce(initialValue, reducer):
+        $val = initialValue
+        for item in self:
+            $val = reducer($val, item)
+        end
+        return $val
+   end
+   def reduceRight(initialValue, reducer): return @reversed().reduce(initiaValue, reducer)
+   def shift():
+        if @isEmpty(): return nil
+        else:
+            val = @0
+            @0 = nil
+            return val
+        end
+   end
+   def removeAll(predicate):
+       for item in self.enumerate():
+           if predicate(item): @(item.key) = nil
+       end
+   end
+   def slice(start): return @slice(start, @length())
+   def slice(start, stop):
+       buffer = $[]
+       for i in Range(start, stop): buffer.append(@(i))
+       return buffer
+   end
 end
 
 def ife(condition, ifval, elseval):

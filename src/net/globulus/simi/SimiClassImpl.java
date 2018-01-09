@@ -175,5 +175,10 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
       public SimiValue copy() {
           return new SuperClassesList(value);
       }
+
+      @Override
+      public SimiValue clone(boolean mutable) {
+          throw new AssertionError();
+      }
   }
 }

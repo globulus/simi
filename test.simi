@@ -30,16 +30,16 @@ end
 
 #d = min3(4, 5, 3)
 
-njuKar = Car.builder().capacity(10).tank(20).build()
+#njuKar = Car.builder().capacity(10).tank(20).build()
 #print njuKar.capacity
 #print njuKar.tank
 
 
 print Math.pow(2, 3)
 
-$Object.each = def f:
-    for item in self: f(item)
-end
+#$Object.each = def f:
+#    for item in self: f(item)
+#end
 
 #print [a = "1", b = def a: return a * a].b(2)
 
@@ -49,12 +49,12 @@ for c in "abcdef": print c
 print "cde" in "abcd"
 print "afe" + "pde".1
 
-arr = [1, 2, 3]
+arr = [1, 2, 3].reversed().joined([5, 6, 7])
 
 len = arr.len()
 print len
 
-arr.each(def i: print i * 2)
+#arr.each(def i: print i * 2)
 
 keys = arr.keys()
 print keys

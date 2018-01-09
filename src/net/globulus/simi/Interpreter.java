@@ -555,7 +555,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
-  private boolean isTruthy(SimiValue object) {
+  static boolean isTruthy(SimiValue object) {
     if (object == null) {
         return false;
     }

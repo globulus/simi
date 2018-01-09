@@ -7,4 +7,9 @@ class Pass extends SimiValue {
     public SimiValue copy() {
         return null;
     }
+
+    @Override
+    public SimiValue clone(boolean mutable) {
+        return null;
+    }
 }

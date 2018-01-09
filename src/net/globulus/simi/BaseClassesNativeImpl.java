@@ -64,6 +64,120 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(keys);
             }
         });
+        methods.put(new OverloadableFunction("enumerate", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiClassImpl objectClass = (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject();
+                return new SimiValue.Object(self.enumerate(objectClass));
+            }
+        });
+        methods.put(new OverloadableFunction("zip", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiClassImpl objectClass = (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject();
+                return new SimiValue.Object(self.zip(objectClass));
+            }
+        });
+        methods.put(new OverloadableFunction("append", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                self.append(arguments.get(1));
+                return arguments.get(0);
+            }
+        });
+        methods.put(new OverloadableFunction("addAll", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getObject();
+                self.addAll(obj);
+                return arguments.get(0);
+            }
+        });
+        methods.put(new OverloadableFunction("indexOf", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiValue value = arguments.get(1);
+                int index = new ArrayList<>(self.fields.values()).indexOf(value);
+                if (index == -1) {
+                    return null;
+                }
+                return new SimiValue.Number(index);
+            }
+        });
+        methods.put(new OverloadableFunction("reversed", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                ListIterator<Map.Entry<String, SimiValue>> iter =
+                        new ArrayList<>(self.fields.entrySet()).listIterator(self.fields.size());
+                LinkedHashMap<String, SimiValue> reversedFields = new LinkedHashMap<>();
+                while (iter.hasPrevious()) {
+                    Map.Entry<String, SimiValue> entry = iter.previous();
+                    reversedFields.put(entry.getKey(), entry.getValue());
+                }
+                return new SimiValue.Object(new SimiObjectImpl(self.clazz, reversedFields, self.immutable));
+            }
+        });
+        methods.put(new OverloadableFunction("clone", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                return new SimiValue.Object(self.clone(false));
+            }
+        });
+        methods.put(new OverloadableFunction("clone", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                boolean mutable = Interpreter.isTruthy(arguments.get(1));
+                return new SimiValue.Object(self.clone(mutable));
+            }
+        });
         methods.put(new OverloadableFunction("isMutable", 0), new SimiCallable() {
             @Override
             public int arity() {

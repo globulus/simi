@@ -9,6 +9,8 @@ class Constants {
     public static final String INIT = "init";
     public static final String SELF = "self";
     public static final String SUPER = "super";
+    public static final String KEY = "key";
+    public static final String VALUE = "value";
 
     public static final String ITERATE = "iterate";
     public static final String NEXT = "next";

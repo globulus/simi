@@ -5,6 +5,8 @@ import net.globulus.simi.api.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 class SimiObjectImpl implements SimiObject {
 
@@ -25,6 +27,19 @@ class SimiObjectImpl implements SimiObject {
     this.fields = new LinkedHashMap<>();
     this.immutable = immutable;
   }
+
+  static SimiObjectImpl pair(SimiClassImpl objectClass, String key, SimiValue value) {
+      LinkedHashMap<String, SimiValue> field = new LinkedHashMap<>();
+      field.put(key, value);
+      return new SimiObjectImpl(objectClass, field, true);
+  }
+
+    static SimiObjectImpl decomposedPair(SimiClassImpl objectClass, String key, SimiValue value) {
+        LinkedHashMap<String, SimiValue> field = new LinkedHashMap<>();
+        field.put(Constants.KEY, new SimiValue.String(key));
+        field.put(Constants.VALUE, value);
+        return new SimiObjectImpl(objectClass, field, true);
+    }
 
   static SimiObjectImpl fromMap(SimiClassImpl clazz, LinkedHashMap<String, SimiValue> fields) {
       return new SimiObjectImpl(clazz, fields, true);
@@ -119,7 +134,17 @@ class SimiObjectImpl implements SimiObject {
   }
 
   boolean is(SimiClassImpl clazz) {
-      return clazz.name.equals(this.clazz.name);
+      if (clazz.name.equals(this.clazz.name)) {
+          return true;
+      }
+      if (this.clazz.superclasses != null) {
+          for (SimiClassImpl superclass : this.clazz.superclasses) {
+              if (superclass.name.equals(clazz.name)) {
+                  return true;
+              }
+          }
+      }
+      return false;
   }
 
   boolean contains(SimiValue object, Token at) {
@@ -149,6 +174,15 @@ class SimiObjectImpl implements SimiObject {
       return true;
   }
 
+  @Override
+  public SimiObjectImpl clone(boolean mutable) {
+      LinkedHashMap<String, SimiValue> fieldsClone = new LinkedHashMap<>();
+      for (Map.Entry<String, SimiValue> entry : fields.entrySet()) {
+          fieldsClone.put(entry.getKey(), entry.getValue().clone(mutable));
+      }
+      return new SimiObjectImpl(clazz, fieldsClone, mutable);
+  }
+
   int length() {
       return fields.size();
   }
@@ -156,8 +190,46 @@ class SimiObjectImpl implements SimiObject {
   private void checkMutability(Token name, Environment environment) {
       if (this.immutable && environment.get(Token.self()).getObject() != this) {
           SimiObject obj = environment.get(Token.self()).getObject();
-          boolean a = obj == this;
           throw new RuntimeError(name, "Trying to alter an immutable object!");
+      }
+  }
+
+  SimiObjectImpl enumerate(SimiClassImpl objectClass) {
+      return SimiObjectImpl.fromArray(objectClass, fields.entrySet().stream()
+              .map(e -> new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, e.getKey(), e.getValue())))
+              .collect(Collectors.toList()));
+  }
+
+  SimiObjectImpl zip(SimiClassImpl objectClass) {
+      if (!isArray()) {
+          throw new RuntimeException("Can only zip arrays!");
+      }
+      if (length() == 0) {
+          return new SimiObjectImpl(objectClass, new LinkedHashMap<>(), true);
+      }
+      LinkedHashMap<String, SimiValue> zipFields = new LinkedHashMap<>();
+      for (SimiValue value : fields.values()) {
+          SimiObjectImpl obj = (SimiObjectImpl) value.getObject();
+          zipFields.put(obj.fields.get(Constants.KEY).getString(), obj.fields.get(Constants.VALUE));
+      }
+      return new SimiObjectImpl(objectClass, zipFields, true);
+  }
+
+  void append(SimiValue elem) {
+      fields.put(Constants.IMPLICIT + fields.size(), elem);
+  }
+
+  void addAll(SimiObjectImpl other) {
+      if (other.isArray()) {
+          for (SimiValue value : other.fields.values()) {
+              append(value);
+          }
+      } else {
+          for (Map.Entry<String, SimiValue> entry : other.fields.entrySet()) {
+              if (!fields.containsKey(entry.getKey())) {
+                  fields.put(entry.getKey(), entry.getValue());
+              }
+          }
       }
   }
 
