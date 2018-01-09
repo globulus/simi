@@ -350,14 +350,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
               arguments.size() + ".");
     }
     boolean isNative = callable instanceof SimiFunction && ((SimiFunction) callable).isNative
+            || callable instanceof SimiMethod && ((SimiMethod) callable).function.isNative
             || callable instanceof BlockImpl && ((BlockImpl) callable).isNative();
     if (isNative) {
       if (instance != null) {
         SimiClassImpl clazz;
-        if (instance instanceof SimiClassImpl) {
-          clazz = (SimiClassImpl) instance;
+        if (callable instanceof SimiMethod) {
+          clazz = ((SimiMethod) callable).clazz;
         } else {
-          clazz = (SimiClassImpl) instance.getSimiClass();
+          if (instance instanceof SimiClassImpl) {
+            clazz = (SimiClassImpl) instance;
+          } else {
+            clazz = (SimiClassImpl) instance.getSimiClass();
+          }
         }
         String className = isBaseClass(clazz.name) ? clazz.name : Constants.CLASS_OBJECT; // TODO fix to check external JARs before attempting $Object
         SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
@@ -453,7 +458,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     // "self" is always one level nearer than "super"'s environment.
     SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getObject();
 
-    SimiFunction method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
+    SimiMethod method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
 
     if (method == null) {
       throw new RuntimeError(expr.method,

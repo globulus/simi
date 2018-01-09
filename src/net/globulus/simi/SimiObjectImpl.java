@@ -2,7 +2,9 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 class SimiObjectImpl implements SimiObject {
 
@@ -74,7 +76,7 @@ class SimiObjectImpl implements SimiObject {
           if (clazz.fields.containsKey(key)) {
               return bind(key, clazz.fields.get(key));
           }
-        SimiFunction method = clazz.findMethod(this, key, arity);
+        SimiMethod method = clazz.findMethod(this, key, arity);
         if (method != null) {
             return new SimiValue.Callable(method, key, this);
         }
@@ -98,6 +100,10 @@ class SimiObjectImpl implements SimiObject {
   void set(Token name, SimiValue value, Environment environment) {
       checkMutability(name, environment);
       String key = name.lexeme;
+      if (key.equals(Constants.PRIVATE) && clazz != null
+              && (clazz.name.equals(Constants.CLASS_STRING) || clazz.name.equals(Constants.CLASS_NUMBER))) {
+          throw new RuntimeError(name, "Cannot modify self._ of Strings and Numbers!");
+      }
       try {
           int index = Integer.parseInt(key);
           key = Constants.IMPLICIT + index;

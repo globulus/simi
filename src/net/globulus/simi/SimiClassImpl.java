@@ -39,32 +39,32 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
         if (value != null) {
             return value;
         }
-        SimiFunction method = findMethod(null, name.lexeme, arity);
+        SimiMethod method = findMethod(null, name.lexeme, arity);
         if (method != null) {
             return new SimiValue.Callable(method, name.lexeme, this);
         }
         return null;
     }
 
-  SimiFunction findMethod(SimiObjectImpl instance, String name, Integer arity) {
+  SimiMethod findMethod(SimiObjectImpl instance, String name, Integer arity) {
         if (arity == null) {
             Optional<SimiFunction> candidate = methods.entrySet().stream()
                     .filter(e -> e.getKey().name.equals(name))
                     .map(Map.Entry::getValue)
                     .findFirst();
             if (candidate.isPresent()) {
-                return candidate.get();
+                return new SimiMethod(this, candidate.get());
             }
         } else {
             OverloadableFunction of = new OverloadableFunction(name, arity);
             if (methods.containsKey(of)) {
-                return methods.get(of).bind(instance);
+                return new SimiMethod(this, methods.get(of).bind(instance));
             }
         }
 
     if (superclasses != null) {
         for (SimiClassImpl superclass : superclasses) {
-            SimiFunction method  = superclass.findMethod(instance, name, arity);
+            SimiMethod method  = superclass.findMethod(instance, name, arity);
             if (method != null) {
                 return method;
             }
@@ -78,18 +78,18 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
     }
   }
 
-  private SimiFunction findClosestVarargMethod(SimiObjectImpl instance, String name, int arity) {
+  private SimiMethod findClosestVarargMethod(SimiObjectImpl instance, String name, int arity) {
         Optional<SimiFunction> candidate = methods.entrySet().stream()
                 .filter(e -> e.getKey().name.equals(name) && e.getKey().arity <= arity)
                 .sorted(Comparator.comparingInt(l -> Math.abs(l.getKey().arity - arity)))
                 .map(Map.Entry::getValue)
                 .findFirst();
         if (candidate.isPresent()) {
-            return candidate.get().bind(instance);
+            return new SimiMethod(this, candidate.get().bind(instance));
         }
         if (superclasses != null) {
           for (SimiClassImpl superclass : superclasses) {
-              SimiFunction method  = superclass.findClosestVarargMethod(instance, name, arity);
+              SimiMethod method  = superclass.findClosestVarargMethod(instance, name, arity);
               if (method != null) {
                   return method;
               }
@@ -100,12 +100,12 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
 
   SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
       SimiObjectImpl instance = new SimiObjectImpl(this, true);
-      SimiFunction initializer = findMethod(instance, Constants.INIT, arguments.size());
+      SimiMethod initializer = findMethod(instance, Constants.INIT, arguments.size());
       if (initializer == null) {
           initializer = findMethod(instance, Constants.PRIVATE + Constants.INIT, arguments.size());
       }
       if (initializer != null) {
-          initializer.call(interpreter, arguments);
+          initializer.function.call(interpreter, arguments);
       }
       return new SimiValue.Object(instance);
   }

@@ -116,6 +116,12 @@ class Scanner {
         while (peek() != '\n' && !isAtEnd()) advance();
         break;
 
+      case '\\':
+        if (match('\n')) {
+          line++;
+        }
+        break;
+
       case ' ':
       case '\r':
       case '\t':

@@ -87,7 +87,7 @@ public abstract class SimiValue {
             if (obj == null || !(obj instanceof SimiValue.Number)) {
                 return false;
             }
-            return value == ((Number) obj).value;
+            return Double.compare(value, ((Number) obj).value) == 0;
         }
 
         @Override
