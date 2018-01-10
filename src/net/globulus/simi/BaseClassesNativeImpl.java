@@ -144,6 +144,11 @@ class BaseClassesNativeImpl {
             @Override
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                if (self.isArray()) {
+                    List<SimiValue> reversed = new ArrayList<>(self.fields.values());
+                    Collections.reverse(reversed);
+                    return new SimiValue.Object(SimiObjectImpl.fromArray(self.clazz, reversed));
+                }
                 ListIterator<Map.Entry<String, SimiValue>> iter =
                         new ArrayList<>(self.fields.entrySet()).listIterator(self.fields.size());
                 LinkedHashMap<String, SimiValue> reversedFields = new LinkedHashMap<>();
@@ -152,6 +157,29 @@ class BaseClassesNativeImpl {
                     reversedFields.put(entry.getKey(), entry.getValue());
                 }
                 return new SimiValue.Object(new SimiObjectImpl(self.clazz, reversedFields, self.immutable));
+            }
+        });
+        methods.put(new OverloadableFunction("sorted", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return sort(interpreter, arguments, null);
+            }
+        });
+        methods.put(new OverloadableFunction("sorted", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiCallable comparator = arguments.get(1).getCallable();
+                return sort(interpreter, arguments, comparator);
             }
         });
         methods.put(new OverloadableFunction("clone", 0), new SimiCallable() {
@@ -199,6 +227,22 @@ class BaseClassesNativeImpl {
             @Override
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 return new SimiValue.Number(((SimiObjectImpl) arguments.get(0).getObject()).isArray());
+            }
+        });
+        methods.put(new OverloadableFunction("class", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObject self = arguments.get(0).getObject();
+                SimiClass clazz = self.getSimiClass();
+                if (clazz == null) {
+                    return null;
+                }
+                return new SimiValue.Object(clazz);
             }
         });
         methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
@@ -514,6 +558,39 @@ class BaseClassesNativeImpl {
             }
         });
         return new SimiNativeClass(Constants.CLASS_GLOBALS, methods);
+    }
+
+    private SimiValue sort(BlockInterpreter interpreter,
+                           List<SimiValue> arguments,
+                           SimiCallable comparator) {
+        SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+        SimiClassImpl objectClass = (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject();
+        if (self.isArray()) {
+            Comparator<SimiValue> nativeComparator;
+            if (comparator == null) {
+                nativeComparator = Comparator.naturalOrder();
+            } else {
+                nativeComparator = (o1, o2) -> comparator.call(interpreter, Arrays.asList(o1, o2)).getNumber().intValue();
+            }
+            List<SimiValue> sorted = new ArrayList<>(self.fields.values());
+            sorted.sort(nativeComparator);
+            return new SimiValue.Object(SimiObjectImpl.fromArray(objectClass, sorted));
+        } else {
+            Comparator<Map.Entry<String, SimiValue>> nativeComparator;
+            if (comparator == null) {
+                nativeComparator = Comparator.comparing(Map.Entry::getKey);
+            } else {
+                nativeComparator = (o1, o2) -> comparator.call(interpreter, Arrays.asList(
+                        new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, o1.getKey(), o1.getValue())),
+                        new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, o2.getKey(), o2.getValue()))
+                    )).getNumber().intValue();
+            }
+            LinkedHashMap<String, SimiValue> sortedFields = new LinkedHashMap<>();
+            self.fields.entrySet().stream()
+                    .sorted(nativeComparator)
+                    .forEach(e -> sortedFields.put(e.getKey(), e.getValue()));
+            return new SimiValue.Object(SimiObjectImpl.fromMap(objectClass, sortedFields));
+        }
     }
 
     private String prepareStringNativeCall(BlockInterpreter interpreter, List<SimiValue> arguments) {

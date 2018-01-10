@@ -241,8 +241,8 @@ class SimiObjectImpl implements SimiObject {
     if (clazz != null) {
         sb.append("\tclass: ")
                 .append(clazz.name)
-                .append("\n\t>>")
-                .append(clazz.toString())
+//                .append("\n\t>>")
+//                .append(clazz.toString())
                 .append(";\n");
     }
     sb.append(printFields());

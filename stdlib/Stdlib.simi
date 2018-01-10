@@ -12,6 +12,7 @@ class $Object:
 
     native append(elem): pass
     native addAll(obj): pass
+
     native indexOf(elem): pass
     native reversed(): pass
     native sorted(): pass
@@ -21,6 +22,7 @@ class $Object:
     native clone(mutable): pass
     native isMutable(): pass
     native isArray(): pass
+    native classObject(): pass
 
     native builder(): pass
 
@@ -100,7 +102,7 @@ class $Object:
             return val
         end
    end
-   def removeAll(predicate):
+   def removeIf(predicate):
        for item in self.enumerate():
            if predicate(item): @(item.key) = nil
        end
