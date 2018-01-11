@@ -48,6 +48,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitBreakStmt(Stmt.Break stmt) {
+    return null;
+  }
+
+  @Override
   public Void visitClassStmt(Stmt.Class stmt) {
     declare(stmt.name, false);
     define(stmt.name);
@@ -78,6 +83,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     if (hasSuperclass) endScope();
 
     currentClass = enclosingClass;
+    return null;
+  }
+
+  @Override
+  public Void visitContinueStmt(Stmt.Continue stmt) {
     return null;
   }
 

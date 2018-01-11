@@ -105,6 +105,14 @@ class Parser {
     if (match(WHILE)) {
         return whileStatement();
     }
+
+    if (match(BREAK)) {
+      return breakStatement();
+    }
+
+    if (match(CONTINUE)) {
+      return continueStatement();
+    }
 //    if (match(COLON)) {
 //        return block("block", true);
 //    }
@@ -164,6 +172,16 @@ class Parser {
     Expr condition = expression();
     Expr.Block block = block("while", true);
     return new Stmt.While(condition, block);
+  }
+
+  private Stmt breakStatement() {
+    Token name = previous();
+    return new Stmt.Break(name);
+  }
+
+  private Stmt continueStatement() {
+    Token name = previous();
+    return new Stmt.Continue(name);
   }
 
   private Stmt.Expression expressionStatement(boolean lambda) {

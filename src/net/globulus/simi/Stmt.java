@@ -7,7 +7,9 @@ import java.util.List;
 abstract class Stmt implements SimiStatement {
 
   interface Visitor<R> {
+    R visitBreakStmt(Break stmt);
     R visitClassStmt(Class stmt);
+    R visitContinueStmt(Continue stmt);
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
     R visitElsifStmt(Elsif stmt);
@@ -16,6 +18,18 @@ abstract class Stmt implements SimiStatement {
     R visitReturnStmt(Return stmt);
     R visitWhileStmt(While stmt);
     R visitForStmt(For stmt);
+  }
+
+  static class Break extends Stmt {
+    Break(Token name) {
+      this.name = name;
+    }
+
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitBreakStmt(this);
+    }
+
+    final Token name;
   }
 
   static class Class extends Stmt {
@@ -34,6 +48,18 @@ abstract class Stmt implements SimiStatement {
     final List<Expr> superclasses;
     final List<Expr.Assign> constants;
     final List<Stmt.Function> methods;
+  }
+
+  static class Continue extends Stmt {
+    Continue(Token name) {
+      this.name = name;
+    }
+
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitContinueStmt(this);
+    }
+
+    final Token name;
   }
 
   static class Expression extends Stmt {

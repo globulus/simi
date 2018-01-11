@@ -35,6 +35,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 //> Classes omit
 
   @Override
+  public String visitBreakStmt(Stmt.Break stmt) {
+    return null;
+  }
+
+  @Override
   public String visitClassStmt(Stmt.Class stmt) {
     StringBuilder builder = new StringBuilder();
     builder.append("(class " + stmt.name.lexeme);
@@ -53,6 +58,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
     builder.append(")");
     return builder.toString();
+  }
+
+  @Override
+  public String visitContinueStmt(Stmt.Continue stmt) {
+    return null;
   }
 //< Classes omit
 //> Statements and State omit

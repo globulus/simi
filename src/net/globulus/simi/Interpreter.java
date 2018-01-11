@@ -3,12 +3,6 @@ package net.globulus.simi;
 import net.globulus.simi.api.*;
 
 import java.util.*;
-//< Functions import-array-list
-//> Resolving and Binding import-hash-map
-//< Resolving and Binding import-hash-map
-//> Statements and State import-list
-//< Statements and State import-list
-//> Resolving and Binding import-map
 
 class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Visitor<Object> {
 
@@ -16,6 +10,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
   private BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
+  private Stack<SimiBlock> loopBlocks = new Stack<>();
 
   Interpreter() {
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
@@ -59,9 +54,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     Environment previous = this.environment;
     try {
       this.environment = (Environment) environment;
-
       for (SimiStatement statement : block.getStatements()) {
-        execute((Stmt) statement);
+          execute((Stmt) statement);
       }
     } finally {
       this.environment = previous;
@@ -82,6 +76,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
     executeBlock(stmt, new Environment(environment));
     return null;
+  }
+
+  @Override
+  public Void visitBreakStmt(Stmt.Break stmt) {
+    if (loopBlocks.isEmpty()) {
+      Simi.error(stmt.name, "Break outside a loop!");
+    }
+    throw new Break();
   }
 
   @Override
@@ -136,6 +138,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         environment.assign(stmt.name, new SimiValue.Object(klass), false);
     }
     return null;
+  }
+
+  @Override
+  public Void visitContinueStmt(Stmt.Continue stmt) {
+    if (loopBlocks.isEmpty()) {
+      Simi.error(stmt.name, "Continue outside a loop!");
+    }
+    throw new Continue();
   }
 
   @Override
@@ -196,9 +206,15 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
+    loopBlocks.push(stmt.body);
     while (isTruthy(evaluate(stmt.condition))) {
-      evaluate(stmt.body);
+      try {
+        evaluate(stmt.body);
+      } catch (Break b) {
+        break;
+      } catch (Continue ignored) { }
     }
+    loopBlocks.pop();
     return null;
   }
 
@@ -215,14 +231,21 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
       nextMethod = iterator.get(nextToken, 0, environment);
     }
+
+    loopBlocks.push(stmt.body);
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
         break;
       }
       environment.assign(stmt.var.name, var, true);
-      evaluate(stmt.body);
+      try {
+        evaluate(stmt.body);
+      } catch (Break b) {
+        break;
+      } catch (Continue ignored) { }
     }
+    loopBlocks.pop();
     this.environment = previous;
     return null;
   }
