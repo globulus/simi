@@ -26,13 +26,14 @@ class $Object:
 
     native builder(): pass
 
-    def isEmpty(): @length() == 0
+    def length(): return @len()
+    def isEmpty(): @len() == 0
     def first():
         if @isEmpty(): return nil
         else: return @0
     end
     def last():
-        len = @length()
+        len = @len()
         if len == 0: return nil
         else: return @(len - 1)
     end
@@ -78,7 +79,7 @@ class $Object:
         else: return buffer.zip()
     end
     def pop():
-        len = @length()
+        len = @len()
         if len == 0: return nil
         else:
             val = @(len - 1)
@@ -107,7 +108,7 @@ class $Object:
            if predicate(item): @(item.key) = nil
        end
    end
-   def slice(start): return @slice(start, @length())
+   def slice(start): return @slice(start, @len())
    def slice(start, stop):
        buffer = $[]
        for i in Range(start, stop): buffer.append(@(i))
@@ -172,11 +173,31 @@ end
 
 class $String:
     native len(): pass
+    native endsWith(suffix): pass
+    native format(args): pass
+    native indexOf(str, index): pass
+    native lastIndexOf(str, index): pass
+    native removing(start, stop): pass
+    native replacing(old, new): pass
+    native split(separator): pass
+    native startsWith(prefix): pass
+    native substring(start, stop): pass
+    native lowerCased(): pass
+    native upperCased(): pass
+    native trim(): pass
 
     native iterate(): pass
     native has(obj): pass
     native equals(other): pass
     native compareTo(other): pass
+
+    native builder(): pass
+
+    def length(): return @len()
+    def indexOf(str): return @indexOf(str, 0)
+    def lastIndexOf(str): return @lastIndexOf(str, @len() - 1)
+    def removing(start): return @slice(start, @len())
+    def substring(start): return @substring(start, @len())
 end
 
 Math = [

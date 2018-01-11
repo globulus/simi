@@ -7,6 +7,7 @@ import java.text.StringCharacterIterator;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 class BaseClassesNativeImpl {
@@ -395,6 +396,186 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(value.length());
             }
         });
+        methods.put(new OverloadableFunction("endsWith", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String suffix = arguments.get(1).getString();
+                return new SimiValue.Number(value.endsWith(suffix));
+            }
+        });
+        methods.put(new OverloadableFunction("format", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                SimiObjectImpl argsObject = (SimiObjectImpl) arguments.get(1).getObject();
+                Object[] args = new Object[argsObject.fields.size()];
+                int i = 0;
+                for (SimiValue simiValue : argsObject.fields.values()) {
+                    if (simiValue instanceof SimiValue.Number) {
+                        args[i] = simiValue.getNumber();
+                    } else {
+                        args[1] = simiValue.toString();
+                    }
+                    i++;
+                }
+                return new SimiValue.String(String.format(value, args));
+            }
+        });
+        methods.put(new OverloadableFunction("indexOf", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String str = arguments.get(1).getString();
+                int index = arguments.get(2).getNumber().intValue();
+                int i = value.indexOf(str, index);
+                if (i == -1) {
+                    return null;
+                }
+                return new SimiValue.Number(i);
+            }
+        });
+        methods.put(new OverloadableFunction("lastIndexOf", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String str = arguments.get(1).getString();
+                int index = arguments.get(2).getNumber().intValue();
+                int i = value.lastIndexOf(str, index);
+                if (i == -1) {
+                    return null;
+                }
+                return new SimiValue.Number(i);
+            }
+        });
+        methods.put(new OverloadableFunction("removing", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                int start = arguments.get(1).getNumber().intValue();
+                int stop = arguments.get(2).getNumber().intValue();
+                return new SimiValue.String(value.substring(0, start).concat(value.substring(stop, value.length())));
+            }
+        });
+        methods.put(new OverloadableFunction("replacing", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String old = arguments.get(1).getString();
+                String newStr = arguments.get(1).getString();
+                return new SimiValue.String(value.replace(old, newStr));
+            }
+        });
+        methods.put(new OverloadableFunction("split", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiClassImpl objectClass = (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getObject();
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String separator = arguments.get(1).getString();
+                List<SimiValue> split = Arrays.stream(value.split(Pattern.quote(separator)))
+                        .map(SimiValue.String::new)
+                        .collect(Collectors.toList());
+                return new SimiValue.Object(SimiObjectImpl.fromArray(objectClass, split));
+            }
+        });
+        methods.put(new OverloadableFunction("startsWith", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                String prefix = arguments.get(1).getString();
+                return new SimiValue.Number(value.startsWith(prefix));
+            }
+        });
+        methods.put(new OverloadableFunction("substring", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                int start = arguments.get(1).getNumber().intValue();
+                int stop = arguments.get(2).getNumber().intValue();
+                return new SimiValue.String(value.substring(start, stop));
+            }
+        });
+        methods.put(new OverloadableFunction("lowerCased", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                return new SimiValue.String(value.toLowerCase());
+            }
+        });
+        methods.put(new OverloadableFunction("upperCased", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                return new SimiValue.String(value.toUpperCase());
+            }
+        });
+        methods.put(new OverloadableFunction("trim", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                return new SimiValue.String(value.trim());
+            }
+        });
         methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -459,7 +640,52 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
             }
         });
-        return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
+        methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+                SimiNativeObject object = new SimiNativeObject(fields);
+                SimiValue objectValue = new SimiValue.Object(object);
+                StringBuilder sb = new StringBuilder();
+                fields.put("plus", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                        SimiValue value = arguments.get(0);
+                        if (value instanceof SimiValue.Number) {
+                            sb.append(value.getNumber());
+                        } else if (value instanceof SimiValue.String) {
+                            sb.append(value.getString());
+                        } else {
+                            sb.append(value.toString());
+                        }
+                        return objectValue;
+                    }
+                }, "plus", object));
+                fields.put("build", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                        return new SimiValue.String(sb.toString());
+                    }
+                }, "build", object));
+                return objectValue;
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_STRING, methods);
     }
 
     private SimiNativeClass getNumberClass() {
