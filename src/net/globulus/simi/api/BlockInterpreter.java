@@ -5,4 +5,5 @@ public interface BlockInterpreter {
     void executeBlock(SimiBlock block, SimiEnvironment environment);
     SimiValue getGlobal(String name);
     SimiEnvironment getEnvironment();
+    void raiseException(SimiException e);
 }

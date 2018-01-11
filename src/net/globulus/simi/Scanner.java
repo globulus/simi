@@ -34,6 +34,7 @@ class Scanner {
     keywords.put("or",     TokenType.OR);
     keywords.put("pass",    TokenType.PASS);
     keywords.put("print",          TokenType.PRINT);
+    keywords.put("rescue",         TokenType.RESCUE);
     keywords.put("return",         TokenType.RETURN);
     keywords.put(Constants.SELF,   TokenType.SELF);
     keywords.put(Constants.SUPER,  TokenType.SUPER);

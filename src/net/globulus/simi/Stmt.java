@@ -15,6 +15,7 @@ abstract class Stmt implements SimiStatement {
     R visitElsifStmt(Elsif stmt);
     R visitIfStmt(If stmt);
     R visitPrintStmt(Print stmt);
+    R visitRescueStmt(Rescue stmt);
     R visitReturnStmt(Return stmt);
     R visitWhileStmt(While stmt);
     R visitForStmt(For stmt);
@@ -129,6 +130,20 @@ abstract class Stmt implements SimiStatement {
     }
 
     final Expr expression;
+  }
+
+  static class Rescue extends Stmt {
+    Rescue(Token keyword, Expr.Block block) {
+      this.keyword = keyword;
+      this.block = block;
+    }
+
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitRescueStmt(this);
+    }
+
+    final Token keyword;
+    final Expr.Block block;
   }
 
   static class Return extends Stmt {

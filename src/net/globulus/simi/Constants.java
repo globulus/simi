@@ -1,6 +1,6 @@
 package net.globulus.simi;
 
-class Constants {
+final class Constants {
 
     public static final String MUTABLE = "$";
     public static final String PRIVATE = "_";
@@ -17,11 +17,13 @@ class Constants {
     public static final String HAS = "has";
     public static final String EQUALS = "equals";
     public static final String COMPARE_TO = "compareTo";
+    public static final String RAISE = "raise";
 
     public static final String CLASS_OBJECT = "$Object";
     public static final String CLASS_STRING = "$String";
     public static final String CLASS_NUMBER = "$Number";
     public static final String CLASS_CLASS = "Class";
+    public static final String CLASS_EXCEPTION = "Exception";
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
 
     private Constants() { }

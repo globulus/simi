@@ -36,15 +36,15 @@ class Environment implements SimiEnvironment {
 
   void assign(Token name, SimiValue value, boolean allowImmutable) {
       String key = name.lexeme;
-    if (values.containsKey(key)) {
+      if (values.get(key) != null) {
         if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
             values.put(key, value);
         } else {
             throw new RuntimeError(name, "Cannot assign to a const, use " + Constants.MUTABLE + " at the start of var name!");
         }
-    } else {
-        define(key, value);
-    }
+      } else {
+          define(key, value);
+      }
 
 //    if (enclosing != null) {
 //      enclosing.assign(name, value);

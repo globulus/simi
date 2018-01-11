@@ -11,6 +11,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private final Map<Expr, Integer> locals = new HashMap<>();
   private BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
   private Stack<SimiBlock> loopBlocks = new Stack<>();
+  private Stack<SimiException> raisedExceptions = new Stack<>();
 
   Interpreter() {
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
@@ -54,8 +55,26 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     Environment previous = this.environment;
     try {
       this.environment = (Environment) environment;
-      for (SimiStatement statement : block.getStatements()) {
-          execute((Stmt) statement);
+      List<? extends SimiStatement> statements = block.getStatements();
+      int size = statements.size();
+      for (int i = 0; i < size; i++) {
+        if (raisedExceptions.isEmpty()) {
+          Stmt statement = (Stmt) statements.get(i);
+          execute(statement);
+        } else {
+          Stmt.Rescue rescue = null;
+          for (; i < size; i++) {
+            Stmt statement = (Stmt) statements.get(i);
+            if (statement instanceof Stmt.Rescue) {
+              rescue = (Stmt.Rescue) statement;
+              break;
+            }
+          }
+          if (rescue != null) { // TODO pass exception
+            SimiException e = raisedExceptions.pop();
+            executeBlock(rescue.block, new Environment(this.environment));
+          }
+        }
       }
     } finally {
       this.environment = previous;
@@ -70,6 +89,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiEnvironment getEnvironment() {
     return environment;
+  }
+
+  @Override
+  public void raiseException(SimiException e) {
+    raisedExceptions.push(e);
   }
 
   @Override
@@ -191,6 +215,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public Void visitPrintStmt(Stmt.Print stmt) {
     SimiValue value = evaluate(stmt.expression);
     System.out.println(stringify(value));
+    return null;
+  }
+
+  @Override
+  public Void visitRescueStmt(Stmt.Rescue stmt) {
+    // Rescue statements are not visited unless explicity
     return null;
   }
 
@@ -658,6 +688,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private boolean isBaseClass(String className) {
     return className.equals(Constants.CLASS_OBJECT)
             || className.equals(Constants.CLASS_NUMBER)
-            || className.equals(Constants.CLASS_STRING);
+            || className.equals(Constants.CLASS_STRING)
+            || className.equals(Constants.CLASS_EXCEPTION);
   }
 }

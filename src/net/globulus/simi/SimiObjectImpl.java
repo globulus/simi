@@ -216,6 +216,9 @@ class SimiObjectImpl implements SimiObject {
   }
 
   void append(SimiValue elem) {
+      if (immutable) {
+          throw new RuntimeException("Trying to append to an immutable object!");
+      }
       fields.put(Constants.IMPLICIT + fields.size(), elem);
   }
 

@@ -105,13 +105,14 @@ class Parser {
     if (match(WHILE)) {
         return whileStatement();
     }
-
     if (match(BREAK)) {
       return breakStatement();
     }
-
     if (match(CONTINUE)) {
       return continueStatement();
+    }
+    if (match(RESCUE)) {
+      return rescueStatement();
     }
 //    if (match(COLON)) {
 //        return block("block", true);
@@ -182,6 +183,15 @@ class Parser {
   private Stmt continueStatement() {
     Token name = previous();
     return new Stmt.Continue(name);
+  }
+
+  private Stmt rescueStatement() {
+    Token keyword = previous();
+    Expr.Block block = block("rescue", true);
+    if (block.params.size() != 1) {
+      Simi.error(keyword, "Rescue block expects exactly 1 parameter!");
+    }
+    return new Stmt.Rescue(keyword, block);
   }
 
   private Stmt.Expression expressionStatement(boolean lambda) {

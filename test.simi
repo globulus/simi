@@ -4,11 +4,16 @@
 #$a = 4
 #print c
 
+class CarException(Exception):
+
+end
+
 class Car:
 
     def init(capacity, tank): pass
 
     def refill(amount):
+        if amount < 0: CarException("Amount < 0!").raise()
         if @tank + amount > @capacity: @tank = @capacity
         else: @tank = @tank + amount
     end
@@ -30,9 +35,16 @@ end
 
 #d = min3(4, 5, 3)
 
-#njuKar = Car.builder().capacity(10).tank(20).build()
-#print njuKar.capacity
-#print njuKar.tank
+def refillCar():
+    njuKar = Car.builder().capacity(10).tank(20).build()
+    print "should be printed"
+    njuKar.refill(-29)
+    print "should be skipped"
+    rescue exception: print "rescue"
+    print "after rescue"
+end
+
+refillCar()
 
 #string = $String.builder().plus(3).plus("aaa").plus(4.5).plus("bbb").build().substring(2, 5)
 #print string

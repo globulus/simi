@@ -19,6 +19,7 @@ class BaseClassesNativeImpl {
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
         classes.put(Constants.CLASS_STRING, getStringClass());
         classes.put(Constants.CLASS_NUMBER, getNumberClass());
+        classes.put(Constants.CLASS_EXCEPTION, getExceptionClass());
         classes.put(Constants.CLASS_GLOBALS, getGlobalsClass());
     }
 
@@ -713,6 +714,25 @@ class BaseClassesNativeImpl {
             }
         });
         return new SimiNativeClass(Constants.CLASS_NUMBER, methods);
+    }
+
+    private SimiNativeClass getExceptionClass() {
+        Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction(Constants.RAISE, 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                String message = self.get("message", interpreter.getEnvironment()).getString();
+                interpreter.raiseException(new SimiException(self.clazz, message));
+                return null;
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_EXCEPTION, methods);
     }
 
     private SimiNativeClass getGlobalsClass() {

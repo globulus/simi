@@ -4,6 +4,7 @@ class $Object:
     native values(): pass
     native enumerate(): pass
     native zip(): pass
+    native toSet(): pass
 
     native iterate(): pass
     native has(obj): pass
@@ -12,6 +13,7 @@ class $Object:
 
     native append(elem): pass
     native addAll(obj): pass
+    native clear(): pass
 
     native indexOf(elem): pass
     native reversed(): pass
@@ -114,6 +116,12 @@ class $Object:
        for i in Range(start, stop): buffer.append(@(i))
        return buffer
    end
+end
+
+class Exception:
+    def init(message): pass
+
+    native raise(): pass
 end
 
 def ife(condition, ifval, elseval):
