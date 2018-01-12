@@ -40,7 +40,10 @@ def refillCar():
     print "should be printed"
     njuKar.refill(-29)
     print "should be skipped"
-    rescue exception: print "rescue"
+    rescue ex:
+        if ex: print "rescue from: " + ex.message
+        print "rescue always"
+    end
     print "after rescue"
 end
 

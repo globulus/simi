@@ -31,7 +31,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   void interpret(List<Stmt> statements) {
     try {
       for (Stmt statement : statements) {
-        execute(statement);
+        if (raisedExceptions.isEmpty()) {
+          execute(statement);
+        } else {
+          throw raisedExceptions.peek();
+        }
       }
     } catch (RuntimeError error) {
       Simi.runtimeError(error);
@@ -70,9 +74,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
               break;
             }
           }
-          if (rescue != null) { // TODO pass exception
+          if (rescue != null) {
             SimiException e = raisedExceptions.pop();
-            executeBlock(rescue.block, new Environment(this.environment));
+            executeRescueBlock(rescue, e);
           }
         }
       }
@@ -220,7 +224,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitRescueStmt(Stmt.Rescue stmt) {
-    // Rescue statements are not visited unless explicity
+    executeRescueBlock(stmt, null);
     return null;
   }
 
@@ -439,7 +443,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     SimiValue object = evaluate(expr.object);
     Token name = evaluateGetSetName(expr.origin, expr.name);
     try {
-        return ((SimiObjectImpl) SimiObjectImpl.getOrConvertObject(object, this)).get(name, expr.arity, environment);
+        SimiObject simiObject = SimiObjectImpl.getOrConvertObject(object, this);
+        if (simiObject instanceof SimiObjectImpl) {
+          return ((SimiObjectImpl) simiObject).get(name, expr.arity, environment);
+        } else {
+          return simiObject.get(name.lexeme, environment);
+        }
     } catch (SimiValue.IncompatibleValuesException e) {
         throw new RuntimeError(expr.origin,"Only instances have properties.");
     }
@@ -580,6 +589,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
           }
         }
         return new SimiValue.Object(object);
+    }
+
+    private void executeRescueBlock(Stmt.Rescue rescue, SimiException e) {
+      List<SimiValue> args = new ArrayList<>();
+      if (e != null) {
+        args.add(new SimiValue.Object(e));
+      } else {
+        args.add(null);
+      }
+      call(new SimiValue.Callable(new BlockImpl(rescue.block, this.environment), null, null), rescue.keyword, args);
     }
 
     private SimiValue lookUpVariable(Token name, Expr expr) {

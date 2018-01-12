@@ -27,11 +27,12 @@ class Environment implements SimiEnvironment {
     if (values.containsKey(name.lexeme)) {
       return values.get(name.lexeme);
     }
-
-    if (enclosing != null) return enclosing.get(name);
-
-    throw new RuntimeError(name,
-        "Undefined variable '" + name.lexeme + "'.");
+    if (enclosing != null) {
+      return enclosing.get(name);
+    }
+    return null;
+//    throw new RuntimeError(name,
+//        "Undefined variable '" + name.lexeme + "'.");
   }
 
   void assign(Token name, SimiValue value, boolean allowImmutable) {
