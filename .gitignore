@@ -27,3 +27,5 @@ hs_err_pid*
 plugin/.idea/misc.xml
 plugin/.idea/modules.xml
 plugin/.idea/workspace.xml
+.idea/markdown-navigator.xml
+.idea/markdown-navigator/profiles_settings.xml

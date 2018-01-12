@@ -493,6 +493,10 @@ class Parser {
       return new Expr.Grouping(expr);
     }
 
+    if (match(QUESTION)) {
+      return new Expr.Unary(previous(), primary());
+    }
+
     throw error(peek(), "Expect expression.");
   }
 

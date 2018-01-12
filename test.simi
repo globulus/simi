@@ -5,7 +5,9 @@
 #print c
 
 class CarException(Exception):
+end
 
+class TankOverflowException(Exception):
 end
 
 class Car:
@@ -14,6 +16,7 @@ class Car:
 
     def refill(amount):
         if amount < 0: CarException("Amount < 0!").raise()
+        if amount > 100: TankOverflowException("Too much gasoline!").raise()
         if @tank + amount > @capacity: @tank = @capacity
         else: @tank = @tank + amount
     end
@@ -38,10 +41,13 @@ end
 def refillCar():
     njuKar = Car.builder().capacity(10).tank(20).build()
     print "should be printed"
-    njuKar.refill(-29)
+    njuKar.refill(10)
     print "should be skipped"
     rescue ex:
+        print ?ex.message
         if ex: print "rescue from: " + ex.message
+        if ex is CarException: print "car exc"
+        else: print ex
         print "rescue always"
     end
     print "after rescue"

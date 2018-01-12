@@ -292,7 +292,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     } else {
       value = evaluate(expr.value);
     }
-    if (value instanceof SimiValue.String || value instanceof SimiValue.Number) {
+    if (value instanceof TempNull) {
+      value = null;
+    } else if (value instanceof SimiValue.String || value instanceof SimiValue.Number) {
       value = value.copy();
     }
     Integer distance = locals.get(expr);
@@ -442,6 +444,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public SimiValue visitGetExpr(Expr.Get expr) {
     SimiValue object = evaluate(expr.object);
     Token name = evaluateGetSetName(expr.origin, expr.name);
+    if (object instanceof TempNull) {
+      return TempNull.INSTANCE;
+    }
     try {
         SimiObject simiObject = SimiObjectImpl.getOrConvertObject(object, this);
         if (simiObject instanceof SimiObjectImpl) {
@@ -546,6 +551,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       case MINUS:
         checkNumberOperand(expr.operator, right);
         return new SimiValue.Number(-right.getNumber());
+      case QUESTION:
+        return (right == null) ? TempNull.INSTANCE : right;
     }
     // Unreachable.
     return null;
@@ -631,7 +638,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   static boolean isTruthy(SimiValue object) {
-    if (object == null) {
+    if (object == null || object == TempNull.INSTANCE) {
         return false;
     }
     try {
@@ -682,7 +689,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (!(b instanceof SimiValue.Object)) {
         throw new RuntimeError(expr.operator, "Right side must be a Class!");
     }
-    return ((SimiObjectImpl) a.getObject()).is((SimiClassImpl) b.getObject());
+    SimiObject aObj = a.getObject();
+    SimiClassImpl clazz = (SimiClassImpl) b.getObject();
+    if (aObj instanceof SimiObjectImpl) {
+      return ((SimiObjectImpl) aObj).is(clazz);
+    } else {
+      return aObj.getSimiClass() == clazz;
+    }
   }
 
   private boolean isIn(SimiValue a, SimiValue b, Expr.Binary expr) {
