@@ -54,6 +54,22 @@ end
 ```
 Blocks are used everywhere with the exact same syntax, for classes, functions, lambdas, and control flow statements.
 
+#### Variables and constants
+In Šimi, you needn't declare the variable before using it, a simple assignment expression both declares and defines a variable.
+
+By default, all variables in Šimi are constants, i.e their value can't change once it's been assigned (and it's assigned right at the declaration). If you want a real variable, its name must start with a dollar sign ($). This makes sure that, at all times, you know that the value of a variable you're accessing could've been changed somewhere in the code, which is not the case with constants.
+```ruby
+# Here are some constants
+a = 5
+b = "str"
+c = [name = "Peter", surname = "Parker"]
+
+# Here are some variables
+$d = 5
+while $d < 15: $d *= 2
+$e = "another string"
+```
+
 ### Values
 
 Šimi supports exactly 5 values, making it extremely easy to infer types and know how does a part of code behave:???
@@ -146,7 +162,7 @@ Objects have a rich literal syntax:
 # A class instance, immutable by default (See Classes section)
 pen = Pen("blue")
 
-# A struct (which can also be accomplised via Class instancing)
+# A value class/struct (which can also be done via Class instancing)
 point = [x = 10, y = 20]
 
 # An array/list is created as a regular object, but without any keys
@@ -164,12 +180,179 @@ tuple = [10, 20, "str"]
 mutableObject = $[key1 = "value1", key2 = 12, key3 = [1, 2, 3, 4]]
 immutableObject = [key4 = mutableObject.key3.len(), key5 = 12.345]
 
-# Immutable objects with functions can be used as static classes
+# Immutable objects with constants and functions serve the role of
+# static classes in other languages.
 basicArithmetic = [
     add = def (a, b): return a + b
     subtract = def (a, b): return a - b
 ]
 ```
+Object literals are enclosed in brackets (\[ ]), with mutable object having a $ before the brackets ($\[ ]). An empty mutable object can become either an array, based on the first operation that's done to it - if it's an add/push or addAll(array), it will become an array, otherwise it's considered to be a dictionary.
+
+Getting and setting values is done via the dot operator (.). For arrays, the supplied key must be a number, whereas for objects with keys it can either be an identifier, a string or a number.
+```ruby
+object = $[a = 2, b = 3]
+a = object.a # Gets value for key a
+b = object.0 # Gets the first value
+c = object.("" + "a") # You can evaluate keys by encolsing them in ()
+
+object.c = "str" # Added a new key-value pair to the object
+object.b = nil # Removed a property from the object
+
+array = $[1, 2, 3, 4, 5]
+d = array.1 # Gets the second element in the array
+array.push(6)
+array.4 = nil # Removed the fifth element from the array
+```
+
+Objects are pass-by-reference.
+
+### Classes
+Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
+```ruby
+class Car(Vehicle):
+    wheels = 4
+
+    def init(brand, model, year): pass
+
+    def refuel(amount): @fuel = Math.min(@tank, @fuel + amount)
+
+    def drive(distance):
+        fuelSpent = @expenditure * distance
+        @fuel = Math.max(0, @fuel - fuelSpent)
+    end
+end
+
+car = Car("Peugeot", "2008", 2014) # Creating a new class instance
+print car.brand # Peugeot
+```
+Here's a quick rundown of classes:
+* By convention, class names are Capitalized.
+* Šimi supports multiple inheritance, i.e a class can have any number of Superclasses. This is partly because Šimi doesn't make a distinction between regular classes, abstract classes and interfaces. When a method is requested via an object getter, the resolution is as following:
+
+⋅⋅⋅1. Check the current class for that method name.
+⋅⋅⋅2. Check the leftmost superclass for that method name.
+⋅⋅⋅3. Recursively check that superclass' lefmost superclass, all the way up.
+
+* All classes except base classes ($Object, $String, $Number, and Exception) silently inherit the $Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to $Object methods.
+* Classes themselves are objects, with "class" set to a void object named "Class".
+* From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
+* Instance vars and methods are mutable by defualt from within the class, and don't require their names to start with $.
+* Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
+* Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
+```ruby
+class Writer: # Implicitly inherits $Object
+    def write(words): print words
+    def write(words, times):
+        for i in times.times(): print words
+    end
+end
+```
+* Constructor methods are named *init*. When an object is constructed via class instantation, the interpeter will look up for an *init* method with the appropriate number of parameters. All objects have a default empty constructor that takes no parameters.
+* An empty init with parameters is a special construct that creates instance variables for all the parameters. This makes it very easy to construct value object classes without having to write boilerplate code.
+```ruby
+class Point:
+    def init(x, y): pass
+
+    # This is fully equivalent to:
+    # def init(x, y):
+    #   @x = x
+    #   @y = y
+    # end
+end
+```
+* All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - methods that have references to *self* in their bodies are instance-only as the *self* will be nil when used on a class.
+* Classes whose names start with $ are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
+```ruby
+# Adding a method that doubles a number
+$Number.double = def (): @_ * 2
+a = 3
+b = a.double() # b == 6
+```
+
+### Operators
+
+#### Arithmetic
+
++, -, *, /, %
+
+* \+ can be used to add values and concatenate strings.
+* Other operators work on Numbers only.
+* \- Can be used as an unary operator.
+
+#### Assignment
+
+=, +=, -=, *=, /=, %=
+
+#### Logical
+
+not, and, or
+
+* *not* is unary, *and* and *or* are binary
+* *and* and *or* are short-circuit operators (and-then and or-else)
+
+#### Comparison
+
+==, !=, <, <=, >, >=, <>
+
+* On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class.
+* The comparison operator <> implicitly invokes *compareTo()* method, which returns -1 if the left compared value is lesser than the right one, 0 is they're equal and 1 if it's greater. For Numbers and Strings, this operator returns the natural ordering, whereas for Objects it can be used in *sorted()* method, as well as a replacement for < and >:
+```ruby
+obj1 <> obj2 < 0 # Is equivalent to obj1 < obj2
+```
+ * Remaining operators (<, <=, > and >=) can only be used with Numbers.
+
+#### is and is not
+You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:
+```ruby
+a = [1, 2, 3, 4]
+a is $Object # true
+a is not $Number # true
+b = 5
+b is $Number # true
+b is $String # false
+car = Car("Audi", "A6", 2016)
+car is Car # true
+car is not $Object # false
+```
+
+#### in and not in
+The *in* operator implicitly calls the *has* method, that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
+```ruby
+class Range:
+
+    # ... rest of implementation omitted...
+
+    def has(val):
+        if @start < @stop: return val >= @start and val < @stop
+        else: return val <= @start and val > @stop
+    end
+end
+"str" in "substring" # true
+"a" not in "bcdf" # true
+2 in [1, 2, 3] # true
+"a" in [b = 2, c = 3] # false
+range = Range(1, 10)
+2 in range # true
+10 not in range # true
+```
+
+#### ?? - nil coalescence
+The ?? operator checks if the value for left is nil. If it is, it returns the right value, otherwise it returns the left value.
+```ruby
+a = b ?? c # is equivalent to a = ife(b != nil, b, c)
+```
+
+#### ? - nil silencing
+Using a method call, getter or setter on a nil results in a NilPointerException, but you can silence that by using the ? operator. Basically, the ? operator will check if its operand is nil. If it is, it's going to disregard all the .s and ()s after it, and return a nil value.
+```ruby
+obj = nil
+a = obj.property # CRASH
+b = ?obj.property # b = nil, no crash
+```
+
+#### @ - self referencing
+The @ operator maps exactly to *self.*, i.e @tank is identical to writing self.tank. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.*s).
 
 ### Control flow
 
@@ -233,7 +416,12 @@ Virtually everything in Šimi is iterable:
 #### break and continue
 The *break* and *continue* keywords work as in other languages, and must be placed inside loops, otherwise the interpreter will throw an exception.
 
-### Exception handling - the *rescue* block
+### Exception handling
+
+#### Exceptions
+All exceptions thrown in Šimi do (and should) extend the base class *Exception*. The default constructor takes a string message, and the class exposes a native method *raise()* that is used for throwing an error.
+
+#### The *rescue* block
 Šimi compresses the usual try-catch-...-catch-else-finally exception handling structure into a single concept, that of a *rescue block*.
 
 ```ruby
