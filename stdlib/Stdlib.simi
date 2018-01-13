@@ -26,6 +26,7 @@ class $Object:
     native isArray(): pass
     native classObject(): pass
 
+    native array(): pass
     native builder(): pass
 
     def length(): return @len()

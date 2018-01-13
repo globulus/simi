@@ -1,14 +1,12 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiEnvironment;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.LinkedHashMap;
 
-class SimiNativeObject extends SimiObjectImpl {
+class SimiNativeObject extends SimiObjectImpl.Dictionary {
 
     SimiNativeObject(LinkedHashMap<String, SimiValue> fields) {
-        super(null, fields, true);
+        super(null, true, fields);
     }
 }

@@ -566,14 +566,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     @Override
     public SimiValue visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
         boolean immutable = (expr.opener.type == TokenType.LEFT_BRACKET);
-        LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
-        int count = 0;
-        for (Expr prop : expr.props) {
+        SimiClassImpl objectClass = (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject();
+        SimiObjectImpl object;
+        if (expr.props.isEmpty()) {
+          object = SimiObjectImpl.empty(objectClass, immutable);
+        } else {
+          LinkedHashMap<String, SimiValue> mapFields = new LinkedHashMap<>();
+          ArrayList<SimiValue> arrayFields = new ArrayList<>();
+          int count = 0;
+          for (Expr prop : expr.props) {
             String key;
             Expr valueExpr;
             if (expr.isDictionary) {
-                Expr.Assign assign = (Expr.Assign) prop;
-                key = assign.name.lexeme;
+              Expr.Assign assign = (Expr.Assign) prop;
+              key = assign.name.lexeme;
               valueExpr = assign.value;
             } else {
               key = Constants.IMPLICIT + count;
@@ -585,14 +591,22 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             } else {
               value = evaluate(valueExpr);
             }
-            fields.put(key, value);
+            if (expr.isDictionary) {
+              mapFields.put(key, value);
+            } else {
+              arrayFields.add(value);
+            }
             count++;
-        }
-        SimiObjectImpl object =
-                new SimiObjectImpl((SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject(), fields, immutable);
-        for (Map.Entry<String, SimiValue> entry : fields.entrySet()) {
-          if (entry.getValue() instanceof SimiValue.Callable) {
-            ((SimiValue.Callable) entry.getValue()).bind(object);
+          }
+          if (expr.isDictionary) {
+            object = SimiObjectImpl.fromMap(objectClass, immutable, mapFields);
+          } else {
+            object = SimiObjectImpl.fromArray(objectClass, immutable, arrayFields);
+          }
+          for (SimiValue value : object.values()) {
+            if (value instanceof SimiValue.Callable) {
+              ((SimiValue.Callable) value).bind(object);
+            }
           }
         }
         return new SimiValue.Object(object);

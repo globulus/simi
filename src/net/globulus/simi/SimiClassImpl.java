@@ -7,7 +7,7 @@ import net.globulus.simi.api.SimiValue;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class SimiClassImpl extends SimiObjectImpl implements SimiClass {
+class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
   final String name;
   final List<SimiClassImpl> superclasses;
@@ -17,7 +17,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
 
     private SimiClassImpl(String name) {
-       super(null, new LinkedHashMap<>(), true);
+       super(null, true, new LinkedHashMap<>());
        this.name = name;
        superclasses = null;
        methods = new HashMap<>();
@@ -27,7 +27,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
                 List<SimiClassImpl> superclasses,
                 Map<String, SimiValue> constants,
                 Map<OverloadableFunction, SimiFunction> methods) {
-    super(CLASS, new LinkedHashMap<>(constants), !name.startsWith(Constants.MUTABLE));
+    super(CLASS, !name.startsWith(Constants.MUTABLE), new LinkedHashMap<>(constants));
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
@@ -99,7 +99,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   }
 
   SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
-      SimiObjectImpl instance = new SimiObjectImpl(this, true);
+      SimiObjectImpl instance = new SimiObjectImpl.Dictionary(this, true, new LinkedHashMap<>());
       SimiMethod initializer = findMethod(instance, Constants.INIT, arguments.size());
       if (initializer == null) {
           initializer = findMethod(instance, Constants.PRIVATE + Constants.INIT, arguments.size());
