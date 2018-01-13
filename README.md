@@ -98,6 +98,22 @@ When used as objects, strings are boxed into an instance of open Stdlib class $S
 
 Strings are pass-by-value, and boxed strings are pass-by-copy.
 
+The $String class contains a native *builder()* method that allows you to concatenate a large number of string components without sacrificing the performance that results from copying a lot of strings:
+```ruby
+class Range:
+
+    ... rest of implementation omitted ...
+
+    def toString():
+        return $String.builder()\
+            .plus("Range from ").plus(@start)\
+            .plus(" to ").plus(@stop)\
+            .plus(" by ").plus(@step)\
+            .build()
+    end
+end
+```
+
 ##### Boxed numbers and strings
 Boxed numbers and strings are objects with two fields, a class being $Number of $String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
@@ -170,8 +186,8 @@ mutableList = $[1, 2, 3, 4, 5]
 mutableList.push(6)
 immutableList = ["str", "str2", "str4"]
 
-# Sets are arrays which invoked the native set() function
-set = mutableList.set()
+# Sets are arrays which invoked the native toSet() function
+set = mutableList.toSet()
 
 # Tuples are basically immutable lists/arrays
 tuple = [10, 20, "str"]
@@ -207,6 +223,12 @@ array.4 = nil # Removed the fifth element from the array
 
 Objects are pass-by-reference.
 
+#### Value conversions
+* Numbers can be converted to Strings via the toString() method.
+* Conversely, Strings can be converted to Numbers by using the toNumber() method, but be aware that invoking this method may produce NumberFormatException that needs to be handled via the *rescue* block.
+* Objects (and all their derivations) have a toString() method that prints a human-readable representation of the object.
+* If you wish to have a custom representation of a class, override the toString() method in it.
+
 ### Classes
 Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
 ```ruby
@@ -230,21 +252,43 @@ Here's a quick rundown of classes:
 * By convention, class names are Capitalized.
 * Šimi supports multiple inheritance, i.e a class can have any number of Superclasses. This is partly because Šimi doesn't make a distinction between regular classes, abstract classes and interfaces. When a method is requested via an object getter, the resolution is as following:
 
-⋅⋅⋅1. Check the current class for that method name.
-⋅⋅⋅2. Check the leftmost superclass for that method name.
-⋅⋅⋅3. Recursively check that superclass' lefmost superclass, all the way up.
+    1. Check the current class for that method name.
+    2. Check the leftmost superclass for that method name.
+    3. Recursively check that superclass' lefmost superclass, all the way up.
 
 * All classes except base classes ($Object, $String, $Number, and Exception) silently inherit the $Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to $Object methods.
+* You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses ($Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
+```ruby
+class OtherCar(Car, Range): # This combination makes no sense :D
+    def init():
+        super.init(10, 20) # Uses the init from Car class
+        @start = 5
+        @stop = 10
+        @step = 2
+        super.refill(2) # Refill from superclass
+        @refill(3) # OtherCar implementation of refill
+   end
+
+   def refill(amount):
+        print "Doing nothing"
+   end
+
+   def has(value):
+    # Here we specify that we wish to use the has() method from the Range class
+    return super(Range).has(value)
+   end
+end
+```
 * Classes themselves are objects, with "class" set to a void object named "Class".
 * From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
-* Instance vars and methods are mutable by defualt from within the class, and don't require their names to start with $.
+* Instance vars and methods are mutable by default from within the class, and don't require their names to start with $.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
 * Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
 ```ruby
 class Writer: # Implicitly inherits $Object
     def write(words): print words
     def write(words, times):
-        for i in times.times(): print words
+        for i in times.times(): @write(words) # method chaining
     end
 end
 ```
@@ -262,12 +306,36 @@ class Point:
 end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - methods that have references to *self* in their bodies are instance-only as the *self* will be nil when used on a class.
+* Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
+```ruby
+class Private:
+    def init():
+        self._privateField = 3
+    end
+
+    def _method():
+        self._privateField = 2 # Works
+    end
+end
+
+private = Private()
+print private._privateField # Error
+print private._method() # Error
+```
 * Classes whose names start with $ are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
 $Number.double = def (): @_ * 2
 a = 3
 b = a.double() # b == 6
+```
+* The $Object class has a native *builder()* method, meaning that any class in Šimi automatically implements the builder pattern:
+```ruby
+Car = Car.builder()\
+    .brand("Mazda")\
+    .model("CX-7")\
+    .year(2009)\
+    .build()
 ```
 
 ### Operators
@@ -317,11 +385,11 @@ car is not $Object # false
 ```
 
 #### in and not in
-The *in* operator implicitly calls the *has* method, that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
+The *in* operator implicitly calls the *has()* method, that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
 ```ruby
 class Range:
 
-    # ... rest of implementation omitted...
+    # ... rest of implementation omitted ...
 
     def has(val):
         if @start < @stop: return val >= @start and val < @stop
@@ -412,6 +480,7 @@ Virtually everything in Šimi is iterable:
 1. The $Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
 2. The $String class exposes a native iterator which goes over the characters of the string.
 3. The $Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native enumerate() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
+4. Classes may choose to implement their own iterators, as can be seen in the Stdlib Range class.
 
 #### break and continue
 The *break* and *continue* keywords work as in other languages, and must be placed inside loops, otherwise the interpreter will throw an exception.

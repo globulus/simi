@@ -3,6 +3,7 @@ package net.globulus.simi;
 import net.globulus.simi.api.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Visitor<Object> {
 
@@ -13,7 +14,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private Stack<SimiBlock> loopBlocks = new Stack<>();
   private Stack<SimiException> raisedExceptions = new Stack<>();
 
+  static Interpreter sharedInstance;
+
   Interpreter() {
+    sharedInstance = this;
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
       @Override
       public int arity() {
@@ -521,12 +525,25 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiValue visitSuperExpr(Expr.Super expr) {
     int distance = locals.get(expr);
-    SimiClassImpl superclass = (SimiClassImpl) environment.getAt(distance, Constants.SUPER).getObject();
+    SimiMethod method = null;
+    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.getAt(distance, Constants.SUPER)).value;
+    if (expr.superclass != null) {
+      superclasses = superclasses.stream()
+              .filter(superclass -> superclass.name.equals(expr.superclass.lexeme)).collect(Collectors.toList());
+      if (superclasses.isEmpty()) {
+        throw new RuntimeError(expr.superclass, "Invalid superclass specified!");
+      }
+    }
 
     // "self" is always one level nearer than "super"'s environment.
     SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getObject();
 
-    SimiMethod method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
+    for (SimiClassImpl superclass : superclasses) {
+      method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
+      if (method != null) {
+        break;
+      }
+    }
 
     if (method == null) {
       throw new RuntimeError(expr.method,

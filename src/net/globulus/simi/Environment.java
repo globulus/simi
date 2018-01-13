@@ -78,7 +78,8 @@ class Environment implements SimiEnvironment {
     ancestor(distance).assign(name, value, false);
   }
 
-  SimiValue tryGet(String name) {
+  @Override
+  public SimiValue tryGet(String name) {
     for (Environment env = this; env != null; env = env.enclosing) {
       SimiValue value = env.values.get(name);
       if (value != null) {

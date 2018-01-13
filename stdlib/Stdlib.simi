@@ -10,6 +10,7 @@ class $Object:
     native has(obj): pass
     native equals(other): pass
     native compareTo(other): pass
+    native toString(): pass
 
     native append(elem): pass
     native addAll(obj): pass
@@ -125,6 +126,9 @@ class Exception:
     native raise(): pass
 end
 
+class NumberFormatException(Exception):
+end
+
 def ife(condition, ifval, elseval):
     if condition: return ifval
     else: return elseval
@@ -169,6 +173,14 @@ class Range:
         if @start < @stop: return val >= @start and val < @stop
         else: return val <= @start and val > @stop
     end
+
+    def toString():
+        return $String.builder()\
+            .plus("Range from ").plus(@start)\
+            .plus(" to ").plus(@stop)\
+            .plus(" by ").plus(@step)\
+            .build()
+    end
 end
 
 class $Number:
@@ -178,6 +190,7 @@ class $Number:
 
     native equals(other): pass
     native compareTo(other): pass
+    native toString(): pass
 end
 
 class $String:
@@ -199,6 +212,7 @@ class $String:
     native has(obj): pass
     native equals(other): pass
     native compareTo(other): pass
+    native toNumber(): pass
 
     native builder(): pass
 

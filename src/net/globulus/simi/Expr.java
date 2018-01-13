@@ -186,8 +186,9 @@ abstract class Expr {
   }
 
   static class Super extends Expr {
-    Super(Token keyword, Token method, Integer arity) {
+    Super(Token keyword, Token superclass, Token method, Integer arity) {
       this.keyword = keyword;
+      this.superclass = superclass;
       this.method = method;
       this.arity = arity;
     }
@@ -197,6 +198,7 @@ abstract class Expr {
     }
 
     final Token keyword;
+    final Token superclass;
     final Token method;
     final Integer arity;
   }

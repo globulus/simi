@@ -463,11 +463,18 @@ class Parser {
 
     if (match(SUPER)) {
       Token keyword = previous();
+      Token superclass;
+      if (match(LEFT_PAREN)) {
+        superclass = consume(IDENTIFIER, "Expected superclass name in parentheses!");
+        consume(RIGHT_PAREN, "Expected ')' after superclass specification!");
+      } else {
+        superclass = null;
+      }
       consume(DOT, "Expect '.' after 'super'.");
       Token method = consume(IDENTIFIER,
           "Expect superclass method name.");
       Integer arity = peekParams();
-      return new Expr.Super(keyword, method, arity);
+      return new Expr.Super(keyword, superclass, method, arity);
     }
 
     if (match(SELF)) {

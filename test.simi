@@ -4,6 +4,16 @@
 #$a = 4
 #print c
 
+def testStringNumberConversion():
+    numStr = "123.3ž"
+    numVal = numStr.toNumber()
+    rescue ex:
+        if ex: print "Invalid number format"
+        else: print numVal
+    end
+end
+testStringNumberConversion()
+
 class CarException(Exception):
 end
 
@@ -15,6 +25,7 @@ class Car:
     def init(capacity, tank): pass
 
     def refill(amount):
+        print "Doing something"
         if amount < 0: CarException("Amount < 0!").raise()
         if amount > 100: TankOverflowException("Too much gasoline!").raise()
         if @tank + amount > @capacity: @tank = @capacity
@@ -27,6 +38,29 @@ class Car:
 
      def f(): pass
 end
+
+class OtherCar(Car, Range):
+    def init():
+        super.init(10, 20)
+        @start = 5
+        @stop = 10
+        @step = 2
+        super.refill(2)
+        @refill(3)
+   end
+
+   def refill(amount):
+        print "Doing nothing"
+   end
+
+   def has(value):
+    return super(Range).has(value)
+   end
+end
+
+otherCar = OtherCar()
+print otherCar.capacity
+print 6 in otherCar
 
 #def min3(a, b, c):
 #    min2 = def (a, b):

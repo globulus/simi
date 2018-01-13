@@ -85,6 +85,20 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(self.zip(getObjectClass(interpreter)));
             }
         });
+        methods.put(new OverloadableFunction("toSet", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                if (self.isArray()) {
+                }
+                throw new RuntimeException("Only Arrays can be converted to Sets!");
+            }
+        });
         methods.put(new OverloadableFunction("append", 1), new SimiCallable() {
             @Override
             public int arity() {
@@ -110,6 +124,19 @@ class BaseClassesNativeImpl {
                 SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getObject();
                 self.addAll(obj);
                 return arguments.get(0);
+            }
+        });
+        methods.put(new OverloadableFunction("clear", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                self.clear((Environment) interpreter.getEnvironment());
+                return null;
             }
         });
         methods.put(new OverloadableFunction("indexOf", 1), new SimiCallable() {
@@ -288,6 +315,17 @@ class BaseClassesNativeImpl {
             @Override
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.TO_STRING, 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.String(arguments.get(0).getObject().toString());
             }
         });
         methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
@@ -623,6 +661,26 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
             }
         });
+        methods.put(new OverloadableFunction("toNumber", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                String string = prepareStringNativeCall(interpreter, arguments);
+                try {
+                    double number = Double.parseDouble(string);
+                    return new SimiValue.Number(number);
+                } catch (NumberFormatException e) {
+                    SimiException se = new SimiException((SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getObject(),
+                            "Invalid number format!");
+                    interpreter.raiseException(se);
+                    return null;
+                }
+            }
+        });
         methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -644,13 +702,7 @@ class BaseClassesNativeImpl {
                     @Override
                     public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                         SimiValue value = arguments.get(0);
-                        if (value instanceof SimiValue.Number) {
-                            sb.append(value.getNumber());
-                        } else if (value instanceof SimiValue.String) {
-                            sb.append(value.getString());
-                        } else {
-                            sb.append(value.toString());
-                        }
+                        sb.append(value.toString());
                         return objectValue;
                     }
                 }, "plus", object));
@@ -693,6 +745,17 @@ class BaseClassesNativeImpl {
             @Override
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 return new SimiValue.Number(arguments.get(0).compareTo(arguments.get(1)));
+            }
+        });
+        methods.put(new OverloadableFunction(Constants.TO_STRING, 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                return new SimiValue.String(arguments.get(0).getNumber().toString());
             }
         });
         return new SimiNativeClass(Constants.CLASS_NUMBER, methods);

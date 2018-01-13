@@ -109,6 +109,12 @@ abstract class SimiObjectImpl implements SimiObject {
       return clazz.name.equals(Constants.CLASS_STRING);
   }
 
+  void clear(Environment environment) {
+      checkMutability(Token.self(), environment);
+      clearImpl();
+  }
+
+  abstract void clearImpl();
     abstract boolean contains(SimiValue object, Token at);
     abstract boolean isArray();
     abstract int length();
@@ -141,6 +147,10 @@ abstract class SimiObjectImpl implements SimiObject {
 
   @Override
   public String toString() {
+      SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
+      if (method != null && !method.function.isNative) {
+          return method.call(Interpreter.sharedInstance, new ArrayList<>()).getString();
+      }
     StringBuilder sb = new StringBuilder();
     sb.append("[\n");
     sb.append("\timmutable: ").append(immutable).append("\n");
@@ -232,6 +242,11 @@ abstract class SimiObjectImpl implements SimiObject {
             } else {
                 fields.put(key, value);
             }
+        }
+
+        @Override
+        void clearImpl() {
+            fields.clear();;
         }
 
         @Override
@@ -400,6 +415,11 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
+        void clearImpl() {
+            fields.clear();
+        }
+
+        @Override
         boolean contains(SimiValue object, Token at) {
             return fields.contains(object);
         }
@@ -537,6 +557,13 @@ abstract class SimiObjectImpl implements SimiObject {
                 underlying = SimiObjectImpl.fromMap(clazz, immutable, fields);
             } else {
                 underlying.setField(key, value);
+            }
+        }
+
+        @Override
+        void clearImpl() {
+            if (underlying != null) {
+                underlying.clearImpl();
             }
         }
 
