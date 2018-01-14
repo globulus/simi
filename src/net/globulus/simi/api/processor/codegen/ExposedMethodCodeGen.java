@@ -12,7 +12,7 @@ public class ExposedMethodCodeGen implements CodeGen<ExposedMethod> {
     @Override
     public void generateCode(ExposedMethod method, SimiApiJavaWriter jw) throws IOException {
         jw.emitEmptyLine();
-        jw.beginMethod(method.returnType, method.name, EnumSet.of(Modifier.PUBLIC, Modifier.STATIC), method.params, method.thrown);
+        jw.beginMethod(method.returnType, method.name, EnumSet.of(Modifier.PRIVATE, Modifier.STATIC), method.params, method.thrown);
         StringBuilder params = new StringBuilder();
         for (int i = 1; i < method.params.size(); i += 2) {
             if (i > 1) {

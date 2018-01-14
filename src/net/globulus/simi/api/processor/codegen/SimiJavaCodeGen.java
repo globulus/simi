@@ -1,8 +1,9 @@
 package net.globulus.simi.api.processor.codegen;
 
+import net.globulus.simi.api.*;
 import net.globulus.simi.api.processor.ExposedClass;
+import net.globulus.simi.api.processor.ExposedMethod;
 import net.globulus.simi.api.processor.javawriter.SimiApiJavaWriter;
-import net.globulus.simi.api.Constants;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Modifier;
@@ -26,16 +27,43 @@ public class SimiJavaCodeGen {
 			Writer writer = jfo.openWriter();
 			SimiApiJavaWriter jw = new SimiApiJavaWriter(writer);
 			jw.emitPackage(packageName);
-			jw.emitImports(Constants.IMPORT_SIMI_OBJECT);
-			jw.emitImports(Constants.IMPORT_SIMI_VALUE);
+			jw.emitImports(SimiValue.class.getCanonicalName());
+			jw.emitImports(SimiObject.class.getCanonicalName());
+			jw.emitImports(SimiEnvironment.class.getCanonicalName());
 			jw.emitEmptyLine();
 
 			jw.emitJavadoc("Generated class by @%s . Do not modify this code!", className);
-			jw.beginType(className, "class", EnumSet.of(Modifier.PUBLIC), null);
+			jw.beginType(className, "class", EnumSet.of(Modifier.PUBLIC), null, SimiApiClass.class.getName());
 			jw.emitEmptyLine();
 
-			jw.beginConstructor(EnumSet.of(Modifier.PRIVATE));
+			jw.beginConstructor(EnumSet.of(Modifier.PUBLIC));
 			jw.endConstructor();
+			jw.emitEmptyLine();
+
+			String simiValue = SimiValue.class.getSimpleName();
+			jw.beginMethod(simiValue, "call", EnumSet.of(Modifier.PUBLIC),
+					"String", "className", "String", "methodName", "SimiObject", "self",
+					"SimiEnvironment", "environment",  "java.util.List<SimiValue>", "args");
+
+			jw.beginControlFlow("switch (className)");
+			for (ExposedClass exposedClass : classes) {
+				jw.emitRaw("case \"%s\":", exposedClass.name);
+				jw.beginControlFlow("switch (methodName)");
+				for (ExposedMethod exposedMethod : exposedClass.methods) {
+					StringBuilder params = new StringBuilder("self, environment");
+					int length = exposedMethod.params.size() / 2 - 2;
+					for (int i = 0; i < length; i++) {
+						params.append(", ").append("args.get(").append(i).append(')');
+					}
+					jw.emitRaw("case \"%s\": return %s.%s(%s);",
+							exposedMethod.name, exposedClass.name, exposedMethod.name, params.toString());
+				}
+				jw.emitStatement("default: return null");
+				jw.endControlFlow();
+			}
+			jw.emitStatement("default: return null");
+			jw.endControlFlow();
+			jw.endMethod();
 			jw.emitEmptyLine();
 
 			ExposedClassCodeGen classCodeGen = new ExposedClassCodeGen();

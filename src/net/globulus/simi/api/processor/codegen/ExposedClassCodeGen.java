@@ -13,7 +13,6 @@ public class ExposedClassCodeGen implements CodeGen<ExposedClass> {
     public void generateCode(ExposedClass type, SimiApiJavaWriter jw) throws IOException {
 		jw.emitEmptyLine();
 		jw.beginType(type.name, "class", EnumSet.of(Modifier.PUBLIC, Modifier.STATIC), null);
-		jw.emitEmptyLine();
 
 		ExposedMethodCodeGen methodCodeGen = new ExposedMethodCodeGen();
 		for (ExposedMethod exposedMethod : type.methods) {

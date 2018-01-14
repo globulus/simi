@@ -186,8 +186,9 @@ mutableList = $[1, 2, 3, 4, 5]
 mutableList.push(6)
 immutableList = ["str", "str2", "str4"]
 
-# Sets are arrays which invoked the native toSet() function
-set = mutableList.toSet()
+# Objects have unique keyes by default, and you can remove duplicates
+# from an array via the native unique() method
+set = [2, 2, 1, 5, 5, 3].uniques().sorted()
 
 # Tuples are basically immutable lists/arrays
 tuple = [10, 20, "str"]

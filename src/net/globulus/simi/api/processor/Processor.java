@@ -1,10 +1,7 @@
 package net.globulus.simi.api.processor;
 
-import net.globulus.simi.api.SimiJavaClass;
-import net.globulus.simi.api.SimiJavaGlobal;
-import net.globulus.simi.api.SimiJavaMethod;
+import net.globulus.simi.api.*;
 import net.globulus.simi.api.processor.codegen.SimiJavaCodeGen;
-import net.globulus.simi.api.Constants;
 import net.globulus.simi.api.processor.util.ProcessorLog;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -55,10 +52,12 @@ public class Processor extends AbstractProcessor {
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+		ProcessorLog.note(null, "Starting");
 		List<ExposedClass> exposedClasses = new ArrayList<>();
 
 		List<ExposedMethod> globals = new ArrayList<>();
 		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaGlobal.class)) {
+			ProcessorLog.note(null, "Globals");
 			if (!isValidMethod(element, true)) {
 				continue;
 			}
@@ -69,9 +68,11 @@ public class Processor extends AbstractProcessor {
 		}
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaClass.class)) {
+			ProcessorLog.note(null, "Classes");
 			if (!isValidClass(element)) {
 				continue;
 			}
+			ProcessorLog.note(null, "Valid class");
 			TypeElement typeElement = (TypeElement) element;
 
 			List<ExposedMethod> methods = new ArrayList<>();
@@ -81,6 +82,7 @@ public class Processor extends AbstractProcessor {
 
 			List<? extends Element> memberFields = mElementUtils.getAllMembers(typeElement);
 			if (memberFields != null) {
+
 				for (Element member : memberFields) {
 					if (member.getKind() != ElementKind.METHOD) {
 						continue;
@@ -111,28 +113,34 @@ public class Processor extends AbstractProcessor {
 
 	private boolean isValidMethod(Element element, boolean global) {
 		String masterError = global
-				? "A Simi API method must of of format: public static Value NAME(SimiObject sender, ...)!"
-				: "A Simi API global function must of of format: public static Value NAME(...)!";
+				? "A Simi API method must of of format: public static SimiValue NAME(SimiObject sender, SimiEnvironment environment...)!"
+				: "A Simi API global function must of of format: public static SimiValue NAME(...)!";
 		if (!element.getModifiers().contains(Modifier.PUBLIC)
 				|| !element.getModifiers().contains(Modifier.STATIC)) {
 			ProcessorLog.error(element, masterError);
 			return false;
 		}
 		ExecutableType method = (ExecutableType) element.asType();
-		TypeMirror simiValue = mElementUtils.getTypeElement(Constants.IMPORT_SIMI_VALUE).asType();
+		TypeMirror simiValue = mElementUtils.getTypeElement(SimiValue.class.getCanonicalName()).asType();
 		if (!mTypeUtils.isSameType(method.getReturnType(), simiValue)) {
 			ProcessorLog.error(element, masterError);
 			return false;
 		}
 		if (!global) {
 			List<? extends TypeMirror> params = method.getParameterTypes();
-			if (params.size() == 0) {
+			if (params.size() < 2) {
 				ProcessorLog.error(element, masterError);
 				return false;
 			}
 			TypeMirror param0 = method.getParameterTypes().get(0);
-			TypeMirror simiObject = mElementUtils.getTypeElement(Constants.IMPORT_SIMI_OBJECT).asType();
+			TypeMirror simiObject = mElementUtils.getTypeElement(SimiObject.class.getCanonicalName()).asType();
 			if (!mTypeUtils.isSameType(param0, simiObject)) {
+				ProcessorLog.error(element, masterError);
+				return false;
+			}
+			TypeMirror param1 = method.getParameterTypes().get(1);
+			TypeMirror simiEnv = mElementUtils.getTypeElement(SimiEnvironment.class.getCanonicalName()).asType();
+			if (!mTypeUtils.isSameType(param1, simiEnv)) {
 				ProcessorLog.error(element, masterError);
 				return false;
 			}

@@ -4,7 +4,6 @@ class $Object:
     native values(): pass
     native enumerate(): pass
     native zip(): pass
-    native toSet(): pass
 
     native iterate(): pass
     native has(obj): pass
@@ -20,6 +19,7 @@ class $Object:
     native reversed(): pass
     native sorted(): pass
     native sorted(comparator): pass
+    native uniques(): pass
 
     native clone(): pass
     native clone(mutable): pass

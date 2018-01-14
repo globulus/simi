@@ -85,20 +85,6 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(self.zip(getObjectClass(interpreter)));
             }
         });
-        methods.put(new OverloadableFunction("toSet", 0), new SimiCallable() {
-            @Override
-            public int arity() {
-                return 0;
-            }
-
-            @Override
-            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
-                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
-                if (self.isArray()) {
-                }
-                throw new RuntimeException("Only Arrays can be converted to Sets!");
-            }
-        });
         methods.put(new OverloadableFunction("append", 1), new SimiCallable() {
             @Override
             public int arity() {
@@ -185,6 +171,22 @@ class BaseClassesNativeImpl {
             public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
                 SimiCallable comparator = arguments.get(1).getCallable();
                 return sort(interpreter, arguments, comparator);
+            }
+        });
+        methods.put(new OverloadableFunction("uniques", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                if (self.isArray()) {
+                    return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), self.immutable,
+                            self.values().stream().distinct().collect(Collectors.toCollection(ArrayList::new))));
+                }
+                return arguments.get(0); // Objects are unique by default
             }
         });
         methods.put(new OverloadableFunction("clone", 0), new SimiCallable() {

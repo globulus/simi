@@ -301,6 +301,13 @@ public class SimiApiJavaWriter implements Closeable {
     return this;
   }
 
+  public SimiApiJavaWriter emitRaw(String format, Object... args) throws IOException {
+    indent();
+    out.write(String.format(format, args));
+    out.write('\n');
+    return this;
+  }
+
   /** Emits a field declaration. */
   public SimiApiJavaWriter emitField(String type, String name) throws IOException {
     return emitField(type, name, EnumSet.noneOf(Modifier.class), null);
