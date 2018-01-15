@@ -4,8 +4,8 @@ import net.globulus.simi.api.*;
 
 import java.text.SimpleDateFormat;
 
-@SimiJavaClass
-public class Date {
+@SimiJavaClass(name = "Date")
+public class SimiDate {
 
     @SimiJavaMethod
     public static SimiValue format(SimiObject self, SimiEnvironment environment, SimiValue pattern) {

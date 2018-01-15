@@ -536,3 +536,58 @@ def testAbs():
     print "Resuming the block normally..."
 ```
 As you can see, the *rescue* statement is more concise and leads to less nesting, while allowing to you explore all the possible execution paths.
+
+### Java API
+
+If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi Java API and expose "native" Java code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *format()* method.
+
+Here's the Šimi implementation:
+```ruby
+class Date:
+    # Instances will have a single field, named timestamp
+    def init(timestamp): pass
+
+    # This method is implemented natively via Java API. Note the native
+    # keyword and the empty body.
+    native format(pattern): pass
+end
+```
+
+A Java project contains the class that'll represent the native equivalent of our Date class:
+```java
+// The @SimiJavaClass annotation tells the annotation processor that this class represents
+// a Simi class. The name parameter may be ommitted if the name of the Java class is the
+// same as the one of Simi class.
+@SimiJavaClass(name = "Date")
+public class SimiDate {
+
+    // Expose the Java methods via the @SimiJavaMethod annotation. The name should be
+    // the same as the name of the Simi method, and the returned value a SimiValue.
+    // All SimiJavaMethods must have at least two parameters, a SimiObject, and a
+    // SimiEnvironment. After that, you may supply any number of SimiValue params,
+    // which must correspond to the params in the Simi method declaration
+    // (native format(pattern): pass).
+    @SimiJavaMethod
+    public static SimiValue format(SimiObject self, SimiEnvironment environment, SimiValue pattern) {
+        // The self param represents the object which invokes the method. We then use
+        // the get(String, SimiEnvironment) method to get the object's "timestamp" field,
+        // which we know to be a number.
+        long timestamp = self.get("timestamp", environment).getNumber().longValue();
+
+        // We then use SimpleDateFormat class to format the java.util.Date represented
+        // by the timestamp to the specified format string.
+        // The returned value must then be wrapped in a SimiValue again.
+        return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
+    }
+}
+```
+After that, everything's really simple: build the Java project and import its resulting JAR into Šimi code:
+```ruby
+import "SimiDate.jar"
+
+date = Date(1516004607682)
+print date.format("dd/MM/yyyy hh:mm:ss")
+```
+You'll notice that there's no performance degradation associated with using native methods as the code is accessed via reflection only once, when the JAR import is resolved. After that, all native method references are effectively statically typed.
+
+You may also expose *global* methods, i.e methods that aren't linked to a class via the *@SimiJavaGlobal* annotation. These methods needn't have the first two parameters set to SimiObject and SimiEnvironment. Global methods should be used to represent a stateless operation, e.g exposing a math function.
