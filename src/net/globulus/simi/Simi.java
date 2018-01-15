@@ -30,7 +30,8 @@ public class Simi {
     byte[] bytes = Files.readAllBytes(Paths.get(path));
     String content = new String(bytes, Charset.defaultCharset());
     if (prepend) {
-        return "import \"/Users/gordanglavas/Desktop/github/simi/stdlib/Stdlib.simi\"\n"
+        return "import \"./stdlib/Stdlib.simi\"\n"
+                + "import \"./stdlib/Stdlib-java.jar\"\n"
                 + content;
     }
     return content;
