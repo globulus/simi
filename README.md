@@ -304,6 +304,10 @@ class Point:
     #   @x = x
     #   @y = y
     # end
+
+    # In value classes, you may want to override the equals method
+    # to check against fields, i.e to use matches() with == operator:
+    def equals(other): return @matches(other)
 end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - methods that have references to *self* in their bodies are instance-only as the *self* will be nil when used on a class.
@@ -364,7 +368,7 @@ not, and, or
 
 ==, !=, <, <=, >, >=, <>
 
-* On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class.
+* On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class. If you need to check equivalence based on values, check out the *matches()* method.
 * The comparison operator <> implicitly invokes *compareTo()* method, which returns -1 if the left compared value is lesser than the right one, 0 is they're equal and 1 if it's greater. For Numbers and Strings, this operator returns the natural ordering, whereas for Objects it can be used in *sorted()* method, as well as a replacement for < and >:
 ```ruby
 obj1 <> obj2 < 0 # Is equivalent to obj1 < obj2

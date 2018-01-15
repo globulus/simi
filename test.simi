@@ -1,3 +1,21 @@
+class Point:
+    def init(x, y): pass
+
+    # This is fully equivalent to:
+    # def init(x, y):
+    #   @x = x
+    #   @y = y
+    # end
+
+    # In value classes, you may want to override the equals method
+    # to check against fields, i.e to use matches() with == operator:
+   # def equals(other): return @matches(other)
+end
+
+p1 = Point(1, 2)
+p2 = Point(1, 2)
+print p1 == p2
+
 date = Date(1516004607682)
 print date
 print date.format("dd/MM/yyyy hh:mm:ss")

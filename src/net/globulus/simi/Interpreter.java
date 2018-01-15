@@ -700,7 +700,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
     if (a instanceof SimiValue.Object) {
       Token equals = new Token(TokenType.IDENTIFIER, Constants.EQUALS, null, expr.operator.line);
-      return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment), equals, Arrays.asList(a, b)).getNumber() != 0;
+      return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment), equals, Collections.singletonList(b)).getNumber() != 0;
     }
     return a.equals(b);
   }

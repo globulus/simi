@@ -10,6 +10,8 @@ class $Object:
     native equals(other): pass
     native compareTo(other): pass
     native toString(): pass
+    native matches(other): pass
+    native matches(other, fields): pass
 
     native append(elem): pass
     native addAll(obj): pass

@@ -114,7 +114,8 @@ abstract class SimiObjectImpl implements SimiObject {
       clearImpl();
   }
 
-  abstract void clearImpl();
+    abstract void clearImpl();
+    abstract boolean matches(SimiObjectImpl other, List<String> fieldsToMatch);
     abstract boolean contains(SimiValue object, Token at);
     abstract boolean isArray();
     abstract int length();
@@ -134,6 +135,18 @@ abstract class SimiObjectImpl implements SimiObject {
   abstract SimiObjectImpl reversed();
   abstract Iterator<?> iterate();
   abstract SimiObjectImpl sorted(Comparator<?> comparator);
+
+  boolean valuesMatch(SimiValue a, SimiValue b) {
+      if (a instanceof SimiValue.Object) {
+          if (!(b instanceof SimiValue.Object)) {
+              return false;
+          }
+          SimiObjectImpl object = (SimiObjectImpl) a.getObject();
+          return object.matches((SimiObjectImpl) b.getObject(), null);
+      } else {
+          return a.equals(b);
+      }
+  }
 
   void append(SimiValue elem) {
       if (immutable) {
@@ -247,6 +260,24 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         void clearImpl() {
             fields.clear();;
+        }
+
+        @Override
+        boolean matches(SimiObjectImpl other, List<String> fieldsToMatch) {
+            if (!(other instanceof Dictionary)) {
+                return false;
+            }
+            Dictionary dictionary = (Dictionary) other;
+            for (Map.Entry<String, SimiValue> entry : fields.entrySet()) {
+                if (fieldsToMatch != null && !fieldsToMatch.contains(entry.getKey())) {
+                    continue;
+                }
+                SimiValue value = dictionary.fields.get(entry.getKey());
+                if (!valuesMatch(value, entry.getValue())) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override
@@ -420,6 +451,23 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
+        boolean matches(SimiObjectImpl other, List<String> fieldsToMatch) {
+            if (!other.isArray()) {
+                return false;
+            }
+            int length = length();
+            if (other.length() != length) {
+                return false;
+            }
+            for (int i = 0; i < length; i++) {
+                if (!valuesMatch(fields.get(i), ((Array) other).fields.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
         boolean contains(SimiValue object, Token at) {
             return fields.contains(object);
         }
@@ -565,6 +613,11 @@ abstract class SimiObjectImpl implements SimiObject {
             if (underlying != null) {
                 underlying.clearImpl();
             }
+        }
+
+        @Override
+        boolean matches(SimiObjectImpl other, List<String> fieldsToMatch) {
+            return other.length() == 0;
         }
 
         @Override

@@ -330,6 +330,35 @@ class BaseClassesNativeImpl {
                 return new SimiValue.String(arguments.get(0).getObject().toString());
             }
         });
+        methods.put(new OverloadableFunction("matches", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiObjectImpl other = (SimiObjectImpl) arguments.get(1).getObject();
+                return new SimiValue.Number(self.matches(other, null));
+            }
+        });
+        methods.put(new OverloadableFunction("matches", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getObject();
+                SimiObjectImpl other = (SimiObjectImpl) arguments.get(1).getObject();
+                List<String> fieldsToMatch = ((SimiObjectImpl) arguments.get(2).getObject()).values().stream()
+                        .map(SimiValue::getString)
+                        .collect(Collectors.toList());
+                return new SimiValue.Number(self.matches(other, fieldsToMatch));
+            }
+        });
         methods.put(new OverloadableFunction("builder", 0), new SimiCallable() {
             @Override
             public int arity() {
