@@ -537,6 +537,24 @@ def testAbs():
 ```
 As you can see, the *rescue* statement is more concise and leads to less nesting, while allowing to you explore all the possible execution paths.
 
+### Importing code
+
+Šimi's *import* keyword is used to import code from external files into the current file. Importing is resolved in the pre-processing phase, in which all the imports are recursively resolved until all are taken care of. Each file will be imported only once.
+
+You may import two types of files into your Šimi code:
+1. Other Šimi files (must end in ".simi"). Simply put, the entire content of the other file will be loaded in front of the content of the caller file.
+2. Native Java code from JARs (must end in ".jar"). The native module manager will scan the JAR for the JavaApi class and try to instantiate it to be used during runtime. Check out the **Java API** section for more info on using native code.
+
+```ruby
+# The import keyword is followed by a string denoting the absolute
+# or relative path to the imported file.
+import "./code.simi" # Imports Simi code
+import "./../../NativeCode.jar" # Imports a Java API JAR
+import '/Users/gordan/Desktop/awesomeCode.simi'
+```
+
+Two files are automatically imported into you file by the interpreter: *Stdlib.simi* and its native companion, *Stdlib-java.jar*. Again, these needn't be imported manually, but make sure that your Stdlib folder (which contains these files) is in your interpreter's root.
+
 ### Java API
 
 If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi Java API and expose "native" Java code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *format()* method.
