@@ -1,5 +1,9 @@
 import "/Users/gordanglavas/Desktop/github/simi/DateFormatter/out/artifacts/DateFormatter_jar/DateFormatter.jar"
 
+date = Date(1516004607682)
+print date
+print date.format("dd/MM/yyyy hh:mm:ss")
+
 #$a = 3
 #b = 5
 #c = $a + b

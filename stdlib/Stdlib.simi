@@ -252,3 +252,9 @@ Math = [
     toDegrees = native (a): pass,
     toRadians = native (a): pass
 ]
+
+class Date:
+    def init(timestamp): pass
+
+    native format(pattern): pass
+end

@@ -66,6 +66,44 @@ public class SimiJavaCodeGen {
 			jw.endMethod();
 			jw.emitEmptyLine();
 
+			jw.beginMethod("String[]", "classNames", EnumSet.of(Modifier.PUBLIC));
+			boolean first = true;
+			StringBuilder classNames = new StringBuilder();
+			for (ExposedClass exposedClass : classes) {
+				if (exposedClass.name.equals(Constants.GLOBALS_CLASS_NAME)) {
+					continue;
+				}
+				if (first) {
+					first = false;
+				} else {
+					classNames.append(',');
+				}
+				classNames.append('\"').append(exposedClass.name).append('\"');
+			}
+			jw.emitStatement("return new String[] { %s }", classNames.toString());
+			jw.endMethod();
+			jw.emitEmptyLine();
+
+			jw.beginMethod("String[]", "globalMethodNames", EnumSet.of(Modifier.PUBLIC));
+			first = true;
+			StringBuilder globalMethodNames = new StringBuilder();
+			for (ExposedClass exposedClass : classes) {
+				if (exposedClass.name.equals(Constants.GLOBALS_CLASS_NAME)) {
+					for (ExposedMethod exposedMethod : exposedClass.methods) {
+						if (first) {
+							first = false;
+						} else {
+							globalMethodNames.append(',');
+						}
+						globalMethodNames.append('\"').append(exposedMethod.name).append('\"');
+					}
+					break;
+				}
+			}
+			jw.emitStatement("return new String[] { %s }", globalMethodNames.toString());
+			jw.endMethod();
+			jw.emitEmptyLine();
+
 			ExposedClassCodeGen classCodeGen = new ExposedClassCodeGen();
 			for (ExposedClass exposedClass : classes) {
 				classCodeGen.generateCode(exposedClass, jw);

@@ -1,7 +1,6 @@
 package net.globulus.simi;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
@@ -13,7 +12,7 @@ import java.util.List;
 
 public class Simi {
 
-  private static final Interpreter interpreter = new Interpreter();
+  private static Interpreter interpreter;
   static boolean hadError = false;
   static boolean hadRuntimeError = false;
 
@@ -67,7 +66,9 @@ public class Simi {
     // Stop if there was a syntax error.
     if (hadError) return;
 
-    Resolver resolver = new Resolver(interpreter, nativeModulesManager);
+    interpreter = new Interpreter(nativeModulesManager);
+
+    Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);
 
     // Stop if there was a resolution error.

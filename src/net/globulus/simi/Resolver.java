@@ -5,14 +5,12 @@ import java.util.*;
 class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   private final Interpreter interpreter;
-  private final NativeModulesManager nativeModulesManager;
   Set<String> globalScope = new HashSet<>();
   private final Stack<Map<String, Boolean>> scopes = new Stack<>();
     private FunctionType currentFunction = FunctionType.NONE;
 
-  Resolver(Interpreter interpreter, NativeModulesManager nativeModulesManager) {
+  Resolver(Interpreter interpreter) {
     this.interpreter = interpreter;
-    this.nativeModulesManager = nativeModulesManager;
   }
 
   private enum FunctionType {

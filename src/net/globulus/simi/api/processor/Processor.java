@@ -52,12 +52,10 @@ public class Processor extends AbstractProcessor {
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-		ProcessorLog.note(null, "Starting");
 		List<ExposedClass> exposedClasses = new ArrayList<>();
 
 		List<ExposedMethod> globals = new ArrayList<>();
 		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaGlobal.class)) {
-			ProcessorLog.note(null, "Globals");
 			if (!isValidMethod(element, true)) {
 				continue;
 			}
@@ -68,11 +66,9 @@ public class Processor extends AbstractProcessor {
 		}
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaClass.class)) {
-			ProcessorLog.note(null, "Classes");
 			if (!isValidClass(element)) {
 				continue;
 			}
-			ProcessorLog.note(null, "Valid class");
 			TypeElement typeElement = (TypeElement) element;
 
 			List<ExposedMethod> methods = new ArrayList<>();

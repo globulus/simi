@@ -8,4 +8,6 @@ public interface SimiApiClass {
                    SimiObject self,
                    SimiEnvironment environment,
                    List<SimiValue> args);
+    String[] classNames();
+    String[] globalMethodNames();
 }

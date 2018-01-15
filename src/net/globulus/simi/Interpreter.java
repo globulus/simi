@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Visitor<Object> {
 
+  private final NativeModulesManager nativeModulesManager;
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
@@ -16,8 +17,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   static Interpreter sharedInstance;
 
-  Interpreter() {
+  Interpreter(NativeModulesManager nativeModulesManager) {
     sharedInstance = this;
+    this.nativeModulesManager = nativeModulesManager;
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
       @Override
       public int arity() {
@@ -428,7 +430,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             clazz = (SimiClassImpl) instance.getSimiClass();
           }
         }
-        String className = isBaseClass(clazz.name) ? clazz.name : Constants.CLASS_OBJECT; // TODO fix to check external JARs before attempting $Object
+        boolean isBaseClass = isBaseClass(clazz.name);
+        if (!isBaseClass) {
+          try {
+            return nativeModulesManager.call(clazz.name, methodName, instance, environment, arguments);
+          } catch (IllegalArgumentException ignored) { }
+        }
+        String className = isBaseClass ? clazz.name : Constants.CLASS_OBJECT;
         SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
         if (nativeMethod == null) {
           nativeMethod = baseClassesNativeImpl.get(Constants.CLASS_GLOBALS, methodName, callable.arity());
@@ -438,7 +446,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         nativeArgs.addAll(arguments);
         return nativeMethod.call(this, nativeArgs);
       } else {
-        // TODO globals
+        try {
+          return nativeModulesManager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME, methodName, null, environment, arguments);
+        } catch (IllegalArgumentException ignored) { }
       }
     }
     return callable.call(this, arguments);

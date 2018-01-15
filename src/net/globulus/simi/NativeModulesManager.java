@@ -2,10 +2,13 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.Constants;
 import net.globulus.simi.api.SimiApiClass;
+import net.globulus.simi.api.SimiObject;
+import net.globulus.simi.api.SimiValue;
 
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class NativeModulesManager {
@@ -13,9 +16,11 @@ class NativeModulesManager {
     private static final String API_CLASS = Constants.PACKAGE_SIMI_API + "." + Constants.API_CLASS_NAME;
 
     private Map<String, SimiApiClass> classes;
+    private Map<String, SimiApiClass> globals;
 
     public NativeModulesManager() {
         classes = new HashMap<>();
+        globals = new HashMap<>();
     }
 
     public void loadJar(URL url) {
@@ -23,17 +28,17 @@ class NativeModulesManager {
                 new URL[] { url },
                 getClass().getClassLoader()
         );
-        Class<?> javaApi;
         try {
-            javaApi = Class.forName(API_CLASS, true, loader);
-            try {
-                classes.put(API_CLASS, (SimiApiClass) javaApi.newInstance());
-            } catch (InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
+            SimiApiClass apiClass = (SimiApiClass) Class.forName(API_CLASS, true, loader).newInstance();
+            for (String className : apiClass.classNames()) {
+                classes.put(className, apiClass);
             }
-        } catch (ClassNotFoundException e) {
+            for (String globalMethodName : apiClass.globalMethodNames()) {
+                globals.put(globalMethodName, apiClass);
+            }
+
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
-            return;
         }
 //        for (Class<?> clazz : javaApi.getClasses()) {
 //            String name = clazz.getSimpleName();
@@ -49,5 +54,24 @@ class NativeModulesManager {
 //                }
 //            }
 //        }
+    }
+
+    SimiValue call(String className,
+                   String methodName,
+                   SimiObject self,
+                   Environment environment,
+                   List<SimiValue> args) throws IllegalArgumentException {
+        if (className.equals(Constants.GLOBALS_CLASS_NAME)) {
+            SimiApiClass apiClass = globals.get(methodName);
+            if (apiClass != null) {
+                return apiClass.call(className, methodName, self, environment, args);
+            }
+        } else {
+            SimiApiClass apiClass = classes.get(className);
+            if (apiClass != null) {
+                return apiClass.call(className, methodName, self, environment, args);
+            }
+        }
+        throw new IllegalArgumentException();
     }
 }
