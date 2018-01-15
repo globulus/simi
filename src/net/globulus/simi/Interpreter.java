@@ -433,7 +433,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         boolean isBaseClass = isBaseClass(clazz.name);
         if (!isBaseClass) {
           try {
-            return nativeModulesManager.call(clazz.name, methodName, instance, environment, arguments);
+            return nativeModulesManager.call(clazz.name, methodName, instance, this, arguments);
           } catch (IllegalArgumentException ignored) { }
         }
         String className = isBaseClass ? clazz.name : Constants.CLASS_OBJECT;
@@ -447,7 +447,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         return nativeMethod.call(this, nativeArgs);
       } else {
         try {
-          return nativeModulesManager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME, methodName, null, environment, arguments);
+          return nativeModulesManager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
+                  methodName, null, this, arguments);
         } catch (IllegalArgumentException ignored) { }
       }
     }

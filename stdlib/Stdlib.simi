@@ -258,5 +258,6 @@ Math = [
 class Date:
     def init(timestamp): pass
 
+    native now(): pass
     native format(pattern): pass
 end

@@ -561,7 +561,7 @@ Two files are automatically imported into you file by the interpreter: *Stdlib.s
 
 ### Java API
 
-If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi Java API and expose "native" Java code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *format()* method.
+If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi Java API and expose "native" Java code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *now()* and *format()* methods.
 
 Here's the Šimi implementation:
 ```ruby
@@ -569,8 +569,9 @@ class Date:
     # Instances will have a single field, named timestamp
     def init(timestamp): pass
 
-    # This method is implemented natively via Java API. Note the native
-    # keyword and the empty body.
+    # These methods is implemented natively via Java API. Note the
+    # native keyword and the empty body.
+    native now(): pass
     native format(pattern): pass
 end
 ```
@@ -586,15 +587,28 @@ public class SimiDate {
     // Expose the Java methods via the @SimiJavaMethod annotation. The name should be
     // the same as the name of the Simi method, and the returned value a SimiValue.
     // All SimiJavaMethods must have at least two parameters, a SimiObject, and a
-    // SimiEnvironment. After that, you may supply any number of SimiValue params,
-    // which must correspond to the params in the Simi method declaration
-    // (native format(pattern): pass).
+    // BlockInterpreter. After that, you may supply any number of SimiValue params,
+    // which must correspond to the params in the Simi method declaration.
+
+    // The now() method is meant to be used statically, hence the self param will
+    // in fact be a SimiClass (Date), which can then be used to create a new
+    // Date instance:
     @SimiJavaMethod
-    public static SimiValue format(SimiObject self, SimiEnvironment environment, SimiValue pattern) {
+    public static SimiValue now(SimiObject self, BlockInterpreter interpreter) {
+        SimiClass clazz = (SimiClass) self;
+        SimiValue timestamp = new SimiValue.Number(System.currentTimeMillis());
+        return clazz.init(interpreter, Collections.singletonList(timestamp));
+    }
+
+    // The format method is meant to be used non-statically, meaning that its
+    // self parameter will reflect the object on which the method was invoked.
+    // This allows us to get its timestamp field and format based on that.
+    @SimiJavaMethod
+    public static SimiValue format(SimiObject self, BlockInterpreter interpreter, SimiValue pattern) {
         // The self param represents the object which invokes the method. We then use
         // the get(String, SimiEnvironment) method to get the object's "timestamp" field,
         // which we know to be a number.
-        long timestamp = self.get("timestamp", environment).getNumber().longValue();
+        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getNumber().longValue();
 
         // We then use SimpleDateFormat class to format the java.util.Date represented
         // by the timestamp to the specified format string.
@@ -605,10 +619,13 @@ public class SimiDate {
 ```
 After that, everything's really simple: build the Java project and import its resulting JAR into Šimi code:
 ```ruby
+# These methods are already a part of Stdlib-java.jar, this is just to
+# illustrate that you have to import the JAR of your external library.
 import "SimiDate.jar"
-
-date = Date(1516004607682)
+date = Date(1516004607682) # non-static usage
 print date.format("dd/MM/yyyy hh:mm:ss")
+now = Date.now() # static usage
+print date.timestamp
 ```
 You'll notice that there's no performance degradation associated with using native methods as the code is accessed via reflection only once, when the JAR import is resolved. After that, all native method references are effectively statically typed.
 

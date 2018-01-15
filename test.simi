@@ -16,7 +16,7 @@ p1 = Point(1, 2)
 p2 = Point(1, 2)
 print p1 == p2
 
-date = Date(1516004607682)
+date = Date.now()
 print date
 print date.format("dd/MM/yyyy hh:mm:ss")
 

@@ -98,7 +98,8 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
       return null;
   }
 
-  SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
+  @Override
+  public SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
       SimiObjectImpl instance = new SimiObjectImpl.Dictionary(this, true, new LinkedHashMap<>());
       SimiMethod initializer = findMethod(instance, Constants.INIT, arguments.size());
       if (initializer == null) {

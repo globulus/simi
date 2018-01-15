@@ -6,7 +6,7 @@ public interface SimiApiClass {
     SimiValue call(String className,
                    String methodName,
                    SimiObject self,
-                   SimiEnvironment environment,
+                   BlockInterpreter interpreter,
                    List<SimiValue> args);
     String[] classNames();
     String[] globalMethodNames();

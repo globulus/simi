@@ -2,7 +2,7 @@ package net.globulus.simi.api;
 
 import net.globulus.simi.api.SimiValue;
 import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiEnvironment;
+import net.globulus.simi.api.BlockInterpreter;
 
 /**
  * Generated class by @JavaApi . Do not modify this code!
@@ -13,11 +13,12 @@ public class JavaApi
   public JavaApi() {
   }
 
-  public SimiValue call(String className, String methodName, SimiObject self, SimiEnvironment environment, java.util.List<SimiValue> args) {
+  public SimiValue call(String className, String methodName, SimiObject self, BlockInterpreter interpreter, java.util.List<SimiValue> args) {
     switch (className) {
       case "Date":
       switch (methodName) {
-        case "format": return Date.format(self, environment, args.get(0));
+        case "now": return Date.now(self, interpreter);
+        case "format": return Date.format(self, interpreter, args.get(0));
         default: return null;
       }
       default: return null;
@@ -35,8 +36,12 @@ public class JavaApi
 
   public static class Date {
 
-    private static SimiValue format(SimiObject simiobject0, SimiEnvironment simienvironment1, SimiValue simivalue2) {
-      return net.globulus.simi.testing.SimiDate.format(simiobject0, simienvironment1, simivalue2);
+    private static SimiValue now(SimiObject simiobject0, BlockInterpreter blockinterpreter1) {
+      return net.globulus.simi.testing.SimiDate.now(simiobject0, blockinterpreter1);
+    }
+
+    private static SimiValue format(SimiObject simiobject0, BlockInterpreter blockinterpreter1, SimiValue simivalue2) {
+      return net.globulus.simi.testing.SimiDate.format(simiobject0, blockinterpreter1, simivalue2);
     }
   }
 

@@ -59,17 +59,17 @@ class NativeModulesManager {
     SimiValue call(String className,
                    String methodName,
                    SimiObject self,
-                   Environment environment,
+                   Interpreter interpreter,
                    List<SimiValue> args) throws IllegalArgumentException {
         if (className.equals(Constants.GLOBALS_CLASS_NAME)) {
             SimiApiClass apiClass = globals.get(methodName);
             if (apiClass != null) {
-                return apiClass.call(className, methodName, self, environment, args);
+                return apiClass.call(className, methodName, self, interpreter, args);
             }
         } else {
             SimiApiClass apiClass = classes.get(className);
             if (apiClass != null) {
-                return apiClass.call(className, methodName, self, environment, args);
+                return apiClass.call(className, methodName, self, interpreter, args);
             }
         }
         throw new IllegalArgumentException();

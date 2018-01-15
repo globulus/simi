@@ -29,7 +29,7 @@ public class SimiJavaCodeGen {
 			jw.emitPackage(packageName);
 			jw.emitImports(SimiValue.class.getCanonicalName());
 			jw.emitImports(SimiObject.class.getCanonicalName());
-			jw.emitImports(SimiEnvironment.class.getCanonicalName());
+			jw.emitImports(BlockInterpreter.class.getCanonicalName());
 			jw.emitEmptyLine();
 
 			jw.emitJavadoc("Generated class by @%s . Do not modify this code!", className);
@@ -43,14 +43,14 @@ public class SimiJavaCodeGen {
 			String simiValue = SimiValue.class.getSimpleName();
 			jw.beginMethod(simiValue, "call", EnumSet.of(Modifier.PUBLIC),
 					"String", "className", "String", "methodName", "SimiObject", "self",
-					"SimiEnvironment", "environment",  "java.util.List<SimiValue>", "args");
+					"BlockInterpreter", "interpreter",  "java.util.List<SimiValue>", "args");
 
 			jw.beginControlFlow("switch (className)");
 			for (ExposedClass exposedClass : classes) {
 				jw.emitRaw("case \"%s\":", exposedClass.name);
 				jw.beginControlFlow("switch (methodName)");
 				for (ExposedMethod exposedMethod : exposedClass.methods) {
-					StringBuilder params = new StringBuilder("self, environment");
+					StringBuilder params = new StringBuilder("self, interpreter");
 					int length = exposedMethod.params.size() / 2 - 2;
 					for (int i = 0; i < length; i++) {
 						params.append(", ").append("args.get(").append(i).append(')');
