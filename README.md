@@ -6,8 +6,8 @@
 #### Keywords
 Šimi has 25 reserved keywords:
 ```ruby
-and break class continue def else elsif end false for if import in is
-native nil or pass print rescue return self super true while
+and break class continue def else elsif end false for gu if import
+in is native nil or pass print rescue return self super true while
 ```
 
 #### Comments
@@ -556,7 +556,7 @@ end
 A Java project contains the class that'll represent the native equivalent of our Date class:
 ```java
 // The @SimiJavaClass annotation tells the annotation processor that this class represents
-// a Simi class. The name parameter may be ommitted if the name of the Java class is the
+// a Simi class. The name parameter may be omitted if the name of the Java class is the
 // same as the one of Simi class.
 @SimiJavaClass(name = "Date")
 public class SimiDate {
