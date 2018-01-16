@@ -37,11 +37,11 @@ public class JavaApi
   public static class Date {
 
     private static SimiValue now(SimiObject simiobject0, BlockInterpreter blockinterpreter1) {
-      return net.globulus.simi.testing.SimiDate.now(simiobject0, blockinterpreter1);
+      return net.globulus.simi.stdlib.SimiDate.now(simiobject0, blockinterpreter1);
     }
 
     private static SimiValue format(SimiObject simiobject0, BlockInterpreter blockinterpreter1, SimiValue simivalue2) {
-      return net.globulus.simi.testing.SimiDate.format(simiobject0, blockinterpreter1, simivalue2);
+      return net.globulus.simi.stdlib.SimiDate.format(simiobject0, blockinterpreter1, simivalue2);
     }
   }
 

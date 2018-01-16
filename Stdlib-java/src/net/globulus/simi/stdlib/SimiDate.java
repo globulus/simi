@@ -1,4 +1,4 @@
-package net.globulus.simi.testing;
+package net.globulus.simi.stdlib;
 
 import net.globulus.simi.api.*;
 

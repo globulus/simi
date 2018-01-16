@@ -1,3 +1,5 @@
+import "./stdlib/Stdlib-java.jar"
+
 class $Object:
     native len(): pass
     native keys(): pass

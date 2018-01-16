@@ -107,6 +107,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
+  public SimiObject newObject(boolean immutable, LinkedHashMap<String, SimiValue> props) {
+    return SimiObjectImpl.fromMap(getObjectClass(), immutable, props);
+  }
+
+  @Override
+  public SimiObject newArray(boolean immutable, ArrayList<SimiValue> props) {
+    return SimiObjectImpl.fromArray(getObjectClass(), immutable, props);
+  }
+
+  @Override
   public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
     executeBlock(stmt, new Environment(environment));
     return null;
@@ -140,7 +150,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             superclasses.add((SimiClassImpl) clazz);
         }
       } else if (!isBaseClass) {
-          superclasses = Collections.singletonList((SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject());
+          superclasses = Collections.singletonList(getObjectClass());
       }
       environment = new Environment(environment);
       environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
@@ -594,7 +604,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     @Override
     public SimiValue visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
         boolean immutable = (expr.opener.type == TokenType.LEFT_BRACKET);
-        SimiClassImpl objectClass = (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject();
+        SimiClassImpl objectClass = getObjectClass();
         SimiObjectImpl object;
         if (expr.props.isEmpty()) {
           object = SimiObjectImpl.empty(objectClass, immutable);
@@ -764,5 +774,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             || className.equals(Constants.CLASS_NUMBER)
             || className.equals(Constants.CLASS_STRING)
             || className.equals(Constants.CLASS_EXCEPTION);
+  }
+
+  private SimiClassImpl getObjectClass() {
+    return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject();
   }
 }

@@ -1,3 +1,7 @@
+import "./Stdlib/File.simi"
+
+File.readLines("README.md").forEach(def s: print s)
+
 class Point:
     def init(x, y): pass
 
@@ -11,6 +15,10 @@ class Point:
     # to check against fields, i.e to use matches() with == operator:
    # def equals(other): return @matches(other)
 end
+
+$var = 1
+$var += 2
+print $var
 
 p1 = Point(1, 2)
 p2 = Point(1, 2)

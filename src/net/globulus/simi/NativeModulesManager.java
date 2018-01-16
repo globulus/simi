@@ -36,7 +36,6 @@ class NativeModulesManager {
             for (String globalMethodName : apiClass.globalMethodNames()) {
                 globals.put(globalMethodName, apiClass);
             }
-
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
         }

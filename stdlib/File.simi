@@ -1,0 +1,10 @@
+import "./stdlib/File-java.jar"
+
+class IoException(Exception):
+end
+
+class File:
+    def init(path): pass
+
+    native readLines(path): pass
+end

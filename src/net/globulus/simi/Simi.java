@@ -31,7 +31,6 @@ public class Simi {
     String content = new String(bytes, Charset.defaultCharset());
     if (prepend) {
         return "import \"./stdlib/Stdlib.simi\"\n"
-                + "import \"./stdlib/Stdlib-java.jar\"\n"
                 + content;
     }
     return content;

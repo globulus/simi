@@ -308,16 +308,24 @@ class Parser {
 
   private Expr assignment() {
     Expr expr = or();
-    if (match(EQUAL)) {
+    if (match(EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, MOD_EQUAL)) {
       Token equals = previous();
       Expr value = assignment();
 
       if (expr instanceof Expr.Variable) {
         Token name = ((Expr.Variable)expr).name;
-        return new Expr.Assign(name, value);
+        if (equals.type == EQUAL) {
+          return new Expr.Assign(name, value);
+        } else {
+          return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value));
+        }
       } else if (expr instanceof Expr.Get) {
-        Expr.Get get = (Expr.Get)expr;
-        return new Expr.Set(get.origin, get.object, get.name, value);
+        if (equals.type == EQUAL) {
+          Expr.Get get = (Expr.Get) expr;
+          return new Expr.Set(get.origin, get.object, get.name, value);
+        } else {
+          Simi.error(equals, "Cannot use compound assignment operators with setters!");
+        }
       }
       Simi.error(equals, "Invalid assignment target.");
     }
@@ -592,6 +600,30 @@ class Parser {
 
   private Token previous() {
     return tokens.get(current - 1);
+  }
+
+  private Token operatorFromAssign(Token assignOp) {
+    TokenType type;
+    switch (assignOp.type) {
+      case PLUS_EQUAL:
+        type = PLUS;
+        break;
+      case MINUS_EQUAL:
+        type = MINUS;
+        break;
+      case STAR_EQUAL:
+        type = STAR;
+        break;
+      case SLASH_EQUAL:
+        type = SLASH;
+        break;
+      case MOD_EQUAL:
+        type = MOD;
+        break;
+      default:
+        throw new IllegalArgumentException("Unable to process assignment operator: " + assignOp.type);
+    }
+    return new Token(type, assignOp.lexeme, null, assignOp.line);
   }
 
   private ParseError error(Token token, String message) {
