@@ -1,4 +1,4 @@
-# Šimi
+# Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax.
 
 ### Basic syntax
