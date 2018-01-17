@@ -12,4 +12,5 @@ public interface BlockInterpreter {
 
     SimiObject newObject(boolean immutable, LinkedHashMap<String, SimiValue> props);
     SimiObject newArray(boolean immutable, ArrayList<SimiValue> props);
+    SimiObject newInstance(SimiClass clazz, LinkedHashMap<String, SimiValue> props);
 }

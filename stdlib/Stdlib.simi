@@ -257,6 +257,10 @@ Math = [
     toRadians = native (a): pass
 ]
 
+class Closeable:
+    def close(): pass
+end
+
 class Date:
     def init(timestamp): pass
 

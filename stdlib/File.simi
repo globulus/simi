@@ -3,6 +3,23 @@ import "./stdlib/File-java.jar"
 class IoException(Exception):
 end
 
+class ReadStream(Closeable):
+    native init(file): pass
+    native read(): pass
+    native readLine(): pass
+    native reset(): pass
+    native skip(n): pass
+    native close(): pass
+end
+
+class WriteStream(Closeable):
+    native init(file): pass
+    native write(string): pass
+    native close(): pass
+
+    def newLine(): @write("\n")
+end
+
 class File:
     def init(path): pass
 

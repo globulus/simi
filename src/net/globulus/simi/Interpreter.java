@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Visitor<Object> {
 
-  private final NativeModulesManager nativeModulesManager;
+  final NativeModulesManager nativeModulesManager;
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
@@ -114,6 +114,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public SimiObject newArray(boolean immutable, ArrayList<SimiValue> props) {
     return SimiObjectImpl.fromArray(getObjectClass(), immutable, props);
+  }
+
+  @Override
+  public SimiObject newInstance(SimiClass clazz, LinkedHashMap<String, SimiValue> props) {
+    return SimiObjectImpl.instance((SimiClassImpl) clazz, props);
   }
 
   @Override

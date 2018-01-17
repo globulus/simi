@@ -16,6 +16,10 @@ abstract class SimiObjectImpl implements SimiObject {
     this.immutable = immutable;
   }
 
+  static SimiObjectImpl instance(SimiClassImpl clazz, LinkedHashMap<String, SimiValue> props) {
+      return new Dictionary(clazz, true, props);
+  }
+
   static SimiObjectImpl pair(SimiClassImpl objectClass, String key, SimiValue value) {
       LinkedHashMap<String, SimiValue> field = new LinkedHashMap<>();
       field.put(key, value);

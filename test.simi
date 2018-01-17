@@ -1,6 +1,25 @@
 import "./Stdlib/File.simi"
 
-File.readLines("README.md").forEach(def s: print s)
+def testFile():
+    #File.readLines("README.md").forEach(def s: print s)
+    file = File("README.md")
+    reader = ReadStream(file)
+    while true:
+        line = reader.readLine()
+        if line: print line
+        else: break
+    end
+    writeFile = File("writetest.txt")
+    writer = WriteStream(writeFile)
+    writer.write("string")
+    writer.newLine()
+    writer.write("new string")
+    rescue ex:
+    end
+    reader.close()
+    writer.close()
+end
+#testFile()
 
 class Point:
     def init(x, y): pass

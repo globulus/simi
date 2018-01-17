@@ -14,16 +14,17 @@ public class SimiFile {
 
     @SimiJavaMethod
     public static SimiValue readLines(SimiObject self, BlockInterpreter interpreter, SimiValue path) {
+        ArrayList<SimiValue> props;
         try {
             List<String> lines = Files.readAllLines(Paths.get(path.getString()));
-            ArrayList<SimiValue> props = lines.stream()
+            props = lines.stream()
                     .map(SimiValue.String::new)
                     .collect(Collectors.toCollection(ArrayList::new));
-            return new SimiValue.Object(interpreter.newArray(true, props));
         } catch (IOException e) {
-            e.printStackTrace();
-            interpreter.raiseException(new SimiException((SimiClass) interpreter.getEnvironment().tryGet("IoException").getObject(), e.getMessage()));
-            return null;
+//            e.printStackTrace();
+            Utils.raiseIoException(e, interpreter);
+            props = new ArrayList<>();
         }
+        return new SimiValue.Object(interpreter.newArray(true, props));
     }
 }

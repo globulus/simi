@@ -106,7 +106,12 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
           initializer = findMethod(instance, Constants.PRIVATE + Constants.INIT, arguments.size());
       }
       if (initializer != null) {
-          initializer.function.call(interpreter, arguments);
+          if (initializer.function.isNative) {
+              Interpreter in = (Interpreter) interpreter;
+              instance = (SimiObjectImpl) in.nativeModulesManager.call(name, Constants.INIT, this, in, arguments).getObject();
+          } else {
+              initializer.function.call(interpreter, arguments);
+          }
       }
       return new SimiValue.Object(instance);
   }
