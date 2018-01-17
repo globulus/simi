@@ -724,7 +724,7 @@ class BaseClassesNativeImpl {
                 SimiNativeObject object = new SimiNativeObject(fields);
                 SimiValue objectValue = new SimiValue.Object(object);
                 StringBuilder sb = new StringBuilder();
-                fields.put("plus", new SimiValue.Callable(new SimiCallable() {
+                fields.put("add", new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 1;
@@ -736,7 +736,7 @@ class BaseClassesNativeImpl {
                         sb.append(value.toString());
                         return objectValue;
                     }
-                }, "plus", object));
+                }, "add", object));
                 fields.put("build", new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {

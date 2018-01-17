@@ -180,9 +180,9 @@ class Range:
 
     def toString():
         return $String.builder()\
-            .plus("Range from ").plus(@start)\
-            .plus(" to ").plus(@stop)\
-            .plus(" by ").plus(@step)\
+            .add("Range from ").add(@start)\
+            .add(" to ").add(@stop)\
+            .add(" by ").add(@step)\
             .build()
     end
 end

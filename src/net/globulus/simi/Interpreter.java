@@ -363,13 +363,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
             return new SimiValue.Number(left.getNumber() + right.getNumber());
         } // [plus]
-
-        if (left instanceof SimiValue.String && right instanceof SimiValue.String) {
-            return new SimiValue.String(left.getString() + right.getString());
-        }
-
-        throw new RuntimeError(expr.operator,
-            "Operands must be two numbers or two strings.");
+        return new SimiValue.String(left.toString() + right.toString());
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
           return new SimiValue.Number(left.getNumber() / right.getNumber());

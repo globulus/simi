@@ -139,7 +139,7 @@ end
 
 refillCar()
 
-#string = $String.builder().plus(3).plus("aaa").plus(4.5).plus("bbb").build().substring(2, 5)
+#string = $String.builder().add(3).add("aaa").add(4.5).add("bbb").build().substring(2, 5)
 #print string
 
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
