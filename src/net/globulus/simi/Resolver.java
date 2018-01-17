@@ -216,6 +216,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitGuExpr(Expr.Gu expr) {
+    return null;
+  }
+
+  @Override
   public Void visitLiteralExpr(Expr.Literal expr) {
     return null;
   }

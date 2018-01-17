@@ -1,5 +1,7 @@
 import "./Stdlib/File.simi"
 
+print gu "2+2"
+
 def testFile():
     #File.readLines("README.md").forEach(def s: print s)
     file = File("README.md")
@@ -9,8 +11,7 @@ def testFile():
         if line: print line
         else: break
     end
-    writeFile = File("writetest.txt")
-    writer = WriteStream(writeFile)
+    writer = WriteStream(File("writetest.txt"))
     writer.write("string")
     writer.newLine()
     writer.write("new string")

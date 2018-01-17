@@ -31,7 +31,7 @@ class Parser {
             advance(); // skip path string
             continue;
         }
-        if (match(NEWLINE, PASS, GU)) {
+        if (match(NEWLINE, PASS)) {
             continue;
         }
         statements.add(declaration());
@@ -245,7 +245,7 @@ class Parser {
     List<Stmt> statements = new ArrayList<>();
     if (match(NEWLINE)) {
         while (!check(END) && !isAtEnd()) {
-            if (match(NEWLINE, PASS, GU)) {
+            if (match(NEWLINE, PASS)) {
               continue;
             }
             statements.add(declaration());
@@ -407,6 +407,10 @@ class Parser {
       Token operator = previous();
       Expr right = unary();
       return new Expr.Unary(operator, right);
+    }
+    if (match(GU)) {
+      Expr.Literal string = (Expr.Literal) primary();
+      return new Expr.Gu(string);
     }
     return call();
   }

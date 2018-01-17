@@ -512,6 +512,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
+  public SimiValue visitGuExpr(Expr.Gu expr) {
+    Scanner scanner = new Scanner(expr.string.value.getString() + "\n");
+    Parser parser = new Parser(scanner.scanTokens(true));
+    return evaluate(((Stmt.Expression) parser.parse().get(0)).expression);
+  }
+
+  @Override
   public SimiValue visitLiteralExpr(Expr.Literal expr) {
     return expr.value;
   }

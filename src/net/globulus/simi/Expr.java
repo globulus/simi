@@ -15,6 +15,7 @@ abstract class Expr {
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
+    R visitGuExpr(Gu expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
     R visitSetExpr(Set expr);
@@ -128,6 +129,7 @@ abstract class Expr {
     final Expr name;
     final Integer arity;
   }
+
   static class Grouping extends Expr {
     Grouping(Expr expression) {
       this.expression = expression;
@@ -139,6 +141,19 @@ abstract class Expr {
 
     final Expr expression;
   }
+
+  static class Gu extends Expr {
+    Gu(Expr.Literal string) {
+      this.string = string;
+    }
+
+    <R> R accept(Visitor<R> visitor, Object... params) {
+      return visitor.visitGuExpr(this);
+    }
+
+    final Expr.Literal string;
+  }
+
   static class Literal extends Expr {
     Literal(SimiValue value) {
       this.value = value;

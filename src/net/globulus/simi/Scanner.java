@@ -206,8 +206,14 @@ class Scanner {
     advance();
 
     // Trim the surrounding quotes.
-    String value = source.substring(start + 1, current - 1);
+    String value = escapedString(start + 1, current - 1);
     addToken(TokenType.STRING, new SimiValue.String(value));
+  }
+
+  private String escapedString(int start, int stop) {
+    return source.substring(start, stop)
+            .replace("\\n", "\n")
+            .replace("\\t", "\t");
   }
 
     private String keywordString(TokenType type) {
