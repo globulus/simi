@@ -22,6 +22,25 @@ def testFile():
 end
 #testFile()
 
+def testYieldFun():
+    print "before yield"
+    for i in 2.times():
+        yield "yield" + i
+    end
+    print "afterYield"
+end
+def testYield():
+    print "Calling yield test"
+    print testYieldFun()
+    print "Calling again..."
+    print testYieldFun()
+    print "Calling yet again..."
+    print testYieldFun()
+    print "Now it should restart"
+    print testYieldFun()
+end
+testYield()
+
 class Point:
     def init(x, y): pass
 

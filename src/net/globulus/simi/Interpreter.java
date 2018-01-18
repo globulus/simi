@@ -28,7 +28,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
       @Override
       public SimiValue call(BlockInterpreter interpreter,
-                         List<SimiValue> arguments) {
+                          List<SimiValue> arguments,
+                            boolean rethrow) {
         return new SimiValue.Number((double)System.currentTimeMillis() / 1000.0);
       }
     }, "clock", null));
@@ -61,29 +62,34 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public void executeBlock(SimiBlock block, SimiEnvironment environment) {
+  public void executeBlock(SimiBlock block, SimiEnvironment environment, int startAt) {
     Environment previous = this.environment;
     try {
       this.environment = (Environment) environment;
       List<? extends SimiStatement> statements = block.getStatements();
       int size = statements.size();
-      for (int i = 0; i < size; i++) {
-        if (raisedExceptions.isEmpty()) {
-          Stmt statement = (Stmt) statements.get(i);
-          execute(statement);
-        } else {
-          Stmt.Rescue rescue = null;
-          for (; i < size; i++) {
+      for (int i = startAt < size ? startAt : 0; i < size; i++) {
+        try {
+          if (raisedExceptions.isEmpty()) {
             Stmt statement = (Stmt) statements.get(i);
-            if (statement instanceof Stmt.Rescue) {
-              rescue = (Stmt.Rescue) statement;
-              break;
+            execute(statement);
+          } else {
+            Stmt.Rescue rescue = null;
+            for (; i < size; i++) {
+              Stmt statement = (Stmt) statements.get(i);
+              if (statement instanceof Stmt.Rescue) {
+                rescue = (Stmt.Rescue) statement;
+                break;
+              }
+            }
+            if (rescue != null) {
+              SimiException e = raisedExceptions.pop();
+              executeRescueBlock(rescue, e);
             }
           }
-          if (rescue != null) {
-            SimiException e = raisedExceptions.pop();
-            executeRescueBlock(rescue, e);
-          }
+        } catch (Yield yield) {
+          block.yield(i + (yield.rethrown ? 0 : 1));
+          throw yield;
         }
       }
     } finally {
@@ -123,7 +129,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
-    executeBlock(stmt, new Environment(environment));
+    executeBlock(stmt, new Environment(environment), 0);
     return null;
   }
 
@@ -255,16 +261,30 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (stmt.value != null) {
       value = evaluate(stmt.value);
     }
-
     throw new Return(value);
+  }
+
+  @Override
+  public Object visitYieldStmt(Stmt.Yield stmt) {
+    SimiValue value = null;
+    if (stmt.value != null) {
+      value = evaluate(stmt.value);
+    }
+    throw new Yield(value, false);
   }
 
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
     loopBlocks.push(stmt.body);
+    if (stmt.block == null) {
+      stmt.block = new BlockImpl(stmt.body, this.environment);
+    }
     while (isTruthy(evaluate(stmt.condition))) {
       try {
-        evaluate(stmt.body);
+        stmt.block.call(this, null, true);
+      } catch (Return | Yield returnYield) {
+          loopBlocks.pop();
+          throw returnYield;
       } catch (Break b) {
         break;
       } catch (Continue ignored) { }
@@ -275,33 +295,45 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public Void visitForStmt(Stmt.For stmt) {
-    Environment previous = this.environment;
-    this.environment = new Environment(this.environment);
-    List<Expr> emptyArgs = new ArrayList<>();
-    SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
-    Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiValue nextMethod = iterable.get(nextToken, 0, environment);
-    if (nextMethod == null) {
-      Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
-      SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
-      nextMethod = iterator.get(nextToken, 0, environment);
+    if (stmt.block == null) {
+      stmt.block = new BlockImpl(stmt.body, this.environment);
     }
 
-    loopBlocks.push(stmt.body);
+    List<Expr> emptyArgs = new ArrayList<>();
+    Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
+    SimiValue nextMethod = stmt.block.closure.tryGet("#next");
+    if (nextMethod == null) {
+      SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
+      nextMethod = iterable.get(nextToken, 0, environment);
+      if (nextMethod == null) {
+        Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);
+        SimiObjectImpl iterator = (SimiObjectImpl) call(iterable.get(iterateToken, 0, environment), emptyArgs, iterateToken).getObject();
+        nextMethod = iterator.get(nextToken, 0, environment);
+      }
+    }
+
+    stmt.block.closure.assign(Token.named("#next"), nextMethod, true);
+    loopBlocks.push(stmt.block);
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
+        stmt.block = null;
         break;
       }
-      environment.assign(stmt.var.name, var, true);
+      stmt.block.closure.assign(stmt.var.name, var, true);
       try {
-        evaluate(stmt.body);
+        stmt.block.call(this, null, true);
+      } catch (Return | Yield returnYield) {
+        if (returnYield instanceof Return) {
+          stmt.block = null;
+        }
+        loopBlocks.pop();
+        throw returnYield;
       } catch (Break b) {
         break;
       } catch (Continue ignored) { }
     }
     loopBlocks.pop();
-    this.environment = previous;
     return null;
   }
 
@@ -453,7 +485,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         List<SimiValue> nativeArgs = new ArrayList<>();
         nativeArgs.add(new SimiValue.Object(instance));
         nativeArgs.addAll(arguments);
-        return nativeMethod.call(this, nativeArgs);
+        return nativeMethod.call(this, nativeArgs, false);
       } else {
         try {
           return nativeModulesManager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
@@ -461,7 +493,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         } catch (IllegalArgumentException ignored) { }
       }
     }
-    return callable.call(this, arguments);
+    return callable.call(this, arguments, false);
   }
 
   @Override

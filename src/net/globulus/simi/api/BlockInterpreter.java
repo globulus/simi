@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 
 public interface BlockInterpreter {
 
-    void executeBlock(SimiBlock block, SimiEnvironment environment);
+    void executeBlock(SimiBlock block, SimiEnvironment environment, int startAt);
     SimiValue getGlobal(String name);
     SimiEnvironment getEnvironment();
     void raiseException(SimiException e);

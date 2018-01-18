@@ -10,16 +10,19 @@ abstract class Stmt implements SimiStatement {
     R visitBreakStmt(Break stmt);
     R visitClassStmt(Class stmt);
     R visitContinueStmt(Continue stmt);
+    R visitElsifStmt(Elsif stmt);
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
-    R visitElsifStmt(Elsif stmt);
+    R visitForStmt(For stmt);
     R visitIfStmt(If stmt);
     R visitPrintStmt(Print stmt);
     R visitRescueStmt(Rescue stmt);
     R visitReturnStmt(Return stmt);
     R visitWhileStmt(While stmt);
-    R visitForStmt(For stmt);
+    R visitYieldStmt(Yield stmt);
   }
+
+  abstract <R> R accept(Visitor<R> visitor);
 
   static class Break extends Stmt {
     Break(Token name) {
@@ -101,6 +104,8 @@ abstract class Stmt implements SimiStatement {
 
         final Expr condition;
         final Expr.Block thenBranch;
+
+        BlockImpl block;
     }
 
   static class If extends Stmt {
@@ -118,6 +123,8 @@ abstract class Stmt implements SimiStatement {
     final Elsif ifstmt;
     final List<Elsif> elsifs;
     final Expr.Block elseBranch;
+
+    BlockImpl block;
   }
 
   static class Print extends Stmt {
@@ -172,23 +179,39 @@ abstract class Stmt implements SimiStatement {
 
     final Expr condition;
     final Expr.Block body;
+
+    BlockImpl block;
   }
 
-    static class For extends Stmt {
-        For(Expr.Variable var, Expr iterable, Expr.Block body) {
-            this.var = var;
-            this.iterable = iterable;
-            this.body = body;
-        }
+  static class For extends Stmt {
+      For(Expr.Variable var, Expr iterable, Expr.Block body) {
+        this.var = var;
+        this.iterable = iterable;
+        this.body = body;
+      }
 
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitForStmt(this);
-        }
+      <R> R accept(Visitor<R> visitor) {
+          return visitor.visitForStmt(this);
+      }
 
-        final Expr.Variable var;
-        final Expr iterable;
-        final Expr.Block body;
+      final Expr.Variable var;
+      final Expr iterable;
+      final Expr.Block body;
+
+      BlockImpl block;
     }
 
-  abstract <R> R accept(Visitor<R> visitor);
+  static class Yield extends Stmt {
+    Yield(Token keyword, Expr value) {
+      this.keyword = keyword;
+      this.value = value;
+    }
+
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitYieldStmt(this);
+    }
+
+    final Token keyword;
+    final Expr value;
+  }
 }

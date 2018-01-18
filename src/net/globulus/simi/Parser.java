@@ -114,6 +114,9 @@ class Parser {
     if (match(RESCUE)) {
       return rescueStatement();
     }
+    if (match(YIELD)) {
+      return yieldStatement(lambda);
+    }
 //    if (match(COLON)) {
 //        return block("block", true);
 //    }
@@ -155,6 +158,16 @@ class Parser {
     }
     checkStatementEnd(lambda);
     return new Stmt.Return(keyword, value);
+  }
+
+  private Stmt yieldStatement(boolean lambda) {
+    Token keyword = previous();
+    Expr value = null;
+    if (!check(NEWLINE)) {
+      value = expression();
+    }
+    checkStatementEnd(lambda);
+    return new Stmt.Yield(keyword, value);
   }
 
 //  private Stmt varDeclaration() {

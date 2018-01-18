@@ -40,6 +40,7 @@ class Scanner {
     keywords.put(Constants.SUPER,  TokenType.SUPER);
     keywords.put("true",   TokenType.TRUE);
     keywords.put("while",  TokenType.WHILE);
+    keywords.put("yield",  TokenType.YIELD);
   }
   private final String source;
   private final List<Token> tokens = new ArrayList<>();

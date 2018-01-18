@@ -22,7 +22,7 @@ class SimiMethod implements SimiCallable {
     }
 
     @Override
-    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
-        return function.call(interpreter, arguments);
+    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+        return function.call(interpreter, arguments, rethrow);
     }
 }

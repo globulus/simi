@@ -140,10 +140,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
     if (stmt.value != null) {
       if (currentFunction == FunctionType.INITIALIZER) {
-        Simi.error(stmt.keyword,
-            "Cannot return a value from an initializer.");
+        Simi.error(stmt.keyword, "Cannot return a value from an initializer.");
       }
-
       resolve(stmt.value);
     }
 
@@ -164,6 +162,17 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   public Void visitWhileStmt(Stmt.While stmt) {
     resolve(stmt.condition);
     resolve(stmt.body);
+    return null;
+  }
+
+  @Override
+  public Void visitYieldStmt(Stmt.Yield stmt) {
+    if (stmt.value != null) {
+      if (currentFunction == FunctionType.INITIALIZER) {
+        Simi.error(stmt.keyword, "Cannot yield a value from an initializer.");
+      }
+      resolve(stmt.value);
+    }
     return null;
   }
 

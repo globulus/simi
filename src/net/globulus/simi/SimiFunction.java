@@ -1,8 +1,7 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiCallable;
 import net.globulus.simi.api.BlockInterpreter;
-import net.globulus.simi.api.SimiObject;
+import net.globulus.simi.api.SimiCallable;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.List;
@@ -13,7 +12,6 @@ class SimiFunction implements SimiCallable {
   private final BlockImpl block;
   private final boolean isInitializer;
   public final boolean isNative;
-  private final SimiObject instance;
 
   SimiFunction(Stmt.Function declaration,
                Environment closure,
@@ -23,24 +21,18 @@ class SimiFunction implements SimiCallable {
     this.block = new BlockImpl(declaration.block, closure);
     this.isInitializer = isInitializer;
     this.isNative = isNative;
-    this.instance = null;
   }
 
-  private SimiFunction(Stmt.Function declaration,
-                       BlockImpl block,
-                       boolean isInitializer,
-                       boolean isNative,
-                       SimiObject instance) {
-      this.declaration = declaration;
+  private SimiFunction(SimiFunction original, BlockImpl block) {
+      this.declaration = original.declaration;
       this.block = block;
-      this.isInitializer = isInitializer;
-      this.isNative = isNative;
-      this.instance = instance;
+      this.isInitializer = original.isInitializer;
+      this.isNative = original.isNative;
   }
 
   SimiFunction bind(SimiObjectImpl instance) {
 //      block.bind(instance);
-      return new SimiFunction(declaration, block.bind(instance), isInitializer, isNative, instance);
+      return new SimiFunction(this, block.bind(instance));
   }
 
   @Override
@@ -54,8 +46,8 @@ class SimiFunction implements SimiCallable {
   }
 
   @Override
-  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
-    SimiValue value = block.call(interpreter, arguments);
+  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+    SimiValue value = block.call(interpreter, arguments, rethrow);
     if (isInitializer) {
         return block.closure.getAt(0, Constants.SELF);
     }

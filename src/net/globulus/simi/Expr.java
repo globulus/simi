@@ -25,7 +25,6 @@ abstract class Expr {
     R visitVariableExpr(Variable expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
   }
-
     static class Block extends Expr implements SimiBlock {
         Block(Token declaration, List<Token> params, List<Stmt> statements) {
             this.declaration = declaration;
@@ -49,6 +48,11 @@ abstract class Expr {
       @Override
       public List<? extends SimiStatement> getStatements() {
         return statements;
+      }
+
+      @Override
+      public void yield(int index) {
+        throw new RuntimeException("Trying to yield a Expr.Block!");
       }
 
       public boolean isEmpty() {

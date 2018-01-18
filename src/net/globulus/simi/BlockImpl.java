@@ -9,6 +9,9 @@ class BlockImpl implements SimiBlock, SimiCallable {
   final Expr.Block declaration;
   final Environment closure;
 
+  private Integer lastStatement;
+  private Environment lastClosure;
+
   BlockImpl(Expr.Block declaration, Environment closure) {
     this.declaration = declaration;
     this.closure = closure;
@@ -25,6 +28,17 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   @Override
+  public void yield(int index) {
+    this.lastStatement = index;
+    this.lastClosure = this.closure;
+  }
+
+  private void clearYield() {
+    this.lastStatement = null;
+    this.lastClosure = null;
+  }
+
+  @Override
   public String toString() {
     return "<block>";
   }
@@ -35,18 +49,31 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   @Override
-  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
-    Environment environment = new Environment(closure);
-    for (int i = 0; i < declaration.params.size(); i++) {
-      environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+    Environment environment = new Environment(lastClosure != null ? lastClosure : closure);
+    if (arguments != null) {
+      for (int i = 0; i < declaration.params.size(); i++) {
+        environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+      }
     }
 
     try {
-      interpreter.executeBlock(declaration, environment);
+      interpreter.executeBlock(this, environment, (lastStatement != null) ? lastStatement : 0);
     } catch (Return returnValue) {
-      return returnValue.value;
+      clearYield();
+      if (rethrow) {
+        throw returnValue;
+      } else {
+        return returnValue.value;
+      }
+    } catch (Yield yield) {
+      if (rethrow) {
+        throw new Yield(yield.value, true);
+      } else {
+        return yield.value;
+      }
     }
-
+    clearYield();
     return null;
   }
 

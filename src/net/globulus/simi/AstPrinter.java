@@ -141,6 +141,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitYieldStmt(Stmt.Yield stmt) {
+    return null;
+  }
+
+  @Override
   public String visitForStmt(Stmt.For stmt) {
     return null;
   }

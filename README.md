@@ -224,6 +224,9 @@ array.4 = nil # Removed the fifth element from the array
 
 Objects are pass-by-reference.
 
+##### Objects vs Arrays
+Šimi Arrays are Objects, insofar as they inherit the $Object class, and are exposed via the SimiObject interface in the API. That being said, you cannot really mix arrays and keyed objects together, i.e you can't invoke an addAll method on an array with an object parameter, and vice-versa. The reasons for that are twofold, the first being that such operations don't really make sense and their outcome would need to be based on a contract, which would unnecessarily complicate the language. The second reason is performance - if arrays and keyed objects were implemented the same way in the interpreter, the execution time of list operations such as insertion would be much worse.
+
 #### Value conversions
 * Numbers can be converted to Strings via the toString() method.
 * Conversely, Strings can be converted to Numbers by using the toNumber() method, but be aware that invoking this method may produce NumberFormatException that needs to be handled via the *rescue* block.

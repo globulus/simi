@@ -166,7 +166,7 @@ abstract class SimiObjectImpl implements SimiObject {
   public String toString() {
       SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
       if (method != null && !method.function.isNative) {
-          return method.call(Interpreter.sharedInstance, new ArrayList<>()).getString();
+          return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getString();
       }
     StringBuilder sb = new StringBuilder();
     sb.append("[\n");
