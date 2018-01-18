@@ -4,10 +4,10 @@
 ### Basic syntax
 
 #### Keywords
-Šimi has 25 reserved keywords:
+Šimi has 27 reserved keywords:
 ```ruby
 and break class continue def else elsif end false for gu if import
-in is native nil or pass print rescue return self super true while
+in is native nil or pass print rescue return self super true while yield
 ```
 
 #### Comments
