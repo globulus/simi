@@ -22,6 +22,10 @@ abstract class Stmt implements SimiStatement {
     R visitYieldStmt(Yield stmt);
   }
 
+  interface BlockStmt {
+    void end();
+  }
+
   abstract <R> R accept(Visitor<R> visitor);
 
   static class Break extends Stmt {
@@ -92,7 +96,7 @@ abstract class Stmt implements SimiStatement {
     final Expr.Block block;
   }
 
-    static class Elsif extends Stmt {
+    static class Elsif extends Stmt implements BlockStmt {
         Elsif(Expr condition, Expr.Block thenBranch) {
             this.condition = condition;
             this.thenBranch = thenBranch;
@@ -106,9 +110,19 @@ abstract class Stmt implements SimiStatement {
         final Expr.Block thenBranch;
 
         BlockImpl block;
+
+      @Override
+      public void end() {
+        block = null;
+        for (Stmt stmt : thenBranch.statements) {
+          if (stmt instanceof BlockStmt) {
+            ((BlockStmt) stmt).end();
+          }
+        }
+      }
     }
 
-  static class If extends Stmt {
+  static class If extends Stmt implements BlockStmt {
     If(Elsif ifstmt, List<Elsif> elsifs, Expr.Block elseBranch) {
         this.ifstmt = ifstmt;
         this.elsifs = elsifs;
@@ -124,7 +138,23 @@ abstract class Stmt implements SimiStatement {
     final List<Elsif> elsifs;
     final Expr.Block elseBranch;
 
-    BlockImpl block;
+    BlockImpl elseBlock;
+
+    @Override
+    public void end() {
+      ifstmt.end();
+      for (Elsif elsif : elsifs) {
+        elsif.end();
+      }
+      elseBlock = null;
+      if (elseBranch != null) {
+        for (Stmt stmt : elseBranch.statements) {
+          if (stmt instanceof BlockStmt) {
+            ((BlockStmt) stmt).end();
+          }
+        }
+      }
+    }
   }
 
   static class Print extends Stmt {
@@ -167,7 +197,7 @@ abstract class Stmt implements SimiStatement {
     final Expr value;
   }
 
-  static class While extends Stmt {
+  static class While extends Stmt implements BlockStmt {
     While(Expr condition, Expr.Block body) {
       this.condition = condition;
       this.body = body;
@@ -181,9 +211,19 @@ abstract class Stmt implements SimiStatement {
     final Expr.Block body;
 
     BlockImpl block;
+
+    @Override
+    public void end() {
+      block = null;
+      for (Stmt stmt : body.statements) {
+        if (stmt instanceof BlockStmt) {
+          ((BlockStmt) stmt).end();
+        }
+      }
+    }
   }
 
-  static class For extends Stmt {
+  static class For extends Stmt implements BlockStmt {
       For(Expr.Variable var, Expr iterable, Expr.Block body) {
         this.var = var;
         this.iterable = iterable;
@@ -199,7 +239,17 @@ abstract class Stmt implements SimiStatement {
       final Expr.Block body;
 
       BlockImpl block;
+
+    @Override
+    public void end() {
+      block = null;
+      for (Stmt stmt : body.statements) {
+        if (stmt instanceof BlockStmt) {
+          ((BlockStmt) stmt).end();
+        }
+      }
     }
+  }
 
   static class Yield extends Stmt {
     Yield(Token keyword, Expr value) {

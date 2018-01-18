@@ -24,8 +24,9 @@ end
 
 def testYieldFun():
     print "before yield"
-    for i in 2.times():
-        yield "yield" + i
+    for i in 3.times():
+        if i < 2: yield "yield" + i
+        else: return "return in yield"
     end
     print "afterYield"
 end

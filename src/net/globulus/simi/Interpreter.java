@@ -220,7 +220,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Object visitElsifStmt(Stmt.Elsif stmt) {
     if (isTruthy(evaluate(stmt.condition))) {
-      evaluate(stmt.thenBranch);
+      if (stmt.block == null) {
+        stmt.block = new BlockImpl(stmt.thenBranch, this.environment);
+      }
+      try {
+        stmt.block.call(this, null, true);
+      } catch (Return | Yield returnYield) {
+        if (returnYield instanceof Return) {
+          stmt.end();
+        }
+        throw returnYield;
+      }
+      stmt.end();
       return true;
     }
     return false;
@@ -237,7 +248,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
     if (stmt.elseBranch != null) {
-      evaluate(stmt.elseBranch);
+      if (stmt.elseBlock == null) {
+        stmt.elseBlock = new BlockImpl(stmt.elseBranch, this.environment);
+      }
+      try {
+        stmt.elseBlock.call(this, null, true);
+      } catch (Return | Yield returnYield) {
+        if (returnYield instanceof Return) {
+          stmt.elseBlock = null;
+        }
+        throw returnYield;
+      }
+      stmt.elseBlock = null;
     }
     return null;
   }
@@ -277,18 +299,22 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public Void visitWhileStmt(Stmt.While stmt) {
     loopBlocks.push(stmt.body);
     if (stmt.block == null) {
-      stmt.block = new BlockImpl(stmt.body, this.environment);
+      stmt.block = new BlockImpl(stmt.body, new Environment(this.environment));
     }
     while (isTruthy(evaluate(stmt.condition))) {
       try {
         stmt.block.call(this, null, true);
       } catch (Return | Yield returnYield) {
+          if (returnYield instanceof Return) {
+            stmt.end();
+          }
           loopBlocks.pop();
           throw returnYield;
       } catch (Break b) {
         break;
       } catch (Continue ignored) { }
     }
+    stmt.end();
     loopBlocks.pop();
     return null;
   }
@@ -296,7 +322,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Void visitForStmt(Stmt.For stmt) {
     if (stmt.block == null) {
-      stmt.block = new BlockImpl(stmt.body, this.environment);
+      stmt.block = new BlockImpl(stmt.body, new Environment(this.environment));
     }
 
     List<Expr> emptyArgs = new ArrayList<>();
@@ -317,7 +343,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
-        stmt.block = null;
+        stmt.end();
         break;
       }
       stmt.block.closure.assign(stmt.var.name, var, true);
@@ -325,7 +351,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         stmt.block.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          stmt.block = null;
+          stmt.end();
         }
         loopBlocks.pop();
         throw returnYield;
