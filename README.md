@@ -493,6 +493,53 @@ Virtually everything in Šimi is iterable:
 #### break and continue
 The *break* and *continue* keywords work as in other languages, and must be placed inside loops, otherwise the interpreter will throw an exception.
 
+#### return and yield
+
+Control flow in in functions is done via *return* and *yield* statements.
+
+The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was invoked, and can either pass or not pass a value:
+ ```ruby
+ def f(x):
+    if x < 5: return 0
+    return x
+ end
+ print f(2) # 0
+ print f(6) # 6
+ ```
+
+ The *yield* statement is very similar to return, but the function block stores where it left off, and subsequent invocations resume the flow from that point:
+```ruby
+def testYieldFun():
+    print "before yield"
+    for i in 3.times():
+        if i < 2: yield "yield " + i
+        else: return "return in yield"
+    end
+end
+print "Calling yield test"
+print testYieldFun()
+print "Calling again..."
+print testYieldFun()
+print "Calling yet again..."
+print testYieldFun()
+print "Now it should restart"
+print testYieldFun()
+```
+The output of this code is:
+```
+Calling yield test
+before yield # Function is invoked the first time, and it starts at beginning
+yield 0 # The value of i is 0, and the function remembers that it "returned" from here
+Calling again... # The second invocation will resume where the function left off...
+yield 1 # ...and we pick up at the next iteration of the loop, with i == 1
+Calling yet again... # Resuming after another yield
+return in yield # This time i == 2, so a return is called
+Now it should restart # That's exactly right
+before yield # ...and we see that it does restart
+yield 0
+```
+Yielding allows for coding of generators, and serves as a lightweight basis for concurrency, allowing a code to do multiple "returns" without having to resort to using callbacks.
+
 ### Exception handling
 
 #### Exceptions
