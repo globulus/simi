@@ -1,0 +1,299 @@
+TokenType = [
+# Single-character tokens.
+  LEFT_PAREN = 0,
+  RIGHT_PAREN = 1,
+  LEFT_BRACKET = 2,
+  RIGHT_BRACKET = 3,
+  COMMA = 4,
+  DOT = 5,
+  COLON = 6,
+  NEWLINE = 7,
+
+  # One or two character tokens.
+  BANG = 8,
+  BANG_EQUAL = 9,
+  EQUAL = 10,
+  EQUAL_EQUAL = 11,
+  GREATER = 12,
+  GREATER_EQUAL = 13,
+  LESS = 14,
+  LESS_EQUAL = 15,
+  LESS_GREATER = 16,
+  PLUS = 17,
+  PLUS_EQUAL = 18,
+  MINUS = 19,
+  MINUS_EQUAL = 20,
+  STAR = 21,
+  STAR_STAR = 22,
+  STAR_EQUAL = 23,
+  SLASH = 24,
+  SLASH_EQUAL = 25,
+  MOD = 26,
+  MOD_MOD = 27,
+  MOD_EQUAL = 28,
+  DOLLAR_LEFT_BRACKET = 29,
+  QUESTION = 30,
+  QUESTION_QUESTION = 31,
+
+  # Literals.
+  IDENTIFIER = 32,
+  STRING = 33,
+  NUMBER = 34,
+
+  # Keywords.
+  AND = 35,
+  BREAK = 36,
+  CLASS = 37,
+  CONTINUE = 38,
+  ELSE = 39,
+  FALSE = 40,
+  DEF = 41,
+  FOR = 42,
+  RESCUE = 43,
+  IF = 44,
+  NIL = 45,
+  OR = 46,
+  PRINT = 47,
+  RETURN = 48,
+  SUPER = 49,
+  SELF = 50,
+  TRUE = 51,
+  WHILE = 52,
+  PASS = 53,
+  IN = 54,
+  IS = 55,
+  NOT = 56,
+  ELSIF = 57,
+  END = 58,
+  ISNOT = 59,
+  NOTIN = 60,
+  NATIVE = 61,
+  IMPORT = 62,
+  YIELD = 63,
+
+  GU = 64,
+
+  EOF = 65
+]
+
+Keywords = [
+        "and" =   TokenType.AND,
+        "break" = TokenType.BREAK,
+        "class" = TokenType.CLASS,
+        "continue" =   TokenType.CONTINUE,
+        "def" =   TokenType.DEF,
+        "end" =   TokenType.END,
+        "else" =  TokenType.ELSE,
+        "elsif" = TokenType.ELSIF,
+        "false" = TokenType.FALSE,
+        "for" =   TokenType.FOR,
+        "gu" =    TokenType.GU,
+        "if" =    TokenType.IF,
+        "import" =    TokenType.IMPORT,
+        "in" =    TokenType.IN,
+        "is" =    TokenType.IS,
+        "native" =     TokenType.NATIVE,
+        "nil" =   TokenType.NIL,
+        "not" =   TokenType.NOT,
+        "or" =    TokenType.OR,
+        "pass" =   TokenType.PASS,
+        "print" =         TokenType.PRINT,
+        "rescue" =        TokenType.RESCUE,
+        "return" =        TokenType.RETURN,
+        "self" =   TokenType.SELF,
+        "super" =  TokenType.SUPER,
+        "true" =  TokenType.TRUE,
+        "while" = TokenType.WHILE,
+        "yield" = TokenType.YIELD
+]
+
+class Token:
+    def init(type, lexeme, literal, line): pass
+
+    def toString():
+        return $String.builder()\
+            .add("Type: ").add(@type)\
+            .add("Lexeme: ").add(@lexeme)\
+            .add("Literal: ").add(@literal)\
+            .add("Line: ").add(@line)\
+            .build()
+    end
+end
+
+class ScanException(Exception):
+    def init(line, message):
+        super.init((line ?? -1) + (str ?? ""))
+    end
+end
+
+class Scanner:
+
+    def init(source):
+        @source = source
+        @sourceLen = source.length()
+        @tokens = $[]
+        @start = 0
+        @current = 0
+        @line = 1
+    end
+
+    def scanTokens(addEof):
+        while not @_isAtEnd():
+            @start = @current
+            @_scanToken()
+        end
+        if addEof: @tokens.append(Token(TokenType.EOF, "", nil, @line))
+        return @tokens
+    end
+    
+    def _scanToken():
+        c = @_advance()
+        if c == "(": @_addToken(TokenType.LEFT_PAREN)
+        elsif c == ")": @_addToken(TokenType.RIGHT_PAREN)
+       elsif c == "[": @_addToken(TokenType.LEFT_BRACKET)
+       elsif c == "]": @_addToken(TokenType.RIGHT_BRACKET)
+       elsif c == ",": @_addToken(TokenType.COMMA)
+       elsif c == ".": @_addToken(TokenType.DOT)
+       elsif c == ":": @_addToken(TokenType.COLON)
+       elsif c == "@":
+           @_addToken(TokenType.SELF)
+          @_addToken(TokenType.DOT)
+       end elsif c == "?": @_addToken(ife(@_match("?"), TokenType.QUESTION_QUESTION, TokenType.QUESTION))
+       elsif c == "!": @_addToken(ife(@_match("="), TokenType.BANG_EQUAL, TokenType.BANG))
+       elsif c == "=": @_addToken(ife(@_match("="), TokenType.EQUAL_EQUAL, TokenType.EQUAL))
+       elsif c == "<":
+        if @_match(">"): @_addToken(TokenType.LESS_GREATER)
+        elsif @_match("="): @_addToken(TokenType.LESS_EQUAL)
+        else: @_addToken(TokenType.LESS)
+       end
+       elsif c == ">": @_addToken(ife(@_match("="), TokenType.GREATER_EQUAL, TokenType.GREATER))
+       elsif c == "+": @_addToken(ife(@_match("="), TokenType.PLUS_EQUAL, TokenType.PLUS))
+       elsif c == "-": @_addToken(ife(@_match("="), TokenType.MINUS_EQUAL, TokenType.MINUS))
+       elsif c == "/": @_addToken(ife(@_match("="), TokenType.SLASH_EQUAL, TokenType.SLASH))
+       elsif c == "*":
+        if @_match("*"): @_addToken(TokenType.STAR_STAR)
+        elsif @_match("="): @_addToken(TokenType.STAR_EQUAL)
+        else: @_addToken(TokenType.STAR)
+       end
+       elsif c == "%":
+        if @_match("%"): @_addToken(TokenType.MOD_MOD)
+        elsif @_match("="): @_addToken(TokenType.MOD_EQUAL)
+        else: @_addToken(TokenType.MOD)
+       end
+       elsif c == "$":
+        if @_match("["): @_addToken(TokenType.DOLLAR_LEFT_BRACKET)
+        else: @_identifier()
+       end
+       elsif c == "#":
+         while @_peek() != '\n' and not @_isAtEnd(): @_advance()
+       end
+       elsif c == "\\":
+        if @_match("\n"): @line = @line + 1
+       end
+       elsif c == " " or c == "\r" or c == "\t": pass
+       elsif c == "\n":
+        @line = @line + 1
+        @_addToken(TokenType.NEWLINE)
+       end
+       else:
+          if @_isStringDelim(c): @_string(c)
+          elsif @_isDigit(c): @_number()
+          elsif @_isAlpha(c): @_identifier()
+          else: @_error(line, "Unexpected character: " + c)
+       end
+    end
+
+    def _identifier():
+        while @_isAlphaNumeric(@_peek()): @_advance()
+        text = source.substring(@start, @current)
+        $type = keywords.(text)
+        if $type == TokenType.NOT and @_matchPeek(TokenType.IN): $type = TokenType.NOTIN
+        elsif $type == TokenType.IS and @_matchPeek(TokenType.NOT): $type = TokenType.ISNOT
+        elsif $type == nil: $type = TokenType.IDENTIFIER
+        @_addToken($type)
+    end
+
+    def _number():
+        while @_isDigit(@_peek()): @_advance()
+        if @_peek()== "." and @_isDigit(@_peekNext()):
+            @_advance()
+            while @_isDigit(@_peek()): @_advance()
+        end
+        @_addToken(TokenType.NUMBER, @source.substring(@start, @current).toNumber())
+    end
+
+    def _string(opener):
+        while @_peek() != opener and not @_isAtEnd():
+            if @_peek()== "\n": @line = @line + 1
+            @_advance()
+        end
+        if @_isAtEnd():
+            @_error(@line, "Unterminated string")
+            return
+        end
+        @_advance()
+        value = @_escapedString(@start + 1, @current - 1)
+        @_addToken(TokenType.STRING, value)
+    end
+
+    def _escapedString(start, stop):
+        return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
+    end
+
+    def _keywordString(type): return type in Keywords.keys()
+
+    def _matchPeek(type):
+        keyword = @_keywordString(type)
+        len = keyword.length()
+        stop = @current + len + 1
+        if stop < @sourceLen and @source.substring(@current + 1, stop) == keyword:
+            @current = stop
+            return true
+        end
+        return false
+    end
+
+    def _match(expected):
+        if @_isAtEnd(): return false
+        if @_peek() != expected: return false
+        @current = @current + 1
+        return true
+    end
+
+    def _peek():
+        if @_isAtEnd(): return '\0'
+        return @source.(@current)
+    end
+
+    def _peekNext():
+        if @current + 1 >= @sourceLen: return '\0'
+        return @source.(@current + 1)
+    end
+
+    def _isAlpha(c): return c.isAlpha() or c == "_" or c == "$"
+
+    def _isDigit(c): return c.isDigit()
+    
+    def _isAlphaNumeric(c): return @_isAlpha(c) or @_isDigit(c)
+    
+    def _isStringDelim(c): return c == '"' or c == "'"
+    
+    def _isAtEnd(): return @current >= @sourceLen
+    
+    def _advance():
+        @current = @current + 1
+      #  print @source
+      #  print @current
+      #  print @source.(@current - 1)
+        return @source.(@current - 1)
+    end
+    
+    def _addToken(type): @_addToken(type, nil)
+    
+    def _addToken(type, literal):
+        text = @source.substring(@start, @current)
+        @tokens.append(Token(type, text, literal, @line))
+    end
+
+    def _error(line, str): print ((line ?? -1) + (str ?? "")) # ScanException(line, str).raise()
+end

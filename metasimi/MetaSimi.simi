@@ -1,0 +1,12 @@
+import "./stdlib/File.simi"
+import "./MetaScanner.simi"
+
+source = File.readString("test.simi")
+scanner = Scanner(source)
+tokens = scanner.scanTokens(true)
+rescue ex:
+    if ex: print ex.message
+end
+for token in tokens:
+    print token
+end1
