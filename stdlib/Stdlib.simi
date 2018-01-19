@@ -211,6 +211,8 @@ class $String:
     native lowerCased(): pass
     native upperCased(): pass
     native trim(): pass
+    native isAlpha(): pass
+    native isDigit(): pass
 
     native iterate(): pass
     native has(obj): pass

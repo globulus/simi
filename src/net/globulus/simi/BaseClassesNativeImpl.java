@@ -628,6 +628,48 @@ class BaseClassesNativeImpl {
                 return new SimiValue.String(value.trim());
             }
         });
+        methods.put(new OverloadableFunction("isAlpha", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                for (char c : value.toCharArray()) {
+                    if (!isAlpha(c)) {
+                        return new SimiValue.Number(false);
+                    }
+                }
+                return new SimiValue.Number(true);
+            }
+
+            private boolean isAlpha(char c) {
+                return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            }
+        });
+        methods.put(new OverloadableFunction("isDigit", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+                String value = prepareStringNativeCall(interpreter, arguments);
+                for (char c : value.toCharArray()) {
+                    if (!isDigit(c)) {
+                        return new SimiValue.Number(false);
+                    }
+                }
+                return new SimiValue.Number(true);
+            }
+
+            private boolean isDigit(char c) {
+                return c >= '0' && c <= '9';
+            }
+        });
         methods.put(new OverloadableFunction(Constants.ITERATE, 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -733,7 +775,11 @@ class BaseClassesNativeImpl {
                     @Override
                     public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
                         SimiValue value = arguments.get(0);
-                        sb.append(value.toString());
+                        if (value == null) {
+                            sb.append("nil");
+                        } else {
+                            sb.append(value.toString());
+                        }
                         return objectValue;
                     }
                 }, "add", object));
@@ -917,8 +963,11 @@ class BaseClassesNativeImpl {
         SimiValue arg0 = arguments.get(0);
         SimiObjectImpl self = (SimiObjectImpl) arg0.getObject();
         SimiEnvironment environment = interpreter.getEnvironment();
+        SimiValue oldSelf = environment.tryGet(Constants.SELF);
         environment.define(Constants.SELF, arg0);
-        return self.get(Constants.PRIVATE, environment).getString();
+        String value = self.get(Constants.PRIVATE, environment).getString();
+        environment.define(Constants.SELF, oldSelf);
+        return value;
     }
 
     private SimiValue doMath(List<SimiValue> arguments, BiFunction<Double, Double, Double> op) {

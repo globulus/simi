@@ -58,8 +58,13 @@ public class Simi {
       NativeModulesManager nativeModulesManager = new NativeModulesManager();
       List<String> imports = new ArrayList<>();
 
+      long time = System.currentTimeMillis();
+      System.out.print("Scanning and resolving imports...");
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManager);
+    System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
+    time = System.currentTimeMillis();
+    System.out.print("Parsing...");
     Parser parser = new Parser(tokens);
     List<Stmt> statements = parser.parse();
 
@@ -71,9 +76,13 @@ public class Simi {
     Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);
 
+    System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
+    time = System.currentTimeMillis();
     // Stop if there was a resolution error.
     if (hadError) return;
+
     interpreter.interpret(statements);
+    System.out.println("Interpreting... " + (System.currentTimeMillis() - time) + " ms");
   }
 
   private static List<Token> scanImports(List<Token> input,
@@ -87,7 +96,11 @@ public class Simi {
         continue;
       }
       i++;
-      String location = input.get(i).literal.getString();
+      Token nextToken = input.get(i);
+      if (nextToken.type != TokenType.STRING) {
+        continue;
+      }
+      String location = nextToken.literal.getString();
       if (imports.contains(location)) {
         continue;
       }

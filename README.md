@@ -495,7 +495,7 @@ The *break* and *continue* keywords work as in other languages, and must be plac
 
 #### return and yield
 
-Control flow in in functions is done via *return* and *yield* statements.
+Control flow in functions is done via *return* and *yield* statements.
 
 The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was invoked, and can either pass or not pass a value:
  ```ruby

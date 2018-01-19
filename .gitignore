@@ -56,3 +56,5 @@ File-java/.idea/modules.xml
 File-java/.idea/misc.xml
 File-java/.idea/workspace.xml
 File-java/out/production/File-java/generated/net/globulus/simi/api/JavaApi.java
+metasimi/stdlib/File.simi
+metasimi/stdlib/Stdlib.simi

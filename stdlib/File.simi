@@ -24,4 +24,5 @@ class File:
     def init(path): pass
 
     native readLines(path): pass
+    native readString(path): pass
 end

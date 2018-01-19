@@ -136,8 +136,10 @@ class Parser {
     Expr.Block thenBranch = block("if", true);
     Expr.Block elseBranch = null;
     List<Stmt.Elsif> elsifs = new ArrayList<>();
-    while (match(ELSIF)) {
-        elsifs.add(new Stmt.Elsif(expression(), block("elsif", true)));
+    while (match(ELSIF, NEWLINE)) {
+        if (previous().type == ELSIF) {
+          elsifs.add(new Stmt.Elsif(expression(), block("elsif", true)));
+        }
     }
     if (match(ELSE)) {
       elseBranch = block("else", true);
@@ -312,7 +314,7 @@ class Parser {
         } else {
           parenCount--;
         }
-      } else if (type == COMMA) {
+      } else if (type == COMMA && parenCount == 0) {
         count++;
       }
     }
@@ -325,7 +327,10 @@ class Parser {
       Token equals = previous();
       Expr value = assignment();
 
-      if (expr instanceof Expr.Variable) {
+      if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
+        Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
+        return new Expr.Assign(literal, value);
+      } else if (expr instanceof Expr.Variable) {
         Token name = ((Expr.Variable)expr).name;
         if (equals.type == EQUAL) {
           return new Expr.Assign(name, value);
@@ -538,7 +543,7 @@ class Parser {
       boolean dictionary = true;
       if (!check(RIGHT_BRACKET)) {
         matchAllNewlines();
-        dictionary = peekSequence(IDENTIFIER, EQUAL);
+        dictionary = peekSequence(IDENTIFIER, EQUAL) || peekSequence(STRING, EQUAL);
         do {
           matchAllNewlines();
           props.add(dictionary ? assignment() : or());

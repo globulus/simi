@@ -27,4 +27,16 @@ public class SimiFile {
         }
         return new SimiValue.Object(interpreter.newArray(true, props));
     }
+
+    @SimiJavaMethod
+    public static SimiValue readString(SimiObject self, BlockInterpreter interpreter, SimiValue path) {
+        try {
+            String content = new String(Files.readAllBytes(Paths.get(path.getString())));
+            return new SimiValue.String(content);
+        } catch (IOException e) {
+//            e.printStackTrace();
+            Utils.raiseIoException(e, interpreter);
+            return null;
+        }
+    }
 }

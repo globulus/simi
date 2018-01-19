@@ -531,6 +531,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
     try {
         SimiObject simiObject = SimiObjectImpl.getOrConvertObject(object, this);
+        if (simiObject == null) {
+          return null;
+        }
         if (simiObject instanceof SimiObjectImpl) {
           return ((SimiObjectImpl) simiObject).get(name, expr.arity, environment);
         } else {
@@ -547,10 +550,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     } else {
       SimiValue val = evaluate(name);
       String lexeme;
-      if (val instanceof SimiValue.Number) {
-        lexeme = "" + val.getNumber();
-      } else if (val instanceof SimiValue.String) {
-        lexeme = val.getString();
+      if (val instanceof SimiValue.Number || val instanceof SimiValue.String) {
+        lexeme = val.toString();
       } else {
         throw new RuntimeError(origin,"Unable to parse getter/setter, invalid value: " + val.toString());
       }

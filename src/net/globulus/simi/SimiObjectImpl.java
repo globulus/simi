@@ -204,6 +204,9 @@ abstract class SimiObjectImpl implements SimiObject {
     }
 
     static SimiObject getOrConvertObject(SimiValue value, Interpreter interpreter) {
+        if (value == null) {
+            return null;
+        }
       if (value instanceof SimiValue.Number || value instanceof SimiValue.String) {
           LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
           fields.put(Constants.PRIVATE, value);
