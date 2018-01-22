@@ -2,7 +2,9 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.SimiStatement;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 abstract class Stmt implements SimiStatement {
 
@@ -23,7 +25,7 @@ abstract class Stmt implements SimiStatement {
   }
 
   interface BlockStmt {
-    void end();
+    List<BlockStmt> getChildren();
   }
 
   abstract <R> R accept(Visitor<R> visitor);
@@ -109,16 +111,12 @@ abstract class Stmt implements SimiStatement {
         final Expr condition;
         final Expr.Block thenBranch;
 
-        BlockImpl block;
-
       @Override
-      public void end() {
-        block = null;
-        for (Stmt stmt : thenBranch.statements) {
-          if (stmt instanceof BlockStmt) {
-            ((BlockStmt) stmt).end();
-          }
-        }
+      public List<BlockStmt> getChildren() {
+        return thenBranch.statements.stream()
+                .filter(s -> s instanceof BlockStmt)
+                .map(s -> (BlockStmt) s)
+                .collect(Collectors.toList());
       }
     }
 
@@ -138,22 +136,18 @@ abstract class Stmt implements SimiStatement {
     final List<Elsif> elsifs;
     final Expr.Block elseBranch;
 
-    BlockImpl elseBlock;
-
     @Override
-    public void end() {
-      ifstmt.end();
-      for (Elsif elsif : elsifs) {
-        elsif.end();
-      }
-      elseBlock = null;
+    public List<BlockStmt> getChildren() {
+      List<BlockStmt> children = new ArrayList<>();
+      children.add(ifstmt);
+      children.addAll(elsifs);
       if (elseBranch != null) {
-        for (Stmt stmt : elseBranch.statements) {
-          if (stmt instanceof BlockStmt) {
-            ((BlockStmt) stmt).end();
-          }
-        }
+        children.addAll(elseBranch.statements.stream()
+                .filter(s -> s instanceof BlockStmt)
+                .map(s -> (BlockStmt) s)
+                .collect(Collectors.toList()));
       }
+      return children;
     }
   }
 
@@ -210,16 +204,12 @@ abstract class Stmt implements SimiStatement {
     final Expr condition;
     final Expr.Block body;
 
-    BlockImpl block;
-
     @Override
-    public void end() {
-      block = null;
-      for (Stmt stmt : body.statements) {
-        if (stmt instanceof BlockStmt) {
-          ((BlockStmt) stmt).end();
-        }
-      }
+    public List<BlockStmt> getChildren() {
+      return body.statements.stream()
+              .filter(s -> s instanceof BlockStmt)
+              .map(s -> (BlockStmt) s)
+              .collect(Collectors.toList());
     }
   }
 
@@ -238,16 +228,12 @@ abstract class Stmt implements SimiStatement {
       final Expr iterable;
       final Expr.Block body;
 
-      BlockImpl block;
-
     @Override
-    public void end() {
-      block = null;
-      for (Stmt stmt : body.statements) {
-        if (stmt instanceof BlockStmt) {
-          ((BlockStmt) stmt).end();
-        }
-      }
+    public List<BlockStmt> getChildren() {
+      return body.statements.stream()
+              .filter(s -> s instanceof BlockStmt)
+              .map(s -> (BlockStmt) s)
+              .collect(Collectors.toList());
     }
   }
 

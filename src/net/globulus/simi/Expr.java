@@ -8,6 +8,8 @@ import java.util.List;
 
 abstract class Expr {
 
+  abstract <R> R accept(Visitor<R> visitor, Object... params);
+
   interface Visitor<R> {
     R visitBlockExpr(Block expr, boolean newScope);
     R visitAssignExpr(Assign expr);
@@ -272,6 +274,4 @@ abstract class Expr {
         final List<Expr> props;
         final boolean isDictionary;
     }
-
-  abstract <R> R accept(Visitor<R> visitor, Object... params);
 }

@@ -220,18 +220,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Object visitElsifStmt(Stmt.Elsif stmt) {
     if (isTruthy(evaluate(stmt.condition))) {
-      if (stmt.block == null) {
-        stmt.block = new BlockImpl(stmt.thenBranch, this.environment);
-      }
+      BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.thenBranch);
       try {
-        stmt.block.call(this, null, true);
+        block.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          stmt.end();
+          this.environment.endBlock(stmt);
         }
         throw returnYield;
       }
-      stmt.end();
+      this.environment.endBlock(stmt);
       return true;
     }
     return false;
@@ -248,18 +246,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
     if (stmt.elseBranch != null) {
-      if (stmt.elseBlock == null) {
-        stmt.elseBlock = new BlockImpl(stmt.elseBranch, this.environment);
-      }
+      BlockImpl elseBlock = this.environment.getOrAssignBlock(stmt, stmt.elseBranch);
       try {
-        stmt.elseBlock.call(this, null, true);
+        elseBlock.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          stmt.elseBlock = null;
+          this.environment.endBlock(stmt);
         }
         throw returnYield;
       }
-      stmt.elseBlock = null;
+      this.environment.endBlock(stmt);
     }
     return null;
   }
@@ -298,15 +294,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
     loopBlocks.push(stmt.body);
-    if (stmt.block == null) {
-      stmt.block = new BlockImpl(stmt.body, new Environment(this.environment));
-    }
+    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body);
     while (isTruthy(evaluate(stmt.condition))) {
       try {
-        stmt.block.call(this, null, true);
+        block.call(this, null, true);
       } catch (Return | Yield returnYield) {
           if (returnYield instanceof Return) {
-            stmt.end();
+            this.environment.endBlock(stmt);
           }
           loopBlocks.pop();
           throw returnYield;
@@ -314,20 +308,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         break;
       } catch (Continue ignored) { }
     }
-    stmt.end();
+    this.environment.endBlock(stmt);
     loopBlocks.pop();
     return null;
   }
 
   @Override
   public Void visitForStmt(Stmt.For stmt) {
-    if (stmt.block == null) {
-      stmt.block = new BlockImpl(stmt.body, new Environment(this.environment));
-    }
+    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body);
 
     List<Expr> emptyArgs = new ArrayList<>();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiValue nextMethod = stmt.block.closure.tryGet("#next");
+    SimiValue nextMethod = block.closure.tryGet("#next");
     if (nextMethod == null) {
       SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
       nextMethod = iterable.get(nextToken, 0, environment);
@@ -338,20 +330,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
 
-    stmt.block.closure.assign(Token.named("#next"), nextMethod, true);
-    loopBlocks.push(stmt.block);
+    block.closure.assign(Token.named("#next"), nextMethod, true);
+    loopBlocks.push(block);
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
-        stmt.end();
+        this.environment.endBlock(stmt);
         break;
       }
-      stmt.block.closure.assign(stmt.var.name, var, true);
+      block.closure.assign(stmt.var.name, var, true);
       try {
-        stmt.block.call(this, null, true);
+        block.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          stmt.end();
+          this.environment.endBlock(stmt);
         }
         loopBlocks.pop();
         throw returnYield;
@@ -376,11 +368,15 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     } else if (value instanceof SimiValue.String || value instanceof SimiValue.Number) {
       value = value.copy();
     }
-    Integer distance = locals.get(expr);
-    if (distance != null) {
-      environment.assignAt(distance, expr.name, value);
+    if (expr.name.lexeme.startsWith(Constants.MUTABLE)) {
+      Integer distance = locals.get(expr);
+      if (distance != null) {
+        environment.assignAt(distance, expr.name, value);
+      } else {
+        globals.assign(expr.name, value, false);
+      }
     } else {
-      globals.assign(expr.name, value, false);
+      environment.assignAt(0, expr.name, value);
     }
     return value;
   }
@@ -417,11 +413,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       case MINUS:
         checkNumberOperands(expr.operator, left, right);
           return new SimiValue.Number(left.getNumber() - right.getNumber());
-      case PLUS:
+      case PLUS: {
         if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
-            return new SimiValue.Number(left.getNumber() + right.getNumber());
+          return new SimiValue.Number(left.getNumber() + right.getNumber());
         } // [plus]
-        return new SimiValue.String(left.toString() + right.toString());
+        String leftStr = (left != null) ? left.toString() : "nil";
+        String rightStr = (right != null) ? right.toString() : "nil";
+        return new SimiValue.String(leftStr + rightStr);
+      }
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
           return new SimiValue.Number(left.getNumber() / right.getNumber());
@@ -553,7 +552,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       if (val instanceof SimiValue.Number || val instanceof SimiValue.String) {
         lexeme = val.toString();
       } else {
-        throw new RuntimeError(origin,"Unable to parse getter/setter, invalid value: " + val.toString());
+        throw new RuntimeError(origin,"Unable to parse getter/setter, invalid value: " + val);
       }
       return new Token(TokenType.IDENTIFIER, lexeme, null, origin.line);
     }
@@ -683,6 +682,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
             if (expr.isDictionary) {
               Expr.Assign assign = (Expr.Assign) prop;
               key = assign.name.lexeme;
+              if (key == null) {
+                key = assign.name.literal.getString();
+              }
               valueExpr = assign.value;
             } else {
               key = Constants.IMPLICIT + count;
@@ -797,21 +799,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {
-    if (a == null || b == null) {
+    SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
+    SimiObject right = SimiObjectImpl.getOrConvertObject(b, this);
+    if (left == null || right == null) {
       return false;
     }
-    if (!(a instanceof SimiValue.Object)) {
-      throw new RuntimeError(expr.operator, "Left side must be an Object!");
-    }
-    if (!(b instanceof SimiValue.Object)) {
-        throw new RuntimeError(expr.operator, "Right side must be a Class!");
-    }
-    SimiObject aObj = a.getObject();
-    SimiClassImpl clazz = (SimiClassImpl) b.getObject();
-    if (aObj instanceof SimiObjectImpl) {
-      return ((SimiObjectImpl) aObj).is(clazz);
+    SimiClassImpl clazz = (SimiClassImpl) right;
+    if (left instanceof SimiObjectImpl) {
+      return ((SimiObjectImpl) left).is(clazz);
     } else {
-      return aObj.getSimiClass() == clazz;
+      return left.getSimiClass() == clazz;
     }
   }
 

@@ -1,6 +1,8 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.SimiClass;
 import net.globulus.simi.api.SimiEnvironment;
+import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.HashMap;
@@ -10,6 +12,7 @@ class Environment implements SimiEnvironment {
 
   final Environment enclosing;
   private final Map<String, SimiValue> values = new HashMap<>();
+  private final Map<Stmt.BlockStmt, BlockImpl> statementBlocks = new HashMap<>();
 
   Environment() {
     enclosing = null;
@@ -78,6 +81,28 @@ class Environment implements SimiEnvironment {
     ancestor(distance).assign(name, value, false);
   }
 
+  Environment trimmedSelf() {
+    if (enclosing == null) {
+      return this;
+    }
+    Environment environment = new Environment(enclosing);
+    for (Map.Entry<String, SimiValue> entry : values.entrySet()) {
+      boolean put = false;
+      if (entry.getValue() instanceof SimiValue.Callable) {
+        put = true;
+      } else if (entry.getValue() instanceof SimiValue.Object) {
+        SimiObject object = entry.getValue().getObject();
+        if (object instanceof SimiClass) {
+          put = true;
+        }
+      }
+      if (put) {
+        environment.values.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return environment;
+  }
+
   @Override
   public SimiValue tryGet(String name) {
     for (Environment env = this; env != null; env = env.enclosing) {
@@ -97,5 +122,21 @@ class Environment implements SimiEnvironment {
     }
 
     return result;
+  }
+
+  BlockImpl getOrAssignBlock(Stmt.BlockStmt stmt, Expr.Block declaration) {
+    BlockImpl block = statementBlocks.get(stmt);
+    if (block == null) {
+      block = new BlockImpl(declaration, this);
+      statementBlocks.put(stmt, block);
+    }
+    return block;
+  }
+
+  void endBlock(Stmt.BlockStmt stmt) {
+    statementBlocks.remove(stmt);
+    for (Stmt.BlockStmt child : stmt.getChildren()) {
+      statementBlocks.remove(child);
+    }
   }
 }

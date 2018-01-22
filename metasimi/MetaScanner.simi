@@ -73,7 +73,9 @@ TokenType = [
 
   GU = 64,
 
-  EOF = 65
+  EOF = 65,
+
+  keyFor = def(value): return @enumerate().find(def e: e.value == value).key
 ]
 
 Keywords = [
@@ -110,12 +112,14 @@ Keywords = [
 class Token:
     def init(type, lexeme, literal, line): pass
 
+    def selfToken(): return Token(TokenType.SELF, "self", nil, 0)
+
     def toString():
         return $String.builder()\
-            .add("Type: ").add(@type)\
-            .add("Lexeme: ").add(@lexeme)\
-            .add("Literal: ").add(@literal)\
-            .add("Line: ").add(@line)\
+            .add("[").add(TokenType.keyFor(@type))\
+            .add(", ").add(@lexeme)\
+            .add(", ").add(@literal)\
+            .add(" @").add(@line)\
             .build()
     end
 end
@@ -127,11 +131,10 @@ class ScanException(Exception):
 end
 
 class Scanner:
-
     def init(source):
         @source = source
         @sourceLen = source.length()
-        @tokens = $[]
+        @tokens = $Object.array()
         @start = 0
         @current = 0
         @line = 1
@@ -187,7 +190,7 @@ class Scanner:
        elsif c == "#":
          while @_peek() != '\n' and not @_isAtEnd(): @_advance()
        end
-       elsif c == "\\":
+       elsif c == "\":
         if @_match("\n"): @line = @line + 1
        end
        elsif c == " " or c == "\r" or c == "\t": pass
@@ -205,11 +208,11 @@ class Scanner:
 
     def _identifier():
         while @_isAlphaNumeric(@_peek()): @_advance()
-        text = source.substring(@start, @current)
-        $type = keywords.(text)
+        text = @source.substring(@start, @current)
+        $type = Keywords.(text)
         if $type == TokenType.NOT and @_matchPeek(TokenType.IN): $type = TokenType.NOTIN
         elsif $type == TokenType.IS and @_matchPeek(TokenType.NOT): $type = TokenType.ISNOT
-        elsif $type == nil: $type = TokenType.IDENTIFIER
+        elsif $type is not $Number: $type = TokenType.IDENTIFIER
         @_addToken($type)
     end
 
@@ -240,10 +243,14 @@ class Scanner:
         return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
     end
 
-    def _keywordString(type): return type in Keywords.keys()
+    def _keywordString(type):
+        match = Keywords.enumerate().find(def e: e.value == type)
+        return ?match.key
+    end
 
     def _matchPeek(type):
         keyword = @_keywordString(type)
+        if not keyword: return false
         len = keyword.length()
         stop = @current + len + 1
         if stop < @sourceLen and @source.substring(@current + 1, stop) == keyword:
@@ -282,9 +289,6 @@ class Scanner:
     
     def _advance():
         @current = @current + 1
-      #  print @source
-      #  print @current
-      #  print @source.(@current - 1)
         return @source.(@current - 1)
     end
     

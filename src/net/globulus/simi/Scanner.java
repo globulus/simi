@@ -228,6 +228,9 @@ class Scanner {
 
     private boolean matchPeek(TokenType type) {
       String keyword = keywordString(type);
+      if (keyword == null) {
+        return false;
+      }
       int len = keyword.length();
       int end = current + len + 1;
       if (end < source.length() && source.substring(current + 1, end).equals(keyword)) {

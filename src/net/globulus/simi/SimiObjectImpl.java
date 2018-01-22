@@ -204,7 +204,7 @@ abstract class SimiObjectImpl implements SimiObject {
     }
 
     static SimiObject getOrConvertObject(SimiValue value, Interpreter interpreter) {
-        if (value == null) {
+        if (value == null || value instanceof SimiValue.Callable) {
             return null;
         }
       if (value instanceof SimiValue.Number || value instanceof SimiValue.String) {
