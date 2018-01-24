@@ -13,13 +13,16 @@ class Environment implements SimiEnvironment {
   final Environment enclosing;
   private final Map<String, SimiValue> values = new HashMap<>();
   private final Map<Stmt.BlockStmt, BlockImpl> statementBlocks = new HashMap<>();
+  final int depth;
 
   Environment() {
     enclosing = null;
+    depth = 0;
   }
 
   Environment(Environment enclosing) {
     this.enclosing = enclosing;
+    depth = enclosing.depth + 1;
   }
 
   boolean has(String key) {
@@ -124,19 +127,36 @@ class Environment implements SimiEnvironment {
     return result;
   }
 
-  BlockImpl getOrAssignBlock(Stmt.BlockStmt stmt, Expr.Block declaration) {
+  BlockImpl getOrAssignBlock(Stmt.BlockStmt stmt,
+                             Expr.Block declaration,
+                             Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts) {
     BlockImpl block = statementBlocks.get(stmt);
     if (block == null) {
-      block = new BlockImpl(declaration, this);
-      statementBlocks.put(stmt, block);
+      SparseArray<BlockImpl> yieldedBlocks = yieldedStmts.get(stmt);
+      if (yieldedBlocks != null) {
+        block = yieldedBlocks.get(depth);
+      }
+      if (block == null) {
+        block = new BlockImpl(declaration, this);
+        statementBlocks.put(stmt, block);
+      }
     }
     return block;
   }
 
-  void endBlock(Stmt.BlockStmt stmt) {
+  void endBlock(Stmt.BlockStmt stmt, Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts) {
     statementBlocks.remove(stmt);
+    popBlock(stmt, yieldedStmts);
     for (Stmt.BlockStmt child : stmt.getChildren()) {
       statementBlocks.remove(child);
+      popBlock(child, yieldedStmts);
+    }
+  }
+
+  private void popBlock(Stmt.BlockStmt stmt, Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts) {
+    SparseArray<BlockImpl> blocks = yieldedStmts.get(stmt);
+    if (blocks != null) {
+      blocks.remove(this.depth);
     }
   }
 }

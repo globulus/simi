@@ -11,9 +11,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
-  private BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
-  private Stack<SimiBlock> loopBlocks = new Stack<>();
-  private Stack<SimiException> raisedExceptions = new Stack<>();
+  private final BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
+  private final Stack<SimiBlock> loopBlocks = new Stack<>();
+  private final Stack<SimiException> raisedExceptions = new Stack<>();
+  private final Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts = new HashMap<>();
 
   static Interpreter sharedInstance;
 
@@ -220,16 +221,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Object visitElsifStmt(Stmt.Elsif stmt) {
     if (isTruthy(evaluate(stmt.condition))) {
-      BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.thenBranch);
+      BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.thenBranch, yieldedStmts);
       try {
         block.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          this.environment.endBlock(stmt);
+          this.environment.endBlock(stmt, yieldedStmts);
+        } else {
+          putBlock(stmt, block);
         }
         throw returnYield;
       }
-      this.environment.endBlock(stmt);
+      this.environment.endBlock(stmt, yieldedStmts);
       return true;
     }
     return false;
@@ -246,16 +249,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
     if (stmt.elseBranch != null) {
-      BlockImpl elseBlock = this.environment.getOrAssignBlock(stmt, stmt.elseBranch);
+      BlockImpl elseBlock = this.environment.getOrAssignBlock(stmt, stmt.elseBranch, yieldedStmts);
       try {
         elseBlock.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          this.environment.endBlock(stmt);
+          this.environment.endBlock(stmt, yieldedStmts);
+        } else {
+          putBlock(stmt, elseBlock);
         }
         throw returnYield;
       }
-      this.environment.endBlock(stmt);
+      this.environment.endBlock(stmt, yieldedStmts);
     }
     return null;
   }
@@ -294,13 +299,15 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
     loopBlocks.push(stmt.body);
-    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body);
+    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body, yieldedStmts);
     while (isTruthy(evaluate(stmt.condition))) {
       try {
         block.call(this, null, true);
       } catch (Return | Yield returnYield) {
           if (returnYield instanceof Return) {
-            this.environment.endBlock(stmt);
+            this.environment.endBlock(stmt, yieldedStmts);
+          } else {
+            putBlock(stmt, block);
           }
           loopBlocks.pop();
           throw returnYield;
@@ -308,14 +315,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         break;
       } catch (Continue ignored) { }
     }
-    this.environment.endBlock(stmt);
+    this.environment.endBlock(stmt, yieldedStmts);
     loopBlocks.pop();
     return null;
   }
 
   @Override
   public Void visitForStmt(Stmt.For stmt) {
-    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body);
+    BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body, yieldedStmts);
 
     List<Expr> emptyArgs = new ArrayList<>();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
@@ -335,7 +342,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
       if (var == null) {
-        this.environment.endBlock(stmt);
+        this.environment.endBlock(stmt, yieldedStmts);
         break;
       }
       block.closure.assign(stmt.var.name, var, true);
@@ -343,7 +350,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         block.call(this, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
-          this.environment.endBlock(stmt);
+          this.environment.endBlock(stmt, yieldedStmts);
+        } else {
+          putBlock(stmt, block);
         }
         loopBlocks.pop();
         throw returnYield;
@@ -840,5 +849,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   private SimiClassImpl getObjectClass() {
     return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject();
+  }
+
+  private void putBlock(Stmt.BlockStmt stmt, BlockImpl block) {
+    SparseArray<BlockImpl> blocks = yieldedStmts.get(stmt);
+    if (blocks == null) {
+      blocks = new SparseArray<>();
+      yieldedStmts.put(stmt, blocks);
+    }
+    blocks.put(this.environment.depth, block);
   }
 }
