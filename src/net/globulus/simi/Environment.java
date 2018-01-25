@@ -148,8 +148,7 @@ class Environment implements SimiEnvironment {
     statementBlocks.remove(stmt);
     popBlock(stmt, yieldedStmts);
     for (Stmt.BlockStmt child : stmt.getChildren()) {
-      statementBlocks.remove(child);
-      popBlock(child, yieldedStmts);
+      endBlock(child, yieldedStmts);
     }
   }
 
