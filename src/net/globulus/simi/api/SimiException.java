@@ -1,5 +1,7 @@
 package net.globulus.simi.api;
 
+import java.util.List;
+
 public final class SimiException extends RuntimeException implements SimiObject {
 
     private final SimiClass clazz;
@@ -30,5 +32,10 @@ public final class SimiException extends RuntimeException implements SimiObject 
     @Override
     public SimiObject clone(boolean mutable) {
         return this;
+    }
+
+    @Override
+    public List<SimiValue> values() {
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 import "./stdlib/Stdlib-java.jar"
 
+"Test for class"
 class $Object:
+"Test for method"
     native len(): pass
     native keys(): pass
     native values(): pass

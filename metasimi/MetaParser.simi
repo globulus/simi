@@ -9,13 +9,17 @@ class Stmt:
     def accept(visitor): pass
 end
 
+class BlockStmt:
+    def children(): pass
+end
+
 class StmtBreak(Stmt):
     def init(name): pass
     def accept(visitor): visitor.visitBreakStmt(self)
 end
 
 class StmtClass(Stmt):
-    def init(name, superclasses, constants, methods): pass
+    def init(name, superclasses, constants, methods, doc): pass
     def accept(visitor): visitor.visitClassStmt(self)
 end
 
@@ -30,18 +34,25 @@ class StmtExpr(Stmt):
 end
 
 class StmtFunction(Stmt):
-    def init(name, block): pass
+    def init(name, block, doc): pass
     def accept(visitor): visitor.visitFunctionStmt(self)
 end
 
-class StmtElsif(Stmt):
+class StmtElsif(Stmt, BlockStmt):
     def init(condition, thenBranch): pass
     def accept(visitor): visitor.visitElsifStmt(self)
+    def children(): return @thenBranch.statements.filter(def s: s is BlockStmt)
 end
 
-class StmtIf(Stmt):
+class StmtIf(Stmt, BlockStmt):
     def init(ifstmt, elsifs, elseBranch): pass
     def accept(visitor): visitor.visitIfStmt(self)
+    def children():
+        children = $[@ifstmt]
+        children.addAll(@elsifs)
+        if @elseBranch: children.addAll(@elseBranch.statements.filter(def s: s is BlockStmt))
+        return children
+    end
 end
 
 class StmtPrint(Stmt):
@@ -59,14 +70,16 @@ class StmtReturn(Stmt):
     def accept(visitor): visitor.visitReturnStmt(self)
 end
 
-class StmtWhile(Stmt):
+class StmtWhile(Stmt, BlockStmt):
     def init(condition, block): pass
     def accept(visitor): visitor.visitWhileStmt(self)
+    def children(): return @body.statements.filter(def s: s is BlockStmt)
 end
 
-class StmtFor(Stmt):
+class StmtFor(Stmt, BlockStmt):
     def init(var, iterable, body): pass
     def accept(visitor): visitor.visitForStmt(self)
+    def children(): return @body.statements.filter(def s: s is BlockStmt)
 end
 
 class StmtYield(Stmt):
@@ -188,6 +201,10 @@ class Parser:
                 continue
             end
             if @_match([TokenType.NEWLINE, TokenType.PASS]): continue
+            if @_match(TokenType.STRING):
+                @doc = @_previous().literal
+                continue
+            end
             stmts.append(@_declaration())
         end
         return stmts
@@ -208,7 +225,8 @@ class Parser:
     end
 
     def _classDeclaration():
-#        print "class declr"
+        doc = @doc
+        @doc = nil
         name = @_consume(TokenType.IDENTIFIER, "Expected class name.")
         $superclasses = nil
         if @_check(TokenType.LEFT_PAREN):
@@ -219,11 +237,15 @@ class Parser:
         methods = $Object.array()
         while not @_check(TokenType.END) and not @_isAtEnd():
             if @_match(TokenType.NEWLINE): continue
+            if @_match(TokenType.STRING):
+                @doc = @_previous().lexeme
+                continue
+            end
             if @_match([TokenType.DEF, TokenType.NATIVE]): methods.append(@_function("method"))
             else: constants.append(@_assignment())
         end
         @_consume(TokenType.END, "Expect 'end' after class body.")
-        return StmtClass(name, superclasses, constants, methods)
+        return StmtClass(name, superclasses, constants, methods, doc)
     end
 
     def _statement(lambda):
@@ -313,8 +335,9 @@ class Parser:
     end
 
     def _function(kind):
-#        print "fn declr"
         declaration = @_previous()
+        doc = @doc
+        @doc = nil
         name = @_consume(TokenType.IDENTIFIER, "Expect " + kind + " name.")
         blockKind = ife(name.lexeme == "init", "init", kind)
         $block = @_block(declaration, blockKind, false)
@@ -324,7 +347,7 @@ class Parser:
             for param in block.params: statements.add(StmtExpr(ExprSet(name, ExprSelf(Token.selfToken()), ExprVar(param), ExprVar(param))))
             $block = ExprBlock(declaration, $block.params, statements)
         end
-        return StmtFunction(name, $block)
+        return StmtFunction(name, $block, doc)
     end
 
     def _block(kind, lambda): return @_block(nil, kind, lambda)
@@ -580,7 +603,7 @@ class Parser:
         opener = @_previous()
         props = $Object.array()
         $dictionary = true
-        if not @_check(TokenType.RIGHT_BRACKED):
+        if not @_check(TokenType.RIGHT_BRACKET):
             @_matchAllNewlines()
             $dictionary = @_peekSequence([TokenType.IDENTIFIER, TokenType.EQUAL]) or @_peekSequence([TokenType.STRING, TokenType.EQUAL])
             props.append(@_getObjectLiteralProp($dictionary))

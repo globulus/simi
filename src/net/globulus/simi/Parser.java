@@ -80,7 +80,10 @@ class Parser {
         if (match(DEF, NATIVE)) {
             methods.add(function("method"));
         } else {
-            constants.add((Expr.Assign) assignment());
+            Expr expr = assignment();
+            if (expr instanceof Expr.Assign) {
+              constants.add((Expr.Assign) expr);
+            }
         }
     }
 

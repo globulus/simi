@@ -131,7 +131,7 @@ abstract class SimiObjectImpl implements SimiObject {
   }
 
   abstract ArrayList<SimiValue> keys();
-  abstract ArrayList<SimiValue> values();
+  public abstract ArrayList<SimiValue> values();
   abstract SimiObjectImpl enumerate(SimiClassImpl objectClass);
   abstract SimiObjectImpl zip(SimiClassImpl objectClass);
 
@@ -266,7 +266,7 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         void clearImpl() {
-            fields.clear();;
+            fields.clear();
         }
 
         @Override
@@ -311,7 +311,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> values() {
+        public ArrayList<SimiValue> values() {
             return new ArrayList<>(fields.values());
         }
 
@@ -497,7 +497,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> values() {
+        public ArrayList<SimiValue> values() {
             return new ArrayList<>(fields);
         }
 
@@ -660,7 +660,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> values() {
+        public ArrayList<SimiValue> values() {
             if (underlying == null) {
                 return new ArrayList<>();
             }

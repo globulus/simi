@@ -4,6 +4,7 @@ import net.globulus.simi.api.*;
 
 import java.io.*;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 @SimiJavaClass
 public class WriteStream {
@@ -74,6 +75,11 @@ public class WriteStream {
 
         @Override
         public SimiObject clone(boolean b) {
+            return null;
+        }
+
+        @Override
+        public List<SimiValue> values() {
             return null;
         }
     }

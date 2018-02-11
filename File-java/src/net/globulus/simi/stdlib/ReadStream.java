@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 @SimiJavaClass
 public class ReadStream {
@@ -112,6 +113,11 @@ public class ReadStream {
 
         @Override
         public SimiObject clone(boolean b) {
+            return null;
+        }
+
+        @Override
+        public List<SimiValue> values() {
             return null;
         }
     }

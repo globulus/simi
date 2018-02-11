@@ -326,7 +326,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
     List<Expr> emptyArgs = new ArrayList<>();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiValue nextMethod = block.closure.tryGet("#next");
+    SimiValue nextMethod = block.closure.tryGet("#next" + block.closure.depth);
     if (nextMethod == null) {
       SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
       nextMethod = iterable.get(nextToken, 0, environment);
@@ -337,7 +337,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
 
-    block.closure.assign(Token.named("#next"), nextMethod, true);
+    block.closure.assign(Token.named("#next" + block.closure.depth), nextMethod, true);
     loopBlocks.push(block);
     while (true) {
       SimiValue var = call(nextMethod, emptyArgs, nextToken);
