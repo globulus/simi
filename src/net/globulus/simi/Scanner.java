@@ -177,18 +177,29 @@ class Scanner {
   }
 
   private void number() {
-    while (isDigit(peek())) advance();
-
+    while (isDigitOrUnderscore(peek())) advance();
     // Look for a fractional part.
     if (peek() == '.' && isDigit(peekNext())) {
       // Consume the "."
       advance();
 
-      while (isDigit(peek())) advance();
+      while (isDigitOrUnderscore(peek())) advance();
+    }
+    // Exp notation
+    if (peek() == 'e' || peek() == 'E') {
+      if (isDigit(peekNext())) {
+        advance();
+      } else if (peekNext() == '+' || peekNext() == '-') {
+        advance();
+        advance();
+      } else {
+        Simi.error(line, "Expected a digit or + or - after E!");
+      }
+      while (isDigitOrUnderscore(peek())) advance();
     }
 
     addToken(TokenType.NUMBER,
-        new SimiValue.Number(Double.parseDouble(source.substring(start, current))));
+        new SimiValue.Number(Double.parseDouble(source.substring(start, current).replace("_", ""))));
   }
 
   protected void string(char opener) {
@@ -269,7 +280,11 @@ class Scanner {
 
   private boolean isDigit(char c) {
     return c >= '0' && c <= '9';
-  } // [is-digit]
+  }
+
+  private boolean isDigitOrUnderscore(char c) {
+    return isDigit(c) || c == '_';
+  }
 
   private boolean isStringDelim(char c) {
     return c == '"' || c == '\'';
