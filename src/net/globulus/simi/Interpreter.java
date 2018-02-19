@@ -54,6 +54,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     return expr.accept(this);
   }
 
+  private SimiValue evaluate(Expr expr, Object... params) {
+    return expr.accept(this, params);
+  }
+
   private void execute(Stmt stmt) {
     stmt.accept(this);
   }
@@ -129,9 +133,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope) {
-    executeBlock(stmt, new Environment(environment), 0);
-    return null;
+  public SimiValue visitBlockExpr(Expr.Block stmt, boolean newScope, boolean execute) {
+    if (execute) {
+      executeBlock(stmt, new Environment(environment), 0);
+      return null;
+    }
+    return new SimiValue.Callable(new BlockImpl(stmt, environment), null, null);
   }
 
   @Override
@@ -366,12 +373,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
     @Override
   public SimiValue visitAssignExpr(Expr.Assign expr) {
-    SimiValue value;
     if (expr.value instanceof Expr.Block) {
-      value = visitFunctionStmt(new Stmt.Function(expr.name, (Expr.Block) expr.value));
-    } else {
-      value = evaluate(expr.value);
+      return visitFunctionStmt(new Stmt.Function(expr.name, (Expr.Block) expr.value));
     }
+
+    SimiValue value = evaluate(expr.value);
     if (value instanceof TempNull) {
       value = null;
     } else if (value instanceof SimiValue.String || value instanceof SimiValue.Number) {
@@ -569,6 +575,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public SimiValue visitGroupingExpr(Expr.Grouping expr) {
+    if (expr.expression instanceof Expr.Block) {
+      return evaluate(expr.expression, true, false);
+    }
     return evaluate(expr.expression);
   }
 

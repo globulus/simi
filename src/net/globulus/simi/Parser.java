@@ -214,7 +214,9 @@ class Parser {
 
   private Stmt.Expression expressionStatement(boolean lambda) {
     Expr expr = expression();
-    checkStatementEnd(lambda);
+    if (!(expr instanceof Expr.Assign) || !(((Expr.Assign) expr).value instanceof Expr.Block)) {
+      checkStatementEnd(lambda);
+    }
     return new Stmt.Expression(expr);
   }
 

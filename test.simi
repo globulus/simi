@@ -2,6 +2,10 @@ import "./Stdlib/File.simi"
 
 print gu "2+2"
 
+(def a:
+    print a
+end)(3)
+
 def testFile():
     #File.readLines("README.md").forEach(def s: print s)
     file = File("README.md")

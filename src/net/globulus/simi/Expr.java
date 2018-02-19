@@ -11,7 +11,7 @@ abstract class Expr {
   abstract <R> R accept(Visitor<R> visitor, Object... params);
 
   interface Visitor<R> {
-    R visitBlockExpr(Block expr, boolean newScope);
+    R visitBlockExpr(Block expr, boolean newScope, boolean execute);
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
     R visitCallExpr(Call expr);
@@ -35,8 +35,9 @@ abstract class Expr {
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
-            boolean newScope = (params.length == 0) ? true : (Boolean) params[0];
-            return visitor.visitBlockExpr(this, newScope);
+            boolean newScope = (params.length < 1) ? true : (Boolean) params[0];
+            boolean execute = (params.length < 2) ? true : (Boolean) params[1];
+            return visitor.visitBlockExpr(this, newScope, execute);
         }
 
         final Token declaration;

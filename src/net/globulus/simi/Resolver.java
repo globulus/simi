@@ -34,7 +34,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitBlockExpr(Expr.Block stmt, boolean newScope) {
+  public Void visitBlockExpr(Expr.Block stmt, boolean newScope, boolean execute) {
     if (newScope) {
       beginScope();
     }
