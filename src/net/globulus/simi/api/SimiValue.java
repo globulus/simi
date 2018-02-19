@@ -7,6 +7,22 @@ public abstract class SimiValue implements Comparable<SimiValue> {
     public abstract SimiValue copy();
     public abstract SimiValue clone(boolean mutable);
 
+    public static SimiValue pack(java.lang.Object value, java.lang.Object... args) {
+        if (value instanceof Double) {
+            return new Number((Double) value);
+        }
+        if (value instanceof java.lang.String) {
+            return new String((java.lang.String) value);
+        }
+        if (value instanceof SimiObject) {
+            return new Object((SimiObject) value);
+        }
+        if (value instanceof SimiCallable) {
+            return new Callable((SimiCallable) value, (java.lang.String) args[0], (SimiObject) args[1]);
+        }
+        throw new IllegalArgumentException("Trying to pack " + value.toString() + " to SimiValue.");
+    }
+
     public java.lang.String getString() {
         if (this instanceof String) {
             return ((String) this).value;

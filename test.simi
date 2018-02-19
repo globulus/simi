@@ -2,6 +2,14 @@ import "./Stdlib/File.simi"
 
 print gu "2+2"
 
+def testAdding():
+    now = Date.now().timestamp
+    $a = 0
+    for i in 100000.times(): $a += 1
+    print "adding complete in: " + (Date.now().timestamp - now)
+end
+testAdding()
+
 def testFile():
     #File.readLines("README.md").forEach(def s: print s)
     file = File("README.md")

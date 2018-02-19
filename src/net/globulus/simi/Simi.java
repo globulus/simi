@@ -49,16 +49,28 @@ public class Simi {
 
     for (;;) { // [repl]
       System.out.print("> ");
-      run(reader.readLine());
+      run(reader.readLine() + "\n");
       hadError = false;
     }
   }
 
   private static void run(String source) throws IOException {
+//    Environment environment = new Environment();
+//    Map<String, String> strings = new HashMap<>();
+//    Map<String, Map<String, ?>> vals = new HashMap<>();
+    long time = System.currentTimeMillis();
+//    environment.assign(Token.named("aaa"), new SimiValue.String("aaaa"), false);
+//    String str = environment.tryGet("aaa").getString();
+//    System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
+//    time = System.currentTimeMillis();
+//    strings.put("aaa", "aaaa");
+//    vals.put("aaa", strings);
+//    String str2 = (String) vals.get("aaa").get("aaa");
+//    System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
+
       NativeModulesManager nativeModulesManager = new NativeModulesManager();
       List<String> imports = new ArrayList<>();
-
-      long time = System.currentTimeMillis();
+//      time = System.currentTimeMillis();
       System.out.print("Scanning and resolving imports...");
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManager);

@@ -1,17 +1,15 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiEnvironment;
-import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
-class Environment implements SimiEnvironment {
+class Environment implements SimiEnvironment, ValueStorage {
 
-  final Environment enclosing;
-  private final Map<String, SimiValue> values = new HashMap<>();
+  private final Environment enclosing;
+//  private final Map<String, SimiValue> values = new HashMap<>();
+  private final ValueStorageImpl values = new ValueStorageImpl();
   private final Map<Stmt.BlockStmt, BlockImpl> statementBlocks = new HashMap<>();
   final int depth;
 
@@ -25,32 +23,28 @@ class Environment implements SimiEnvironment {
     depth = enclosing.depth + 1;
   }
 
-  boolean has(String key) {
-    return values.containsKey(key);
-  }
-
-  SimiValue get(Token name) {
-    if (values.containsKey(name.lexeme)) {
-      return values.get(name.lexeme);
-    }
-    if (enclosing != null) {
-      return enclosing.get(name);
-    }
-    return null;
+//  SimiValue get(Token name) {
+//    if (values.containsKey(name.lexeme)) {
+//      return values.get(name.lexeme);
+//    }
+//    if (enclosing != null) {
+//      return enclosing.get(name);
+//    }
+//    return null;
 //    throw new RuntimeError(name,
 //        "Undefined variable '" + name.lexeme + "'.");
-  }
+//  }
 
-  void assign(Token name, SimiValue value, boolean allowImmutable) {
+  void assign(Token name, Object value, boolean allowImmutable) {
       String key = name.lexeme;
-      if (values.get(key) != null) {
+      if (get(key) != null) {
         if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
-            values.put(key, value);
+            put(key, value);
         } else {
             throw new RuntimeError(name, "Cannot assign to a const, use " + Constants.MUTABLE + " at the start of var name!");
         }
       } else {
-          define(key, value);
+        put(key, value);
       }
 
 //    if (enclosing != null) {
@@ -64,7 +58,7 @@ class Environment implements SimiEnvironment {
 
   @Override
   public void define(String name, SimiValue value) {
-    values.put(name, value);
+    put(name, value);
   }
 
   Environment ancestor(int distance) {
@@ -76,40 +70,50 @@ class Environment implements SimiEnvironment {
     return environment;
   }
 
-  SimiValue getAt(int distance, String name) {
-    return ancestor(distance).values.get(name);
+  Object getAt(int distance, String name) {
+    return ancestor(distance).get(name);
   }
 
-  void assignAt(int distance, Token name, SimiValue value) {
+  void assignAt(int distance, Token name, Object value) {
     ancestor(distance).assign(name, value, false);
   }
 
-  Environment trimmedSelf() {
-    if (enclosing == null) {
-      return this;
-    }
-    Environment environment = new Environment(enclosing);
-    for (Map.Entry<String, SimiValue> entry : values.entrySet()) {
-      boolean put = false;
-      if (entry.getValue() instanceof SimiValue.Callable) {
-        put = true;
-      } else if (entry.getValue() instanceof SimiValue.Object) {
-        SimiObject object = entry.getValue().getObject();
-        if (object instanceof SimiClass) {
-          put = true;
-        }
+//  Environment trimmedSelf() {
+//    if (enclosing == null) {
+//      return this;
+//    }
+//    Environment environment = new Environment(enclosing);
+//    for (Map.Entry<String, SimiValue> entry : values.entrySet()) {
+//      boolean put = false;
+//      if (entry.getValue() instanceof SimiValue.Callable) {
+//        put = true;
+//      } else if (entry.getValue() instanceof SimiValue.Object) {
+//        SimiObject object = entry.getValue().getObject();
+//        if (object instanceof SimiClass) {
+//          put = true;
+//        }
+//      }
+//      if (put) {
+//        environment.values.put(entry.getKey(), entry.getValue());
+//      }
+//    }
+//    return environment;
+//  }
+
+  public Object tryGetObject(String name) {
+    for (Environment env = this; env != null; env = env.enclosing) {
+      Object value = env.get(name);
+      if (value != null) {
+        return value;
       }
-      if (put) {
-        environment.values.put(entry.getKey(), entry.getValue());
-      }
     }
-    return environment;
+    return null;
   }
 
   @Override
   public SimiValue tryGet(String name) {
     for (Environment env = this; env != null; env = env.enclosing) {
-      SimiValue value = env.values.get(name);
+      SimiValue value = env.getValue(name);
       if (value != null) {
         return value;
       }
@@ -157,5 +161,94 @@ class Environment implements SimiEnvironment {
     if (blocks != null) {
       blocks.remove(this.depth);
     }
+  }
+
+  @Override
+  public void put(String name, Double value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public void put(String name, String value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public void put(String name, SimiObject value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public void put(String name, SimiCallable value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public void put(String name, SimiValue value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public void put(String name, Object value) {
+    values.put(name, value);
+  }
+
+  @Override
+  public Double getNumber(String name) {
+    Double value = values.getNumber(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getNumber(name);
+    }
+    return value;
+  }
+
+  @Override
+  public String getString(String name) {
+    String value = values.getString(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getString(name);
+    }
+    return value;
+  }
+
+  @Override
+  public SimiObject getObject(String name) {
+    SimiObject value = values.getObject(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getObject(name);
+    }
+    return value;
+  }
+
+  @Override
+  public SimiCallable getCallable(String name) {
+    SimiCallable value = values.getCallable(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getCallable(name);
+    }
+    return value;
+  }
+
+  @Override
+  public SimiValue getValue(String name) {
+    SimiValue value = values.getValue(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getValue(name);
+    }
+    return value;
+  }
+
+  @Override
+  public Object get(String name) {
+    Double value = values.getNumber(name);
+    if (value == null && enclosing != null) {
+      return enclosing.getNumber(name);
+    }
+    return value;
+  }
+
+  @Override
+  public boolean remove(String name) {
+    return values.remove(name) || enclosing == null || enclosing.remove(name);
   }
 }

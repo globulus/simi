@@ -203,18 +203,24 @@ abstract class SimiObjectImpl implements SimiObject {
       set(Token.nativeCall(key), value, (Environment) environment);
     }
 
-    static SimiObject getOrConvertObject(SimiValue value, Interpreter interpreter) {
-        if (value == null || value instanceof SimiValue.Callable) {
-            return null;
+    static SimiObject getOrConvertObject(Object value, Interpreter interpreter) {
+        if (value instanceof SimiObject) {
+            return (SimiObject) value;
         }
-      if (value instanceof SimiValue.Number || value instanceof SimiValue.String) {
-          LinkedHashMap<String, SimiValue> fields = new LinkedHashMap<>();
+        if (value instanceof SimiValue.Object) {
+            return ((SimiValue.Object) value).getObject();
+        }
+      if (value instanceof SimiValue.Number
+              || value instanceof SimiValue.String
+              || value instanceof Double
+              || value instanceof String) {
+          ValueStorageImpl fields = new ValueStorageImpl();
           fields.put(Constants.PRIVATE, value);
           return SimiObjectImpl.fromMap((SimiClassImpl) interpreter.getGlobal(
-                    value instanceof SimiValue.Number ? Constants.CLASS_NUMBER : Constants.CLASS_STRING).getObject(),
+                  (value instanceof SimiValue.Number || value instanceof Double) ? Constants.CLASS_NUMBER : Constants.CLASS_STRING).getObject(),
                   true, fields);
       }
-      return value.getObject();
+      return null;
     }
 
     static class Dictionary extends SimiObjectImpl {
