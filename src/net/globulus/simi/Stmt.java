@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 abstract class Stmt implements SimiStatement {
 
   interface Visitor<R> {
+    R visitAnnotationStmt(Annotation stmt);
     R visitBreakStmt(Break stmt);
     R visitClassStmt(Class stmt);
     R visitContinueStmt(Continue stmt);
@@ -29,6 +30,18 @@ abstract class Stmt implements SimiStatement {
   }
 
   abstract <R> R accept(Visitor<R> visitor);
+
+  static class Annotation extends Stmt {
+    Annotation(Expr expr) {
+      this.expr = expr;
+    }
+
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitAnnotationStmt(this);
+    }
+
+    final Expr expr;
+  }
 
   static class Break extends Stmt {
     Break(Token name) {

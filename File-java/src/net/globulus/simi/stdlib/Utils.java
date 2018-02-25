@@ -9,6 +9,6 @@ import java.io.IOException;
 class Utils {
 
     static void raiseIoException(IOException e, BlockInterpreter interpreter) {
-        interpreter.raiseException(new SimiException((SimiClass) interpreter.getEnvironment().tryGet("IoException").getObject(), e.getMessage()));
+        interpreter.raiseException(new SimiException((SimiClass) interpreter.getEnvironment().tryGet("IoException").value.getObject(), e.getMessage()));
     }
 }

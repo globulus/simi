@@ -2,6 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.BlockInterpreter;
 import net.globulus.simi.api.SimiClass;
+import net.globulus.simi.api.SimiProperty;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.*;
@@ -25,7 +26,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
   SimiClassImpl(String name,
                 List<SimiClassImpl> superclasses,
-                Map<String, SimiValue> constants,
+                Map<String, SimiProperty> constants,
                 Map<OverloadableFunction, SimiFunction> methods) {
     super(CLASS, !name.startsWith(Constants.MUTABLE), new LinkedHashMap<>(constants));
     this.superclasses = superclasses;
@@ -34,14 +35,14 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
   }
 
     @Override
-    SimiValue get(Token name, Integer arity, Environment environment) {
-        SimiValue value = super.get(name, arity, environment);
-        if (value != null) {
-            return value;
+    SimiProperty get(Token name, Integer arity, Environment environment) {
+        SimiProperty prop = super.get(name, arity, environment);
+        if (prop != null) {
+            return prop;
         }
         SimiMethod method = findMethod(null, name.lexeme, arity);
         if (method != null) {
-            return new SimiValue.Callable(method, name.lexeme, this);
+            return new SimiProperty(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
         }
         return null;
     }

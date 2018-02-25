@@ -15,12 +15,12 @@ public class ReadStream {
     @SimiJavaMethod
     public static SimiValue init(SimiObject self, BlockInterpreter interpreter, SimiValue file) {
         SimiClass clazz = (SimiClass) self;
-        String path = file.getObject().get("path", interpreter.getEnvironment()).getString();
+        String path = file.getObject().get("path", interpreter.getEnvironment()).value.getString();
         try {
             BufferedReader reader = new BufferedReader(new FileReader(path));
             Wrapper wrapper = new Wrapper(reader);
-            LinkedHashMap<String, SimiValue> props = new LinkedHashMap<>();
-            props.put("native_reader", new SimiValue.Object(wrapper));
+            LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
+            props.put("native_reader", new SimiProperty(new SimiValue.Object(wrapper)));
             SimiObject object = interpreter.newInstance(clazz, props);
             return new SimiValue.Object(object);
         } catch (FileNotFoundException e) {
@@ -85,7 +85,7 @@ public class ReadStream {
     }
 
     private static BufferedReader getReader(SimiObject self, BlockInterpreter interpreter) {
-        return ((Wrapper) self.get("native_reader", interpreter.getEnvironment()).getObject()).reader;
+        return ((Wrapper) self.get("native_reader", interpreter.getEnvironment()).value.getObject()).reader;
     }
 
     private static class Wrapper implements SimiObject {
@@ -102,12 +102,12 @@ public class ReadStream {
         }
 
         @Override
-        public SimiValue get(String s, SimiEnvironment simiEnvironment) {
+        public SimiProperty get(String s, SimiEnvironment simiEnvironment) {
             return null;
         }
 
         @Override
-        public void set(String s, SimiValue simiValue, SimiEnvironment simiEnvironment) {
+        public void set(String s, SimiProperty simiProperty, SimiEnvironment simiEnvironment) {
 
         }
 

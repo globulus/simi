@@ -67,3 +67,4 @@ Native-java/.idea/misc.xml
 Native-java/.idea/modules.xml
 Native-java/.idea/workspace.xml
 Native-java/out/production/Native-java/generated/net/globulus/simi/api/JavaApi.java
+Stdlib-java/out/production/Stdlib-java/generated/net/globulus/simi/api/JavaApi.java

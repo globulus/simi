@@ -12,12 +12,12 @@ public class WriteStream {
     @SimiJavaMethod
     public static SimiValue init(SimiObject self, BlockInterpreter interpreter, SimiValue file) {
         SimiClass clazz = (SimiClass) self;
-        String path = file.getObject().get("path", interpreter.getEnvironment()).getString();
+        String path = file.getObject().get("path", interpreter.getEnvironment()).value.getString();
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(path));
             Wrapper wrapper = new Wrapper(writer);
-            LinkedHashMap<String, SimiValue> props = new LinkedHashMap<>();
-            props.put("native_writer", new SimiValue.Object(wrapper));
+            LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
+            props.put("native_writer", new SimiProperty(new SimiValue.Object(wrapper)));
             SimiObject object = interpreter.newInstance(clazz, props);
             return new SimiValue.Object(object);
         } catch (IOException e) {
@@ -47,7 +47,7 @@ public class WriteStream {
     }
 
     private static BufferedWriter getWriter(SimiObject self, BlockInterpreter interpreter) {
-        return ((Wrapper) self.get("native_writer", interpreter.getEnvironment()).getObject()).writer;
+        return ((Wrapper) self.get("native_writer", interpreter.getEnvironment()).value.getObject()).writer;
     }
 
     private static class Wrapper implements SimiObject {
@@ -64,12 +64,12 @@ public class WriteStream {
         }
 
         @Override
-        public SimiValue get(String s, SimiEnvironment simiEnvironment) {
+        public SimiProperty get(String s, SimiEnvironment simiEnvironment) {
             return null;
         }
 
         @Override
-        public void set(String s, SimiValue simiValue, SimiEnvironment simiEnvironment) {
+        public void set(String s, SimiProperty simiProperty, SimiEnvironment simiEnvironment) {
 
         }
 

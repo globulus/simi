@@ -17,7 +17,7 @@ public class SimiDate {
 
     @SimiJavaMethod
     public static SimiValue format(SimiObject self, BlockInterpreter interpreter, SimiValue pattern) {
-        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getNumber().longValue();
+        long timestamp = self.get("timestamp", interpreter.getEnvironment()).value.getNumber().longValue();
         return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
     }
 }

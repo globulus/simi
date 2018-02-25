@@ -4,8 +4,8 @@ import java.util.List;
 
 public interface SimiObject {
     SimiClass getSimiClass();
-    SimiValue get(String key, SimiEnvironment environment);
-    void set(String key, SimiValue value, SimiEnvironment environment);
+    SimiProperty get(String key, SimiEnvironment environment);
+    void set(String key, SimiProperty prop, SimiEnvironment environment);
     SimiObject clone(boolean mutable);
     List<SimiValue> values();
 }

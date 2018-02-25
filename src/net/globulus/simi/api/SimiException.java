@@ -17,15 +17,15 @@ public final class SimiException extends RuntimeException implements SimiObject 
     }
 
     @Override
-    public SimiValue get(String key, SimiEnvironment environment) {
+    public SimiProperty get(String key, SimiEnvironment environment) {
         if (key.equals("message")) {
-            return new SimiValue.String(getMessage());
+            return new SimiProperty(new SimiValue.String(getMessage()));
         }
         return null;
     }
 
     @Override
-    public void set(String key, SimiValue value, SimiEnvironment environment) {
+    public void set(String key, SimiProperty value, SimiEnvironment environment) {
         throw new AssertionError();
     }
 

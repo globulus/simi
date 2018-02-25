@@ -15,6 +15,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   private final Stack<SimiBlock> loopBlocks = new Stack<>();
   private final Stack<SimiException> raisedExceptions = new Stack<>();
   private final Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts = new HashMap<>();
+  private List<SimiObject> annotations = new ArrayList<>();
 
   static Interpreter sharedInstance;
 
@@ -103,7 +104,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public SimiValue getGlobal(String name) {
+  public SimiProperty getGlobal(String name) {
     return globals.getAt(0, name);
   }
 
@@ -118,7 +119,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public SimiObject newObject(boolean immutable, LinkedHashMap<String, SimiValue> props) {
+  public SimiObject newObject(boolean immutable, LinkedHashMap<String, SimiProperty> props) {
     return SimiObjectImpl.fromMap(getObjectClass(), immutable, props);
   }
 
@@ -128,7 +129,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   @Override
-  public SimiObject newInstance(SimiClass clazz, LinkedHashMap<String, SimiValue> props) {
+  public SimiObject newInstance(SimiClass clazz, LinkedHashMap<String, SimiProperty> props) {
     return SimiObjectImpl.instance((SimiClassImpl) clazz, props);
   }
 
@@ -139,6 +140,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       return null;
     }
     return new SimiValue.Callable(new BlockImpl(stmt, environment), null, null);
+  }
+
+  @Override
+  public Void visitAnnotationStmt(Stmt.Annotation stmt) {
+    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.expr), this);
+    annotations.add(object);
+    return null;
   }
 
   @Override
@@ -174,31 +182,32 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       environment = new Environment(environment);
       environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
-      Map<String, SimiValue> constants = new HashMap<>();
+      Map<String, SimiProperty> constants = new HashMap<>();
       for (Expr.Assign constant : stmt.constants) {
           String key = constant.name.lexeme;
           SimiValue value = evaluate(constant.value);
-          constants.put(key, value);
+          constants.put(key, new SimiProperty(value, applyAnnotations()));
       }
 
     Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
         String name = method.name.lexeme;
       SimiFunction function = new SimiFunction(method, environment,
-          name.equals(Constants.INIT), method.block.isNative());
+          name.equals(Constants.INIT), method.block.isNative(), applyAnnotations());
       methods.put(new OverloadableFunction(name, function.arity()), function);
     }
 
     SimiClassImpl klass = new SimiClassImpl(className, superclasses, constants, methods);
+    SimiValue classValue = new SimiValue.Object(klass);
 
 //    if (superclass != null) {
 //      environment = environment.enclosing;
 //    }
 
     if (isBaseClass) {
-        globals.assign(stmt.name, new SimiValue.Object(klass), false);
+        globals.assign(stmt.name, classValue, applyAnnotations(), false);
     } else {
-        environment.assign(stmt.name, new SimiValue.Object(klass), false);
+        environment.assign(stmt.name, classValue, applyAnnotations(), false);
     }
     return null;
   }
@@ -219,7 +228,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
   @Override
   public SimiValue visitFunctionStmt(Stmt.Function stmt) {
-    SimiFunction function = new SimiFunction(stmt, environment, false, stmt.block.isNative());
+    SimiFunction function = new SimiFunction(stmt, environment, false, stmt.block.isNative(), applyAnnotations());
     SimiValue value = new SimiValue.Callable(function, stmt.name.lexeme, null);
     environment.define(stmt.name.lexeme, value);
     return value;
@@ -333,7 +342,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
     List<Expr> emptyArgs = new ArrayList<>();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiValue nextMethod = block.closure.tryGet("#next" + block.closure.depth);
+    SimiProperty nextMethod = block.closure.tryGet("#next" + block.closure.depth);
     if (nextMethod == null) {
       SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
       nextMethod = iterable.get(nextToken, 0, environment);
@@ -344,15 +353,15 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       }
     }
 
-    block.closure.assign(Token.named("#next" + block.closure.depth), nextMethod, true);
+    block.closure.assign(Token.named("#next" + block.closure.depth), nextMethod.value, null, true);
     loopBlocks.push(block);
     while (true) {
-      SimiValue var = call(nextMethod, emptyArgs, nextToken);
+      SimiValue var = call(nextMethod.value, emptyArgs, nextToken);
       if (var == null) {
         this.environment.endBlock(stmt, yieldedStmts);
         break;
       }
-      block.closure.assign(stmt.var.name, var, true);
+      block.closure.assign(stmt.var.name, var, null,true);
       try {
         block.call(this, null, true);
       } catch (Return | Yield returnYield) {
@@ -386,12 +395,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     if (expr.name.lexeme.startsWith(Constants.MUTABLE)) {
       Integer distance = locals.get(expr);
       if (distance != null) {
-        environment.assignAt(distance, expr.name, value);
+        environment.assignAt(distance, expr.name, value, applyAnnotations());
       } else {
-        globals.assign(expr.name, value, false);
+        globals.assign(expr.name, value, applyAnnotations(), false);
       }
     } else {
-      environment.assignAt(0, expr.name, value);
+      environment.assignAt(0, expr.name, value, applyAnnotations());
     }
     return value;
   }
@@ -457,6 +466,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public SimiValue visitCallExpr(Expr.Call expr) {
     SimiValue callee = evaluate(expr.callee);
     return call(callee, expr.arguments, expr.paren);
+  }
+
+  private SimiValue call(SimiProperty prop, List<Expr> args, Token paren) {
+    SimiValue callee = (prop != null) ? prop.value :  null;
+    return call(callee, args, paren);
   }
 
   private SimiValue call(SimiValue callee, List<Expr> args, Token paren) {
@@ -548,11 +562,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         if (simiObject == null) {
           return null;
         }
+        SimiProperty prop;
         if (simiObject instanceof SimiObjectImpl) {
-          return ((SimiObjectImpl) simiObject).get(name, expr.arity, environment);
+          prop = ((SimiObjectImpl) simiObject).get(name, expr.arity, environment);
         } else {
-          return simiObject.get(name.lexeme, environment);
+          prop = simiObject.get(name.lexeme, environment);
         }
+        return (prop != null) ? prop.value : null;
     } catch (SimiValue.IncompatibleValuesException e) {
         throw new RuntimeError(expr.origin,"Only instances have properties.");
     }
@@ -621,7 +637,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     } else {
       value = evaluate(expr.value);
     }
-    ((SimiObjectImpl) object.getObject()).set(name, value, environment);
+    ((SimiObjectImpl) object.getObject()).set(name, new SimiProperty(value), environment);
     return value;
   }
 
@@ -629,7 +645,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   public SimiValue visitSuperExpr(Expr.Super expr) {
     int distance = locals.get(expr);
     SimiMethod method = null;
-    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.getAt(distance, Constants.SUPER)).value;
+    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.getAt(distance, Constants.SUPER).value).value;
     if (expr.superclass != null) {
       superclasses = superclasses.stream()
               .filter(superclass -> superclass.name.equals(expr.superclass.lexeme)).collect(Collectors.toList());
@@ -639,7 +655,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
 
     // "self" is always one level nearer than "super"'s environment.
-    SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getObject();
+    SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).value.getObject();
 
     for (SimiClassImpl superclass : superclasses) {
       method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
@@ -691,7 +707,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
         if (expr.props.isEmpty()) {
           object = SimiObjectImpl.empty(objectClass, immutable);
         } else {
-          LinkedHashMap<String, SimiValue> mapFields = new LinkedHashMap<>();
+          LinkedHashMap<String, SimiProperty> mapFields = new LinkedHashMap<>();
           ArrayList<SimiValue> arrayFields = new ArrayList<>();
           int count = 0;
           for (Expr prop : expr.props) {
@@ -715,7 +731,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
               value = evaluate(valueExpr);
             }
             if (expr.isDictionary) {
-              mapFields.put(key, value);
+              mapFields.put(key, new SimiProperty(value));
             } else {
               arrayFields.add(value);
             }
@@ -747,14 +763,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 
     private SimiValue lookUpVariable(Token name, Expr expr) {
 //        Integer distance = locals.get(expr);
-        SimiValue value = null;
+        SimiProperty prop = null;
 //        if (distance != null) {
 //          value = environment.getAt(distance, name.lexeme);
 //        }
 //        if (value == null) {
-          value = environment.tryGet(name.lexeme);
-          if (value != null) {
-            return value;
+          prop = environment.tryGet(name.lexeme);
+          if (prop != null && prop.value != null) {
+            return prop.value;
           }
 //        }
         return globals.get(name);
@@ -796,7 +812,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
     if (a instanceof SimiValue.Object) {
       Token equals = new Token(TokenType.IDENTIFIER, Constants.EQUALS, null, expr.operator.line);
-      return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment), equals, Collections.singletonList(b)).getNumber() != 0;
+      return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment).value, equals, Collections.singletonList(b)).getNumber() != 0;
     }
     return a.equals(b);
   }
@@ -811,7 +827,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
     }
     if (a instanceof SimiValue.Object) {
       Token compareTo = new Token(TokenType.IDENTIFIER, Constants.COMPARE_TO, null, expr.operator.line);
-      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment), compareTo, Arrays.asList(a, b));
+      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment).value, compareTo, Arrays.asList(a, b));
     }
     return new SimiValue.Number(a.compareTo(b));
   }
@@ -839,7 +855,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
 //          throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line);
-      return call(object.get(has, 1, environment), has, Collections.singletonList(a)).getNumber() != 0;
+      return call(object.get(has, 1, environment).value, has, Collections.singletonList(a)).getNumber() != 0;
   }
 
   private String stringify(SimiValue object) {
@@ -857,7 +873,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
   }
 
   private SimiClassImpl getObjectClass() {
-    return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getObject();
+    return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).value.getObject();
   }
 
   private void putBlock(Stmt.BlockStmt stmt, BlockImpl block) {
@@ -867,5 +883,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiValue>, Stmt.Vis
       yieldedStmts.put(stmt, blocks);
     }
     blocks.put(this.environment.depth, block);
+  }
+
+  private List<SimiObject> applyAnnotations() {
+    if (annotations.isEmpty()) {
+      return null;
+    }
+    List<SimiObject> copy = Collections.unmodifiableList(annotations);
+    annotations.clear();
+    return copy;
   }
 }

@@ -1,17 +1,15 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiEnvironment;
-import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class Environment implements SimiEnvironment {
 
   final Environment enclosing;
-  private final Map<String, SimiValue> values = new HashMap<>();
+  private final Map<String, SimiProperty> props = new HashMap<>();
   private final Map<Stmt.BlockStmt, BlockImpl> statementBlocks = new HashMap<>();
   final int depth;
 
@@ -26,12 +24,12 @@ class Environment implements SimiEnvironment {
   }
 
   boolean has(String key) {
-    return values.containsKey(key);
+    return props.containsKey(key);
   }
 
   SimiValue get(Token name) {
-    if (values.containsKey(name.lexeme)) {
-      return values.get(name.lexeme);
+    if (props.containsKey(name.lexeme)) {
+      return props.get(name.lexeme).value;
     }
     if (enclosing != null) {
       return enclosing.get(name);
@@ -41,16 +39,17 @@ class Environment implements SimiEnvironment {
 //        "Undefined variable '" + name.lexeme + "'.");
   }
 
-  void assign(Token name, SimiValue value, boolean allowImmutable) {
+  void assign(Token name, SimiValue value, List<SimiObject> annotations, boolean allowImmutable) {
       String key = name.lexeme;
-      if (values.get(key) != null) {
+      SimiProperty prop = props.get(key);
+      if (prop != null) {
         if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
-            values.put(key, value);
+            prop.value = value;
         } else {
             throw new RuntimeError(name, "Cannot assign to a const, use " + Constants.MUTABLE + " at the start of var name!");
         }
       } else {
-          define(key, value);
+          define(key, value, annotations);
       }
 
 //    if (enclosing != null) {
@@ -62,9 +61,17 @@ class Environment implements SimiEnvironment {
 //        "Undefined variable '" + key + "'.");
   }
 
-  @Override
   public void define(String name, SimiValue value) {
-    values.put(name, value);
+    define(name, value, null);
+  }
+
+  @Override
+  public void define(String name, SimiValue value, List<SimiObject> annotations) {
+    if (value == null) {
+      props.remove(name);
+    } else {
+      props.put(name, new SimiProperty(value, annotations));
+    }
   }
 
   Environment ancestor(int distance) {
@@ -76,42 +83,20 @@ class Environment implements SimiEnvironment {
     return environment;
   }
 
-  SimiValue getAt(int distance, String name) {
-    return ancestor(distance).values.get(name);
+  SimiProperty getAt(int distance, String name) {
+    return ancestor(distance).props.get(name);
   }
 
-  void assignAt(int distance, Token name, SimiValue value) {
-    ancestor(distance).assign(name, value, false);
-  }
-
-  Environment trimmedSelf() {
-    if (enclosing == null) {
-      return this;
-    }
-    Environment environment = new Environment(enclosing);
-    for (Map.Entry<String, SimiValue> entry : values.entrySet()) {
-      boolean put = false;
-      if (entry.getValue() instanceof SimiValue.Callable) {
-        put = true;
-      } else if (entry.getValue() instanceof SimiValue.Object) {
-        SimiObject object = entry.getValue().getObject();
-        if (object instanceof SimiClass) {
-          put = true;
-        }
-      }
-      if (put) {
-        environment.values.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return environment;
+  void assignAt(int distance, Token name, SimiValue value, List<SimiObject> annotations) {
+    ancestor(distance).assign(name, value, annotations, false);
   }
 
   @Override
-  public SimiValue tryGet(String name) {
+  public SimiProperty tryGet(String name) {
     for (Environment env = this; env != null; env = env.enclosing) {
-      SimiValue value = env.values.get(name);
-      if (value != null) {
-        return value;
+      SimiProperty prop = env.props.get(name);
+      if (prop != null) {
+        return prop;
       }
     }
     return null;
@@ -119,7 +104,7 @@ class Environment implements SimiEnvironment {
 
   @Override
   public String toString() {
-    String result = values.toString();
+    String result = props.toString();
     if (enclosing != null) {
       result += " -> " + enclosing.toString();
     }

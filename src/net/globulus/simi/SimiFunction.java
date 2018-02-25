@@ -1,8 +1,6 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.BlockInterpreter;
-import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
 import java.util.List;
 
@@ -12,15 +10,18 @@ class SimiFunction implements SimiCallable {
   private final BlockImpl block;
   private final boolean isInitializer;
   public final boolean isNative;
+  final List<SimiObject> annotations;
 
   SimiFunction(Stmt.Function declaration,
                Environment closure,
                boolean isInitializer,
-               boolean isNative) {
+               boolean isNative,
+               List<SimiObject> annotations) {
     this.declaration = declaration;
     this.block = new BlockImpl(declaration.block, closure);
     this.isInitializer = isInitializer;
     this.isNative = isNative;
+    this.annotations = annotations;
   }
 
   private SimiFunction(SimiFunction original, BlockImpl block) {
@@ -28,6 +29,7 @@ class SimiFunction implements SimiCallable {
       this.block = block;
       this.isInitializer = original.isInitializer;
       this.isNative = original.isNative;
+      this.annotations = original.annotations;
   }
 
   SimiFunction bind(SimiObjectImpl instance) {
@@ -49,7 +51,8 @@ class SimiFunction implements SimiCallable {
   public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
     SimiValue value = block.call(interpreter, arguments, rethrow);
     if (isInitializer) {
-        return block.closure.getAt(0, Constants.SELF);
+        SimiProperty prop = block.closure.getAt(0, Constants.SELF);
+        return (prop != null) ? prop.value : null;
     }
     return value;
   }

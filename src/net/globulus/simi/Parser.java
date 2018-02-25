@@ -51,6 +51,9 @@ class Parser {
       if (match(DEF, NATIVE)) {
           return function("function");
       }
+      if (match(BANG)) {
+        return annotation();
+      }
       return statement(false);
     } catch (ParseError error) {
       synchronize();
@@ -90,6 +93,19 @@ class Parser {
     consume(END, "Expect 'end' after class body.");
 
     return new Stmt.Class(name, superclasses, constants, methods);
+  }
+
+  private Stmt annotation() {
+    Expr expr = null;
+    if (peek().type == LEFT_BRACKET) {
+      expr = objectLiteral();
+    } else if (peek().type == IDENTIFIER) {
+      expr = call();
+    } else {
+      Simi.error(peek(), "Annotation expect either an object literal or a constructor invocation!");
+    }
+    checkStatementEnd(false);
+    return new Stmt.Annotation(expr);
   }
 
   private Stmt statement(boolean lambda) {
