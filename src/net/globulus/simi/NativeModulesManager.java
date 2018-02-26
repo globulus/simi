@@ -1,9 +1,7 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.*;
 import net.globulus.simi.api.Constants;
-import net.globulus.simi.api.SimiApiClass;
-import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiValue;
 
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -55,11 +53,11 @@ class NativeModulesManager {
 //        }
     }
 
-    SimiValue call(String className,
+    SimiProperty call(String className,
                    String methodName,
                    SimiObject self,
                    Interpreter interpreter,
-                   List<SimiValue> args) throws IllegalArgumentException {
+                   List<SimiProperty> args) throws IllegalArgumentException {
         if (className.equals(Constants.GLOBALS_CLASS_NAME)) {
             SimiApiClass apiClass = globals.get(methodName);
             if (apiClass != null) {

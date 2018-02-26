@@ -1,11 +1,28 @@
 package net.globulus.simi.api;
 
-public abstract class SimiValue implements Comparable<SimiValue> {
+import java.util.List;
+
+public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
 
     protected SimiValue() { }
 
     public abstract SimiValue copy();
     public abstract SimiValue clone(boolean mutable);
+
+    @Override
+    public SimiValue getValue() {
+        return this;
+    }
+
+    @Override
+    public void setValue(SimiValue value) {
+        throw new UnsupportedOperationException("Can't set value of SimiValue!");
+    }
+
+    @Override
+    public List<SimiObject> getAnnotations() {
+        return null;
+    }
 
     public java.lang.String getString() {
         if (this instanceof String) {

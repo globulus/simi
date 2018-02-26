@@ -3,11 +3,11 @@ package net.globulus.simi.api;
 import java.util.List;
 
 public interface SimiApiClass {
-    SimiValue call(String className,
+    SimiProperty call(String className,
                    String methodName,
                    SimiObject self,
                    BlockInterpreter interpreter,
-                   List<SimiValue> args);
+                   List<SimiProperty> args);
     String[] classNames();
     String[] globalMethodNames();
 }

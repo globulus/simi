@@ -6,6 +6,7 @@ import java.util.ArrayList;
 //< Statements and State parser-imports
 //> Control Flow import-arrays
 //< Control Flow import-arrays
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,6 +20,8 @@ class Parser {
 
   private final List<Token> tokens;
   private int current = 0;
+
+  private List<Stmt.Annotation> annotations = new ArrayList<>();
 
   Parser(List<Token> tokens) {
     this.tokens = tokens;
@@ -82,6 +85,8 @@ class Parser {
         }
         if (match(DEF, NATIVE)) {
             methods.add(function("method"));
+        } else if (match(BANG)) {
+            annotations.add((Stmt.Annotation) annotation());
         } else {
             Expr expr = assignment();
             if (expr instanceof Expr.Assign) {
@@ -98,6 +103,7 @@ class Parser {
   private Stmt annotation() {
     Expr expr = null;
     if (peek().type == LEFT_BRACKET) {
+      advance();
       expr = objectLiteral();
     } else if (peek().type == IDENTIFIER) {
       expr = call();
@@ -265,7 +271,7 @@ class Parser {
       block = new Expr.Block(declaration, block.params, statements);
     }
 
-    return new Stmt.Function(name, block);
+    return new Stmt.Function(name, block, getAnnotations());
   }
 
   private Expr.Block block(String kind, boolean lambda) {
@@ -450,6 +456,17 @@ class Parser {
     if (match(GU)) {
       Expr.Literal string = (Expr.Literal) primary();
       return new Expr.Gu(string);
+    }
+    if (match(BANG_BANG)) {
+      List<Token> tokens = new ArrayList<>();
+      while (match(IDENTIFIER)) {
+        tokens.add(previous());
+        match(DOT);
+      }
+      if (tokens.isEmpty()) {
+        Simi.error(peek(), "Annotations operator needs params!");
+      }
+      return new Expr.Annotations(tokens);
     }
     return call();
   }
@@ -693,5 +710,14 @@ class Parser {
 
       advance();
     }
+  }
+
+  private List<Stmt.Annotation> getAnnotations() {
+      if (annotations.isEmpty()) {
+          return null;
+      }
+      List<Stmt.Annotation> copy = Collections.unmodifiableList(new ArrayList<>(annotations));
+      annotations.clear();
+      return copy;
   }
 }

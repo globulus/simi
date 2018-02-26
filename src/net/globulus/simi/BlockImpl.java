@@ -19,7 +19,7 @@ class BlockImpl implements SimiBlock, SimiCallable {
 
   BlockImpl bind(SimiObjectImpl instance) {
     Environment environment = new Environment(closure);
-    environment.assign(Token.self(), new SimiValue.Object(instance), null, false);
+    environment.assign(Token.self(), new SimiValue.Object(instance), false);
     return new BlockImpl(declaration, environment);
   }
 
@@ -49,7 +49,7 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   @Override
-  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+  public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
     Environment environment = new Environment(lastClosure != null ? lastClosure : closure);
     if (arguments != null) {
       for (int i = 0; i < declaration.params.size(); i++) {
@@ -64,13 +64,13 @@ class BlockImpl implements SimiBlock, SimiCallable {
       if (rethrow) {
         throw returnValue;
       } else {
-        return returnValue.value;
+        return returnValue.prop;
       }
     } catch (Yield yield) {
       if (rethrow) {
-        throw new Yield(yield.value, true);
+        throw new Yield(yield.prop, true);
       } else {
-        return yield.value;
+        return yield.prop;
       }
     }
     clearYield();

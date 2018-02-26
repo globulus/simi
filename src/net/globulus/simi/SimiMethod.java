@@ -2,7 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.BlockInterpreter;
 import net.globulus.simi.api.SimiCallable;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.SimiProperty;
 
 import java.util.List;
 
@@ -22,7 +22,7 @@ class SimiMethod implements SimiCallable {
     }
 
     @Override
-    public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments, boolean rethrow) {
+    public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
         return function.call(interpreter, arguments, rethrow);
     }
 }

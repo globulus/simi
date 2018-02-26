@@ -1,6 +1,6 @@
 package net.globulus.simi.api;
 
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.SimiProperty;
 import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.BlockInterpreter;
 
@@ -13,7 +13,7 @@ public class JavaApi
   public JavaApi() {
   }
 
-  public SimiValue call(String className, String methodName, SimiObject self, BlockInterpreter interpreter, java.util.List<SimiValue> args) {
+  public SimiProperty call(String className, String methodName, SimiObject self, BlockInterpreter interpreter, java.util.List<SimiProperty> args) {
     switch (className) {
       case "Date":
       switch (methodName) {
@@ -36,12 +36,12 @@ public class JavaApi
 
   public static class Date {
 
-    private static SimiValue now(SimiObject simiobject0, BlockInterpreter blockinterpreter1) {
+    private static SimiProperty now(SimiObject simiobject0, BlockInterpreter blockinterpreter1) {
       return net.globulus.simi.stdlib.SimiDate.now(simiobject0, blockinterpreter1);
     }
 
-    private static SimiValue format(SimiObject simiobject0, BlockInterpreter blockinterpreter1, SimiValue simivalue2) {
-      return net.globulus.simi.stdlib.SimiDate.format(simiobject0, blockinterpreter1, simivalue2);
+    private static SimiProperty format(SimiObject simiobject0, BlockInterpreter blockinterpreter1, SimiProperty simiproperty2) {
+      return net.globulus.simi.stdlib.SimiDate.format(simiobject0, blockinterpreter1, simiproperty2);
     }
   }
 

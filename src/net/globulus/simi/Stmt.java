@@ -98,9 +98,10 @@ abstract class Stmt implements SimiStatement {
   }
 
   static class Function extends Stmt {
-    Function(Token name, Expr.Block block) {
+    Function(Token name, Expr.Block block, List<Stmt.Annotation> annotations) {
       this.name = name;
       this.block = block;
+      this.annotations = annotations;
     }
 
     <R> R accept(Visitor<R> visitor) {
@@ -109,6 +110,7 @@ abstract class Stmt implements SimiStatement {
 
     final Token name;
     final Expr.Block block;
+    final List<Stmt.Annotation> annotations;
   }
 
     static class Elsif extends Stmt implements BlockStmt {

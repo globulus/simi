@@ -109,16 +109,16 @@ public class Processor extends AbstractProcessor {
 
 	private boolean isValidMethod(Element element, boolean global) {
 		String masterError = global
-				? "A Simi API method must of of format: public static SimiValue NAME(SimiObject sender, BlockInterpreter interpreter...)!"
-				: "A Simi API global function must of of format: public static SimiValue NAME(...)!";
+				? "A Simi API method must of of format: public static SimiProperty NAME(SimiObject sender, BlockInterpreter interpreter...)!"
+				: "A Simi API global function must of of format: public static SimiProperty NAME(...)!";
 		if (!element.getModifiers().contains(Modifier.PUBLIC)
 				|| !element.getModifiers().contains(Modifier.STATIC)) {
 			ProcessorLog.error(element, masterError);
 			return false;
 		}
 		ExecutableType method = (ExecutableType) element.asType();
-		TypeMirror simiValue = mElementUtils.getTypeElement(SimiValue.class.getCanonicalName()).asType();
-		if (!mTypeUtils.isSameType(method.getReturnType(), simiValue)) {
+		TypeMirror simiProperty = mElementUtils.getTypeElement(SimiProperty.class.getCanonicalName()).asType();
+		if (!mTypeUtils.isSameType(method.getReturnType(), simiProperty)) {
 			ProcessorLog.error(element, masterError);
 			return false;
 		}

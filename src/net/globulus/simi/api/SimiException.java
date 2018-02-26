@@ -19,7 +19,7 @@ public final class SimiException extends RuntimeException implements SimiObject 
     @Override
     public SimiProperty get(String key, SimiEnvironment environment) {
         if (key.equals("message")) {
-            return new SimiProperty(new SimiValue.String(getMessage()));
+            return new SimiValue.String(getMessage());
         }
         return null;
     }

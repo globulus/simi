@@ -28,8 +28,8 @@ abstract class SimiObjectImpl implements SimiObject {
 
     static SimiObjectImpl decomposedPair(SimiClassImpl objectClass, SimiValue key, SimiValue value) {
         LinkedHashMap<String, SimiProperty> prop = new LinkedHashMap<>();
-        prop.put(Constants.KEY, new SimiProperty(key));
-        prop.put(Constants.VALUE, new SimiProperty(value));
+        prop.put(Constants.KEY, new SimiPropertyImpl(key));
+        prop.put(Constants.VALUE, new SimiPropertyImpl(value));
         return new Dictionary(objectClass, true, prop);
     }
 
@@ -55,17 +55,17 @@ abstract class SimiObjectImpl implements SimiObject {
           }
           SimiMethod method = clazz.findMethod(this, key, arity);
           if (method != null) {
-              return new SimiProperty(new SimiValue.Callable(method, key, this), method.function.annotations);
+              return new SimiPropertyImpl(new SimiValue.Callable(method, key, this), method.function.annotations);
           }
       }
       return null;
   }
 
   SimiProperty bind(String key, SimiProperty prop) {
-      if (prop != null && prop.value instanceof SimiValue.Callable) {
-          SimiCallable callable = prop.value.getCallable();
+      if (prop != null && prop.getValue() instanceof SimiValue.Callable) {
+          SimiCallable callable = prop.getValue().getCallable();
           if (callable instanceof BlockImpl) {
-              return new SimiProperty(new SimiValue.Callable(((BlockImpl) callable).bind(this), key, this), prop.annotations);
+              return new SimiPropertyImpl(new SimiValue.Callable(((BlockImpl) callable).bind(this), key, this), prop.getAnnotations());
           }
       }
       return prop;
@@ -159,16 +159,16 @@ abstract class SimiObjectImpl implements SimiObject {
       if (a == null || b == null) {
           return false;
       }
-      return valuesMatch(a.value, b.value);
+      return valuesMatch(a.getValue(), b.getValue());
     }
 
-  void append(SimiValue elem) {
+  void append(SimiProperty elem) {
       if (immutable) {
           throw new RuntimeException("Trying to append to an immutable object!");
       }
       appendImpl(elem);
   }
-  abstract void appendImpl(SimiValue elem);
+  abstract void appendImpl(SimiProperty elem);
 
   abstract void addAll(SimiObjectImpl other);
 
@@ -176,7 +176,7 @@ abstract class SimiObjectImpl implements SimiObject {
   public String toString() {
       SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
       if (method != null && !method.function.isNative) {
-          return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getString();
+          return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getValue().getString();
       }
     StringBuilder sb = new StringBuilder();
     sb.append("[\n");
@@ -213,15 +213,19 @@ abstract class SimiObjectImpl implements SimiObject {
       set(Token.nativeCall(key), prop, (Environment) environment);
     }
 
-    static SimiObject getOrConvertObject(SimiValue value, Interpreter interpreter) {
+    static SimiObject getOrConvertObject(SimiProperty prop, Interpreter interpreter) {
+        if (prop == null) {
+            return null;
+        }
+        SimiValue value = prop.getValue();
         if (value == null || value instanceof SimiValue.Callable) {
             return null;
         }
       if (value instanceof SimiValue.Number || value instanceof SimiValue.String) {
           LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
-          fields.put(Constants.PRIVATE, new SimiProperty(value));
+          fields.put(Constants.PRIVATE, new SimiPropertyImpl(value));
           return SimiObjectImpl.fromMap((SimiClassImpl) interpreter.getGlobal(
-                    value instanceof SimiValue.Number ? Constants.CLASS_NUMBER : Constants.CLASS_STRING).value.getObject(),
+                    value instanceof SimiValue.Number ? Constants.CLASS_NUMBER : Constants.CLASS_STRING).getValue().getObject(),
                   true, fields);
       }
       return value.getObject();
@@ -248,8 +252,8 @@ abstract class SimiObjectImpl implements SimiObject {
                     return bind(implicitKey, fields.get(implicitKey));
                 } else {
                     if (clazz != null && clazz.name.equals(Constants.CLASS_STRING)) {
-                        String value = fields.get(Constants.PRIVATE).value.getString();
-                        return new SimiProperty(new SimiValue.String("" + value.charAt(index)));
+                        String value = fields.get(Constants.PRIVATE).getValue().getString();
+                        return new SimiPropertyImpl(new SimiValue.String("" + value.charAt(index)));
                     }
                     return bind(implicitKey, new ArrayList<>(fields.values()).get(index));
                 }
@@ -322,7 +326,7 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         public ArrayList<SimiValue> values() {
-            return fields.values().stream().map(p -> p.value).collect(Collectors.toCollection(ArrayList::new));
+            return fields.values().stream().map(p -> p.getValue()).collect(Collectors.toCollection(ArrayList::new));
         }
 
         @Override
@@ -331,7 +335,7 @@ abstract class SimiObjectImpl implements SimiObject {
             ArrayList<SimiValue> values = new ArrayList<>(size);
             for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
                 values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
-                        new SimiValue.String(entry.getKey()), entry.getValue().value)));
+                        new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
             }
             return SimiObjectImpl.fromArray(objectClass, true, values);
         }
@@ -343,15 +347,15 @@ abstract class SimiObjectImpl implements SimiObject {
             }
             LinkedHashMap<String, SimiProperty> zipFields = new LinkedHashMap<>();
             for (SimiProperty prop : fields.values()) {
-                Dictionary obj = ((SimiObjectImpl) prop.value.getObject()).asDictionary();
-                zipFields.put(obj.fields.get(Constants.KEY).value.getString(), obj.fields.get(Constants.VALUE));
+                Dictionary obj = ((SimiObjectImpl) prop.getValue().getObject()).asDictionary();
+                zipFields.put(obj.fields.get(Constants.KEY).getValue().getString(), obj.fields.get(Constants.VALUE));
             }
             return new Dictionary(objectClass, true, zipFields);
         }
 
         @Override
         SimiValue indexOf(SimiValue value) {
-            int index = fields.values().stream().map(p -> p.value).collect(Collectors.toList()).indexOf(value);
+            int index = fields.values().stream().map(p -> p.getValue()).collect(Collectors.toList()).indexOf(value);
             if (index == -1) {
                 return null;
             }
@@ -385,8 +389,8 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        void appendImpl(SimiValue elem) {
-            fields.put(Constants.IMPLICIT + fields.size(), new SimiProperty(elem));
+        void appendImpl(SimiProperty elem) {
+            fields.put(Constants.IMPLICIT + fields.size(), elem);
         }
 
         @Override
@@ -447,7 +451,7 @@ abstract class SimiObjectImpl implements SimiObject {
             String key = name.lexeme;
             try {
                 int index = Integer.parseInt(key);
-                return bind(key, new SimiProperty(fields.get(index)));
+                return bind(key, new SimiPropertyImpl(fields.get(index)));
             } catch (NumberFormatException ignored) { }
             return getFromClass(name, arity);
         }
@@ -458,7 +462,7 @@ abstract class SimiObjectImpl implements SimiObject {
             if (prop == null) {
                 fields.remove(index);
             } else {
-                fields.set(index, prop.value);
+                fields.set(index, prop.getValue());
             }
         }
 
@@ -555,8 +559,8 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        void appendImpl(SimiValue elem) {
-            fields.add(elem);
+        void appendImpl(SimiProperty elem) {
+            fields.add(elem.getValue());
         }
 
         @Override
@@ -726,10 +730,10 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        void appendImpl(SimiValue elem) {
+        void appendImpl(SimiProperty elem) {
             if (underlying == null) {
                 ArrayList<SimiValue> fields = new ArrayList<>();
-                fields.add(elem);
+                fields.add(elem.getValue());
                 underlying = SimiObjectImpl.fromArray(clazz, immutable, fields);
             } else {
                 underlying.appendImpl(elem);

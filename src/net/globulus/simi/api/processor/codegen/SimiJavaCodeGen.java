@@ -27,7 +27,7 @@ public class SimiJavaCodeGen {
 			Writer writer = jfo.openWriter();
 			SimiApiJavaWriter jw = new SimiApiJavaWriter(writer);
 			jw.emitPackage(packageName);
-			jw.emitImports(SimiValue.class.getCanonicalName());
+			jw.emitImports(SimiProperty.class.getCanonicalName());
 			jw.emitImports(SimiObject.class.getCanonicalName());
 			jw.emitImports(BlockInterpreter.class.getCanonicalName());
 			jw.emitEmptyLine();
@@ -40,10 +40,10 @@ public class SimiJavaCodeGen {
 			jw.endConstructor();
 			jw.emitEmptyLine();
 
-			String simiValue = SimiValue.class.getSimpleName();
-			jw.beginMethod(simiValue, "call", EnumSet.of(Modifier.PUBLIC),
+			String simiProperty = SimiProperty.class.getSimpleName();
+			jw.beginMethod(simiProperty, "call", EnumSet.of(Modifier.PUBLIC),
 					"String", "className", "String", "methodName", "SimiObject", "self",
-					"BlockInterpreter", "interpreter",  "java.util.List<SimiValue>", "args");
+					"BlockInterpreter", "interpreter",  "java.util.List<SimiProperty>", "args");
 
 			jw.beginControlFlow("switch (className)");
 			for (ExposedClass exposedClass : classes) {

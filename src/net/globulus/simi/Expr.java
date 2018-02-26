@@ -11,9 +11,10 @@ abstract class Expr {
   abstract <R> R accept(Visitor<R> visitor, Object... params);
 
   interface Visitor<R> {
-    R visitBlockExpr(Block expr, boolean newScope, boolean execute);
+    R visitAnnotationsExpr(Annotations expr);
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
+    R visitBlockExpr(Block expr, boolean newScope, boolean execute);
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
@@ -74,6 +75,18 @@ abstract class Expr {
       }
     }
 
+    static class Annotations extends Expr {
+      Annotations(List<Token> tokens) {
+        this.tokens = tokens;
+      }
+
+      <R> R accept(Visitor<R> visitor, Object... params) {
+        return visitor.visitAnnotationsExpr(this);
+      }
+
+      final List<Token> tokens;
+    }
+
   static class Assign extends Expr {
     Assign(Token name, Expr value) {
       this.name = name;
@@ -87,6 +100,7 @@ abstract class Expr {
     final Token name;
     final Expr value;
   }
+
   static class Binary extends Expr {
     Binary(Expr left, Token operator, Expr right) {
       this.left = left;

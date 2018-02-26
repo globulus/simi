@@ -9,15 +9,15 @@ import java.util.Collections;
 public class SimiDate {
 
     @SimiJavaMethod
-    public static SimiValue now(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty now(SimiObject self, BlockInterpreter interpreter) {
         SimiClass clazz = (SimiClass) self;
         SimiValue timestamp = new SimiValue.Number(System.currentTimeMillis());
         return clazz.init(interpreter, Collections.singletonList(timestamp));
     }
 
     @SimiJavaMethod
-    public static SimiValue format(SimiObject self, BlockInterpreter interpreter, SimiValue pattern) {
-        long timestamp = self.get("timestamp", interpreter.getEnvironment()).value.getNumber().longValue();
-        return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
+    public static SimiProperty format(SimiObject self, BlockInterpreter interpreter, SimiProperty pattern) {
+        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getValue().getNumber().longValue();
+        return new SimiValue.String(new SimpleDateFormat(pattern.getValue().getString()).format(new java.util.Date(timestamp)));
     }
 }

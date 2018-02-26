@@ -81,7 +81,6 @@ class Scanner {
       break;
 //> two-char-tokens
       case '?': addToken(match('?') ? TokenType.QUESTION_QUESTION : TokenType.QUESTION); break;
-      case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
       case '<': {
         if (match('>')) {
@@ -90,6 +89,15 @@ class Scanner {
           addToken(TokenType.LESS_EQUAL);
         } else {
           addToken(TokenType.LESS);
+        }
+      } break;
+      case '!': {
+        if (match('!')) {
+          addToken(TokenType.BANG_BANG);
+        } else if (match('=')) {
+          addToken(TokenType.BANG_EQUAL);
+        } else {
+          addToken(TokenType.BANG);
         }
       } break;
       case '>': addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;

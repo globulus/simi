@@ -42,7 +42,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         }
         SimiMethod method = findMethod(null, name.lexeme, arity);
         if (method != null) {
-            return new SimiProperty(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
+            return new SimiPropertyImpl(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
         }
         return null;
     }
@@ -100,7 +100,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
   }
 
   @Override
-  public SimiValue init(BlockInterpreter interpreter, List<SimiValue> arguments) {
+  public SimiProperty init(BlockInterpreter interpreter, List<SimiProperty> arguments) {
       SimiObjectImpl instance = new SimiObjectImpl.Dictionary(this, true, new LinkedHashMap<>());
       SimiMethod initializer = findMethod(instance, Constants.INIT, arguments.size());
       if (initializer == null) {
@@ -109,7 +109,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
       if (initializer != null) {
           if (initializer.function.isNative) {
               Interpreter in = (Interpreter) interpreter;
-              instance = (SimiObjectImpl) in.nativeModulesManager.call(name, Constants.INIT, this, in, arguments).getObject();
+              instance = (SimiObjectImpl) in.nativeModulesManager.call(name, Constants.INIT, this, in, arguments).getValue().getObject();
           } else {
               initializer.function.call(interpreter, arguments, false);
           }

@@ -22,4 +22,9 @@ class TempNull extends SimiValue {
     public int compareTo(SimiValue o) {
         return 0;
     }
+
+    @Override
+    public java.lang.String toString() {
+        return "nil";
+    }
 }

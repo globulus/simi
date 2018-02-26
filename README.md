@@ -680,3 +680,28 @@ print date.timestamp
 You'll notice that there's no performance degradation associated with using native methods as the code is accessed via reflection only once, when the JAR import is resolved. After that, all native method references are effectively statically typed.
 
 You may also expose *global* methods, i.e methods that aren't linked to a class via the *@SimiJavaGlobal* annotation. These methods needn't have the first two parameters set to SimiObject and SimiEnvironment. Global methods should be used to represent a stateless operation, e.g exposing a math function.
+
+### Annotations
+
+Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals and precede a declaration:
+```ruby
+class Api:
+    ![method = "GET", endpoint = "/user"]
+    def getUser(result):
+
+    end
+
+    ![method = "GET", endpoint = "/appointments"]
+    def getAppointments(result): pass
+end
+```
+You may have as many annotations before a field as you'd like, each in a separate line.
+
+You can get a list of field's annotations using the **!!** operator. It returns a list of objects, or *nil* if no annotations have been associated with a field. Note that annotation objects are evaluated upon the !! invocation, meaning that annotations can contain variables and other expressions. Let's examine a networking library that consumes the annotations of our Api class and uses them to construct network calls:
+```ruby
+class SimiNetworking:
+    def execute(func):
+
+    end
+end
+```

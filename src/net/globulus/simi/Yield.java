@@ -1,15 +1,15 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.SimiProperty;
 
 class Yield extends RuntimeException {
 
-  final SimiValue value;
+  final SimiProperty prop;
   final boolean rethrown;
 
-  Yield(SimiValue value, boolean rethrown) {
+  Yield(SimiProperty prop, boolean rethrown) {
     super(null, null, false, false);
-    this.value = value;
+    this.prop = prop;
     this.rethrown = rethrown;
   }
 }

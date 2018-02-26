@@ -6,7 +6,7 @@ enum TokenType {
   COMMA, DOT, COLON, NEWLINE,
 
   // One or two character tokens.
-  BANG, BANG_EQUAL,
+  BANG, BANG_BANG, BANG_EQUAL,
   EQUAL, EQUAL_EQUAL,
   GREATER, GREATER_EQUAL,
   LESS, LESS_EQUAL,

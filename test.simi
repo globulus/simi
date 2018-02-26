@@ -6,6 +6,7 @@ print gu "2+2"
     print a
 end)(3)
 
+![method = "POST"]
 def testFile():
     #File.readLines("README.md").forEach(def s: print s)
     file = File("README.md")
@@ -25,6 +26,10 @@ def testFile():
     writer.close()
 end
 #testFile()
+print "Annotations"
+print !!testFile
+def printFunAnnotations(fun): print !!fun
+printFunAnnotations(testFile)
 
 def testYieldFun():
     print "before yield"
@@ -94,7 +99,12 @@ end
 class TankOverflowException(Exception):
 end
 
+![dbName = "Car"]
+![serialize = false]
 class Car:
+
+    ![dbField = "wheels"]
+    wheels = 4
 
     def init(capacity, tank): pass
 
@@ -110,8 +120,14 @@ class Car:
         @tank = 0
      end
 
+    ![method = "GET"]
      def f(): pass
 end
+print "Car annotations"
+print !!Car
+print !!Car.wheels
+print !!Car.f
+printFunAnnotations(Car.f)
 
 class OtherCar(Car, Range):
     def init():
