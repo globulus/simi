@@ -187,9 +187,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
       Map<String, SimiProperty> constants = new HashMap<>();
       for (Expr.Assign constant : stmt.constants) {
+        if (constant.annotations != null) {
+          for (Stmt.Annotation annotation : constant.annotations) {
+            visitAnnotationStmt(annotation);
+          }
+          applyAnnotations(constant);
+        }
           String key = constant.name.lexeme;
           SimiProperty prop = evaluate(constant.value);
-          constants.put(key, prop);
+          List<SimiObject> annotations = getAnnotations(constant);
+          if (prop != null) {
+            constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
+          }
       }
 
     Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
@@ -395,7 +404,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     @Override
     public SimiValue visitAnnotationsExpr(Expr.Annotations expr) {
         SimiProperty object = environment.tryGet(expr.tokens.get(0).lexeme);
-        for (int i = 1; i < expr.tokens.size(); i++) {
+          for (int i = 1; i < expr.tokens.size(); i++) {
             object = object.getValue().getObject().get(expr.tokens.get(i).lexeme, environment);
         }
         if (object == null || object.getAnnotations() == null) {
@@ -422,7 +431,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     } else {
       value = prop.getValue();
     }
-    SimiProperty newProp = new SimiPropertyImpl(value, getAnnotations(expr));
+    List<SimiObject> assignAnnotations = getAnnotations(expr);
+    if (assignAnnotations == null && prop != null && prop.getAnnotations() != null) {
+      assignAnnotations = prop.getAnnotations();
+    }
+    SimiProperty newProp = new SimiPropertyImpl(value, assignAnnotations);
     if (expr.name.lexeme.startsWith(Constants.MUTABLE)) {
       Integer distance = locals.get(expr);
       if (distance != null) {
@@ -743,7 +756,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
           object = SimiObjectImpl.empty(objectClass, immutable);
         } else {
           LinkedHashMap<String, SimiProperty> mapFields = new LinkedHashMap<>();
-          ArrayList<SimiValue> arrayFields = new ArrayList<>();
+          ArrayList<SimiProperty> arrayFields = new ArrayList<>();
           int count = 0;
           for (Expr propExpr : expr.props) {
             String key;
@@ -768,7 +781,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             if (expr.isDictionary) {
               mapFields.put(key, prop);
             } else {
-              arrayFields.add(prop.getValue());
+              arrayFields.add(prop);
             }
             count++;
           }

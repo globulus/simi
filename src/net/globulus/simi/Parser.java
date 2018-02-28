@@ -356,13 +356,13 @@ class Parser {
 
       if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
         Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
-        return new Expr.Assign(literal, value);
+        return new Expr.Assign(literal, value, getAnnotations());
       } else if (expr instanceof Expr.Variable) {
         Token name = ((Expr.Variable)expr).name;
         if (equals.type == EQUAL) {
-          return new Expr.Assign(name, value);
+          return new Expr.Assign(name, value, getAnnotations());
         } else {
-          return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value));
+          return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value), getAnnotations());
         }
       } else if (expr instanceof Expr.Get) {
         if (equals.type == EQUAL) {

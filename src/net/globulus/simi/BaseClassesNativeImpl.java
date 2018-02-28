@@ -184,7 +184,7 @@ class BaseClassesNativeImpl {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
                 if (self.isArray()) {
                     return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), self.immutable,
-                            self.values().stream().distinct().collect(Collectors.toCollection(ArrayList::new))));
+                            new ArrayList<>(self.values().stream().distinct().collect(Collectors.toList()))));
                 }
                 return arguments.get(0); // Objects are unique by default
             }
@@ -264,7 +264,7 @@ class BaseClassesNativeImpl {
                 final boolean isArray = self.isArray();
                 final Iterator<?> iterator = self.iterate();
                 LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
-                fields.put(Constants.NEXT, new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                fields.put(Constants.NEXT, new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 0;
@@ -273,15 +273,11 @@ class BaseClassesNativeImpl {
                     @Override
                     public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                         if (iterator.hasNext()) {
-                            if (isArray) {
-                                return (SimiValue) iterator.next();
-                            } else {
-                                return new SimiValue.String((String) iterator.next());
-                            }
+                            return (SimiProperty) iterator.next();
                         }
                         return null;
                     }
-                }, null, null)));
+                }, null, null));
                 return new SimiValue.Object(new SimiNativeObject(fields));
             }
         });
@@ -379,7 +375,7 @@ class BaseClassesNativeImpl {
                 SimiValue objectValue = new SimiValue.Object(object);
                 List<SimiProperty> initArgs = new ArrayList<>();
                 for (String param : params) {
-                    fields.put(param, new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                    fields.put(param, new SimiValue.Callable(new SimiCallable() {
                         @Override
                         public int arity() {
                             return 1;
@@ -392,9 +388,9 @@ class BaseClassesNativeImpl {
                             initArgs.add(arg);
                             return objectValue;
                         }
-                    }, param, object)));
+                    }, param, object));
                 }
-                fields.put("build", new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                fields.put("build", new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 0;
@@ -416,7 +412,7 @@ class BaseClassesNativeImpl {
                         }
                         return clazz.init(interpreter, initArgs);
                     }
-                }, "build", object)));
+                }, "build", object));
                 return objectValue;
             }
         });
@@ -681,7 +677,7 @@ class BaseClassesNativeImpl {
                 String value = prepareStringNativeCall(interpreter, arguments);
                 StringCharacterIterator iterator = new StringCharacterIterator(value);
                 LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
-                fields.put(Constants.NEXT, new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                fields.put(Constants.NEXT, new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 0;
@@ -695,7 +691,7 @@ class BaseClassesNativeImpl {
                        }
                         return null;
                     }
-                }, null, null)));
+                }, null, null));
                 return new SimiValue.Object(new SimiNativeObject(fields));
             }
         });
@@ -766,7 +762,7 @@ class BaseClassesNativeImpl {
                 SimiNativeObject object = new SimiNativeObject(fields);
                 SimiValue objectValue = new SimiValue.Object(object);
                 StringBuilder sb = new StringBuilder();
-                fields.put("add", new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                fields.put("add", new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 1;
@@ -782,8 +778,8 @@ class BaseClassesNativeImpl {
                         }
                         return objectValue;
                     }
-                }, "add", object)));
-                fields.put("build", new SimiPropertyImpl(new SimiValue.Callable(new SimiCallable() {
+                }, "add", object));
+                fields.put("build", new SimiValue.Callable(new SimiCallable() {
                     @Override
                     public int arity() {
                         return 0;
@@ -793,7 +789,7 @@ class BaseClassesNativeImpl {
                     public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                         return new SimiValue.String(sb.toString());
                     }
-                }, "build", object)));
+                }, "build", object));
                 return objectValue;
             }
         });

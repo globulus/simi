@@ -44,6 +44,14 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         if (method != null) {
             return new SimiPropertyImpl(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
         }
+        if (superclasses != null) {
+            for (SimiClassImpl superclass : superclasses) {
+                SimiProperty superclassProp = superclass.get(name, arity, environment);
+                if (superclassProp != null) {
+                    return superclassProp;
+                }
+            }
+        }
         return null;
     }
 
@@ -149,6 +157,21 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
             }
         }
         return constructors;
+  }
+
+  Set<String> allKeys() {
+      Set<String> keys = new HashSet<>(fields.keySet());
+      if (superclasses != null) {
+          for (SimiClassImpl superclass : superclasses) {
+              keys.addAll(superclass.allKeys());
+          }
+      }
+      return keys;
+  }
+
+  @Override
+  public ArrayList<SimiValue> keys() {
+    return allKeys().stream().map(SimiValue.String::new).collect(Collectors.toCollection(ArrayList::new));
   }
 
 //  @Override

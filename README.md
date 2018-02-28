@@ -72,10 +72,10 @@ $e = "another string"
 
 ### Values
 
-Šimi supports exactly 5 values, making it extremely easy to infer types and know how does a part of code behave:???
+Šimi supports exactly 5 values, making it extremely easy to infer types and know how does a certain part of code work:
 1. Number - equivalent to a *double* in other languages, represents 64-bit floating-point number. Also serves as the boolean type, with *true* mapping to 1, and *false* mapping to 0.
 2. String - represents a (multiline) piece of text, enclosed in either single or double quotes.
-3. Function - a parametrized block of code that can be invoked. Functions are fist-class citizens in Šimi and can be passed around as normal values.
+3. Function - a parametrized block of code that can be invoked. Functions are first-class citizens in Šimi and can be passed around as normal values.
 4. Object - the most powerful Šimi construct, represents a mutable or immutable array/list, set, dictionary/map/hash, or a class instance.
 5. Nil - represents an absence of value. Invoking operations on nils generally results in a NilPointerException.
 
@@ -697,11 +697,108 @@ end
 ```
 You may have as many annotations before a field as you'd like, each in a separate line.
 
-You can get a list of field's annotations using the **!!** operator. It returns a list of objects, or *nil* if no annotations have been associated with a field. Note that annotation objects are evaluated upon the !! invocation, meaning that annotations can contain variables and other expressions. Let's examine a networking library that consumes the annotations of our Api class and uses them to construct network calls:
+You can get a list of field's annotations using the **!!** operator. It returns a list of objects, or *nil* if no annotations have been associated with a field. Note that annotation objects are evaluated upon the !! invocation, meaning that annotations can contain variables and other expressions. Let's examine a simple class that generates SQL code for creating tables based on a list of model classes.
 ```ruby
-class SimiNetworking:
-    def execute(func):
+# Model superclass. It doesn't have its own table, but contains a primary key field
+# that will be used by all model superclasses.
+class Model:
+    # The dbField in the annotation specifies that this field will have a column in
+    # the corresponding table. If its value is true, we'll infer the column name
+    # from the field name. Otherwise, we'll use the supplied string value.
+    ![dbField = true, primaryKey = true]
+    id = 0
+end
 
+# We use the dbTable annotation to indicate that this class should have a table in
+# the database. The associated value is the name of the table.
+![dbTable = "Users"]
+class User(Model):
+    ![dbField = "first_name"]
+    firstName = ""
+
+    ![dbField = "last_name"]
+    lastName = ""
+end
+
+![dbTable = "Appointments"]
+class Appointment(Model):
+    ![dbField = true]
+    userId = ""
+
+    ![dbField = "timeslot"]
+    time = Date()
+end
+
+# This class generates SQL code for creating tables based on a list of classes.
+class DbLib:
+    def init(tables):
+        sqlBuilder = $String.builder()
+        for table in tables:
+            @_sqlForTable(table, sqlBuilder)
+        end
+        @sql = sqlBuilder.build()
+    end
+
+    def _sqlForTable(table, sqlBuilder):
+        classAnnotations = !!table # First we get annotations for the class
+        if not classAnnotations: return # If there aren't any, skip this class
+        for annot in classAnnotations:
+            dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
+            if dbTable:
+                name = ife(dbTable is $String, dbTable, table.name) # Infer table name
+                sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n") # Construct SQL
+                @_sqlForFields(table, sqlBuilder) # Add column SQL
+                sqlBuilder.add(");\n")
+            end
+        end
+    end
+
+    def _sqlForFields(table, sqlBuilder):
+        # Iterate through all the class fields and find those that have an annotation
+        # which contains the "dbField" field
+        for key in table:
+            val = table.(key)
+            keyAnnotations = !!val
+            if not keyAnnotations: continue
+            for annot in keyAnnotations:
+                dbField = annot.dbField
+                if not dbField: continue
+                name = ife(dbField is $String, dbField, key) # Infer the name
+                $type = nil # Infer type based on calue associated with the field in class definition
+                if val is $Number: $type = "int"
+                elsif val is $String: $type = "varchar(255)"
+                elsif val is Date: $type = "date"
+                # ... of course, many more types could be added, including relationships to other tables
+
+                sqlBuilder.add(name).add(" ").add($type)
+                if annot.primaryKey: # Check for "primary key" field in the annotation
+                    if $type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                    sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
+                end
+                else: sqlBuilder.add(",")
+                sqlBuilder.add("\n")
+            end
+        end
     end
 end
+
+(def ():
+    db = DbLib([Model, User, Appointment])
+    print db.sql
+end)()
+```
+The output of this code is:
+```
+CREATE TABLE Users (
+first_name varchar(255),
+last_name varchar(255),
+id int NOT NULL AUTO_INCREMENT,
+PRIMARY KEY (id),
+);
+CREATE TABLE Appointments (
+timeslot date,
+id int NOT NULL AUTO_INCREMENT,
+PRIMARY KEY (id),
+userId varchar(255),
+);
 ```

@@ -42,14 +42,9 @@ class Environment implements SimiEnvironment {
 
   void assign(Token name, SimiProperty prop, boolean allowImmutable) {
       String key = name.lexeme;
-      SimiProperty oldProp = props.get(key);
-      if (oldProp != null) {
+      if (props.containsKey(key)) {
         if (allowImmutable || key.startsWith(Constants.MUTABLE)) {
-            if (oldProp instanceof SimiValue) {
-              props.put(key, prop);
-            } else {
-              oldProp.setValue(prop.getValue());
-            }
+           props.put(key, prop);
         } else {
             throw new RuntimeError(name, "Cannot assign to a const, use " + Constants.MUTABLE + " at the start of var name!");
         }
@@ -64,10 +59,6 @@ class Environment implements SimiEnvironment {
 //
 //    throw new RuntimeError(name,
 //        "Undefined variable '" + key + "'.");
-  }
-
-  public void define(String name, SimiValue value) {
-    define(name, new SimiPropertyImpl(value));
   }
 
   @Override

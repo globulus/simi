@@ -4,17 +4,13 @@ import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiProperty;
 import net.globulus.simi.api.SimiValue;
 
+import java.util.Collections;
 import java.util.List;
 
 final class SimiPropertyImpl implements SimiProperty, Comparable<SimiPropertyImpl> {
 
     private SimiValue value;
     private final List<SimiObject> annotations;
-
-    SimiPropertyImpl(SimiValue value) {
-        this.value = value;
-        this.annotations = null;
-    }
 
     SimiPropertyImpl(SimiValue value, List<SimiObject> annotations) {
         this.value = value;

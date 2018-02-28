@@ -88,9 +88,10 @@ abstract class Expr {
     }
 
   static class Assign extends Expr {
-    Assign(Token name, Expr value) {
+    Assign(Token name, Expr value, List<Stmt.Annotation> annotations) {
       this.name = name;
       this.value = value;
+      this.annotations = annotations;
     }
 
     <R> R accept(Visitor<R> visitor, Object... params) {
@@ -99,6 +100,7 @@ abstract class Expr {
 
     final Token name;
     final Expr value;
+    final List<Stmt.Annotation> annotations;
   }
 
   static class Binary extends Expr {
