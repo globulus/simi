@@ -802,3 +802,29 @@ PRIMARY KEY (id),
 userId varchar(255),
 );
 ```
+
+### To-Dos
+
+Here's a list of features that might make it into the language at some point in the future:
+1. **when** statement: A syntax sugar for a lot of elsifs when you're checking against the same variable. It will likely support *in* and *is*, but I'm not entirely sure of other operators:
+```ruby
+when a:
+    5: print "a is 5"
+    10: print "a is 10"
+    not in Range(12, 16): print "not between 12 and 16"
+    is $String: print "a is String"
+    else: print "reached the default branch"
+end
+```
+2. **async/function yield** expression: a function would yield until the execution of another function is done, and then resume its execution. This would allow for clearer code, without using callbacks. The basis for this is already implemented via the *yield statement*.
+```ruby
+def post(body):
+    request = Request(body, [cookie = "123])
+
+    # The execution of post() will stop here, and resume once executePost() returns.
+    result = yield NetworkingLib.executePost(request)
+
+    if result ...etc etc...
+end
+```
+3. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
