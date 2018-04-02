@@ -10,14 +10,14 @@ import java.util.List;
 public class WriteStream {
 
     @SimiJavaMethod
-    public static SimiValue init(SimiObject self, BlockInterpreter interpreter, SimiValue file) {
+    public static SimiProperty init(SimiObject self, BlockInterpreter interpreter, SimiProperty file) {
         SimiClass clazz = (SimiClass) self;
-        String path = file.getObject().get("path", interpreter.getEnvironment()).value.getString();
+        String path = file.getValue().getObject().get("path", interpreter.getEnvironment()).getValue().getString();
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(path));
             Wrapper wrapper = new Wrapper(writer);
             LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
-            props.put("native_writer", new SimiProperty(new SimiValue.Object(wrapper)));
+            props.put("native_writer", new SimiValue.Object(wrapper));
             SimiObject object = interpreter.newInstance(clazz, props);
             return new SimiValue.Object(object);
         } catch (IOException e) {
@@ -27,9 +27,9 @@ public class WriteStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue write(SimiObject self, BlockInterpreter interpreter, SimiValue string) {
+    public static SimiProperty write(SimiObject self, BlockInterpreter interpreter, SimiProperty string) {
         try {
-            getWriter(self, interpreter).write(string.getString());
+            getWriter(self, interpreter).write(string.getValue().getString());
         } catch (IOException e) {
             Utils.raiseIoException(e, interpreter);
         }
@@ -37,7 +37,7 @@ public class WriteStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue close(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty close(SimiObject self, BlockInterpreter interpreter) {
         try {
             getWriter(self, interpreter).close();
         } catch (IOException e) {
@@ -47,7 +47,7 @@ public class WriteStream {
     }
 
     private static BufferedWriter getWriter(SimiObject self, BlockInterpreter interpreter) {
-        return ((Wrapper) self.get("native_writer", interpreter.getEnvironment()).value.getObject()).writer;
+        return ((Wrapper) self.get("native_writer", interpreter.getEnvironment()).getValue().getObject()).writer;
     }
 
     private static class Wrapper implements SimiObject {

@@ -427,6 +427,32 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false, new ArrayList<>()));
             }
         });
+        methods.put(new OverloadableFunction("array", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                int capacity = arguments.get(1).getValue().getNumber().intValue();
+                return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false, new ArrayList<>(capacity)));
+            }
+        });
+        methods.put(new OverloadableFunction("array", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                int capacity = arguments.get(1).getValue().getNumber().intValue();
+                SimiValue fillValue = arguments.get(2).getValue();
+                return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false,
+                        new ArrayList<>(Collections.nCopies(capacity, fillValue))));
+            }
+        });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
     }
 

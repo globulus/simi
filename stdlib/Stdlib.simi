@@ -34,6 +34,8 @@ class $Object:
     native classObject(): pass
 
     native array(): pass
+    native array(capacity): pass
+    native array(capacity, fillValue): pass
     native builder(): pass
 
     def length(): return @len()

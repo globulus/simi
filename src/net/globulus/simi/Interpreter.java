@@ -673,7 +673,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   public SimiProperty visitSetExpr(Expr.Set expr) {
     SimiProperty object = evaluate(expr.object);
 
-    if (!(object instanceof SimiValue.Object)) { // [order]
+    if (!(object != null && object.getValue() instanceof SimiValue.Object) && !(object instanceof SimiValue.Object)) { // [order]
       throw new RuntimeError(expr.origin, "Only objects have fields.");
     }
 

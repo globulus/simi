@@ -13,10 +13,10 @@ import java.util.stream.Collectors;
 public class SimiFile {
 
     @SimiJavaMethod
-    public static SimiValue readLines(SimiObject self, BlockInterpreter interpreter, SimiValue path) {
+    public static SimiProperty readLines(SimiObject self, BlockInterpreter interpreter, SimiProperty path) {
         ArrayList<SimiValue> props;
         try {
-            List<String> lines = Files.readAllLines(Paths.get(path.getString()));
+            List<String> lines = Files.readAllLines(Paths.get(path.getValue().getString()));
             props = lines.stream()
                     .map(SimiValue.String::new)
                     .collect(Collectors.toCollection(ArrayList::new));
@@ -29,9 +29,9 @@ public class SimiFile {
     }
 
     @SimiJavaMethod
-    public static SimiValue readString(SimiObject self, BlockInterpreter interpreter, SimiValue path) {
+    public static SimiProperty readString(SimiObject self, BlockInterpreter interpreter, SimiProperty path) {
         try {
-            String content = new String(Files.readAllBytes(Paths.get(path.getString())));
+            String content = new String(Files.readAllBytes(Paths.get(path.getValue().getString())));
             return new SimiValue.String(content);
         } catch (IOException e) {
 //            e.printStackTrace();

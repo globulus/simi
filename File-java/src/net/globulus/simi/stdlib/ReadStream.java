@@ -13,14 +13,14 @@ import java.util.List;
 public class ReadStream {
 
     @SimiJavaMethod
-    public static SimiValue init(SimiObject self, BlockInterpreter interpreter, SimiValue file) {
+    public static SimiProperty init(SimiObject self, BlockInterpreter interpreter, SimiProperty file) {
         SimiClass clazz = (SimiClass) self;
-        String path = file.getObject().get("path", interpreter.getEnvironment()).value.getString();
+        String path = file.getValue().getObject().get("path", interpreter.getEnvironment()).getValue().getString();
         try {
             BufferedReader reader = new BufferedReader(new FileReader(path));
             Wrapper wrapper = new Wrapper(reader);
             LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
-            props.put("native_reader", new SimiProperty(new SimiValue.Object(wrapper)));
+            props.put("native_reader", new SimiValue.Object(wrapper));
             SimiObject object = interpreter.newInstance(clazz, props);
             return new SimiValue.Object(object);
         } catch (FileNotFoundException e) {
@@ -30,7 +30,7 @@ public class ReadStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue read(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty read(SimiObject self, BlockInterpreter interpreter) {
         try {
             return new SimiValue.String("" + (char) getReader(self, interpreter).read());
         } catch (IOException e) {
@@ -40,7 +40,7 @@ public class ReadStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue readLine(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty readLine(SimiObject self, BlockInterpreter interpreter) {
         try {
             String line = getReader(self, interpreter).readLine();
             if (line != null) {
@@ -55,7 +55,7 @@ public class ReadStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue reset(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty reset(SimiObject self, BlockInterpreter interpreter) {
         try {
             getReader(self, interpreter).reset();
         } catch (IOException e) {
@@ -65,9 +65,9 @@ public class ReadStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue skip(SimiObject self, BlockInterpreter interpreter, SimiValue length) {
+    public static SimiProperty skip(SimiObject self, BlockInterpreter interpreter, SimiProperty length) {
         try {
-            return new SimiValue.Number(getReader(self, interpreter).skip(length.getNumber().longValue()));
+            return new SimiValue.Number(getReader(self, interpreter).skip(length.getValue().getNumber().longValue()));
         } catch (IOException e) {
             Utils.raiseIoException(e, interpreter);
             return null;
@@ -75,7 +75,7 @@ public class ReadStream {
     }
 
     @SimiJavaMethod
-    public static SimiValue close(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty close(SimiObject self, BlockInterpreter interpreter) {
         try {
             getReader(self, interpreter).close();
         } catch (IOException e) {
@@ -85,7 +85,7 @@ public class ReadStream {
     }
 
     private static BufferedReader getReader(SimiObject self, BlockInterpreter interpreter) {
-        return ((Wrapper) self.get("native_reader", interpreter.getEnvironment()).value.getObject()).reader;
+        return ((Wrapper) self.get("native_reader", interpreter.getEnvironment()).getValue().getObject()).reader;
     }
 
     private static class Wrapper implements SimiObject {

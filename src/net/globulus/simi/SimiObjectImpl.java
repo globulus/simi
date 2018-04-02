@@ -81,12 +81,17 @@ abstract class SimiObjectImpl implements SimiObject {
               && (clazz.name.equals(Constants.CLASS_STRING) || clazz.name.equals(Constants.CLASS_NUMBER))) {
           throw new RuntimeError(name, "Cannot modify self._ of Strings and Numbers!");
       }
-      try {
-          int index = Integer.parseInt(key);
-          key = Constants.IMPLICIT + index;
-      } catch (NumberFormatException ignored) { }
-      if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
-          throw new RuntimeError(name, "Trying to access a private property!");
+      if (!isArray()) {
+          try {
+              int index = Integer.parseInt(key);
+              key = Constants.IMPLICIT + index;
+          } catch (NumberFormatException ignored) { }
+      }
+      if (key.startsWith(Constants.PRIVATE)) {
+           SimiObject self = environment.get(Token.self()).getObject();
+           if (self != this && self != clazz) {
+               throw new RuntimeError(name, "Trying to access a private property!");
+           }
       }
      setField(key, prop);
   }
@@ -262,8 +267,11 @@ abstract class SimiObjectImpl implements SimiObject {
                 }
             } catch (NumberFormatException ignored) { }
 
-            if (key.startsWith(Constants.PRIVATE) && environment.get(Token.self()).getObject() != this) {
-                throw new RuntimeError(name, "Trying to access a private property!");
+            if (key.startsWith(Constants.PRIVATE)) {
+                SimiObject self = environment.get(Token.self()).getObject();
+                if (self != this && self != clazz) {
+                    throw new RuntimeError(name, "Trying to access a private property!");
+                }
             }
             if (fields.containsKey(key)) {
                 return bind(key, fields.get(key));
