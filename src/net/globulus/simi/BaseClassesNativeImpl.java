@@ -466,7 +466,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 return new SimiValue.Number(value.length());
             }
         });
@@ -478,7 +478,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String suffix = arguments.get(1).getValue().getString();
                 return new SimiValue.Number(value.endsWith(suffix));
             }
@@ -491,7 +491,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 SimiObjectImpl argsObject = (SimiObjectImpl) arguments.get(1).getValue().getObject();
                 Object[] args = new Object[argsObject.length()];
                 int i = 0;
@@ -514,7 +514,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String str = arguments.get(1).getValue().getString();
                 int index = arguments.get(2).getValue().getNumber().intValue();
                 int i = value.indexOf(str, index);
@@ -532,7 +532,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String str = arguments.get(1).getValue().getString();
                 int index = arguments.get(2).getValue().getNumber().intValue();
                 int i = value.lastIndexOf(str, index);
@@ -550,7 +550,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 int start = arguments.get(1).getValue().getNumber().intValue();
                 int stop = arguments.get(2).getValue().getNumber().intValue();
                 return new SimiValue.String(value.substring(0, start).concat(value.substring(stop, value.length())));
@@ -564,7 +564,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String old = arguments.get(1).getValue().getString();
                 String newStr = arguments.get(1).getValue().getString();
                 return new SimiValue.String(value.replace(old, newStr));
@@ -579,7 +579,7 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 SimiClassImpl objectClass = (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getValue().getObject();
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String separator = arguments.get(1).getValue().getString();
                 ArrayList<SimiValue> split = Arrays.stream(value.split(Pattern.quote(separator)))
                         .map(SimiValue.String::new)
@@ -595,7 +595,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String prefix = arguments.get(1).getValue().getString();
                 return new SimiValue.Number(value.startsWith(prefix));
             }
@@ -608,7 +608,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 int start = arguments.get(1).getValue().getNumber().intValue();
                 int stop = arguments.get(2).getValue().getNumber().intValue();
                 return new SimiValue.String(value.substring(start, stop));
@@ -622,7 +622,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 return new SimiValue.String(value.toLowerCase());
             }
         });
@@ -634,7 +634,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 return new SimiValue.String(value.toUpperCase());
             }
         });
@@ -646,7 +646,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 return new SimiValue.String(value.trim());
             }
         });
@@ -658,7 +658,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 for (char c : value.toCharArray()) {
                     if (!isAlpha(c)) {
                         return new SimiValue.Number(false);
@@ -679,7 +679,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 for (char c : value.toCharArray()) {
                     if (!isDigit(c)) {
                         return new SimiValue.Number(false);
@@ -700,7 +700,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 StringCharacterIterator iterator = new StringCharacterIterator(value);
                 LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
                 fields.put(Constants.NEXT, new SimiValue.Callable(new SimiCallable() {
@@ -729,7 +729,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String value = prepareStringNativeCall(interpreter, arguments);
+                String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String str = arguments.get(1).getValue().getString();
                 return new SimiValue.Number(value.contains(str));
             }
@@ -764,7 +764,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                String string = prepareStringNativeCall(interpreter, arguments);
+                String string = prepareValueNativeCall(interpreter, arguments).getString();
                 try {
                     double number = Double.parseDouble(string);
                     return new SimiValue.Number(number);
@@ -854,7 +854,8 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                return new SimiValue.String(arguments.get(0).getValue().getNumber().toString());
+                SimiValue value = prepareValueNativeCall(interpreter, arguments);
+                return new SimiValue.String(value.getNumber().toString());
             }
         });
         return new SimiNativeClass(Constants.CLASS_NUMBER, methods);
@@ -981,13 +982,13 @@ class BaseClassesNativeImpl {
         }
     }
 
-    private String prepareStringNativeCall(BlockInterpreter interpreter, List<SimiProperty> arguments) {
+    private SimiValue prepareValueNativeCall(BlockInterpreter interpreter, List<SimiProperty> arguments) {
         SimiProperty arg0 = arguments.get(0);
         SimiObjectImpl self = (SimiObjectImpl) arg0.getValue().getObject();
         SimiEnvironment environment = interpreter.getEnvironment();
         SimiProperty oldSelf = environment.tryGet(Constants.SELF);
         environment.define(Constants.SELF, arg0);
-        String value = self.get(Constants.PRIVATE, environment).getValue().getString();
+        SimiValue value = self.get(Constants.PRIVATE, environment).getValue();
         if (oldSelf != null) {
             environment.define(Constants.SELF, oldSelf);
         } else {

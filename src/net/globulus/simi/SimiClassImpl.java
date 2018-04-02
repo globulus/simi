@@ -1,9 +1,6 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.BlockInterpreter;
-import net.globulus.simi.api.SimiClass;
-import net.globulus.simi.api.SimiProperty;
-import net.globulus.simi.api.SimiValue;
+import net.globulus.simi.api.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,6 +53,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
     }
 
   SimiMethod findMethod(SimiObjectImpl instance, String name, Integer arity) {
+      SimiObjectImpl binder = (instance != null) ? instance : this;
         if (arity == null) {
             Optional<SimiFunction> candidate = methods.entrySet().stream()
                     .filter(e -> e.getKey().name.equals(name))
@@ -67,7 +65,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         } else {
             OverloadableFunction of = new OverloadableFunction(name, arity);
             if (methods.containsKey(of)) {
-                return new SimiMethod(this, methods.get(of).bind(instance));
+                return new SimiMethod(this, methods.get(of).bind(binder));
             }
         }
 
@@ -94,7 +92,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
                 .map(Map.Entry::getValue)
                 .findFirst();
         if (candidate.isPresent()) {
-            return new SimiMethod(this, candidate.get().bind(instance));
+            return new SimiMethod(this, candidate.get().bind((instance != null) ? instance : this));
         }
         if (superclasses != null) {
           for (SimiClassImpl superclass : superclasses) {

@@ -39,7 +39,7 @@ class $Object:
     native builder(): pass
 
     def length(): return @len()
-    def isEmpty(): @len() == 0
+    def isEmpty(): return @len() == 0
     def first():
         if @isEmpty(): return nil
         else: return @0
