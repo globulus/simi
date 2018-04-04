@@ -482,7 +482,7 @@ class Parser {
           if (peek().type == NUMBER) {
               name = new Expr.Variable(consume(NUMBER, "Expected a number or id after '.'."));
           } else if (peek().type == LEFT_PAREN) {
-            name = or();
+            name = primary();
           } else {
             name = new Expr.Variable(consume(IDENTIFIER, "Expected a number of id after '.'."));
           }
