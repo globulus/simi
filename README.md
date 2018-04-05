@@ -350,11 +350,12 @@ Car = Car.builder()\
 
 #### Arithmetic
 
-+, -, *, /, %
++, -, *, /, //, %
 
 * \+ can be used to add values and concatenate strings.
 * Other operators work on Numbers only.
 * \- Can be used as an unary operator.
+* // is the integer division operator, 3 // 2 == 1, while 3 / 2 == 1.5.
 
 #### Assignment
 
@@ -828,3 +829,11 @@ def post(body):
 end
 ```
 3. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
+4. **Object decomposition**: syntax sugar for extracting multiple values out of an object at once:
+```ruby
+obj = [a = 3, b = 4, c = 5]
+[a, b, c] = obj
+print a # 3
+print b # 4
+print c # 5
+```

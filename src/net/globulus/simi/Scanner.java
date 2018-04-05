@@ -103,7 +103,15 @@ class Scanner {
       case '>': addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;
       case '+': addToken(match('=') ? TokenType.PLUS_EQUAL : TokenType.PLUS); break;
       case '-': addToken(match('=') ? TokenType.MINUS_EQUAL : TokenType.MINUS); break;
-      case '/': addToken(match('=') ? TokenType.SLASH_EQUAL : TokenType.SLASH); break;
+      case '/': {
+        if (match('/')) {
+          addToken(TokenType.SLASH_SLASH);
+        } else if (match('=')) {
+          addToken(TokenType.SLASH_EQUAL);
+        } else {
+          addToken(TokenType.SLASH);
+        }
+      } break;
       case '*': {
         if (match('*')) {
           addToken(TokenType.STAR_STAR);

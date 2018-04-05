@@ -199,6 +199,9 @@ class $Number:
     native equals(other): pass
     native compareTo(other): pass
     native toString(): pass
+
+    def sum(a, b): return a + b
+    def product(a, b): return a * b
 end
 
 class $String:
@@ -238,7 +241,6 @@ Math = [
     max = native (a, b): pass,
     min = native (a, b): pass,
     atan2 = native (a, b): pass,
-
     abs = native (a): pass,
     acos = native (a): pass,
     asin = native (a): pass,
@@ -252,6 +254,7 @@ Math = [
     log = native (a): pass,
     log10 = native (a): pass,
     log1p = native (a): pass,
+    logn = def (a, b): return @log(a) / @log(b),
     round = native (a): pass,
     signum = native (a): pass,
     sin = native (a): pass,

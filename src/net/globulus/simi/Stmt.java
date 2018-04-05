@@ -11,7 +11,7 @@ abstract class Stmt implements SimiStatement {
   interface Visitor<R> {
     R visitAnnotationStmt(Annotation stmt);
     R visitBreakStmt(Break stmt);
-    R visitClassStmt(Class stmt);
+    R visitClassStmt(Class stmt, boolean addToEnv);
     R visitContinueStmt(Continue stmt);
     R visitElsifStmt(Elsif stmt);
     R visitExpressionStmt(Expression stmt);
@@ -29,14 +29,14 @@ abstract class Stmt implements SimiStatement {
     List<BlockStmt> getChildren();
   }
 
-  abstract <R> R accept(Visitor<R> visitor);
+  abstract <R> R accept(Visitor<R> visitor, Object... args);
 
   static class Annotation extends Stmt {
     Annotation(Expr expr) {
       this.expr = expr;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitAnnotationStmt(this);
     }
 
@@ -48,7 +48,7 @@ abstract class Stmt implements SimiStatement {
       this.name = name;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitBreakStmt(this);
     }
 
@@ -56,21 +56,31 @@ abstract class Stmt implements SimiStatement {
   }
 
   static class Class extends Stmt {
-    Class(Token name, List<Expr> superclasses, List<Expr.Assign> constants, List<Stmt.Function> methods) {
+    Class(Token name, List<Expr> superclasses, List<Expr.Assign> constants,
+          List<Stmt.Class> innerClasses, List<Stmt.Function> methods,
+          List<Stmt.Annotation> annotations) {
       this.name = name;
       this.superclasses = superclasses;
       this.constants = constants;
+      this.innerClasses = innerClasses;
       this.methods = methods;
+      this.annotations = annotations;
     }
 
-    <R> R accept(Visitor<R> visitor) {
-      return visitor.visitClassStmt(this);
+    <R> R accept(Visitor<R> visitor, Object... args) {
+      boolean addToEnv = true;
+      if (args != null && args.length > 0) {
+        addToEnv = (Boolean) args[0];
+      }
+      return visitor.visitClassStmt(this, addToEnv);
     }
 
     final Token name;
     final List<Expr> superclasses;
     final List<Expr.Assign> constants;
+    final List<Stmt.Class> innerClasses;
     final List<Stmt.Function> methods;
+    final List<Stmt.Annotation> annotations;
   }
 
   static class Continue extends Stmt {
@@ -78,7 +88,7 @@ abstract class Stmt implements SimiStatement {
       this.name = name;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitContinueStmt(this);
     }
 
@@ -90,7 +100,7 @@ abstract class Stmt implements SimiStatement {
       this.expression = expression;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitExpressionStmt(this);
     }
 
@@ -104,7 +114,7 @@ abstract class Stmt implements SimiStatement {
       this.annotations = annotations;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitFunctionStmt(this);
     }
 
@@ -119,7 +129,7 @@ abstract class Stmt implements SimiStatement {
             this.thenBranch = thenBranch;
         }
 
-        <R> R accept(Visitor<R> visitor) {
+        <R> R accept(Visitor<R> visitor, Object... args) {
             return visitor.visitElsifStmt(this);
         }
 
@@ -143,7 +153,7 @@ abstract class Stmt implements SimiStatement {
     }
 
     @Override
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitIfStmt(this);
     }
 
@@ -171,7 +181,7 @@ abstract class Stmt implements SimiStatement {
       this.expression = expression;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitPrintStmt(this);
     }
 
@@ -184,7 +194,7 @@ abstract class Stmt implements SimiStatement {
       this.block = block;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitRescueStmt(this);
     }
 
@@ -198,7 +208,7 @@ abstract class Stmt implements SimiStatement {
       this.value = value;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitReturnStmt(this);
     }
 
@@ -212,7 +222,7 @@ abstract class Stmt implements SimiStatement {
       this.body = body;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitWhileStmt(this);
     }
 
@@ -235,7 +245,7 @@ abstract class Stmt implements SimiStatement {
         this.body = body;
       }
 
-      <R> R accept(Visitor<R> visitor) {
+      <R> R accept(Visitor<R> visitor, Object... args) {
           return visitor.visitForStmt(this);
       }
 
@@ -258,7 +268,7 @@ abstract class Stmt implements SimiStatement {
       this.value = value;
     }
 
-    <R> R accept(Visitor<R> visitor) {
+    <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitYieldStmt(this);
     }
 

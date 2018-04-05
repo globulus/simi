@@ -64,7 +64,7 @@ class Parser {
     }
   }
 
-  private Stmt classDeclaration() {
+  private Stmt.Class classDeclaration() {
     Token name = consume(IDENTIFIER, "Expect class name.");
 
     List<Expr> superclasses = null;
@@ -78,6 +78,7 @@ class Parser {
     consume(COLON, "Expect ':' before class body.");
 
     List<Expr.Assign> constants = new ArrayList<>();
+    List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(END) && !isAtEnd()) {
         if (match(NEWLINE)) {
@@ -85,8 +86,10 @@ class Parser {
         }
         if (match(DEF, NATIVE)) {
             methods.add(function("method"));
+        } else if (match(CLASS)) {
+            innerClasses.add(classDeclaration());
         } else if (match(BANG)) {
-            annotations.add((Stmt.Annotation) annotation());
+            annotations.add(annotation());
         } else {
             Expr expr = assignment();
             if (expr instanceof Expr.Assign) {
@@ -97,10 +100,10 @@ class Parser {
 
     consume(END, "Expect 'end' after class body.");
 
-    return new Stmt.Class(name, superclasses, constants, methods);
+    return new Stmt.Class(name, superclasses, constants, innerClasses, methods, getAnnotations());
   }
 
-  private Stmt annotation() {
+  private Stmt.Annotation annotation() {
     Expr expr = null;
     if (peek().type == LEFT_BRACKET) {
       advance();
@@ -429,7 +432,7 @@ class Parser {
 
   private Expr multiplication() {
     Expr expr = nilCoalescence();
-    while (match(SLASH, STAR, MOD)) {
+    while (match(SLASH, SLASH_SLASH, STAR, MOD)) {
       Token operator = previous();
       Expr right = nilCoalescence();
       expr = new Expr.Binary(expr, operator, right);

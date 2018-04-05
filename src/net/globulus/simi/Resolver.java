@@ -56,7 +56,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitClassStmt(Stmt.Class stmt) {
+  public Void visitClassStmt(Stmt.Class stmt, boolean addToEnv) {
     declare(stmt.name, false);
     define(stmt.name);
     ClassType enclosingClass = currentClass;

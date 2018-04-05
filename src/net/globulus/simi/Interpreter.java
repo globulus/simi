@@ -160,7 +160,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitClassStmt(Stmt.Class stmt) {
+  public SimiProperty visitClassStmt(Stmt.Class stmt, boolean addToEnv) {
       applyAnnotations(stmt);
       String className = stmt.name.lexeme;
       boolean isBaseClass = isBaseClass(className);
@@ -200,6 +200,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
           }
       }
+      for (Stmt.Class innerClass : stmt.innerClasses) {
+        if (innerClass.annotations != null) {
+          for (Stmt.Annotation annotation : innerClass.annotations) {
+            visitAnnotationStmt(annotation);
+          }
+          applyAnnotations(innerClass);
+        }
+        String key = innerClass.name.lexeme;
+        SimiProperty prop = visitClassStmt(innerClass, false);
+        List<SimiObject> annotations = getAnnotations(innerClass);
+        if (prop != null) {
+          constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
+        }
+      }
 
     Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
@@ -225,10 +239,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
     if (isBaseClass) {
         globals.assign(stmt.name, classProp, false);
-    } else {
+    } else if (addToEnv) {
         environment.assign(stmt.name, classProp, false);
     }
-    return null;
+    return classProp;
   }
 
   @Override
@@ -494,6 +508,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
           return new SimiValue.Number(left.getNumber() / right.getNumber());
+      case SLASH_SLASH:
+        checkNumberOperands(expr.operator, left, right);
+        return new SimiValue.Number(left.getNumber().longValue() / right.getNumber().longValue());
       case STAR:
         checkNumberOperands(expr.operator, left, right);
           return new SimiValue.Number(left.getNumber() * right.getNumber());
