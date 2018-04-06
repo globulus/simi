@@ -1,10 +1,53 @@
 import "./Stdlib/File.simi"
 
+def fib(n):
+  if n < 2: return n
+  return fib(n - 1) + fib(n - 2)
+end
+
+#before = clock()
+#print fib(40)
+#after = clock()
+#print after - before
+
 print gu "2+2"
+
+GuClass = gu "class GuClass:
+    def test(): print 'GuClassTest'
+end"
+print GuClass().test()
 
 (def a:
     print a
 end)(3)
+
+Fruit = Enum.of(["APPLE" = [size = 3], "ORANGE" = [size = 2], "BANANA" = [size = 4]])
+apple = Fruit.APPLE
+print "Apple is fruit: " + (apple is Fruit)
+print "Apple == Apple: " + (apple == Fruit.APPLE)
+print "Apple == Banana: " + (apple == Fruit.BANANA)
+Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+potato = Veggies.POTATO
+print "Apple is Veggie: " + (apple is Veggies)
+print "Apple size: " + apple.size
+print "Is potato round: " + potato.isRound()
+print "Is cucumber round: " + Veggies.CUCUMBER.isRound()
+
+class OuterClass:
+
+    class InnerClass:
+        def test(): print "Inner class test"
+    end
+
+    class _PrivateInnerClass:
+        def test(): print "Shouldn't happen"
+    end
+end
+def testInnerClass():
+    OuterClass.InnerClass().test()
+#    OuterClass._PrivateInnerClass().test()
+end
+testInnerClass()
 
 ![method = "POST"]
 def testFile():

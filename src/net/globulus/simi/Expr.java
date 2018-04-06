@@ -166,15 +166,15 @@ abstract class Expr {
   }
 
   static class Gu extends Expr {
-    Gu(Expr.Literal string) {
-      this.string = string;
+    Gu(Expr expr) {
+      this.expr = expr;
     }
 
     <R> R accept(Visitor<R> visitor, Object... params) {
       return visitor.visitGuExpr(this);
     }
 
-    final Expr.Literal string;
+    final Expr expr;
   }
 
   static class Literal extends Expr {

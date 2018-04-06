@@ -229,6 +229,18 @@ class $String:
 
     native builder(): pass
 
+    def sum(a, b): return a + b
+    def from(array, separator):
+        $first = true
+        f = def (a, b):
+            $s = ""
+            if $first: $first = false
+            else: $s = separator
+            return a + $s + b
+       end
+       return array.reduce("", f)
+    end
+
     def length(): return @len()
     def indexOf(str): return @indexOf(str, 0)
     def lastIndexOf(str): return @lastIndexOf(str, @len() - 1)
@@ -275,4 +287,47 @@ class Date:
 
     native now(): pass
     native format(pattern): pass
+end
+
+class Enum:
+    def of(obj):
+        return Enum.of(obj, nil)
+    end
+
+    def of(obj, funs):
+       if not obj or obj.isEmpty(): return nil
+
+        timestamp = clock().toString()
+        joined = obj.reduce("", $String.sum)
+        className = "$EnumClass" + joined + timestamp.substring(timestamp.indexOf('.') + 1)
+
+        isArray = obj.isArray()
+        $args = "value"
+        if not isArray: $args = $String.from(obj.0, ", ")
+
+        guStr = "class " + className + "(Enum):
+            def init(" + $args + "): pass
+            def equals(other): return @matches(other)
+        end"
+        clazz = gu guStr
+
+        for key in obj:
+            $val = nil
+            if isArray: $val = clazz(key)
+            else:
+                args = $String.from(obj.(key).values(), ", ")
+                constructor =  "clazz(" + args + ")"
+                $val = gu constructor
+            end
+            clazz.(key) = $val
+        end
+
+        if funs:
+            for key in funs:
+                clazz.(key) = funs.(key)
+            end
+        end
+
+        return clazz
+    end
 end

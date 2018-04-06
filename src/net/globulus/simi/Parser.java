@@ -336,9 +336,9 @@ class Parser {
     int parenCount = 0;
     for (int i = current + 1; i < len; i++) {
       TokenType type = tokens.get(i).type;
-      if (type == LEFT_PAREN) {
+      if (type == LEFT_PAREN || type == LEFT_BRACKET || type == DOLLAR_LEFT_BRACKET) {
         parenCount++;
-      } else if (type == RIGHT_PAREN) {
+      } else if (type == RIGHT_PAREN || type == RIGHT_BRACKET) {
         if (parenCount == 0) {
           break;
         } else {
@@ -457,8 +457,7 @@ class Parser {
       return new Expr.Unary(operator, right);
     }
     if (match(GU)) {
-      Expr.Literal string = (Expr.Literal) primary();
-      return new Expr.Gu(string);
+      return new Expr.Gu(primary());
     }
     if (match(BANG_BANG)) {
       List<Token> tokens = new ArrayList<>();

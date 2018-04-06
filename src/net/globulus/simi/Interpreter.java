@@ -662,9 +662,24 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitGuExpr(Expr.Gu expr) {
-    Scanner scanner = new Scanner(expr.string.value.getString() + "\n");
+    Expr expression = expr.expr;
+    String string;
+    if (expression instanceof Expr.Variable) {
+      string = evaluate(expression).getValue().getString();
+    } else {
+      string = ((Expr.Literal) expression).value.getString();
+    }
+    Scanner scanner = new Scanner(string + "\n");
     Parser parser = new Parser(scanner.scanTokens(true));
-    return evaluate(((Stmt.Expression) parser.parse().get(0)).expression);
+    Stmt stmt = parser.parse().get(0);
+    if (stmt instanceof Stmt.Class) {
+      return visitClassStmt((Stmt.Class) stmt, false);
+    } else if (stmt instanceof Stmt.Expression) {
+      return evaluate(((Stmt.Expression) stmt).expression);
+    } else {
+      Simi.error(0, "Invalid GU expression!");
+      return null;
+    }
   }
 
   @Override
