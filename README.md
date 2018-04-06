@@ -592,6 +592,40 @@ def testAbs():
 ```
 As you can see, the *rescue* statement is more concise and leads to less nesting, while allowing to you explore all the possible execution paths.
 
+### Enums
+
+Šimi currently doesn't support enums as a first-class language feature, but does bring them in via a pure-Šimi function *Enum.of()*, which is a part of Stdlib. There are no strong reasons or opinions to back this approach: the implementation was coded as an exercise in Šimi metaprogramming, and was found satisfactory and in-line with the general philosophy of reducing cognitive load needed to learn and use the language.
+Roughly speaking, the idea behind an enum is to create a custom data type that has a fixed amount of discrete possible values. At the simplest level, *Enum.of()* converts an array of strings into a class that contains like-named intances of that same class. Check out the following example:
+```ruby
+Fruit = Enum.of(["APPLE", "ORANGE", "BANANA"])
+apple = Fruit.APPLE
+print "Apple is fruit: " + (apple is Fruit) # true
+print "Apple == Apple: " + (apple == Fruit.APPLE) # true
+print "Apple == Banana: " + (apple == Fruit.BANANA) # false
+```
+Most of the time, this is all you need from an enum - a set of possible values that you can simply reference, and can use with *==* and *is* operators. Here, Fruit is a class that extends *Enum* class, and it has three static fields: APPLE, ORANGE, and BANANA, all of which are instances of the Fruit class. Each intance has a field named *value* that contains the string representation of the key (i.e, it's "APPLE" for APPLE).
+
+Instead of using an array, you can pass a key-value object to the *Enum.of()* function to associate data with your enum values:
+```ruby
+Fruit = Enum.of(["APPLE" = 3, "ORANGE" = 2, "BANANA" = 10])
+apple = Fruit.APPLE
+print apple.value # 3
+
+Veggies = Enum.of(["POTATO" = [count = 10, location = "cellar"],\
+                    "CUCUMBER" = [count = 5, location = "closet"]])
+print Veggies.POTATO.count # 10
+print Veggies.CUCUMBER.location # closet
+```
+If the object you passed has non-object keyes, the resulting enum will retain the *value* field. Otherwise, the associated object will be decomposed and its keyes used as fields of the resulting enum class. Note that all the objects that you pass as values need to be of the same type, i.e have the exact same keyes.
+
+Lastly, the *Enum.of()* can take a second parameter, a key-value object containing functions that will be associated with the resulting enum class:
+```ruby
+Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+print "Is potato round: " + potato.isRound() # true
+print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
+```
+Overall, that should satisfy most, if not all needs that a developer has when leveraging enums in their code. If you go as far as creating enums that have both value objects and functions associated with them, the legibility of *Enum.of()* usage starts to deteriorate and would better be served with a dedicated language construct. Also make sure to check out its implementation in Stdlib to learn more on metaprogramming in Šimi!
+
 ### Importing code
 
 Šimi's *import* keyword is used to import code from external files into the current file. Importing is resolved in the pre-processing phase, in which all the imports are recursively resolved until all are taken care of. Each file will be imported only once.
