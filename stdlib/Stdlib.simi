@@ -302,8 +302,9 @@ class Enum:
         className = "$EnumClass" + joined + timestamp.substring(timestamp.indexOf('.') + 1)
 
         isArray = obj.isArray()
+        isFirstValueScalar = obj.0 is not $Object
         $args = "value"
-        if not isArray: $args = $String.from(obj.0, ", ")
+        if not isArray and not isFirstValueScalar : $args = $String.from(obj.0, ", ")
 
         guStr = "class " + className + "(Enum):
             def init(" + $args + "): pass
@@ -314,6 +315,7 @@ class Enum:
         for key in obj:
             $val = nil
             if isArray: $val = clazz(key)
+            elsif isFirstValueScalar: $val = clazz(obj.(key))
             else:
                 args = $String.from(obj.(key).values(), ", ")
                 constructor =  "clazz(" + args + ")"
