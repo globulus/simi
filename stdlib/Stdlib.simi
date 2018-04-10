@@ -304,7 +304,7 @@ class Enum:
         isArray = obj.isArray()
         isFirstValueScalar = obj.0 is not $Object
         $args = "value"
-        if not isArray and not isFirstValueScalar : $args = $String.from(obj.0, ", ")
+        if not isArray and not isFirstValueScalar: $args = $String.from(obj.0, ", ")
 
         guStr = "class " + className + "(Enum):
             def init(" + $args + "): pass
