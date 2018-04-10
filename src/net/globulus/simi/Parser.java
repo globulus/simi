@@ -180,7 +180,7 @@ class Parser {
 
   private Stmt whenStatement() {
     Token when = previous();
-    Expr left = primary();
+    Expr left = call();
     consume(COLON, "Expect a ':' after when.");
     consume(NEWLINE, "Expect a newline after when ':.");
     Stmt.Elsif firstElsif = null;
@@ -190,17 +190,30 @@ class Parser {
       if (match(NEWLINE)) {
         continue;
       }
-      Token op;
-      if (match(IS, ISNOT, IN, NOTIN)) {
-        op = previous();
-      } else if (match(ELSE)) {
-        elseBranch = block("else", true);
+      List<Expr.Binary> conditions = new ArrayList<>();
+      do {
+        Token op;
+        if (match(IS, ISNOT, IN, NOTIN)) {
+          op = previous();
+        } else if (match(ELSE)) {
+          elseBranch = block("else", true);
+          break;
+        } else {
+          op = new Token(EQUAL_EQUAL, null, null, when.line);
+        }
+        Expr right = call();
+        conditions.add(new Expr.Binary(left, op, right));
+        match(OR);
+      } while (!check(COLON));
+      if (conditions.isEmpty()) {
         continue;
-      } else {
-        op = new Token(EQUAL_EQUAL, null, null, when.line);
       }
-      Expr right = or();
-      Stmt.Elsif elsif = new Stmt.Elsif(new Expr.Binary(left, op, right), block("when", true));
+      Expr condition = conditions.get(0);
+      Token or = new Token(OR, null, null, when.line);
+      for (int i = 1; i < conditions.size(); i++) {
+        condition = new Expr.Logical(condition, or, conditions.get(i));
+      }
+      Stmt.Elsif elsif = new Stmt.Elsif(condition, block("when", true));
       if (firstElsif == null) {
         firstElsif = elsif;
       } else {

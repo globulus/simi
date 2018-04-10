@@ -796,11 +796,11 @@ class BaseClassesNativeImpl {
 
                     @Override
                     public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                        SimiValue value = arguments.get(0).getValue();
-                        if (value == null) {
+                        SimiProperty prop = arguments.get(0);
+                        if (prop == null || prop.getValue() == null) {
                             sb.append("nil");
                         } else {
-                            sb.append(value.toString());
+                            sb.append(prop.getValue().toString());
                         }
                         return objectValue;
                     }
