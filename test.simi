@@ -74,6 +74,15 @@ print !!testFile
 def printFunAnnotations(fun): print !!fun
 printFunAnnotations(testFile)
 
+def testObjectDecomp():
+    print "Obj decomp"
+    obj = [a = 3, b = 4]
+    [a, c] = obj
+    print a
+    print b
+end
+testObjectDecomp()
+
 def testYieldFun():
     print "before yield"
     for i in 3.times():

@@ -224,6 +224,15 @@ array.4 = nil # Removed the fifth element from the array
 
 Objects are pass-by-reference.
 
+There is an object decomposition syntax sugar for extracting multiple values out of an object at once:
+```ruby
+obj = [a = 3, b = 4, c = 5]
+[a, b, d] = obj
+print a # 3
+print b # 4
+print d # nil
+```
+
 ##### Objects vs Arrays
 Šimi Arrays are Objects, insofar as they inherit the $Object class, and are exposed via the SimiObject interface in the API. That being said, you cannot really mix arrays and keyed objects together, i.e you can't invoke an addAll method on an array with an object parameter, and vice-versa. The reasons for that are twofold, the first being that such operations don't really make sense and their outcome would need to be based on a contract, which would unnecessarily complicate the language. The second reason is performance - if arrays and keyed objects were implemented the same way in the interpreter, the execution time of list operations such as insertion would be much worse.
 
@@ -313,7 +322,7 @@ class Point:
     def equals(other): return @matches(other)
 end
 ```
-* All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - methods that have references to *self* in their bodies are instance-only as the *self* will be nil when used on a class.
+* All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
 ```ruby
 class Private:
@@ -863,11 +872,3 @@ def post(body):
 end
 ```
 3. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
-4. **Object decomposition**: syntax sugar for extracting multiple values out of an object at once:
-```ruby
-obj = [a = 3, b = 4, c = 5]
-[a, b, c] = obj
-print a # 3
-print b # 4
-print c # 5
-```

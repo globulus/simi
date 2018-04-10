@@ -103,6 +103,22 @@ abstract class Expr {
     final List<Stmt.Annotation> annotations;
   }
 
+  static class ObjectDecomp extends Expr {
+    ObjectDecomp(List<Assign> assigns) {
+      this.assigns = assigns;
+    }
+
+    <R> R accept(Visitor<R> visitor, Object... params) {
+      R value = null;
+      for (Assign assign : assigns) {
+        value = visitor.visitAssignExpr(assign);
+      }
+      return value;
+    }
+
+    final List<Assign> assigns;
+  }
+
   static class Binary extends Expr {
     Binary(Expr left, Token operator, Expr right) {
       this.left = left;

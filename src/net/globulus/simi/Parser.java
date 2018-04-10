@@ -374,6 +374,18 @@ class Parser {
         } else {
           Simi.error(equals, "Cannot use compound assignment operators with setters!");
         }
+      } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
+        Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
+        if (objectLiteral.isDictionary || objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
+          Simi.error(equals.line, "Invalid object decomposition syntax.");
+        }
+        List<Expr.Assign> assigns = new ArrayList<>();
+        List<Stmt.Annotation> annotations = getAnnotations();
+        for (Expr prop : objectLiteral.props) {
+          Token name = ((Expr.Variable) prop).name;
+          assigns.add(new Expr.Assign(name, new Expr.Get(name, value, prop, null), annotations));
+        }
+        return new Expr.ObjectDecomp(assigns);
       }
       Simi.error(equals, "Invalid assignment target.");
     }
