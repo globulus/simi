@@ -462,6 +462,18 @@ elsif a < d:
 end else: print f
 ```
 
+#### when
+A syntax sugar for a lot of elsifs when you're checking against the same value. It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*. *When* statement can be made exhaustive by adding an *else* block at the end.
+```ruby
+when a:
+    5: print "a is 5"
+    10: print "a is 10"
+    is $String: print "a is String"
+    not in Range(12, 16): print "not between 12 and 16"
+    else: print "reached the default branch"
+end
+```
+
 #### The *ife* function
 While Šimi does not offer the ternary operator (?:), the Stdlib contains a global function named **ife**, which works exactly as ?: does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
 ```ruby
@@ -850,17 +862,7 @@ userId varchar(255),
 ### To-Dos
 
 Here's a list of features that might make it into the language at some point in the future:
-1. **when** statement: A syntax sugar for a lot of elsifs when you're checking against the same variable. It will likely support *in* and *is*, but I'm not entirely sure of other operators:
-```ruby
-when a:
-    5: print "a is 5"
-    10: print "a is 10"
-    not in Range(12, 16): print "not between 12 and 16"
-    is $String: print "a is String"
-    else: print "reached the default branch"
-end
-```
-2. **async/function yield** expression: a function would yield until the execution of another function is done, and then resume its execution. This would allow for clearer code, without using callbacks. The basis for this is already implemented via the *yield statement*.
+1. **async/function yield** expression: a function would yield until the execution of another function is done, and then resume its execution. This would allow for clearer code, without using callbacks. The basis for this is already implemented via the *yield statement*.
 ```ruby
 def post(body):
     request = Request(body, [cookie = "123])
@@ -871,4 +873,4 @@ def post(body):
     if result ...etc etc...
 end
 ```
-3. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
+2. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.

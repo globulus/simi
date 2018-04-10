@@ -124,6 +124,9 @@ class Parser {
     if (match(IF)) {
         return ifStatement();
     }
+    if (match(WHEN)) {
+      return whenStatement();
+    }
     if (match(PRINT)) {
         return printStatement(lambda);
     }
@@ -173,6 +176,39 @@ class Parser {
       elseBranch = block("else", true);
     }
     return new Stmt.If(new Stmt.Elsif(condition, thenBranch), elsifs, elseBranch);
+  }
+
+  private Stmt whenStatement() {
+    Token when = previous();
+    Expr left = primary();
+    consume(COLON, "Expect a ':' after when.");
+    consume(NEWLINE, "Expect a newline after when ':.");
+    Stmt.Elsif firstElsif = null;
+    List<Stmt.Elsif> elsifs = new ArrayList<>();
+    Expr.Block elseBranch = null;
+    while (!check(END) && !isAtEnd()) {
+      if (match(NEWLINE)) {
+        continue;
+      }
+      Token op;
+      if (match(IS, ISNOT, IN, NOTIN)) {
+        op = previous();
+      } else if (match(ELSE)) {
+        elseBranch = block("else", true);
+        continue;
+      } else {
+        op = new Token(EQUAL_EQUAL, null, null, when.line);
+      }
+      Expr right = or();
+      Stmt.Elsif elsif = new Stmt.Elsif(new Expr.Binary(left, op, right), block("when", true));
+      if (firstElsif == null) {
+        firstElsif = elsif;
+      } else {
+        elsifs.add(elsif);
+      }
+    }
+    consume(END, "Expect end at the end of when.");
+    return new Stmt.If(firstElsif, elsifs, elseBranch);
   }
 
   private Stmt printStatement(boolean lambda) {

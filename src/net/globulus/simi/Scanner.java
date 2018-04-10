@@ -39,6 +39,7 @@ class Scanner {
     keywords.put(Constants.SELF,   TokenType.SELF);
     keywords.put(Constants.SUPER,  TokenType.SUPER);
     keywords.put("true",   TokenType.TRUE);
+    keywords.put("when",  TokenType.WHEN);
     keywords.put("while",  TokenType.WHILE);
     keywords.put("yield",  TokenType.YIELD);
   }

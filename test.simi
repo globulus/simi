@@ -83,6 +83,19 @@ def testObjectDecomp():
 end
 testObjectDecomp()
 
+def testWhen():
+    print "When test"
+    a = 13
+    when a:
+        5: print "a is 5"
+        10: print "a is 10"
+        is $String: print "a is String"
+        not in Range(12, 16): print "not between 12 and 16"
+        else: print "reached the default branch"
+    end
+end
+testWhen()
+
 def testYieldFun():
     print "before yield"
     for i in 3.times():
