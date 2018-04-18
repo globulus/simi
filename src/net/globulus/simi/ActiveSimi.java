@@ -4,8 +4,6 @@ import net.globulus.simi.api.SimiProperty;
 import net.globulus.simi.api.SimiValue;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -16,13 +14,20 @@ public class ActiveSimi {
     private static Interpreter interpreter;
     static boolean hadError = false;
     static boolean hadRuntimeError = false;
+    private static ImportResolver importResolver;
 
     private ActiveSimi() { }
 
-    public static void load(String source) throws IOException {
+    public static void load(String... files) throws IOException {
         ErrorHub.sharedInstance().removeWatcher(WATCHER);
         ErrorHub.sharedInstance().addWatcher(WATCHER);
-        run(source);
+        StringBuilder source = new StringBuilder("import \"stdlib/Stdlib.simi\"\n\n");
+        for (String file : files) {
+            source.append("import \"")
+                    .append(file)
+                    .append("\"\n");
+        }
+        run(source.toString());
     }
 
     public static SimiProperty eval(String className, String methodName, SimiProperty... params) {
@@ -51,10 +56,15 @@ public class ActiveSimi {
         return runExpression(sb.toString());
     }
 
-    private static String readFile(String path, boolean prepend) throws IOException {
-        byte[] bytes = Files.readAllBytes(Paths.get(path));
-        String content = new String(bytes, Charset.defaultCharset());
-        return content;
+    public static void setImportResolver(ImportResolver ir) {
+        importResolver = ir;
+    }
+
+    private static String readFile(String path) {
+        if (importResolver == null) {
+            throw new IllegalStateException("ImportResolver not initialized!");
+        }
+        return importResolver.readFile(path);
     }
 
     private static void run(String source) throws IOException {
@@ -118,7 +128,7 @@ public class ActiveSimi {
             if (pathString.endsWith(".jar")) {
                 nativeModulesManager.loadJar(path.toUri().toURL());
             } else if (pathString.endsWith(".simi")) {
-                List<Token> tokens = new Scanner(readFile(location, false)).scanTokens(false);
+                List<Token> tokens = new Scanner(readFile(location)).scanTokens(false);
                 result.addAll(scanImports(tokens, imports, nativeModulesManager));
             }
         }
@@ -142,4 +152,8 @@ public class ActiveSimi {
             hadRuntimeError = true;
         }
     };
+
+    public interface ImportResolver {
+        String readFile(String fileName);
+    }
 }
