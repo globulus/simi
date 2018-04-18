@@ -111,7 +111,7 @@ class Parser {
     } else if (peek().type == IDENTIFIER) {
       expr = call();
     } else {
-      Simi.error(peek(), "Annotation expect either an object literal or a constructor invocation!");
+      ErrorHub.sharedInstance().error(peek(), "Annotation expect either an object literal or a constructor invocation!");
     }
     checkStatementEnd(false);
     return new Stmt.Annotation(expr);
@@ -281,7 +281,7 @@ class Parser {
     Token keyword = previous();
     Expr.Block block = block("rescue", true);
     if (block.params.size() != 1) {
-      Simi.error(keyword, "Rescue block expects exactly 1 parameter!");
+      ErrorHub.sharedInstance().error(keyword, "Rescue block expects exactly 1 parameter!");
     }
     return new Stmt.Rescue(keyword, block);
   }
@@ -421,12 +421,12 @@ class Parser {
           Expr.Get get = (Expr.Get) expr;
           return new Expr.Set(get.origin, get.object, get.name, value);
         } else {
-          Simi.error(equals, "Cannot use compound assignment operators with setters!");
+          ErrorHub.sharedInstance().error(equals, "Cannot use compound assignment operators with setters!");
         }
       } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
         Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
         if (objectLiteral.isDictionary || objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
-          Simi.error(equals.line, "Invalid object decomposition syntax.");
+          ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
         }
         List<Expr.Assign> assigns = new ArrayList<>();
         List<Stmt.Annotation> annotations = getAnnotations();
@@ -436,7 +436,7 @@ class Parser {
         }
         return new Expr.ObjectDecomp(assigns);
       }
-      Simi.error(equals, "Invalid assignment target.");
+      ErrorHub.sharedInstance().error(equals, "Invalid assignment target.");
     }
     return expr;
   }
@@ -527,7 +527,7 @@ class Parser {
         match(DOT);
       }
       if (tokens.isEmpty()) {
-        Simi.error(peek(), "Annotations operator needs params!");
+        ErrorHub.sharedInstance().error(peek(), "Annotations operator needs params!");
       }
       return new Expr.Annotations(tokens);
     }
@@ -750,7 +750,7 @@ class Parser {
   }
 
   private ParseError error(Token token, String message) {
-    Simi.error(token, message);
+    ErrorHub.sharedInstance().error(token, message);
     return new ParseError();
   }
 

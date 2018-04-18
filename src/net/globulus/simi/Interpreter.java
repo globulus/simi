@@ -5,7 +5,7 @@ import net.globulus.simi.api.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.Visitor<Object> {
+class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.Visitor<SimiProperty> {
 
   final NativeModulesManager nativeModulesManager;
   private final Environment globals = new Environment();
@@ -39,18 +39,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     }, "clock", null));
   }
 
-  void interpret(List<Stmt> statements) {
+  SimiProperty interpret(List<Stmt> statements) {
+    SimiProperty result = null;
     try {
       for (Stmt statement : statements) {
         if (raisedExceptions.isEmpty()) {
-          execute(statement);
+          result = execute(statement);
         } else {
           throw raisedExceptions.peek();
         }
       }
     } catch (RuntimeError error) {
-      Simi.runtimeError(error);
+      ErrorHub.sharedInstance().runtimeError(error);
     }
+    return result;
   }
 
   private SimiProperty evaluate(Expr expr) {
@@ -61,8 +63,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     return expr.accept(this, params);
   }
 
-  private void execute(Stmt stmt) {
-    stmt.accept(this);
+  private SimiProperty execute(Stmt stmt) {
+    return stmt.accept(this);
   }
 
   void resolve(Expr expr, int depth) {
@@ -145,16 +147,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitAnnotationStmt(Stmt.Annotation stmt) {
+  public SimiProperty visitAnnotationStmt(Stmt.Annotation stmt) {
     SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.expr).getValue(), this);
     annotationsBuffer.add(object);
     return null;
   }
 
   @Override
-  public Void visitBreakStmt(Stmt.Break stmt) {
+  public SimiProperty visitBreakStmt(Stmt.Break stmt) {
     if (loopBlocks.isEmpty()) {
-      Simi.error(stmt.name, "Break outside a loop!");
+      ErrorHub.sharedInstance().error(stmt.name, "Break outside a loop!");
     }
     throw new Break();
   }
@@ -246,17 +248,16 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitContinueStmt(Stmt.Continue stmt) {
+  public SimiProperty visitContinueStmt(Stmt.Continue stmt) {
     if (loopBlocks.isEmpty()) {
-      Simi.error(stmt.name, "Continue outside a loop!");
+      ErrorHub.sharedInstance().error(stmt.name, "Continue outside a loop!");
     }
     throw new Continue();
   }
 
   @Override
-  public Void visitExpressionStmt(Stmt.Expression stmt) {
-    evaluate(stmt.expression);
-    return null; // [void]
+  public SimiProperty visitExpressionStmt(Stmt.Expression stmt) {
+    return evaluate(stmt.expression);
   }
 
   @Override
@@ -269,7 +270,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Object visitElsifStmt(Stmt.Elsif stmt) {
+  public SimiProperty visitElsifStmt(Stmt.Elsif stmt) {
     if (isTruthy(evaluate(stmt.condition))) {
       BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.thenBranch, yieldedStmts);
       try {
@@ -283,18 +284,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         throw returnYield;
       }
       this.environment.endBlock(stmt, yieldedStmts);
-      return true;
+      return new SimiValue.Number(true);
     }
-    return false;
+    return new SimiValue.Number(false);
   }
 
   @Override
-  public Void visitIfStmt(Stmt.If stmt) {
-    if ((Boolean) visitElsifStmt(stmt.ifstmt)) {
+  public SimiProperty visitIfStmt(Stmt.If stmt) {
+    if (visitElsifStmt(stmt.ifstmt).getValue().getNumber() != 0) {
       return null;
     }
     for (Stmt.Elsif elsif : stmt.elsifs) {
-      if ((Boolean) visitElsifStmt(elsif)) {
+      if (visitElsifStmt(elsif).getValue().getNumber() != 0) {
         return null;
       }
     }
@@ -316,20 +317,20 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitPrintStmt(Stmt.Print stmt) {
+  public SimiProperty visitPrintStmt(Stmt.Print stmt) {
     SimiProperty prop = evaluate(stmt.expression);
     System.out.println(stringify(prop));
-    return null;
+    return prop;
   }
 
   @Override
-  public Void visitRescueStmt(Stmt.Rescue stmt) {
+  public SimiProperty visitRescueStmt(Stmt.Rescue stmt) {
     executeRescueBlock(stmt, null);
     return null;
   }
 
   @Override
-  public Void visitReturnStmt(Stmt.Return stmt) {
+  public SimiProperty visitReturnStmt(Stmt.Return stmt) {
     SimiProperty prop = null;
     if (stmt.value != null) {
       prop = evaluate(stmt.value);
@@ -338,7 +339,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Object visitYieldStmt(Stmt.Yield stmt) {
+  public SimiProperty visitYieldStmt(Stmt.Yield stmt) {
     SimiProperty prop = null;
     if (stmt.value != null) {
       prop = evaluate(stmt.value);
@@ -347,7 +348,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitWhileStmt(Stmt.While stmt) {
+  public SimiProperty visitWhileStmt(Stmt.While stmt) {
     loopBlocks.push(stmt.body);
     BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body, yieldedStmts);
     while (isTruthy(evaluate(stmt.condition).getValue())) {
@@ -371,7 +372,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   @Override
-  public Void visitForStmt(Stmt.For stmt) {
+  public SimiProperty visitForStmt(Stmt.For stmt) {
     BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body, yieldedStmts);
 
     List<Expr> emptyArgs = new ArrayList<>();
@@ -677,7 +678,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     } else if (stmt instanceof Stmt.Expression) {
       return evaluate(((Stmt.Expression) stmt).expression);
     } else {
-      Simi.error(0, "Invalid GU expression!");
+      ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
       return null;
     }
   }

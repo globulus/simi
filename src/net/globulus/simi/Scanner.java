@@ -170,7 +170,7 @@ class Scanner {
         } else if (isAlpha(c)) {
           identifier();
         } else {
-          Simi.error(line, "Unexpected character.");
+        ErrorHub.sharedInstance().error(line, "Unexpected character.");
         }
         break;
     }
@@ -210,7 +210,7 @@ class Scanner {
         advance();
         advance();
       } else {
-        Simi.error(line, "Expected a digit or + or - after E!");
+        ErrorHub.sharedInstance().error(line, "Expected a digit or + or - after E!");
       }
       while (isDigitOrUnderscore(peek())) advance();
     }
@@ -227,7 +227,7 @@ class Scanner {
 
     // Unterminated string.
     if (isAtEnd()) {
-      Simi.error(line, "Unterminated string.");
+      ErrorHub.sharedInstance().error(line, "Unterminated string.");
       return;
     }
 

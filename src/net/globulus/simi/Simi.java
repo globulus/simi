@@ -17,6 +17,7 @@ public class Simi {
   static boolean hadRuntimeError = false;
 
   public static void main(String[] args) throws IOException {
+    ErrorHub.sharedInstance().addWatcher(WATCHER);
     if (args.length > 1) {
       System.out.println("Usage: simi [script]");
     } else if (args.length == 1) {
@@ -24,6 +25,7 @@ public class Simi {
     } else {
       runPrompt();
     }
+    ErrorHub.sharedInstance().removeWatcher(WATCHER);
   }
 
   private static String readFile(String path, boolean prepend) throws IOException {
@@ -117,27 +119,20 @@ public class Simi {
     return result;
   }
 
-  static void error(int line, String message) {
-    report(line, "", message);
-  }
-
-  private static void report(int line, String where, String message) {
-    System.err.println(
-        "[line " + line + "] Error" + where + ": " + message);
-    hadError = true;
-  }
-
-  static void error(Token token, String message) {
-    if (token.type == TokenType.EOF) {
-      report(token.line, " at end", message);
-    } else {
-      report(token.line, " at '" + token.lexeme + "'", message);
+  private static final ErrorWatcher WATCHER = new ErrorWatcher() {
+    @Override
+    public void report(int line, String where, String message) {
+      System.err.println(
+              "[line " + line + "] Error" + where + ": " + message);
+      hadError = true;
     }
-  }
 
-  static void runtimeError(RuntimeError error) {
-    System.err.println(error.getMessage() +
-        "\n[line " + error.token.line + "]");
-    hadRuntimeError = true;
-  }
+    @Override
+    public void runtimeError(RuntimeError error) {
+
+      System.err.println(error.getMessage() +
+              "\n[line " + error.token.line + "]");
+      hadRuntimeError = true;
+    }
+  };
 }

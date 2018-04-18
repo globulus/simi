@@ -463,11 +463,11 @@ end else: print f
 ```
 
 #### when
-A syntax sugar for a lot of elsifs when you're checking against the same value. It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*. *When* statement can be made exhaustive by adding an *else* block at the end.
+A syntax sugar for a lot of elsifs when you're checking against the same value. It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*. You can use the *or* operator to check against multiple conditions in a single branch. *When* statement can be made exhaustive by adding an *else* block at the end.
 ```ruby
 when a:
     5: print "a is 5"
-    10: print "a is 10"
+    10 or 13 or 15: print "a is 10 or 13 or 15"
     is $String: print "a is String"
     not in Range(12, 16): print "not between 12 and 16"
     else: print "reached the default branch"
