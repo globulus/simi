@@ -859,6 +859,10 @@ userId varchar(255),
 );
 ```
 
+### Android integration
+
+You can use Šimi in your Android app. Check out [our other project](https://github.com/globulus/simi-android)!
+
 ### To-Dos
 
 Here's a list of features that might make it into the language at some point in the future:

@@ -982,4 +982,24 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       annotations.remove(key);
       return list;
   }
+
+  public List<String> defineTempVars(SimiProperty... vars) {
+    long timestamp = System.currentTimeMillis();
+    String prefix = "_tempvar_";
+    List<String> names = new ArrayList<>(vars.length);
+    int count = 0;
+    for (SimiProperty var : vars) {
+      String name = prefix + (timestamp + count);
+      count++;
+      names.add(name);
+      environment.define(name, var);
+    }
+    return names;
+  }
+
+  public void undefineTempVars(List<String> names) {
+    for (String name : names) {
+      environment.define(name, null);
+    }
+  }
 }

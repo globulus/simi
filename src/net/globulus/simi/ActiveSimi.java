@@ -1,7 +1,6 @@
 package net.globulus.simi;
 
 import net.globulus.simi.api.SimiProperty;
-import net.globulus.simi.api.SimiValue;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,29 +30,34 @@ public class ActiveSimi {
     }
 
     public static SimiProperty eval(String className, String methodName, SimiProperty... params) {
+        if (interpreter == null) {
+            throw new IllegalStateException("Must call load() before using eval!");
+        }
         StringBuilder sb = new StringBuilder();
         if (className != null) {
             sb.append(className).append('.');
         }
         sb.append(methodName).append('(');
+        List<String> names = interpreter.defineTempVars(params);
         boolean first = true;
-        for (SimiProperty param : params) {
+        for (String name : names) {
             if (first) {
                 first = false;
             } else {
                 sb.append(", ");
             }
-            SimiValue value = param.getValue();
-            String s;
-            if (value instanceof SimiValue.String) {
-                s = "\"" + value.toString() + "\"";
-            } else {
-                s = value.toString();
-            }
-            sb.append(s);
+            sb.append(name);
         }
         sb.append(')');
-        return runExpression(sb.toString());
+        SimiProperty result = runExpression(sb.toString());
+        interpreter.undefineTempVars(names);
+        return result;
+    }
+
+    public static void evalAsync(Callback callback, String className, String methodName, SimiProperty... params) {
+        synchronized (interpreter) {
+            new Thread(() -> callback.done(eval(className, methodName, params))).run();
+        }
     }
 
     public static void setImportResolver(ImportResolver ir) {
@@ -153,7 +157,18 @@ public class ActiveSimi {
         }
     };
 
+    static SimiClassImpl getObjectClass() {
+        if (interpreter == null) {
+            return null;
+        }
+        return (SimiClassImpl) interpreter.getGlobal(Constants.CLASS_OBJECT).getValue().getObject();
+    }
+
     public interface ImportResolver {
         String readFile(String fileName);
+    }
+
+    public interface Callback {
+        void done(SimiProperty result);
     }
 }
