@@ -1,6 +1,55 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax.
 
+- Table of contents
+    + [Basic syntax](#basic-syntax)
+      - [Keywords](#keywords)
+      - [Comments](#comments)
+      - [Identifiers](#identifiers)
+      - [Newlines](#newlines)
+      - [pass](#pass)
+      - [Code blocks](#code-blocks)
+      - [Variables and constants](#variables-and-constants)
+    + [Values](#values)
+      - [Numbers](#numbers)
+      - [Strings](#strings)
+        * [Boxed numbers and strings](#boxed-numbers-and-strings)
+      - [Functions](#functions)
+      - [Objects](#objects)
+        * [Objects vs Arrays](#objects-vs-arrays)
+      - [Value conversions](#value-conversions)
+    + [Classes](#classes)
+    + [Operators](#operators)
+      - [Arithmetic](#arithmetic)
+      - [Assignment](#assignment)
+      - [Logical](#logical)
+      - [Comparison](#comparison)
+      - [is and is not](#is-and-is-not)
+      - [in and not in](#in-and-not-in)
+      - [?? - nil coalescence](#-----nil-coalescence)
+      - [? - nil silencing](#----nil-silencing)
+      - [@ - self referencing](#----self-referencing)
+    + [Control flow](#control-flow)
+      - [Truth](#truth)
+      - [if-elsif-else](#if-elsif-else)
+      - [when](#when)
+      - [The *ife* function](#the--ife--function)
+      - [while loop](#while-loop)
+      - [for-in loop](#for-in-loop)
+      - [Iterators and iterables](#iterators-and-iterables)
+      - [break and continue](#break-and-continue)
+      - [return and yield](#return-and-yield)
+    + [Exception handling](#exception-handling)
+      - [Exceptions](#exceptions)
+      - [The *rescue* block](#the--rescue--block)
+    + [Enums](#enums)
+    + [Importing code](#importing-code)
+    + [Java API](#java-api)
+    + [Annotations](#annotations)
+    + [Android integration](#android-integration)
+    + [iOS integration](#ios-integration)
+    + [To-Dos](#to-dos)
+
 ### Basic syntax
 
 #### Keywords
@@ -862,6 +911,10 @@ userId varchar(255),
 ### Android integration
 
 You can use Šimi in your Android app. Check out [our other project](https://github.com/globulus/simi-android)!
+
+### iOS integration
+
+You can use Šimi in your iOS app. Check out [our other project](https://github.com/globulus/simi-ios)!
 
 ### To-Dos
 
