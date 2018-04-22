@@ -1,6 +1,8 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax.
 
+You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios).
+
 - Table of contents
     + [Basic syntax](#basic-syntax)
       - [Keywords](#keywords)
@@ -691,10 +693,11 @@ If the object you passed has non-object keyes, the resulting enum will retain th
 Lastly, the *Enum.of()* can take a second parameter, a key-value object containing functions that will be associated with the resulting enum class:
 ```ruby
 Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+potato = Veggies.POTATO
 print "Is potato round: " + potato.isRound() # true
 print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
 ```
-Overall, that should satisfy most, if not all needs that a developer has when leveraging enums in their code. If you go as far as creating enums that have both value objects and functions associated with them, the legibility of *Enum.of()* usage starts to deteriorate and would better be served with a dedicated language construct. Also make sure to check out its implementation in Stdlib to learn more on metaprogramming in Šimi!
+Overall, that should satisfy most, if not all the needs that a developer has when leveraging enums in their code. If you go as far as creating enums that have both value objects and functions associated with them, the legibility of *Enum.of()* usage starts to deteriorate and would better be served with a dedicated language construct. Also make sure to check out its implementation in Stdlib to learn more on metaprogramming in Šimi!
 
 ### Importing code
 
