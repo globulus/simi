@@ -9,6 +9,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
   final String name;
   final List<SimiClassImpl> superclasses;
+  final Stmt.Class stmt;
 
   private final Map<OverloadableFunction, SimiFunction> methods;
 
@@ -19,16 +20,19 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
        this.name = name;
        superclasses = null;
        methods = new HashMap<>();
+       stmt = null;
     }
 
   SimiClassImpl(String name,
                 List<SimiClassImpl> superclasses,
                 Map<String, SimiProperty> constants,
-                Map<OverloadableFunction, SimiFunction> methods) {
+                Map<OverloadableFunction, SimiFunction> methods,
+                Stmt.Class stmt) {
     super(CLASS, !name.startsWith(Constants.MUTABLE), new LinkedHashMap<>(constants));
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
+    this.stmt = stmt;
   }
 
     @Override
@@ -172,6 +176,14 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
     return allKeys().stream().map(SimiValue.String::new).collect(Collectors.toCollection(ArrayList::new));
   }
 
+  @Override
+  public String toCode() {
+    if (stmt != null) {
+        return stmt.toCode();
+    }
+    return super.toCode();
+  }
+
 //  @Override
 //  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {
 //      SimiObjectImpl instance = new SimiObjectImpl(this, true);
@@ -212,6 +224,11 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
       @Override
       public int compareTo(SimiValue o) {
           throw new AssertionError();
+      }
+
+      @Override
+      public java.lang.String toCode() {
+          return null;
       }
   }
 }

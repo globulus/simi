@@ -28,6 +28,7 @@ class Scanner {
     keywords.put("import",     TokenType.IMPORT);
     keywords.put("in",     TokenType.IN);
     keywords.put("is",     TokenType.IS);
+    keywords.put("ivic",     TokenType.IVIC);
     keywords.put("native",      TokenType.NATIVE);
     keywords.put("nil",    TokenType.NIL);
     keywords.put("not",    TokenType.NOT);

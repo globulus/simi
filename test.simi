@@ -315,3 +315,6 @@ car.refill(20)
 print(car.tank)
 car.refill(20, 10)
 print car.tank
+
+print ivic Car
+print ivic car

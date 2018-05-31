@@ -1,12 +1,15 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.Codifiable;
 import net.globulus.simi.api.SimiStatement;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-abstract class Stmt implements SimiStatement {
+abstract class Stmt implements SimiStatement, Codifiable {
+
+  abstract <R> R accept(Visitor<R> visitor, Object... args);
 
   interface Visitor<R> {
     R visitAnnotationStmt(Annotation stmt);
@@ -29,9 +32,10 @@ abstract class Stmt implements SimiStatement {
     List<BlockStmt> getChildren();
   }
 
-  abstract <R> R accept(Visitor<R> visitor, Object... args);
-
   static class Annotation extends Stmt {
+
+    final Expr expr;
+
     Annotation(Expr expr) {
       this.expr = expr;
     }
@@ -40,10 +44,16 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitAnnotationStmt(this);
     }
 
-    final Expr expr;
+    @Override
+    public String toCode() {
+      return TokenType.BANG.toCode() + expr.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class Break extends Stmt {
+
+    final Token name;
+
     Break(Token name) {
       this.name = name;
     }
@@ -52,10 +62,21 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitBreakStmt(this);
     }
 
-    final Token name;
+    @Override
+    public String toCode() {
+      return name.type.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class Class extends Stmt {
+
+    final Token name;
+    final List<Expr> superclasses;
+    final List<Expr.Assign> constants;
+    final List<Stmt.Class> innerClasses;
+    final List<Stmt.Function> methods;
+    final List<Stmt.Annotation> annotations;
+
     Class(Token name, List<Expr> superclasses, List<Expr.Assign> constants,
           List<Stmt.Class> innerClasses, List<Stmt.Function> methods,
           List<Stmt.Annotation> annotations) {
@@ -75,15 +96,35 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitClassStmt(this, addToEnv);
     }
 
-    final Token name;
-    final List<Expr> superclasses;
-    final List<Expr.Assign> constants;
-    final List<Stmt.Class> innerClasses;
-    final List<Stmt.Function> methods;
-    final List<Stmt.Annotation> annotations;
+    @Override
+    public String toCode() {
+      // TODO add annotations - can't add them now as the order of statements is unknown
+      return new StringBuilder(TokenType.CLASS.toCode())
+              .append(" ").append(name.lexeme)
+              .append(superclasses != null
+                      ? TokenType.LEFT_PAREN.toCode() + superclasses.stream()
+                            .map(Codifiable::toCode)
+                            .collect(Collectors.joining(TokenType.COMMA.toCode() + " ")) + TokenType.RIGHT_PAREN.toCode()
+                      : ""
+              )
+              .append(TokenType.COLON.toCode())
+              .append(TokenType.NEWLINE.toCode())
+              .append(constants.stream().map(Codifiable::toCode).collect(Collectors.joining(TokenType.NEWLINE.toCode())))
+              .append(TokenType.NEWLINE.toCode())
+              .append(methods.stream().map(Codifiable::toCode).collect(Collectors.joining()))
+              .append(TokenType.NEWLINE.toCode())
+              .append(innerClasses.stream().map(Codifiable::toCode).collect(Collectors.joining()))
+              .append(TokenType.NEWLINE.toCode())
+              .append(TokenType.END.toCode())
+              .append(TokenType.NEWLINE.toCode())
+              .toString();
+    }
   }
 
   static class Continue extends Stmt {
+
+    final Token name;
+
     Continue(Token name) {
       this.name = name;
     }
@@ -92,10 +133,16 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitContinueStmt(this);
     }
 
-    final Token name;
+    @Override
+    public String toCode() {
+      return name.type.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class Expression extends Stmt {
+
+    final Expr expression;
+
     Expression(Expr expression) {
       this.expression = expression;
     }
@@ -104,10 +151,18 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitExpressionStmt(this);
     }
 
-    final Expr expression;
+    @Override
+    public String toCode() {
+      return expression.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class Function extends Stmt {
+
+    final Token name;
+    final Expr.Block block;
+    final List<Stmt.Annotation> annotations;
+
     Function(Token name, Expr.Block block, List<Stmt.Annotation> annotations) {
       this.name = name;
       this.block = block;
@@ -118,12 +173,22 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitFunctionStmt(this);
     }
 
-    final Token name;
-    final Expr.Block block;
-    final List<Stmt.Annotation> annotations;
+    @Override
+    public String toCode() {
+      return new StringBuilder()
+              .append(annotations != null
+                      ? annotations.stream().map(Codifiable::toCode).collect(Collectors.joining())
+                      : "")
+              .append(block.toCode(name.lexeme))
+              .toString();
+    }
   }
 
     static class Elsif extends Stmt implements BlockStmt {
+
+      final Expr condition;
+      final Expr.Block thenBranch;
+
         Elsif(Expr condition, Expr.Block thenBranch) {
             this.condition = condition;
             this.thenBranch = thenBranch;
@@ -133,9 +198,6 @@ abstract class Stmt implements SimiStatement {
             return visitor.visitElsifStmt(this);
         }
 
-        final Expr condition;
-        final Expr.Block thenBranch;
-
       @Override
       public List<BlockStmt> getChildren() {
         return thenBranch.statements.stream()
@@ -143,9 +205,19 @@ abstract class Stmt implements SimiStatement {
                 .map(s -> (BlockStmt) s)
                 .collect(Collectors.toList());
       }
+
+      @Override
+      public String toCode() {
+        return condition.toCode() + thenBranch.toCode();
+      }
     }
 
   static class If extends Stmt implements BlockStmt {
+
+    final Elsif ifstmt;
+    final List<Elsif> elsifs;
+    final Expr.Block elseBranch;
+
     If(Elsif ifstmt, List<Elsif> elsifs, Expr.Block elseBranch) {
         this.ifstmt = ifstmt;
         this.elsifs = elsifs;
@@ -156,10 +228,6 @@ abstract class Stmt implements SimiStatement {
     <R> R accept(Visitor<R> visitor, Object... args) {
       return visitor.visitIfStmt(this);
     }
-
-    final Elsif ifstmt;
-    final List<Elsif> elsifs;
-    final Expr.Block elseBranch;
 
     @Override
     public List<BlockStmt> getChildren() {
@@ -174,9 +242,22 @@ abstract class Stmt implements SimiStatement {
       }
       return children;
     }
+
+    @Override
+    public String toCode() {
+      return new StringBuilder(TokenType.IF.toCode())
+              .append(" ")
+              .append(ifstmt.toCode())
+              .append(elsifs.stream().map(e -> TokenType.ELSIF.toCode() + " " + e.toCode()).collect(Collectors.joining()))
+              .append(elseBranch != null ? TokenType.ELSE.toCode() + " " + elseBranch.toCode() : "")
+              .toString();
+    }
   }
 
   static class Print extends Stmt {
+
+    final Expr expression;
+
     Print(Expr expression) {
       this.expression = expression;
     }
@@ -185,10 +266,17 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitPrintStmt(this);
     }
 
-    final Expr expression;
+    @Override
+    public String toCode() {
+      return TokenType.PRINT.toCode() + " " + expression.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class Rescue extends Stmt {
+
+    final Token keyword;
+    final Expr.Block block;
+
     Rescue(Token keyword, Expr.Block block) {
       this.keyword = keyword;
       this.block = block;
@@ -198,11 +286,17 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitRescueStmt(this);
     }
 
-    final Token keyword;
-    final Expr.Block block;
+    @Override
+    public String toCode() {
+      return keyword.type.toCode() + " " + block.toCode();
+    }
   }
 
   static class Return extends Stmt {
+
+    final Token keyword;
+    final Expr value;
+
     Return(Token keyword, Expr value) {
       this.keyword = keyword;
       this.value = value;
@@ -212,11 +306,17 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitReturnStmt(this);
     }
 
-    final Token keyword;
-    final Expr value;
+    @Override
+    public String toCode() {
+      return keyword.type.toCode() + " " + value.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 
   static class While extends Stmt implements BlockStmt {
+
+    final Expr condition;
+    final Expr.Block body;
+
     While(Expr condition, Expr.Block body) {
       this.condition = condition;
       this.body = body;
@@ -226,9 +326,6 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitWhileStmt(this);
     }
 
-    final Expr condition;
-    final Expr.Block body;
-
     @Override
     public List<BlockStmt> getChildren() {
       return body.statements.stream()
@@ -236,9 +333,23 @@ abstract class Stmt implements SimiStatement {
               .map(s -> (BlockStmt) s)
               .collect(Collectors.toList());
     }
+
+    @Override
+    public String toCode() {
+      return new StringBuilder(TokenType.WHILE.toCode())
+              .append(" ")
+              .append(condition.toCode())
+              .append(body.toCode())
+              .toString();
+    }
   }
 
   static class For extends Stmt implements BlockStmt {
+
+    final Expr.Variable var;
+    final Expr iterable;
+    final Expr.Block body;
+
       For(Expr.Variable var, Expr iterable, Expr.Block body) {
         this.var = var;
         this.iterable = iterable;
@@ -249,10 +360,6 @@ abstract class Stmt implements SimiStatement {
           return visitor.visitForStmt(this);
       }
 
-      final Expr.Variable var;
-      final Expr iterable;
-      final Expr.Block body;
-
     @Override
     public List<BlockStmt> getChildren() {
       return body.statements.stream()
@@ -260,9 +367,24 @@ abstract class Stmt implements SimiStatement {
               .map(s -> (BlockStmt) s)
               .collect(Collectors.toList());
     }
+
+    @Override
+    public String toCode() {
+      return new StringBuilder(TokenType.FOR.toCode())
+              .append(" ")
+              .append(var.toCode())
+              .append(" ").append(TokenType.IN.toCode()).append(" ")
+              .append(iterable.toCode())
+              .append(body.toCode())
+              .toString();
+    }
   }
 
   static class Yield extends Stmt {
+
+    final Token keyword;
+    final Expr value;
+
     Yield(Token keyword, Expr value) {
       this.keyword = keyword;
       this.value = value;
@@ -272,7 +394,9 @@ abstract class Stmt implements SimiStatement {
       return visitor.visitYieldStmt(this);
     }
 
-    final Token keyword;
-    final Expr value;
+    @Override
+    public String toCode() {
+      return keyword.type.toCode() + " " + value.toCode() + TokenType.NEWLINE.toCode();
+    }
   }
 }

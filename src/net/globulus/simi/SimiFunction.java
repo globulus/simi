@@ -55,4 +55,9 @@ class SimiFunction implements SimiCallable {
     }
     return prop;
   }
+
+  @Override
+  public String toCode() {
+    return declaration.toCode();
+  }
 }

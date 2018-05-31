@@ -1,0 +1,6 @@
+import "./stdlib/Gson-java.jar"
+
+class Gson:
+    native parse(json): pass
+    native stringify(obj): pass
+end

@@ -2,7 +2,7 @@ package net.globulus.simi.api;
 
 import java.util.List;
 
-public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
+public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<SimiValue> {
 
     protected SimiValue() { }
 
@@ -90,6 +90,11 @@ public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
             }
             return this.value.compareTo(((String) o).value);
         }
+
+        @Override
+        public java.lang.String toCode() {
+            return toString();
+        }
     }
 
     public static class Number extends SimiValue {
@@ -141,6 +146,11 @@ public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
             }
             return Double.compare(this.value, ((Number) o).value);
         }
+
+        @Override
+        public java.lang.String toCode() {
+            return toString();
+        }
     }
 
     public static class Object extends SimiValue {
@@ -174,6 +184,11 @@ public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
         @Override
         public int compareTo(SimiValue o) {
             throw new RuntimeException("Unable to compare objects by default, implement in subclass!");
+        }
+
+        @Override
+        public java.lang.String toCode() {
+            return value.toCode();
         }
     }
 
@@ -220,6 +235,11 @@ public abstract class SimiValue implements SimiProperty, Comparable<SimiValue> {
         @Override
         public int compareTo(SimiValue o) {
             throw new RuntimeException("Unable to compare callables!");
+        }
+
+        @Override
+        public java.lang.String toCode() {
+            return value.toCode();
         }
     }
 

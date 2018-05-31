@@ -520,6 +520,9 @@ class Parser {
     if (match(GU)) {
       return new Expr.Gu(primary());
     }
+    if (match(IVIC)) {
+      return new Expr.Ivic(primary());
+    }
     if (match(BANG_BANG)) {
       List<Token> tokens = new ArrayList<>();
       while (match(IDENTIFIER)) {

@@ -18,4 +18,9 @@ class Pass extends SimiValue {
     public int compareTo(SimiValue o) {
         throw new AssertionError();
     }
+
+    @Override
+    public java.lang.String toCode() {
+        return TokenType.PASS.toCode();
+    }
 }

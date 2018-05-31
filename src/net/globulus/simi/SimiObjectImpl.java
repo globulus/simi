@@ -448,6 +448,23 @@ abstract class SimiObjectImpl implements SimiObject {
             }
             return new Dictionary(clazz, mutable, fieldsClone);
         }
+
+        @Override
+        public String toCode() {
+            return new StringBuilder(immutable ? TokenType.LEFT_BRACKET.toCode() : TokenType.DOLLAR_LEFT_BRACKET.toCode())
+                    .append(TokenType.NEWLINE.toCode())
+                    .append(clazz != null
+                        ? "class = gu \"" + clazz.name + "\"" + (fields.isEmpty() ? "" : TokenType.COMMA.toCode()) + TokenType.NEWLINE.toCode()
+                        : ""
+                    )
+                    .append(fields.entrySet().stream()
+                            .map(e -> e.getKey() + " " + TokenType.EQUAL.toCode() + " " + e.getValue().getValue().toCode())
+                            .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
+                    )
+                    .append(TokenType.RIGHT_BRACKET.toCode())
+                    .append(TokenType.NEWLINE.toCode())
+                    .toString();
+        }
     }
 
     static class Array extends SimiObjectImpl {
@@ -615,9 +632,21 @@ abstract class SimiObjectImpl implements SimiObject {
             }
             return new Array(clazz, mutable, fieldsClone);
         }
+
+        @Override
+        public String toCode() {
+            return new StringBuilder(immutable ? TokenType.LEFT_BRACKET.toCode() : TokenType.DOLLAR_LEFT_BRACKET.toCode())
+                    .append(fields.stream()
+                            .map(i -> i.getValue().toCode())
+                            .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
+                    )
+                    .append(TokenType.RIGHT_BRACKET.toCode())
+                    .append(TokenType.NEWLINE.toCode())
+                    .toString();
+        }
     }
 
-    private static class InitiallyEmpty extends SimiObjectImpl {
+    static class InitiallyEmpty extends SimiObjectImpl {
 
         private SimiObjectImpl underlying;
 
@@ -798,6 +827,14 @@ abstract class SimiObjectImpl implements SimiObject {
             InitiallyEmpty clone = (InitiallyEmpty) SimiObjectImpl.empty(clazz, mutable);
             clone.underlying = (underlying != null) ? (SimiObjectImpl) underlying.clone(mutable) : null;
             return clone;
+        }
+
+        @Override
+        public String toCode() {
+            if (underlying == null) {
+                return "";
+            }
+            return underlying.toCode();
         }
     }
 }

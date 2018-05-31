@@ -25,4 +25,9 @@ class SimiMethod implements SimiCallable {
     public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
         return function.call(interpreter, arguments, rethrow);
     }
+
+    @Override
+    public String toCode() {
+        return function.toCode();
+    }
 }

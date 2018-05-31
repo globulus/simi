@@ -38,4 +38,9 @@ public final class SimiException extends RuntimeException implements SimiObject 
     public List<SimiValue> values() {
         return null;
     }
+
+    @Override
+    public String toCode() {
+        return null; // TODO revisit
+    }
 }

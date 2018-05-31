@@ -81,4 +81,9 @@ class BlockImpl implements SimiBlock, SimiCallable {
   public List<? extends SimiStatement> getStatements() {
     return declaration.getStatements();
   }
+
+  @Override
+  public String toCode() {
+    return declaration.toCode();
+  }
 }

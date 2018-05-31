@@ -25,6 +25,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     sharedInstance = this;
     this.nativeModulesManager = nativeModulesManager;
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
+
+      @Override
+      public String toCode() {
+        return "clock()";
+      }
+
       @Override
       public int arity() {
         return 0;
@@ -95,6 +101,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             if (rescue != null) {
               SimiException e = raisedExceptions.pop();
               executeRescueBlock(rescue, e);
+            } else if (!loopBlocks.isEmpty()) {
+              throw new Break();
             }
           }
         } catch (Yield yield) {
@@ -231,7 +239,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       methods.put(new OverloadableFunction(name, function.arity()), function);
     }
 
-    SimiClassImpl klass = new SimiClassImpl(className, superclasses, constants, methods);
+    SimiClassImpl klass = new SimiClassImpl(className, superclasses, constants, methods, stmt);
     SimiValue classValue = new SimiValue.Object(klass);
     SimiProperty classProp = new SimiPropertyImpl(classValue, getAnnotations(stmt));
 
@@ -681,6 +689,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
       return null;
     }
+  }
+
+  @Override
+  public SimiProperty visitIvicExpr(Expr.Ivic expr) {
+    SimiValue value = evaluate(expr.expr).getValue();
+    return new SimiValue.String(value.toCode());
   }
 
   @Override

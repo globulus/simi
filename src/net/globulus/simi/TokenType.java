@@ -1,6 +1,8 @@
 package net.globulus.simi;
 
-enum TokenType {
+import net.globulus.simi.api.Codifiable;
+
+enum TokenType implements Codifiable {
   // Single-character tokens.
   LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET,
   COMMA, DOT, COLON, NEWLINE,
@@ -28,7 +30,92 @@ enum TokenType {
   IN, IS, NOT, ELSIF, END, ISNOT, NOTIN, NATIVE, IMPORT, YIELD,
   WHEN,
 
-  GU,
+  GU, IVIC,
 
-  EOF
+  EOF;
+
+  @Override
+  public String toCode() {
+    switch (this) {
+      case LEFT_PAREN:
+        return "(";
+      case RIGHT_PAREN:
+        return ")";
+      case LEFT_BRACKET:
+        return "[";
+      case RIGHT_BRACKET:
+        return "]";
+      case COMMA:
+        return ",";
+      case DOT:
+        return ".";
+      case COLON:
+        return ":";
+      case NEWLINE:
+        return "\n";
+      case BANG:
+        return "!";
+      case BANG_BANG:
+        return "!!";
+      case BANG_EQUAL:
+        return "!=";
+      case EQUAL:
+        return "=";
+      case EQUAL_EQUAL:
+        return "==";
+      case GREATER:
+        return ">";
+      case GREATER_EQUAL:
+        return ">=";
+      case LESS:
+        return "<";
+      case LESS_EQUAL:
+        return "<=";
+      case LESS_GREATER:
+        return "<>";
+      case PLUS:
+        return "+";
+      case PLUS_EQUAL:
+        return "+=";
+      case MINUS:
+        return "-";
+      case MINUS_EQUAL:
+        return "-=";
+      case STAR:
+        return "*";
+      case STAR_STAR:
+        return "**";
+      case STAR_EQUAL:
+        return "*=";
+      case SLASH:
+        return "/";
+      case SLASH_SLASH:
+        return "//";
+      case SLASH_EQUAL:
+        return "/=";
+      case MOD:
+        return "%";
+      case MOD_MOD:
+        return "%%";
+      case MOD_EQUAL:
+        return "%=";
+      case DOLLAR_LEFT_BRACKET:
+        return "$[";
+      case QUESTION:
+        return "?";
+      case QUESTION_QUESTION:
+        return "??";
+      case IDENTIFIER:
+      case STRING:
+      case NUMBER:
+      case EOF:
+        throw new IllegalArgumentException("Shouldn't be used with toCode()");
+      case ISNOT:
+        return "is not";
+      case NOTIN:
+        return "not in";
+      default:
+        return toString().toLowerCase();
+    }
+  }
 }

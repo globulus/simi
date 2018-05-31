@@ -27,4 +27,9 @@ class TempNull extends SimiValue {
     public java.lang.String toString() {
         return "nil";
     }
+
+    @Override
+    public java.lang.String toCode() {
+        return null;
+    }
 }
