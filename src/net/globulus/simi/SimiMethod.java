@@ -27,7 +27,7 @@ class SimiMethod implements SimiCallable {
     }
 
     @Override
-    public String toCode() {
-        return function.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return function.toCode(indentationLevel, ignoreFirst);
     }
 }

@@ -34,7 +34,6 @@ enum TokenType implements Codifiable {
 
   EOF;
 
-  @Override
   public String toCode() {
     switch (this) {
       case LEFT_PAREN:
@@ -117,5 +116,13 @@ enum TokenType implements Codifiable {
       default:
         return toString().toLowerCase();
     }
+  }
+
+  @Override
+  public String toCode(int indentationLevel, boolean ignoreFirst) {
+    if (ignoreFirst) {
+      return toCode();
+    }
+    return Codifiable.getIndentation(indentationLevel) + toCode();
   }
 }

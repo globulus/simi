@@ -57,7 +57,7 @@ class SimiFunction implements SimiCallable {
   }
 
   @Override
-  public String toCode() {
-    return declaration.toCode();
+  public String toCode(int indentationLevel, boolean ignoreFirst) {
+    return declaration.toCode(indentationLevel, ignoreFirst);
   }
 }

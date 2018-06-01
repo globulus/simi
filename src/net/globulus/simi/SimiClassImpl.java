@@ -177,11 +177,11 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
   }
 
   @Override
-  public String toCode() {
+  public String toCode(int indentationLevel, boolean ignoreFirst) {
     if (stmt != null) {
-        return stmt.toCode();
+        return stmt.toCode(indentationLevel, ignoreFirst);
     }
-    return super.toCode();
+    return super.toCode(indentationLevel, ignoreFirst);
   }
 
 //  @Override
@@ -227,7 +227,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
       }
 
       @Override
-      public java.lang.String toCode() {
+      public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
           return null;
       }
   }

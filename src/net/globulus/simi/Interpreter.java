@@ -27,7 +27,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
 
       @Override
-      public String toCode() {
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
         return "clock()";
       }
 
@@ -694,7 +694,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitIvicExpr(Expr.Ivic expr) {
     SimiValue value = evaluate(expr.expr).getValue();
-    return new SimiValue.String(value.toCode());
+    return new SimiValue.String(value.toCode(0, false));
   }
 
   @Override
@@ -825,12 +825,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             } else {
               prop = evaluate(valueExpr);
             }
-            if (expr.isDictionary) {
-              mapFields.put(key, prop);
+            if (key.equals(TokenType.CLASS.toCode())
+                    && prop.getValue() instanceof SimiValue.Object
+                    && prop.getValue().getObject() instanceof SimiClassImpl) {
+              objectClass = (SimiClassImpl) prop.getValue().getObject();
             } else {
-              arrayFields.add(prop);
+              if (expr.isDictionary) {
+                mapFields.put(key, prop);
+              } else {
+                arrayFields.add(prop);
+              }
+              count++;
             }
-            count++;
           }
           if (expr.isDictionary) {
             object = SimiObjectImpl.fromMap(objectClass, immutable, mapFields);

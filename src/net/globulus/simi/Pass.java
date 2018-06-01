@@ -20,7 +20,7 @@ class Pass extends SimiValue {
     }
 
     @Override
-    public java.lang.String toCode() {
-        return TokenType.PASS.toCode();
+    public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
+        return TokenType.PASS.toCode(indentationLevel, ignoreFirst);
     }
 }

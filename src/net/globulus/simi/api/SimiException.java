@@ -40,7 +40,7 @@ public final class SimiException extends RuntimeException implements SimiObject 
     }
 
     @Override
-    public String toCode() {
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
         return null; // TODO revisit
     }
 }

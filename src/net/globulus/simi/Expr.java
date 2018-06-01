@@ -78,12 +78,15 @@ abstract class Expr implements Codifiable {
         return ((Expr.Literal) expr.expression).value instanceof Pass;
       }
 
-      String toCode(String name) {
+      String toCode(int indentationLevel, boolean ignoreFirst, String name) {
         String opener;
         if (declaration.type == TokenType.DEF || declaration.type == TokenType.NATIVE) {
           opener = declaration.type.toCode() + " ";
         } else {
           opener = "";
+        }
+        if (name != null) {
+          opener += name;
         }
         boolean needsParenthesis = !opener.isEmpty() || name != null;
         StringBuilder paramsBuilder = new StringBuilder();
@@ -97,22 +100,23 @@ abstract class Expr implements Codifiable {
         if (needsParenthesis) {
           paramsBuilder.append(TokenType.RIGHT_PAREN.toCode());
         }
-        return new StringBuilder(opener)
+        return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
+                .append(opener)
                 .append(paramsBuilder.toString())
                 .append(TokenType.COLON.toCode())
                 .append(TokenType.NEWLINE.toCode())
                 .append(statements.stream()
-                        .map(Codifiable::toCode)
+                        .map(s -> s.toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining(TokenType.NEWLINE.toCode()))
                 )
-                .append(TokenType.END.toCode())
+                .append(TokenType.END.toCode(indentationLevel, false))
                 .append(TokenType.NEWLINE.toCode())
                 .toString();
       }
 
       @Override
-      public String toCode() {
-          return toCode(null);
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+          return toCode(indentationLevel, ignoreFirst, null);
       }
     }
 
@@ -129,10 +133,11 @@ abstract class Expr implements Codifiable {
       }
 
       @Override
-      public String toCode() {
-        return tokens.stream()
-                .map(t -> t.lexeme)
-                .collect(Collectors.joining(TokenType.DOT.toCode()));
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return TokenType.BANG_BANG.toCode(indentationLevel, ignoreFirst)
+                  + tokens.stream()
+                      .map(t -> t.lexeme)
+                      .collect(Collectors.joining(TokenType.DOT.toCode()));
       }
     }
 
@@ -153,17 +158,18 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
       return new StringBuilder()
               .append(annotations != null
                       ? annotations.stream()
-                          .map(Codifiable::toCode)
+                          .map(a -> a.toCode(indentationLevel, false))
                           .collect(Collectors.joining(TokenType.NEWLINE.toCode()))
                       : ""
               )
+              .append(Codifiable.getIndentation(indentationLevel))
               .append(name.lexeme)
               .append(" ").append(TokenType.EQUAL.toCode()).append(" ")
-              .append(value.toCode())
+              .append(value.toCode(0, false))
               .toString();
     }
   }
@@ -185,15 +191,15 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return new StringBuilder(TokenType.LEFT_BRACKET.toCode())
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.LEFT_BRACKET.toCode(indentationLevel, ignoreFirst))
               .append(assigns.stream()
                       .map(a -> a.name.lexeme)
                       .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
               )
               .append(TokenType.RIGHT_BRACKET.toCode())
               .append(" ").append(TokenType.EQUAL.toCode()).append(" ")
-              .append(((Get) assigns.get(0).value).object.toCode())
+              .append(((Get) assigns.get(0).value).object.toCode(0, false))
               .toString();
     }
   }
@@ -215,8 +221,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return left.toCode() + " " + operator.type.toCode() + " " + right.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return left.toCode(indentationLevel, ignoreFirst) + " " + operator.type.toCode() + " " + right.toCode(0, false);
     }
   }
 
@@ -237,11 +243,11 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return new StringBuilder(callee.toCode())
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(callee.toCode(indentationLevel, ignoreFirst))
               .append(TokenType.LEFT_PAREN.toCode())
               .append(arguments.stream()
-                      .map(Codifiable::toCode)
+                      .map(a -> a.toCode(0, false))
                       .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
               )
               .append(TokenType.RIGHT_PAREN.toCode())
@@ -268,8 +274,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return object.toCode() + TokenType.DOT.toCode() + name.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return object.toCode(indentationLevel, ignoreFirst) + TokenType.DOT.toCode() + name.toCode(0, false);
     }
   }
 
@@ -286,8 +292,13 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return TokenType.LEFT_PAREN.toCode() + " " + expression.toCode() + " " + TokenType.RIGHT_PAREN.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.LEFT_PAREN.toCode(indentationLevel, ignoreFirst))
+              .append(" ")
+              .append(expression.toCode(0, false))
+              .append(" ")
+              .append(TokenType.RIGHT_PAREN.toCode())
+              .toString();
     }
   }
 
@@ -304,8 +315,11 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return TokenType.GU.toCode() + " " + expr.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.GU.toCode(indentationLevel, ignoreFirst))
+              .append(" ")
+              .append(expr.toCode(0, false))
+              .toString();
     }
   }
 
@@ -322,8 +336,11 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return TokenType.IVIC.toCode() + " " + expr.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.IVIC.toCode(indentationLevel, ignoreFirst))
+            .append(" ")
+            .append(expr.toCode(0, false))
+            .toString();
     }
   }
 
@@ -340,8 +357,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return value.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return value.toCode(indentationLevel, ignoreFirst);
     }
   }
 
@@ -362,8 +379,13 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return left.toCode() + " " + operator.type.toCode() + " " + right.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(left.toCode(indentationLevel, ignoreFirst))
+              .append(" ")
+              .append(operator.type.toCode())
+              .append(" ")
+              .append(left.toCode(0, false))
+              .toString();
     }
   }
 
@@ -386,13 +408,12 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return new StringBuilder()
-              .append(object.toCode())
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(object.toCode(indentationLevel, ignoreFirst))
               .append(TokenType.DOT.toCode())
-              .append(name.toCode())
+              .append(name.toCode(0, false))
               .append(" ").append(TokenType.EQUAL.toCode()).append(" ")
-              .append(value.toCode())
+              .append(value.toCode(0, false))
               .toString();
     }
   }
@@ -416,8 +437,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      StringBuilder sb = new StringBuilder(keyword.type.toCode());
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      StringBuilder sb = new StringBuilder(keyword.type.toCode(indentationLevel, ignoreFirst));
       if (superclass != null) {
         sb.append(TokenType.LEFT_PAREN.toCode()).append(superclass.lexeme).append(TokenType.RIGHT_PAREN.toCode());
       }
@@ -439,8 +460,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return keyword.type.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return keyword.type.toCode(indentationLevel, ignoreFirst);
     }
   }
 
@@ -459,8 +480,8 @@ abstract class Expr implements Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return operator.type.toCode() + " " + right.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return  operator.type.toCode(indentationLevel, ignoreFirst) + " " + right.toCode(0, false);
     }
   }
 
@@ -477,8 +498,8 @@ abstract class Expr implements Codifiable {
         }
 
       @Override
-      public String toCode() {
-        return name.lexeme;
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return (ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel)) + name.lexeme;
       }
     }
 
@@ -499,12 +520,13 @@ abstract class Expr implements Codifiable {
         }
 
       @Override
-      public String toCode() {
-        StringBuilder sb = new StringBuilder(opener.type.toCode()).append(TokenType.NEWLINE.toCode());
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        StringBuilder sb = new StringBuilder(opener.type.toCode(indentationLevel, ignoreFirst))
+                .append(TokenType.NEWLINE.toCode());
         for (Expr expr : props) {
-          sb.append(expr.toCode()).append(TokenType.COMMA.toCode()).append(TokenType.NEWLINE.toCode());
+          sb.append(expr.toCode(indentationLevel + 1, false)).append(TokenType.COMMA.toCode()).append(TokenType.NEWLINE.toCode());
         }
-        sb.append(TokenType.RIGHT_BRACKET.toCode());
+        sb.append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false));
         return sb.toString();
       }
     }

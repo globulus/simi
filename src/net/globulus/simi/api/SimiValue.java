@@ -92,7 +92,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         }
 
         @Override
-        public java.lang.String toCode() {
+        public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
             return toString();
         }
     }
@@ -148,7 +148,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         }
 
         @Override
-        public java.lang.String toCode() {
+        public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
             return toString();
         }
     }
@@ -187,8 +187,8 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         }
 
         @Override
-        public java.lang.String toCode() {
-            return value.toCode();
+        public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
+            return value.toCode(indentationLevel, ignoreFirst);
         }
     }
 
@@ -238,8 +238,8 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         }
 
         @Override
-        public java.lang.String toCode() {
-            return value.toCode();
+        public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
+            return value.toCode(indentationLevel, ignoreFirst);
         }
     }
 

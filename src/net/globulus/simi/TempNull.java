@@ -29,7 +29,7 @@ class TempNull extends SimiValue {
     }
 
     @Override
-    public java.lang.String toCode() {
-        return null;
+    public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
+        return TokenType.NIL.toCode(indentationLevel, ignoreFirst);
     }
 }

@@ -45,8 +45,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return TokenType.BANG.toCode() + expr.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return TokenType.BANG.toCode(indentationLevel, false) + expr.toCode(indentationLevel, true) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -63,8 +63,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return name.type.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return name.type.toCode(indentationLevel, false) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -97,25 +97,25 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
       // TODO add annotations - can't add them now as the order of statements is unknown
-      return new StringBuilder(TokenType.CLASS.toCode())
+      return new StringBuilder(TokenType.CLASS.toCode(indentationLevel, false))
               .append(" ").append(name.lexeme)
               .append(superclasses != null
                       ? TokenType.LEFT_PAREN.toCode() + superclasses.stream()
-                            .map(Codifiable::toCode)
+                            .map(s -> s.toCode(0, false))
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + " ")) + TokenType.RIGHT_PAREN.toCode()
                       : ""
               )
               .append(TokenType.COLON.toCode())
               .append(TokenType.NEWLINE.toCode())
-              .append(constants.stream().map(Codifiable::toCode).collect(Collectors.joining(TokenType.NEWLINE.toCode())))
+              .append(constants.stream().map(c -> c.toCode(indentationLevel + 1, false)).collect(Collectors.joining(TokenType.NEWLINE.toCode())))
               .append(TokenType.NEWLINE.toCode())
-              .append(methods.stream().map(Codifiable::toCode).collect(Collectors.joining()))
+              .append(methods.stream().map(m -> m.toCode(indentationLevel + 1, false)).collect(Collectors.joining()))
               .append(TokenType.NEWLINE.toCode())
-              .append(innerClasses.stream().map(Codifiable::toCode).collect(Collectors.joining()))
+              .append(innerClasses.stream().map(i -> i.toCode(indentationLevel + 1, false)).collect(Collectors.joining()))
               .append(TokenType.NEWLINE.toCode())
-              .append(TokenType.END.toCode())
+              .append(TokenType.END.toCode(indentationLevel, false))
               .append(TokenType.NEWLINE.toCode())
               .toString();
     }
@@ -134,8 +134,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return name.type.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return name.type.toCode(indentationLevel, false) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -152,8 +152,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return expression.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return expression.toCode(indentationLevel, false) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -174,12 +174,12 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
       return new StringBuilder()
               .append(annotations != null
-                      ? annotations.stream().map(Codifiable::toCode).collect(Collectors.joining())
+                      ? annotations.stream().map(a -> a.toCode(indentationLevel, false)).collect(Collectors.joining())
                       : "")
-              .append(block.toCode(name.lexeme))
+              .append(block.toCode(indentationLevel, false, name.lexeme))
               .toString();
     }
   }
@@ -207,8 +207,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
       }
 
       @Override
-      public String toCode() {
-        return condition.toCode() + thenBranch.toCode();
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return condition.toCode(indentationLevel, ignoreFirst) + thenBranch.toCode(indentationLevel, true);
       }
     }
 
@@ -244,12 +244,12 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return new StringBuilder(TokenType.IF.toCode())
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.IF.toCode(indentationLevel, false))
               .append(" ")
-              .append(ifstmt.toCode())
-              .append(elsifs.stream().map(e -> TokenType.ELSIF.toCode() + " " + e.toCode()).collect(Collectors.joining()))
-              .append(elseBranch != null ? TokenType.ELSE.toCode() + " " + elseBranch.toCode() : "")
+              .append(ifstmt.toCode(indentationLevel, true))
+              .append(elsifs.stream().map(e -> TokenType.ELSIF.toCode() + " " + e.toCode(indentationLevel, true)).collect(Collectors.joining()))
+              .append(elseBranch != null ? TokenType.ELSE.toCode(indentationLevel, false) + elseBranch.toCode(indentationLevel, true) : "")
               .toString();
     }
   }
@@ -267,8 +267,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return TokenType.PRINT.toCode() + " " + expression.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return TokenType.PRINT.toCode(indentationLevel, false) + " " + expression.toCode(0, false) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -287,8 +287,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return keyword.type.toCode() + " " + block.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return keyword.type.toCode() + " " + block.toCode(indentationLevel, true);
     }
   }
 
@@ -307,8 +307,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return keyword.type.toCode() + " " + value.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return keyword.type.toCode(indentationLevel, false) + " " + value.toCode(0, false) + TokenType.NEWLINE.toCode();
     }
   }
 
@@ -335,11 +335,11 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
       return new StringBuilder(TokenType.WHILE.toCode())
               .append(" ")
-              .append(condition.toCode())
-              .append(body.toCode())
+              .append(condition.toCode(indentationLevel, false))
+              .append(body.toCode(indentationLevel, true))
               .toString();
     }
   }
@@ -369,13 +369,13 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return new StringBuilder(TokenType.FOR.toCode())
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.FOR.toCode(indentationLevel, false))
               .append(" ")
-              .append(var.toCode())
+              .append(var.toCode(0, false))
               .append(" ").append(TokenType.IN.toCode()).append(" ")
-              .append(iterable.toCode())
-              .append(body.toCode())
+              .append(iterable.toCode(0, false))
+              .append(body.toCode(indentationLevel, true))
               .toString();
     }
   }
@@ -395,8 +395,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
     }
 
     @Override
-    public String toCode() {
-      return keyword.type.toCode() + " " + value.toCode() + TokenType.NEWLINE.toCode();
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return keyword.type.toCode(indentationLevel, false) + " " + value.toCode(0, false) + TokenType.NEWLINE.toCode();
     }
   }
 }
