@@ -385,7 +385,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
     List<Expr> emptyArgs = new ArrayList<>();
     Token nextToken = new Token(TokenType.IDENTIFIER, Constants.NEXT, null, stmt.var.name.line);
-    SimiProperty nextMethod = block.closure.tryGet("#next" + block.closure.depth);
+    String nextMethodName = "#next" + block.closure.depth;
+    SimiProperty nextMethod = block.closure.tryGet(nextMethodName);
     if (nextMethod == null) {
       SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
       nextMethod = iterable.get(nextToken, 0, environment);
@@ -421,6 +422,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       } catch (Continue ignored) { }
     }
     loopBlocks.pop();
+    block.closure.define(nextMethodName, null);
     return null;
   }
 

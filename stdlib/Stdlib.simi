@@ -77,7 +77,7 @@ class $Object:
         else: return nil
     end
     def forEach(function):
-        for item in self: function(self)
+        for item in self: function(item)
     end
     def joined(with):
         clone = @clone()
@@ -195,6 +195,8 @@ class $Number:
     def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
+
+    native randomInt(max): pass
 
     native equals(other): pass
     native compareTo(other): pass

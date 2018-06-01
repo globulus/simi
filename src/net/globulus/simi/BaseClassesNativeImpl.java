@@ -5,6 +5,7 @@ import net.globulus.simi.api.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -824,6 +825,18 @@ class BaseClassesNativeImpl {
 
     private SimiNativeClass getNumberClass() {
         Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction("randomInt", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                int max = arguments.get(1).getValue().getNumber().intValue();
+                return new SimiValue.Number(ThreadLocalRandom.current().nextInt(max));
+            }
+        });
         methods.put(new OverloadableFunction(Constants.EQUALS, 1), new SimiCallable() {
             @Override
             public int arity() {
