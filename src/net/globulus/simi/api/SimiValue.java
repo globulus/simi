@@ -93,7 +93,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         @Override
         public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
-            return toString();
+            return "\"" + toString().replace("\"", "\\\"") + "\"";
         }
     }
 

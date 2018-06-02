@@ -48,6 +48,7 @@ You can run Šimi on any machine that has JVM by invoking the Simi JAR, which in
     + [Importing code](#importing-code)
     + [Java API](#java-api)
     + [Annotations](#annotations)
+    + [Metaprogramming and (de)serialization - *gu* and *ivic*](#metaprogramming-and--de-serialization----gu--and--ivic-)
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
@@ -910,6 +911,85 @@ PRIMARY KEY (id),
 userId varchar(255),
 );
 ```
+
+### Metaprogramming and (de)serialization - *gu* and *ivic*
+
+While designing Šimi, a deliberate attempt was made to blur the line between the code and interpreter's inner workings. If the interpreter's input is code, then it should also be able to produce valid Šimi code as its output, which can then be taken up again by an interpreter. Two unary operators, *gu* and *ivic*, make this incredibly easy to accomplish, and their interoperability allow for seamless and interesting approaches at metaprogramming and (de)serialization.
+The basics:
+* **gu** takes a string (or an expression that evaluates to string) representation of a Šimi statement as input and interprets it, returning the result of the statement. E.g, gu "2+2" == 4
+* **ivic** takes a Šimi value as input and dumps it to a Šimi code string that's readily interpetable. Any output produced by the *ivic* operator can be readily pasted in Šimi code or invoked by the *gu* operator.
+
+An obvious power of this combo is that any internal state of a Šimi interpeter can be dumped into code and then interpreted again, making serialization and deserialization of Šimi classes, objects, or any other piece of code trivial. This is similar to what JSON does for JavaScript, with the added benefit of being able to serialize *anything* - functions, classes, annotations, etc:
+```ruby
+class Car:
+
+    wheels = 4
+
+    def init(capacity, tank): pass
+
+    def refill(amount):
+        if amount < 0: CarException("Amount < 0!").raise()
+        if amount > 100: TankOverflowException("Too much gasoline!").raise()
+        if @tank + amount > @capacity: @tank = @capacity
+        else: @tank = @tank + amount
+    end
+
+    def refill(amount, doprint):
+        @tank = 0
+     end
+end
+
+carInstance = Car(40, 10)
+
+print ivic Car # printing the class
+print ivic carInstance
+```
+The code above produces the following output:
+```
+class Car:
+    wheels = 4
+    def init(capacity, tank):
+        self.capacity = capacity
+        self.tank = tank
+    end
+    def refill(amount):
+        if amount < 0:
+            CarException("Amount < 0!").raise()
+        end
+        if amount > 100:
+            TankOverflowException("Too much gasoline!").raise()
+        end
+        if self.tank + amount > self.capacity:
+            self.tank = self.capacity
+        end
+        else:
+            self.tank = self.tank + amount
+        end
+    end
+    def refill(amount, doprint):
+        self.tank = 0
+    end
+end
+[
+    "class" = gu "Car",
+    capacity = 40,
+    tank = 0
+]
+```
+As you can see, the entire code of the Car class has been printed, and the instance object was also dumped in an interpretable format.
+Naturally, invoking *gu ivic* clones objects:
+```ruby
+obj = [a = 5,
+    b = "aaa",
+    c = def (a, b):
+        result = a + b + "dddd"
+        return result
+    end
+]
+clone = gu ivic obj
+print clone.matches(obj) # true
+```
+
 
 ### Android integration
 

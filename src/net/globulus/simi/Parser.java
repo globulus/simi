@@ -518,10 +518,10 @@ class Parser {
       return new Expr.Unary(operator, right);
     }
     if (match(GU)) {
-      return new Expr.Gu(primary());
+      return new Expr.Gu(unary());
     }
     if (match(IVIC)) {
-      return new Expr.Ivic(primary());
+      return new Expr.Ivic(unary());
     }
     if (match(BANG_BANG)) {
       List<Token> tokens = new ArrayList<>();

@@ -107,7 +107,7 @@ abstract class Expr implements Codifiable {
                 .append(TokenType.NEWLINE.toCode())
                 .append(statements.stream()
                         .map(s -> s.toCode(indentationLevel + 1, false))
-                        .collect(Collectors.joining(TokenType.NEWLINE.toCode()))
+                        .collect(Collectors.joining())
                 )
                 .append(TokenType.END.toCode(indentationLevel, false))
                 .append(TokenType.NEWLINE.toCode())

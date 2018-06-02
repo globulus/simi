@@ -222,7 +222,11 @@ class Scanner {
 
   protected void string(char opener) {
     while (peek() != opener && !isAtEnd()) {
-      if (peek() == '\n') line++;
+      if (peek() == '\n') {
+        line++;
+      } else if (peek() == '\\' && peekNext() == opener) {
+        advance();
+      }
       advance();
     }
 

@@ -317,4 +317,18 @@ car.refill(20, 10)
 print car.tank
 
 print ivic Car
+ivicCar = ivic car
+carClone = gu ivicCar
+print carClone.matches(car)
 print ivic car
+print carClone
+
+so = [a = 5, c = "aaa", b = def (a, b):
+    c = a + b + "dddd"
+    return c
+end
+]
+print ivic so
+clone = gu ivic so
+print clone.matches(so)
+print ivic clone

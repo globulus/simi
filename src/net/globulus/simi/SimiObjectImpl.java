@@ -341,7 +341,7 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         public ArrayList<SimiValue> values() {
-            return fields.values().stream().map(p -> p.getValue()).collect(Collectors.toCollection(ArrayList::new));
+            return fields.values().stream().map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
         }
 
         @Override
@@ -451,21 +451,23 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         public String toCode(int indentationLevel, boolean ignoreFirst) {
+            String indentation = Codifiable.getIndentation(indentationLevel + 1);
             return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
                     .append(immutable ? TokenType.LEFT_BRACKET.toCode() : TokenType.DOLLAR_LEFT_BRACKET.toCode())
                     .append(TokenType.NEWLINE.toCode())
                     .append(clazz != null
-                        ? Codifiable.getIndentation(indentationLevel + 1)
+                        ? indentation
                             + "\"class\" = gu \"" + clazz.name + "\"" + (fields.isEmpty() ? "" : TokenType.COMMA.toCode())
                             + TokenType.NEWLINE.toCode()
                         : ""
                     )
                     .append(fields.entrySet().stream()
-                            .map(e -> e.getKey() + " "
+                            .map(e -> indentation + e.getKey() + " "
                                     + TokenType.EQUAL.toCode() + " "
-                                    + e.getValue().getValue().toCode(indentationLevel + 1, false))
+                                    + e.getValue().getValue().toCode(indentationLevel + 1, true))
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
                     )
+                    .append(TokenType.NEWLINE.toCode(indentationLevel, false))
                     .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
                     .append(TokenType.NEWLINE.toCode())
                     .toString();

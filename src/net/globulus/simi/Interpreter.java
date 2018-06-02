@@ -673,13 +673,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitGuExpr(Expr.Gu expr) {
-    Expr expression = expr.expr;
-    String string;
-    if (expression instanceof Expr.Variable) {
-      string = evaluate(expression).getValue().getString();
-    } else {
-      string = ((Expr.Literal) expression).value.getString();
-    }
+    String string = evaluate(expr.expr).getValue().getString();
     Scanner scanner = new Scanner(string + "\n");
     Parser parser = new Parser(scanner.scanTokens(true));
     Stmt stmt = parser.parse().get(0);
