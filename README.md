@@ -990,6 +990,29 @@ clone = gu ivic obj
 print clone.matches(obj) # true
 ```
 
+These operators also allow for some interesting approaches to metaprogramming. Take, for example, how *gu* is used in *Enum.of()* function to generate the enum class and associate values with it:
+```ruby
+guStr = "class " + className + "(Enum):
+    def init(" + $args + "): pass
+    def equals(other): return @matches(other)
+end"
+clazz = gu guStr
+
+...
+
+for key in obj:
+    $val = nil
+    if isArray: $val = clazz(key)
+    elsif isFirstValueScalar: $val = clazz(obj.(key))
+    else:
+        args = $String.from(obj.(key).values(), ", ")
+        constructor =  "clazz(" + args + ")"
+        $val = gu constructor
+    end
+    clazz.(key) = $val
+end
+```
+Combining this with *ivic* allows for creation of programs that *change their code on the fly*. Simply, dump a block/function/method to code with *ivic*, use string manipulation to alter its body, and use it again by supplying the altered code to *gu*. Check out this [simple genetic algorithm](https://github.com/globulus/simi/blob/develop/genetic.simi) to see the duo in action!
 
 ### Android integration
 
