@@ -521,13 +521,15 @@ abstract class Expr implements Codifiable {
 
       @Override
       public String toCode(int indentationLevel, boolean ignoreFirst) {
-        StringBuilder sb = new StringBuilder(opener.type.toCode(indentationLevel, ignoreFirst))
-                .append(TokenType.NEWLINE.toCode());
-        for (Expr expr : props) {
-          sb.append(expr.toCode(indentationLevel + 1, false)).append(TokenType.COMMA.toCode()).append(TokenType.NEWLINE.toCode());
-        }
-        sb.append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false));
-        return sb.toString();
+        return new StringBuilder(opener.type.toCode(indentationLevel, ignoreFirst))
+                .append(TokenType.NEWLINE.toCode())
+                .append(props.stream()
+                  .map(p -> p.toCode(indentationLevel + 1, false))
+                  .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
+                )
+                .append(TokenType.NEWLINE.toCode())
+                .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
+                .toString();
       }
     }
 }

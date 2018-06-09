@@ -138,7 +138,7 @@ abstract class SimiObjectImpl implements SimiObject {
       }
   }
 
-  abstract ArrayList<SimiValue> keys();
+  public abstract ArrayList<SimiValue> keys();
   public abstract ArrayList<SimiValue> values();
   abstract SimiObjectImpl enumerate(SimiClassImpl objectClass);
   abstract SimiObjectImpl zip(SimiClassImpl objectClass);
@@ -331,7 +331,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> keys() {
+        public ArrayList<SimiValue> keys() {
             Set<String> keys = new HashSet<>(fields.keySet());
             if (clazz != null) {
                 keys.addAll(clazz.allKeys());
@@ -543,7 +543,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> keys() {
+        public ArrayList<SimiValue> keys() {
             return IntStream.range(0, length())
                     .mapToObj(SimiValue.Number::new)
                     .collect(Collectors.toCollection(ArrayList::new));
@@ -718,7 +718,7 @@ abstract class SimiObjectImpl implements SimiObject {
         }
 
         @Override
-        ArrayList<SimiValue> keys() {
+        public ArrayList<SimiValue> keys() {
             if (underlying == null) {
                 return new ArrayList<>();
             }

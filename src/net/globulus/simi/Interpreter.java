@@ -389,6 +389,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     SimiProperty nextMethod = block.closure.tryGet(nextMethodName);
     if (nextMethod == null) {
       SimiObjectImpl iterable = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(evaluate(stmt.iterable), this);
+      if (iterable == null) {
+        return null;
+      }
       nextMethod = iterable.get(nextToken, 0, environment);
       if (nextMethod == null) {
         Token iterateToken = new Token(TokenType.IDENTIFIER, Constants.ITERATE, null, stmt.var.name.line);

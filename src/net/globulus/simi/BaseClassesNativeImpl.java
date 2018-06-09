@@ -454,6 +454,24 @@ class BaseClassesNativeImpl {
                         new ArrayList<>(Collections.nCopies(capacity, fillValue))));
             }
         });
+        methods.put(new OverloadableFunction("slice", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 2;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                int start = arguments.get(1).getValue().getNumber().intValue();
+                int stop = arguments.get(2).getValue().getNumber().intValue();
+                if (self.isArray()) {
+                    return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true,
+                        new ArrayList<>(self.asArray().fields.subList(start, stop - 1))));
+                }
+                return null; // TODO implement for Dictionary
+            }
+        });
         return new SimiNativeClass(Constants.CLASS_OBJECT, methods);
     }
 
@@ -567,7 +585,7 @@ class BaseClassesNativeImpl {
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String old = arguments.get(1).getValue().getString();
-                String newStr = arguments.get(1).getValue().getString();
+                String newStr = arguments.get(2).getValue().getString();
                 return new SimiValue.String(value.replace(old, newStr));
             }
         });

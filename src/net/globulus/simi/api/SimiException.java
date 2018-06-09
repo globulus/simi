@@ -35,6 +35,11 @@ public final class SimiException extends RuntimeException implements SimiObject 
     }
 
     @Override
+    public List<SimiValue> keys() {
+        return null;
+    }
+
+    @Override
     public List<SimiValue> values() {
         return null;
     }

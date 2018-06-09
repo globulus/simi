@@ -7,5 +7,6 @@ public interface SimiObject extends Codifiable {
     SimiProperty get(String key, SimiEnvironment environment);
     void set(String key, SimiProperty prop, SimiEnvironment environment);
     SimiObject clone(boolean mutable);
+    List<SimiValue> keys();
     List<SimiValue> values();
 }
