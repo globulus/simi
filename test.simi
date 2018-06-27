@@ -1,4 +1,26 @@
 import "./Stdlib/File.simi"
+import "./Stdlib/Gson.simi"
+import "./Stdlib/Net.simi"
+
+Net.go(def ():
+    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
+    print "Got response"
+    print code
+    print body
+end)()
+
+asyncf = gu Async.s(def ():
+    a = 5
+    b = 6
+    c = await* Gson.parseAsync('{a1:2}')
+    print "async c is " + c
+    d = 5
+    e = 7
+    f = await* Gson.parseAsync('{a2:3}')
+    print "async f is " + f
+    g = 10
+end)
+asyncf()
 
 def fib(n):
   if n < 2: return n
