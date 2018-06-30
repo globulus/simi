@@ -36,11 +36,13 @@ abstract class Expr implements Codifiable {
       final Token declaration;
       final List<Token> params;
       final List<Stmt> statements;
+      final boolean canReturn;
 
-        Block(Token declaration, List<Token> params, List<Stmt> statements) {
+        Block(Token declaration, List<Token> params, List<Stmt> statements, boolean canReturn) {
             this.declaration = declaration;
             this.params = params;
             this.statements = statements;
+            this.canReturn = canReturn;
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
@@ -61,6 +63,11 @@ abstract class Expr implements Codifiable {
       @Override
       public void yield(int index) {
         throw new RuntimeException("Trying to yield a Expr.Block!");
+      }
+
+      @Override
+      public boolean canReturn() {
+        return canReturn;
       }
 
       public boolean isEmpty() {

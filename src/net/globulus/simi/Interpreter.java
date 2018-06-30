@@ -101,7 +101,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             if (rescue != null) {
               SimiException e = raisedExceptions.pop();
               executeRescueBlock(rescue, e);
-            } else if (!loopBlocks.isEmpty()) {
+            } else if (block.canReturn()) {
+              throw new Return(null);
+            } else {
               throw new Break();
             }
           }

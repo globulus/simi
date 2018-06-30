@@ -2,6 +2,10 @@ import "./Stdlib/File.simi"
 import "./Stdlib/Gson.simi"
 import "./Stdlib/Net.simi"
 
+
+
+print "ssss\""
+
 Net.go(def ():
     [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
     print "Got response"
@@ -180,6 +184,22 @@ def testStringNumberConversion():
 end
 testStringNumberConversion()
 
+def testNestedRescue():
+    for i in 10.times():
+        addStringAndTryToConvert(i)
+    end
+    rescue ex:
+        if ex: print "Invalid number format detected outside of fun and loop"
+        else: print "No invalid numbers detected"
+    end
+end
+def addStringAndTryToConvert(number):
+    $str = number.toString()
+    if $Number.randomInt(2): $str += "a"
+    numVal = $str.toNumber()
+end
+testNestedRescue()
+
 class CarException(Exception):
 end
 
@@ -354,3 +374,4 @@ print ivic so
 clone = gu ivic so
 print clone.matches(so)
 print ivic clone
+

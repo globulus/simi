@@ -15,6 +15,8 @@ import static net.globulus.simi.TokenType.*;
 class Parser {
 
   private static final String LAMBDA = "lambda";
+  private static final String FUNCTION = "function";
+  private static final String METHOD = "method";
 
   private static class ParseError extends RuntimeException {}
 
@@ -52,7 +54,7 @@ class Parser {
           return classDeclaration();
       }
       if (match(DEF, NATIVE)) {
-          return function("function");
+          return function(FUNCTION);
       }
       if (match(BANG)) {
         return annotation();
@@ -85,7 +87,7 @@ class Parser {
           continue;
         }
         if (match(DEF, NATIVE)) {
-            methods.add(function("method"));
+            methods.add(function(METHOD));
         } else if (match(CLASS)) {
             innerClasses.add(classDeclaration());
         } else if (match(BANG)) {
@@ -320,7 +322,7 @@ class Parser {
         statements.add(new Stmt.Expression(new Expr.Set(name,
                 new Expr.Self(Token.self()), new Expr.Variable(param), new Expr.Variable(param))));
       }
-      block = new Expr.Block(declaration, block.params, statements);
+      block = new Expr.Block(declaration, block.params, statements, true);
     }
 
     return new Stmt.Function(name, block, getAnnotations());
@@ -352,7 +354,7 @@ class Parser {
         }
         statements.add(stmt);
     }
-    return new Expr.Block(declaration, params, statements);
+    return new Expr.Block(declaration, params, statements, kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
   }
 
   private List<Token> params(String kind, boolean lambda) {

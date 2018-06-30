@@ -83,17 +83,28 @@ class Json:
             $curr = $curr + 1
             return str.($curr - 1)
         end
-        error = def message: print message # MalformedJsonException(message).raise()
+        error = def message: MalformedJsonException(message).raise()
         string = def ():
-            while peek() != @_TOKENS.stringDelimiter and not isAtEnd():
-              advance()
-            end
+           $escaping = false
+           $escapedCount = 0
+           while not isAtEnd():
+               if peek() == @_TOKENS.stringDelimiter:
+                    if $escaping: $escaping = false
+                    else: break
+               end
+               elsif peek() == "\"":
+                    $escaping = true
+                    $escapedCount = $escapedCount + 1
+               end
+               advance()
+           end
             if isAtEnd():
                 error("Unterminated string")
                 return nil
             end
             advance()
-            return str.substring($start, $curr)
+            $curr = $curr - $escapedCount
+            return str.substring($start + 1, $curr - 1)
         end
         identifier = def ():
             while isAlphaNumeric(peek()): advance()
@@ -112,7 +123,8 @@ class Json:
         while not isAtEnd():
             $start = $curr
             c = advance()
-            if c in [@_TOKENS.arrayStart, @_TOKENS.arrayEnd, @_TOKENS.objectStart,\
+            if c == ' ' or c == '\n': continue
+            elsif c in [@_TOKENS.arrayStart, @_TOKENS.arrayEnd, @_TOKENS.objectStart,\
                 @_TOKENS.objectEnd, @_TOKENS.colon, @_TOKENS.comma]: tokens.append(c)
             elsif c == @_TOKENS.stringDelimiter: tokens.append(string())
             elsif isDigit(c): tokens.append(number())
@@ -185,7 +197,7 @@ class Json:
     end
 end
 
-range = [a = 15, b = Range(10, 15), c = "asdjsakdaskd", d = [1, 2, 3]]
-str = Json.stringify(range)
-print str
-print Json.parse(str)
+#range = [a = 15, b = Range(10, 15), c = "asdjsakdaskd", d = [1, 2, 3]]
+#str = Json.stringify(range)
+#print str
+#print Json.parse(str)

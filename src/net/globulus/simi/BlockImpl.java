@@ -83,6 +83,11 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   @Override
+  public boolean canReturn() {
+    return declaration.canReturn();
+  }
+
+  @Override
   public String toCode(int indentationLevel, boolean ignoreFirst) {
     return declaration.toCode(indentationLevel, ignoreFirst);
   }
