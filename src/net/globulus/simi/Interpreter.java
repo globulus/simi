@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.Visitor<SimiProperty> {
 
-  final NativeModulesManager nativeModulesManager;
+  final Collection<NativeModulesManager> nativeModulesManagers;
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
@@ -21,9 +21,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   static Interpreter sharedInstance;
 
-  Interpreter(NativeModulesManager nativeModulesManager) {
+  Interpreter(Collection<NativeModulesManager> nativeModulesManagers) {
     sharedInstance = this;
-    this.nativeModulesManager = nativeModulesManager;
+    this.nativeModulesManagers = nativeModulesManagers;
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
 
       @Override
@@ -606,9 +606,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
         boolean isBaseClass = isBaseClass(clazz.name);
         if (!isBaseClass) {
-          try {
-            return nativeModulesManager.call(clazz.name, methodName, instance, this, arguments);
-          } catch (IllegalArgumentException ignored) { }
+          for (NativeModulesManager manager : nativeModulesManagers) {
+            try {
+              return manager.call(clazz.name, methodName, instance, this, arguments);
+            } catch (IllegalArgumentException ignored) {
+            }
+          }
         }
         String className = isBaseClass ? clazz.name : Constants.CLASS_OBJECT;
         SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
@@ -620,10 +623,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         nativeArgs.addAll(arguments);
         return nativeMethod.call(this, nativeArgs, false);
       } else {
-        try {
-          return nativeModulesManager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
-                  methodName, null, this, arguments);
-        } catch (IllegalArgumentException ignored) { }
+        for (NativeModulesManager manager : nativeModulesManagers) {
+          try {
+            return manager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
+                    methodName, null, this, arguments);
+          } catch (IllegalArgumentException ignored) {
+          }
+        }
       }
     }
     return callable.call(this, arguments, false);

@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Simi {
@@ -57,7 +58,7 @@ public class Simi {
   }
 
   private static void run(String source) throws IOException {
-      NativeModulesManager nativeModulesManager = new NativeModulesManager();
+      NativeModulesManager nativeModulesManager = new JavaNativeModulesManager();
       List<String> imports = new ArrayList<>();
 
       long time = System.currentTimeMillis();
@@ -73,7 +74,7 @@ public class Simi {
     // Stop if there was a syntax error.
     if (hadError) return;
 
-    interpreter = new Interpreter(nativeModulesManager);
+    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager));
 
     Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);
@@ -109,7 +110,7 @@ public class Simi {
       Path path = Paths.get(location);
       String pathString = path.toString().toLowerCase();
       if (pathString.endsWith(".jar")) {
-          nativeModulesManager.loadJar(path.toUri().toURL());
+          nativeModulesManager.load(path.toUri().toURL().toString());
       } else if (pathString.endsWith(".simi")) {
           List<Token> tokens = new Scanner(readFile(location, false)).scanTokens(false);
           result.addAll(scanImports(tokens, imports, nativeModulesManager));
