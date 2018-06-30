@@ -247,7 +247,8 @@ class Scanner {
   private String escapedString(int start, int stop) {
     return source.substring(start, stop)
             .replace("\\n", "\n")
-            .replace("\\t", "\t");
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"");
   }
 
     private String keywordString(TokenType type) {
