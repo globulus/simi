@@ -209,6 +209,15 @@ difference = subtract(a = 5, b = pow(2, 3))
 printFunction()
 ```
 
+For functions that take no arguments or more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
+```ruby
+def f(a, b, c): pass
+f(1, 2, 3) # The conventional way of doing it
+f([4, 5, 6]) # Invoking with an array
+f([a = 7, b = 8, c = 9]) # Invoking with dictionary
+# All these invocations do the same thing!
+```
+
 #### Objects
 Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above. **Nils are not permitted as object values, and associating a nil with a key will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:
 1. Class instances
@@ -1036,4 +1045,6 @@ def post(body):
     if result ...etc etc...
 end
 ```
+**This is currently supported via the [Stdlib Async class](stdlib/Stdlib.simi).**
 2. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
+**This is currently supported via the [Decorator class](stdlib/Decorator.simi).**

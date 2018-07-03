@@ -30,4 +30,9 @@ class SimiMethod implements SimiCallable {
     public String toCode(int indentationLevel, boolean ignoreFirst) {
         return function.toCode(indentationLevel, ignoreFirst);
     }
+
+    @Override
+    public String toString() {
+        return function.toString();
+    }
 }

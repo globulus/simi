@@ -529,12 +529,12 @@ abstract class Expr implements Codifiable {
       @Override
       public String toCode(int indentationLevel, boolean ignoreFirst) {
         return new StringBuilder(opener.type.toCode(indentationLevel, ignoreFirst))
-                .append(TokenType.NEWLINE.toCode())
+                .append(isDictionary ? TokenType.NEWLINE.toCode() : "")
                 .append(props.stream()
-                  .map(p -> p.toCode(indentationLevel + 1, false))
-                  .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
+                  .map(p -> p.toCode(isDictionary ? indentationLevel + 1 : 0, false))
+                  .collect(Collectors.joining(TokenType.COMMA.toCode() + (isDictionary ? TokenType.NEWLINE.toCode() : " ")))
                 )
-                .append(TokenType.NEWLINE.toCode())
+                .append(isDictionary ? TokenType.NEWLINE.toCode() : "")
                 .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
                 .toString();
       }

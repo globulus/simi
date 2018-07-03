@@ -39,7 +39,7 @@ class SimiFunction implements SimiCallable {
 
   @Override
   public String toString() {
-    return "<" + (isNative ? "native" : "def") + " " + declaration.name.lexeme + ">";
+    return declaration.name.lexeme;
   }
 
   @Override

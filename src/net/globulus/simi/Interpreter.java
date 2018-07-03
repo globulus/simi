@@ -584,11 +584,17 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       throw new RuntimeError(paren,"Can only call functions and classes.");
     }
 
+    List<SimiProperty> decomposedArgs = arguments;
     if (arguments.size() != callable.arity()) {
-      throw new RuntimeError(paren, "Expected " +
-              callable.arity() + " arguments but got " +
-              arguments.size() + ".");
+      // See if we can decompose argument array/object into actual arguments
+      decomposedArgs = decomposeArguments(callable, arguments);
+      if (decomposedArgs == arguments) { // We didn't manage to decomp args from object
+        throw new RuntimeError(paren, "Expected " +
+                callable.arity() + " arguments but got " +
+                arguments.size() + ".");
+      }
     }
+
     boolean isNative = callable instanceof SimiFunction && ((SimiFunction) callable).isNative
             || callable instanceof SimiMethod && ((SimiMethod) callable).function.isNative
             || callable instanceof BlockImpl && ((BlockImpl) callable).isNative();
@@ -608,7 +614,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         if (!isBaseClass) {
           for (NativeModulesManager manager : nativeModulesManagers) {
             try {
-              return manager.call(clazz.name, methodName, instance, this, arguments);
+              return manager.call(clazz.name, methodName, instance, this, decomposedArgs);
             } catch (IllegalArgumentException ignored) {
             }
           }
@@ -620,19 +626,30 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
         List<SimiProperty> nativeArgs = new ArrayList<>();
         nativeArgs.add(new SimiValue.Object(instance));
-        nativeArgs.addAll(arguments);
+        nativeArgs.addAll(decomposedArgs);
         return nativeMethod.call(this, nativeArgs, false);
       } else {
         for (NativeModulesManager manager : nativeModulesManagers) {
           try {
             return manager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
-                    methodName, null, this, arguments);
+                    methodName, null, this, decomposedArgs);
           } catch (IllegalArgumentException ignored) {
           }
         }
       }
     }
-    return callable.call(this, arguments, false);
+    return callable.call(this, decomposedArgs, false);
+  }
+
+  private List<SimiProperty> decomposeArguments(SimiCallable callable, List<SimiProperty> arguments) {
+    if (arguments.size() == 1 && arguments.get(0).getValue() instanceof SimiValue.Object) {
+      SimiObject argObject = arguments.get(0).getValue().getObject();
+      List<SimiValue> values = argObject.values();
+      if (argObject.values().size() == callable.arity()) {
+        return values.stream().map(v -> (SimiProperty) v).collect(Collectors.toList());
+      }
+    }
+    return arguments;
   }
 
   @Override
