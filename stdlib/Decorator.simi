@@ -1,7 +1,7 @@
-class Decorator:
-    KEYWORD = "decorate *"
+Decorator = [
+    KEYWORD = "decorate *",
 
-    def go(f):
+    go = def (f):
         lines = (ivic f).split("\n")
         newLines = $Object.array()
         $decorators = nil
@@ -52,18 +52,18 @@ class Decorator:
         tempName = @_tempName()
 #        print  "[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName
         return gu ("[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName)
-    end
+    end,
 
-    def _isDefLine(line):
+    _isDefLine = def (line):
         return line.startsWith("def ") or " = def" in line
-    end
+    end,
 
-    def _tempName():
+    _tempName = def ():
         return "temp" + clock().toString().substring(5)
-    end
+    end,
 
-    def test():
-        Decorator.go(def ():
+    test = def ():
+        @go(def ():
             def timed(f):
                 wrapper = def args:
                     t1 = clock()
@@ -102,6 +102,6 @@ class Decorator:
             print exp(2, 50)
         end)()
     end
-end
+]
 
-Decorator.test()
+#Decorator.test()

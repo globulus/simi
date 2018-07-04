@@ -1,0 +1,54 @@
+Async = [
+    KEYWORD = "await *",
+
+    go = def (f): return gu @s(f),
+
+    s = def (f):
+        flines = (ivic f).split("\n")
+        return @swl(flines)
+    end,
+
+    swl = def (lines):
+        timestamp = clock().toString()
+        tempName = "temp" + timestamp.substring(timestamp.indexOf('.') + 1)
+        return "[f = " + @_process(lines, 0, tempName).trim() + "\nend].f"
+    end,
+
+    _process = def (lines, start, tempName):
+        $prepend = "\n"
+        for i in Range(start, lines.len()):
+            $line = lines.(i)
+           if @KEYWORD in $line:
+               if i > start:
+                   $prepend += $String.from(lines.slice(start, i + 1), "\n") + "\n"
+               end
+               $jump = 1
+               if $line.endsWith("["):
+                   $opens = 0
+                   for j in Range(i + 1, lines.len()):
+                       otherLine = lines.(j)
+                       if otherLine.endsWith("["): $opens = $opens + 1
+                       elsif otherLine.startsWith("]"):
+                           if $opens == 0:
+                               $jump = j - i + 2
+                               $line = $String.from(lines.slice(i, j + 2), " ")
+                               break
+                           end
+                           else: $opens = $opens - 1
+                       end
+                   end
+               end
+               return $prepend + @_makeAwait(tempName + start, $line) + @_process(lines, i + $jump, tempName) + "\nend)"
+            end
+        end
+        return $prepend + $String.from(lines.slice(start, lines.len()), "\n")
+    end,
+
+    _makeAwait = def (name, line):
+        varName = line.substring(0, line.indexOf("=")).trim()
+        method = line.substring(line.indexOf(@KEYWORD) + @KEYWORD.len() + 1).trim()
+        rVar = "var" + name
+        return method.substring(0, method.len() - 1) + ", def " + rVar + ":
+            " + varName + " = " + rVar
+    end
+]

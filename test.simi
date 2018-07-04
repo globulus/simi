@@ -1,10 +1,10 @@
 import "./Stdlib/File.simi"
 import "./Stdlib/Gson.simi"
 import "./Stdlib/Net.simi"
+import "./Stdlib/Async.simi"
+import "./Stdlib/Decorator.simi"
 
-
-
-print "ssss\""
+Decorator.test()
 
 Net.go(def ():
     [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
@@ -13,7 +13,7 @@ Net.go(def ():
     print body
 end)()
 
-asyncf = gu Async.s(def ():
+asyncf = Async.go(def ():
     a = 5
     b = 6
     c = await* Gson.parseAsync('{a1:2}')

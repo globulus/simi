@@ -1045,7 +1045,7 @@ def post(body):
     if result ...etc etc...
 end
 ```
-**This is currently supported via the [Stdlib Async class](stdlib/Stdlib.simi).**
+**This is currently supported via the [Stdlib Async class](stdlib/Async.simi).**
 
 2. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
 **This is currently supported via the [Decorator class](stdlib/Decorator.simi).**
