@@ -19,6 +19,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   private Map<Object, List<SimiObject>> annotations = new HashMap<>();
   private List<SimiObject> annotationsBuffer = new ArrayList<>();
 
+  private Stack<Expr.Call> callExprStack = new Stack<>();
+
   static Interpreter sharedInstance;
 
   Interpreter(Collection<NativeModulesManager> nativeModulesManagers) {
@@ -543,8 +545,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitCallExpr(Expr.Call expr) {
+    callExprStack.push(expr);
     SimiProperty callee = evaluate(expr.callee);
-    return call(callee, expr.arguments, expr.paren);
+    SimiProperty result = call(callee, expr.arguments, expr.paren);
+    callExprStack.pop();
+    return result;
   }
 
   private SimiProperty call(SimiProperty prop, List<Expr> args, Token paren) {
@@ -581,7 +586,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       methodName = ((SimiValue.Callable) callee).name;
       instance = ((SimiValue.Callable) callee).getInstance();
     } else {
-      throw new RuntimeError(paren,"Can only call functions and classes.");
+      throw new RuntimeError(paren,"Can only call functions and classes: " + callExprStack.peek().callee.toCode(0, true));
     }
 
     List<SimiProperty> decomposedArgs = arguments;

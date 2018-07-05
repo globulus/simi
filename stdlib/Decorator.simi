@@ -1,3 +1,5 @@
+import "./Stdlib/CodeBlocks.simi"
+
 Decorator = [
     KEYWORD = "decorate *",
 
@@ -5,57 +7,46 @@ Decorator = [
         lines = (ivic f).split("\n")
         newLines = $Object.array()
         $decorators = nil
-        $tempName = nil
-        $params = nil
-        $endCount = -1
-        for line in lines:
+        $skip = -1
+        for e in lines.enumerate():
+            i = e.key
+            line = e.value
             trimmedLine = line.trim()
             if trimmedLine.startsWith(@KEYWORD):
 #                print trimmedLine.substring(@KEYWORD.len() + 1)
                 $decorators = (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
 #                print "Found decorators: " + $decorators
-                continue
             end
-            elsif $decorators and @_isDefLine(trimmedLine):
-                $params = trimmedLine.substring(trimmedLine.indexOf('(') + 1, trimmedLine.lastIndexOf(')'))
+            elsif $decorators and CodeBlocks.Function.isDefLine(trimmedLine):
+                func = CodeBlocks.Function(lines, i)
+                params = func.parametersWithoutParentheses()
                 newLines.append(line)
-                $tempName = @_tempName()
-                newLines.append($tempName + " = def (" + $params + "):")
-                $endCount = 1
-#                print "added temp " + $temp
-                continue
-            end
-            elsif trimmedLine.endsWith(":"): $endCount += 1
-            elsif trimmedLine == "end" and $endCount > -1:
-                $endCount -= 1
-                if $endCount == 0 and $decorators:
-                    newLines.append("end")
-                    $str = $String.builder().add("return ")
-                    for f in $decorators:
-                        $str.add(f).add("(")
-                    end
-                    $str.add($tempName)
-                    for _ in $decorators.len().times():
-                        $str.add(")")
-                    end
-                    needsBrackets = $params.indexOf(',')
-                    $str\
-                        .add("(").add(ife(needsBrackets, "[", ""))\
-                        .add($params)\
-                        .add(ife(needsBrackets, "]", "")).add(")")
-                    newLines.append($str.build())
-                    $decorators = nil
+                tempName = @_tempName()
+                newLines.append(tempName + " = def (" + params + "):")
+                newLines.addAll(func.body().map(def l: l.replacing(func.name + "(", tempName + "(")))
+                newLines.append("end")
+                str = $String.builder().add("return ")
+                for f in $decorators:
+                    str.add(f).add("(")
                 end
+                str.add(tempName)
+                for _ in $decorators.len().times():
+                    str.add(")")
+                end
+                needsBrackets = params.indexOf(',')
+                str\
+                    .add("(").add(ife(needsBrackets, "[", ""))\
+                    .add(params)\
+                    .add(ife(needsBrackets, "]", "")).add(")")
+                newLines.append(str.build())
+                $decorators = nil
+                $skip = i + func.body().len()
             end
-            newLines.append(line)
+            elsif i > $skip: newLines.append(line)
         end
         tempName = @_tempName()
 #        print  "[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName
         return gu ("[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName)
-    end,
-
-    _isDefLine = def (line):
-        return line.startsWith("def ") or " = def" in line
     end,
 
     _tempName = def ():

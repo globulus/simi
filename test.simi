@@ -4,6 +4,145 @@ import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
 
+Decorator.go(def ():
+    def timed(f):
+        wrapper = def args:
+            t1 = clock()
+            val = f(args)
+            print "It took " + (clock() - t1) + " ms to run"
+            return val
+        end
+        return wrapper
+    end
+
+    def memoize(f):
+#        print "In memoize"
+        fcache = $[]
+        $farg = nil
+        fworker = def f:
+            $farg = CodeBlocks.Function(f)
+            return flooper()
+        end
+        flooper = def ():
+            while true:
+                fname = $farg.name
+#                print "In flooper: " + fname
+                if fname not in fcache:
+                    fcache.(fname) = def args:
+                        cache = $[]
+                        $arg = 0
+                        workerLines = $Object.array()
+                        workerLines.append($farg.anonymousDeclaration())
+                        $temp = 0
+                        for line in $farg.body():
+                            trimmedLine = line.trim()
+                            if fname in trimmedLine:
+                                parts = $Object.array()
+                                $currentLine = trimmedLine
+                                while fname in $currentLine:
+                                    index = $currentLine.indexOf(fname)
+                                    parts.append($currentLine.substring(0, index))
+                                    rest = $currentLine.substring(index)
+                                    $parenCount = 0
+                                    $firstParen = -1
+                                    for i in rest.len().times():
+                                        c = rest.(i)
+                                        if c == '(':
+                                            if $parenCount == 0: $firstParen = i
+                                            $parenCount += 1
+                                        end
+                                        elsif c == ')':
+                                            $parenCount -= 1
+                                            if $parenCount == 0:
+                                                tempName = "temp" + $temp
+                                                $temp += 1
+                                                workerLines.append("$arg = " + rest.substring($firstParen, i + 1))
+                                                workerLines.append(tempName + " = looper()")
+                                                parts.append(tempName)
+                                                $currentLine = rest.substring(i + 1)
+                                                break
+                                            end
+                                        end
+                                    end
+                                end
+#                                print parts
+                                workerLines.append($String.from(parts, " "))
+                            end
+                            else: workerLines.append(line)
+                        end
+                        workerLines.append("end")
+#                        print workerLines
+                        worker = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
+                        looper = def ():
+                           while true:
+                            key = $arg.toString()
+                            if key not in cache: cache.(key) = worker($arg)
+#                            else: print "found key in cache: " + key
+                            yield cache.(key)
+                         end
+                       end
+                       return worker(args)
+                    end
+                end
+                yield fcache.(fname)
+            end
+        end
+        return fworker(f)
+    end
+
+    def fib(n):
+#        print "first time in fib"
+        cache = $[]
+        $arg = 0
+        inner = def n:
+            if n < 2: return n
+            $arg = n - 1
+            a = loop()
+            $arg = n - 2
+            b = loop()
+            return a + b
+        end
+        loop = def ():
+           while true:
+#            print cache
+            key = $arg.toString()
+            if key not in cache: cache.(key) = inner($arg)
+#            else: print "have cache for " + key
+#            print "about to yield " + cache.(key)
+            yield cache.(key)
+         end
+        end
+        return inner(n)
+    end
+
+    decorate* "memoize"
+    def fib2(n):
+        if n < 2: return n
+        return fib2(n - 2) + fib2(n - 1)
+    end
+
+    decorate* "timed"
+    def testFib(n):
+        print "Testing fib"
+        print fib(n)
+        print "Done testing fib"
+    end
+    testFib(10)
+    testFib(10)
+    testFib(10)
+
+
+    decorate* "timed"
+    def testFib2(n):
+        print "Testing fib2"
+        print fib2(n)
+        print "Done testing fib2"
+    end
+    testFib2(100)
+    testFib2(100)
+    testFib2(100)
+end)()
+
 Decorator.test()
 
 Net.go(def ():
@@ -11,7 +150,7 @@ Net.go(def ():
     print "Got response"
     print code
     print body
-end)()
+end)
 
 asyncf = Async.go(def ():
     a = 5
@@ -24,7 +163,7 @@ asyncf = Async.go(def ():
     print "async f is " + f
     g = 10
 end)
-asyncf()
+#asyncf()
 
 def fib(n):
   if n < 2: return n
@@ -374,4 +513,3 @@ print ivic so
 clone = gu ivic so
 print clone.matches(so)
 print ivic clone
-

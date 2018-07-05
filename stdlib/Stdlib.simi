@@ -329,3 +329,11 @@ class Enum:
         return clazz
     end
 end
+
+Meta = [
+    go = def (mutators, f):
+        $mutated = f
+        mutators.forEach(def m: $mutated = m.go($mutated))
+        return $mutated
+    end
+]

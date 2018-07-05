@@ -1,0 +1,49 @@
+class CodeBlocks:
+
+    class InvalidBlockException(Exception):
+    end
+
+    class Function:
+
+        _ANON_DEF = " = def"
+        _BASIC_DEF = "def "
+
+        def init(f):
+            @ref = f
+            @name = "" + f
+            @lines = (ivic f).split("\n")
+        end
+
+        def init(lines, startLine):
+            defLine = (lines.(startLine)).trim()
+            if not @isDefLine(defLine): CodeBlocks.InvalidBlockException("The start line isn't a def line!").raise()
+            if @_ANON_DEF in defLine: @name = defLine.substring(0, defLine.indexOf(@_ANON_DEF))
+            else: @name = defLine.substring(@_BASIC_DEF.len(), defLine.indexOf('('))
+            fLines = $Object.array()
+            $endCount = 0
+            for i in Range(startLine, lines.len()):
+                line = lines.(i)
+                fLines.append(line)
+                trimmedLine = line.trim()
+                if trimmedLine.endsWith(":"): $endCount += 1
+                elsif trimmedLine == "end":
+                    $endCount -= 1
+                    if $endCount == 0: break
+                end
+            end
+            @lines = fLines
+        end
+
+        def declaration(): return @lines.0
+        def anonymousDeclaration(): return @declaration().replacing(@name, "")
+        def parametersWithoutParentheses():
+            trimmed = @lines.0.trim()
+            return trimmed.substring(trimmed.indexOf('(') + 1, trimmed.lastIndexOf(')'))
+        end
+        def body(): return @lines.slice(1, @lines.len())
+
+        def isDefLine(line):
+            return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
+        end
+    end
+end

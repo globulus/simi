@@ -605,7 +605,13 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         void addAll(SimiObjectImpl other) {
             if (other.isArray()) {
-                fields.addAll(((Array) other).fields);
+                Array array;
+                if (other instanceof InitiallyEmpty) {
+                    array = other.asArray();
+                } else {
+                    array = (Array) other;
+                }
+                fields.addAll(array.fields);
             } else {
                 throw new RuntimeException("Trying to add a dictionary to an array!");
             }
