@@ -16,6 +16,8 @@ class Scanner {
     keywords.put("and",    TokenType.AND);
     keywords.put("break",  TokenType.BREAK);
     keywords.put("class",  TokenType.CLASS);
+    keywords.put("class_",  TokenType.CLASS_FINAL);
+    keywords.put("class$",  TokenType.CLASS_OPEN);
     keywords.put("continue",    TokenType.CONTINUE);
     keywords.put("def",    TokenType.DEF);
     keywords.put("end",    TokenType.END);
@@ -188,6 +190,13 @@ class Scanner {
         type = TokenType.NOTIN;
     } else if (type == TokenType.IS && matchPeek(TokenType.NOT)) {
         type = TokenType.ISNOT;
+    } else if (type == TokenType.CLASS) {
+      String candidateText = text + peek();
+      TokenType candidateType = keywords.get(candidateText);
+      if (candidateType != null) {
+        type = candidateType;
+        advance();
+      }
     } else if (type == null) {
         type = TokenType.IDENTIFIER;
     }

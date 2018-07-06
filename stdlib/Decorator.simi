@@ -5,7 +5,7 @@ Decorator = [
 
     go = def (f):
         lines = (ivic f).split("\n")
-        newLines = $Object.array()
+        newLines = Object.array()
         $decorators = nil
         $skip = -1
         for e in lines.enumerate():
@@ -25,7 +25,7 @@ Decorator = [
                 newLines.append(tempName + " = def (" + params + "):")
                 newLines.addAll(func.body().map(def l: l.replacing(func.name + "(", tempName + "(")))
                 newLines.append("end")
-                str = $String.builder().add("return ")
+                str = String.builder().add("return ")
                 for f in $decorators:
                     str.add(f).add("(")
                 end
@@ -45,8 +45,8 @@ Decorator = [
             elsif i > $skip: newLines.append(line)
         end
         tempName = @_tempName()
-#        print  "[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName
-        return gu ("[" + tempName + " = " + $String.from(newLines, "\n") + "\n]." + tempName)
+#        print  "[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName
+        return gu ("[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName)
     end,
 
     _tempName = def ():
@@ -118,13 +118,13 @@ Decorator = [
                 fname = $farg.name
 #                print "In flooper: " + fname
                 if fname not in fcache:
-                    workerLines = $Object.array()
+                    workerLines = Object.array()
                     workerLines.append($farg.anonymousDeclaration().replacing("(", "(looper, "))
                     $temp = 0
                     for line in $farg.body():
                         trimmedLine = line.trim()
                         if fname in trimmedLine:
-                            parts = $Object.array()
+                            parts = Object.array()
                             $currentLine = trimmedLine
                             while fname in $currentLine:
                                 index = $currentLine.indexOf(fname)
@@ -157,13 +157,13 @@ Decorator = [
                                 end
                             end
 #                                print parts
-                            workerLines.append($String.from(parts, " "))
+                            workerLines.append(String.from(parts, " "))
                         end
                         else: workerLines.append(line)
                     end
                     workerLines.append("end")
 #                    print workerLines
-                    workerCache.(fname) = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
+                    workerCache.(fname) = gu ("[f = " + String.from(workerLines, "\n") + "].f")
                     fcache.(fname) = def args:
                         cache = $[]
                         $arg = 0

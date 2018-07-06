@@ -1,7 +1,7 @@
 import "./stdlib/Stdlib-java.jar"
 
 "Test for class"
-class $Object:
+class$ Object:
 "Test for method"
     native len(): pass
     native keys(): pass
@@ -83,7 +83,7 @@ class $Object:
     def joined(with):
         clone = @clone()
         $extra = with
-        if with is not $Object: $extra = [with]
+        if with is not Object: $extra = [with]
         clone.addAll($extra)
         return clone
     end
@@ -181,7 +181,7 @@ class Range:
     end
 
     def toString():
-        return $String.builder()\
+        return String.builder()\
             .add("Range from ").add(@start)\
             .add(" to ").add(@stop)\
             .add(" by ").add(@step)\
@@ -189,7 +189,7 @@ class Range:
     end
 end
 
-class $Number:
+class$ Number:
     def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
@@ -204,7 +204,7 @@ class $Number:
     def product(a, b): return a * b
 end
 
-class $String:
+class$ String:
     native len(): pass
     native endsWith(suffix): pass
     native format(args): pass
@@ -298,15 +298,15 @@ class Enum:
        if not obj or obj.isEmpty(): return nil
 
         timestamp = clock().toString()
-        joined = obj.reduce("", $String.sum)
-        className = "$EnumClass" + joined + timestamp.substring(timestamp.indexOf('.') + 1)
+        joined = obj.reduce("", String.sum)
+        className = "EnumClass" + joined + timestamp.substring(timestamp.indexOf('.') + 1)
 
         isArray = obj.isArray()
-        isFirstValueScalar = obj.0 is not $Object
+        isFirstValueScalar = obj.0 is not Object
         $args = "value"
-        if not isArray and not isFirstValueScalar: $args = $String.from(obj.0, ", ")
+        if not isArray and not isFirstValueScalar: $args = String.from(obj.0, ", ")
 
-        guStr = "class " + className + "(Enum):
+        guStr = "class$ " + className + "(Enum):
             def init(" + $args + "): pass
             def equals(other): return @matches(other)
         end"
@@ -317,7 +317,7 @@ class Enum:
             if isArray: $val = clazz(key)
             elsif isFirstValueScalar: $val = clazz(obj.(key))
             else:
-                args = $String.from(obj.(key).values(), ", ")
+                args = String.from(obj.(key).values(), ", ")
                 constructor =  "clazz(" + args + ")"
                 $val = gu constructor
             end

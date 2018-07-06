@@ -19,14 +19,14 @@ class Knight:
         @loc = loc
         @move = move
         @lastDist = nil
-        @trace = $Object.array()
+        @trace = Object.array()
     end
 
     def mutate():
         move = @move
         lines = (ivic move).split("\n").clone(false)
         lines.1 = @_randomMove()
-        newMove = "(" + $String.from(lines, "\n") + ")"
+        newMove = "(" + String.from(lines, "\n") + ")"
         @move = gu newMove
     end
 
@@ -45,14 +45,14 @@ class Knight:
     end
 
     def _randomMove():
-        dx = $Number.randomInt(4) * ife($Number.randomInt(2) == 0, 1, -1)
-        dy = $Number.randomInt(4) * ife($Number.randomInt(2) == 0, 1, -1)
+        dx = Number.randomInt(4) * ife(Number.randomInt(2) == 0, 1, -1)
+        dy = Number.randomInt(4) * ife(Number.randomInt(2) == 0, 1, -1)
         return "  return @loc.translatedBy(" + dx + ", " + dy + ")"
     end
 end
 
 maxKnights = 5
-knights = $Object.array()
+knights = Object.array()
 for _ in maxKnights.times():
     knights.push(Knight(Field(0, 0), def (): pass))
 end

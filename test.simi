@@ -185,7 +185,7 @@ def testWhen():
     when a:
         5: print "a is 5"
         10 or 13: print "a is 10 or 13"
-        is $String: print "a is String"
+        is String: print "a is String"
         not in Range(12, 16): print "not between 12 and 16"
         else: print "reached the default branch"
     end
@@ -265,7 +265,7 @@ def testNestedRescue():
 end
 def addStringAndTryToConvert(number):
     $str = number.toString()
-    if $Number.randomInt(2): $str += "a"
+    if Number.randomInt(2): $str += "a"
     numVal = $str.toNumber()
 end
 testNestedRescue()
@@ -356,7 +356,7 @@ end
 
 refillCar()
 
-#string = $String.builder().add(3).add("aaa").add(4.5).add("bbb").build().substring(2, 5)
+#string = String.builder().add(3).add("aaa").add(4.5).add("bbb").build().substring(2, 5)
 #print string
 
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
@@ -377,7 +377,7 @@ print arr
 
 print Math.pow(2, 3)
 
-#$Object.each = def f:
+#Object.each = def f:
 #    for item in self: f(item)
 #end
 

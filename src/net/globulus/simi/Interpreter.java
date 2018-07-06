@@ -191,7 +191,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             if (!(clazz instanceof SimiClassImpl)) {
                 throw new RuntimeError(stmt.name, "Superclass must be a class.");
             }
-            superclasses.add((SimiClassImpl) clazz);
+            SimiClassImpl simiClass = (SimiClassImpl) clazz;
+            if (simiClass.type == SimiClassImpl.Type.FINAL) {
+              throw new RuntimeError(stmt.name, "Can't use a final class as superclass: " + simiClass.name);
+            }
+            superclasses.add(simiClass);
         }
       } else if (!isBaseClass) {
           superclasses = Collections.singletonList(getObjectClass());
@@ -243,7 +247,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       methods.put(new OverloadableFunction(name, function.arity()), function);
     }
 
-    SimiClassImpl klass = new SimiClassImpl(className, superclasses, constants, methods, stmt);
+    SimiClassImpl klass = new SimiClassImpl(SimiClassImpl.Type.from(stmt.opener.type),
+            className, superclasses, constants, methods, stmt);
     SimiValue classValue = new SimiValue.Object(klass);
     SimiProperty classProp = new SimiPropertyImpl(classValue, getAnnotations(stmt));
 

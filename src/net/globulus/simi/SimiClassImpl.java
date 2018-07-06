@@ -7,28 +7,32 @@ import java.util.stream.Collectors;
 
 class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
+    final Type type;
   final String name;
   final List<SimiClassImpl> superclasses;
   final Stmt.Class stmt;
 
   private final Map<OverloadableFunction, SimiFunction> methods;
 
-  static final SimiClassImpl CLASS = new SimiClassImpl(Constants.CLASS_CLASS);
+  static final SimiClassImpl CLASS = new SimiClassImpl(Type.REGULAR, Constants.CLASS_CLASS);
 
-    private SimiClassImpl(String name) {
+    private SimiClassImpl(Type type, String name) {
        super(null, true, new LinkedHashMap<>());
+       this.type = type;
        this.name = name;
        superclasses = null;
        methods = new HashMap<>();
        stmt = null;
     }
 
-  SimiClassImpl(String name,
+  SimiClassImpl(Type type,
+                String name,
                 List<SimiClassImpl> superclasses,
                 Map<String, SimiProperty> constants,
                 Map<OverloadableFunction, SimiFunction> methods,
                 Stmt.Class stmt) {
-    super(CLASS, !name.startsWith(Constants.MUTABLE), new LinkedHashMap<>(constants));
+    super(CLASS, type != Type.OPEN, new LinkedHashMap<>(constants));
+    this.type = type;
     this.superclasses = superclasses;
     this.name = name;
     this.methods = methods;
@@ -235,5 +239,24 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
       public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
           return null;
       }
+  }
+
+  enum Type {
+        REGULAR(TokenType.CLASS), FINAL(TokenType.CLASS_FINAL), OPEN(TokenType.CLASS_OPEN);
+
+        final TokenType tokenType;
+
+        Type(TokenType tokenType) {
+            this.tokenType = tokenType;
+        }
+
+        static Type from(TokenType tokenType) {
+            for (Type type : values()) {
+                if (type.tokenType == tokenType) {
+                    return type;
+                }
+            }
+            throw new IllegalArgumentException("Illegal token type: " + tokenType);
+        }
   }
 }

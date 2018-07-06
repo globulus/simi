@@ -25,10 +25,10 @@ enum TokenType implements Codifiable {
   IDENTIFIER, STRING, NUMBER,
 
   // Keywords.
-  AND, BREAK, CLASS, CONTINUE, ELSE, FALSE, DEF, FOR, RESCUE,
-  IF, NIL, OR, PRINT, RETURN, SUPER, SELF, TRUE, WHILE, PASS,
-  IN, IS, NOT, ELSIF, END, ISNOT, NOTIN, NATIVE, IMPORT, YIELD,
-  WHEN,
+  AND, BREAK, CLASS, CLASS_FINAL, CLASS_OPEN, CONTINUE, ELSE,
+  FALSE, DEF, FOR, RESCUE, IF, NIL, OR, PRINT, RETURN, SUPER,
+  SELF, TRUE, WHILE, PASS, IN, IS, NOT, ELSIF, END, ISNOT,
+  NOTIN, NATIVE, IMPORT, YIELD, WHEN,
 
   GU, IVIC,
 
@@ -113,6 +113,10 @@ enum TokenType implements Codifiable {
         return "is not";
       case NOTIN:
         return "not in";
+      case CLASS_FINAL:
+        return "class_";
+      case CLASS_OPEN:
+        return "class$";
       default:
         return toString().toLowerCase();
     }

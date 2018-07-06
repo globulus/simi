@@ -20,7 +20,7 @@ class CodeBlocks:
             if not @isDefLine(defLine): CodeBlocks.InvalidBlockException("The start line isn't a def line!").raise()
             if @_ANON_DEF in defLine: @name = defLine.substring(0, defLine.indexOf(@_ANON_DEF))
             else: @name = defLine.substring(@_BASIC_DEF.len(), defLine.indexOf('('))
-            fLines = $Object.array()
+            fLines = Object.array()
             $endCount = 0
             for i in Range(startLine, lines.len()):
                 line = lines.(i)

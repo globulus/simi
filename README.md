@@ -134,7 +134,7 @@ $e = "another string"
 #### Numbers
 Šimi doesn't make a distinction between integers and floating point numbers, but instead has only a double-precision floating point type, which doubles as a boolean type as 0 represents a false value.
 
-When numbers are used as objects, they're boxed into an instance of open Stdlib class $Number, which contains useful methods for converting numbers to strings, rounding, etc.
+When numbers are used as objects, they're boxed into an instance of open Stdlib class Number, which contains useful methods for converting numbers to strings, rounding, etc.
 
 Numbers are pass-by-value, and boxed numbers are pass-by-copy.
 
@@ -146,18 +146,18 @@ string = "this is a
  string with tabs"
 anotherString = 'this is another "string"'
 ```
-When used as objects, strings are boxed into an instance of open Stdlib class $String, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
+When used as objects, strings are boxed into an instance of open Stdlib class String, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
 
 Strings are pass-by-value, and boxed strings are pass-by-copy.
 
-The $String class contains a native *builder()* method that allows you to concatenate a large number of string components without sacrificing the performance that results from copying a lot of strings:
+The String class contains a native *builder()* method that allows you to concatenate a large number of string components without sacrificing the performance that results from copying a lot of strings:
 ```ruby
 class Range:
 
     ... rest of implementation omitted ...
 
     def toString():
-        return $String.builder()\
+        return String.builder()\
             .add("Range from ").add(@start)\
             .add(" to ").add(@stop)\
             .add(" by ").add(@step)\
@@ -167,9 +167,9 @@ end
 ```
 
 ##### Boxed numbers and strings
-Boxed numbers and strings are objects with two fields, a class being $Number of $String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
+Boxed numbers and strings are objects with two fields, a class being Number of String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
-# Implementation of times() method from $Number class
+# Implementation of times() method from Number class
 def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
 ```
 
@@ -228,7 +228,7 @@ Objects are an extremely powerful construct that combine expressiveness and flex
 6. Dictionaries/Maps/Hashes
 7. Static classes
 
-The underlying class for objects is the open Stdlib class $Object. It contains a large number of (mostly native) methods that allow the objects that facilitate their use in any of the purposes in the list above.
+The underlying class for objects is the open Stdlib class Object. It contains a large number of (mostly native) methods that allow the objects that facilitate their use in any of the purposes in the list above.
 
 Objects can be *mutable* or *immutable*:
 * You can change the values of fields of mutable objects, including deleting them (by setting to nil). You may introduce new fields to mutable objects.
@@ -295,7 +295,7 @@ print d # nil
 ```
 
 ##### Objects vs Arrays
-Šimi Arrays are Objects, insofar as they inherit the $Object class, and are exposed via the SimiObject interface in the API. That being said, you cannot really mix arrays and keyed objects together, i.e you can't invoke an addAll method on an array with an object parameter, and vice-versa. The reasons for that are twofold, the first being that such operations don't really make sense and their outcome would need to be based on a contract, which would unnecessarily complicate the language. The second reason is performance - if arrays and keyed objects were implemented the same way in the interpreter, the execution time of list operations such as insertion would be much worse.
+Šimi Arrays are Objects, insofar as they inherit the Object class, and are exposed via the SimiObject interface in the API. That being said, you cannot really mix arrays and keyed objects together, i.e you can't invoke an addAll method on an array with an object parameter, and vice-versa. The reasons for that are twofold, the first being that such operations don't really make sense and their outcome would need to be based on a contract, which would unnecessarily complicate the language. The second reason is performance - if arrays and keyed objects were implemented the same way in the interpreter, the execution time of list operations such as insertion would be much worse.
 
 #### Value conversions
 * Numbers can be converted to Strings via the toString() method.
@@ -330,8 +330,8 @@ Here's a quick rundown of classes:
     2. Check the leftmost superclass for that method name.
     3. Recursively check that superclass' lefmost superclass, all the way up.
 
-* All classes except base classes ($Object, $String, $Number, and Exception) silently inherit the $Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to $Object methods.
-* You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses ($Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
+* All classes except base classes (Object, String, Number, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
+* You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses (Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
 ```ruby
 class OtherCar(Car, Range): # This combination makes no sense :D
     def init():
@@ -359,7 +359,7 @@ end
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
 * Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
 ```ruby
-class Writer: # Implicitly inherits $Object
+class Writer: # Implicitly inherits Object
     def write(words): print words
     def write(words, times):
         for i in times.times(): @write(words) # method chaining
@@ -400,14 +400,15 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
-* Classes whose names start with $ are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
+* Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
-$Number.double = def (): @_ * 2
+Number.double = def (): @_ * 2
 a = 3
 b = a.double() # b == 6
 ```
-* The $Object class has a native *builder()* method, meaning that any class in Šimi automatically implements the builder pattern:
+* Classes that are defined as **class_ Name** are *final classes*, which can't be subclasses. This feature is important as it normally all subclasses can alter instance fields from their superclasses, so being able to make classes non-subclassable adds to code safety and stability.
+* The Object class has a native *builder()* method, meaning that any class in Šimi automatically implements the builder pattern:
 ```ruby
 Car = Car.builder()\
     .brand("Mazda")\
@@ -453,14 +454,14 @@ obj1 <> obj2 < 0 # Is equivalent to obj1 < obj2
 You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:
 ```ruby
 a = [1, 2, 3, 4]
-a is $Object # true
-a is not $Number # true
+a is Object # true
+a is not Number # true
 b = 5
-b is $Number # true
-b is $String # false
+b is Number # true
+b is String # false
 car = Car("Audi", "A6", 2016)
 car is Car # true
-car is not $Object # false
+car is not Object # false
 ```
 
 #### in and not in
@@ -529,7 +530,7 @@ A syntax sugar for a lot of elsifs when you're checking against the same value. 
 when a:
     5: print "a is 5"
     10 or 13 or 15: print "a is 10 or 13 or 15"
-    is $String: print "a is String"
+    is String: print "a is String"
     not in Range(12, 16): print "not between 12 and 16"
     else: print "reached the default branch"
 end
@@ -568,9 +569,9 @@ The contract for these two interfaces is very simple:
 * An *iterable* is an object that has the method *iterate()*, which returns an iterator. By convention, every invocation of that method should produce a new iterator, pointing at the start of the iterable object.
 
 Virtually everything in Šimi is iterable:
-1. The $Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
-2. The $String class exposes a native iterator which goes over the characters of the string.
-3. The $Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native enumerate() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
+1. The Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
+2. The String class exposes a native iterator which goes over the characters of the string.
+3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native enumerate() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
 4. Classes may choose to implement their own iterators, as can be seen in the Stdlib Range class.
 
 #### break and continue
@@ -633,7 +634,7 @@ All exceptions thrown in Šimi do (and should) extend the base class *Exception*
 
 ```ruby
 def abs(value):
-  if value is not $Number: InvalidParameterException("Expected a number!").raise()
+  if value is not Number: InvalidParameterException("Expected a number!").raise()
   return Math.abs(value)
 end
 
@@ -850,7 +851,7 @@ end
 # This class generates SQL code for creating tables based on a list of classes.
 class DbLib:
     def init(tables):
-        sqlBuilder = $String.builder()
+        sqlBuilder = String.builder()
         for table in tables:
             @_sqlForTable(table, sqlBuilder)
         end
@@ -863,7 +864,7 @@ class DbLib:
         for annot in classAnnotations:
             dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
             if dbTable:
-                name = ife(dbTable is $String, dbTable, table.name) # Infer table name
+                name = ife(dbTable is String, dbTable, table.name) # Infer table name
                 sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n") # Construct SQL
                 @_sqlForFields(table, sqlBuilder) # Add column SQL
                 sqlBuilder.add(");\n")
@@ -881,10 +882,10 @@ class DbLib:
             for annot in keyAnnotations:
                 dbField = annot.dbField
                 if not dbField: continue
-                name = ife(dbField is $String, dbField, key) # Infer the name
+                name = ife(dbField is String, dbField, key) # Infer the name
                 $type = nil # Infer type based on calue associated with the field in class definition
-                if val is $Number: $type = "int"
-                elsif val is $String: $type = "varchar(255)"
+                if val is Number: $type = "int"
+                elsif val is String: $type = "varchar(255)"
                 elsif val is Date: $type = "date"
                 # ... of course, many more types could be added, including relationships to other tables
 
@@ -1014,7 +1015,7 @@ for key in obj:
     if isArray: $val = clazz(key)
     elsif isFirstValueScalar: $val = clazz(obj.(key))
     else:
-        args = $String.from(obj.(key).values(), ", ")
+        args = String.from(obj.(key).values(), ", ")
         constructor =  "clazz(" + args + ")"
         $val = gu constructor
     end

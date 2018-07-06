@@ -31,7 +31,7 @@ end
 # This class generates SQL code for creating tables based on a list of classes.
 class DbLib:
     def init(tables):
-        sqlBuilder = $String.builder()
+        sqlBuilder = String.builder()
         for table in tables:
             @_sqlForTable(table, sqlBuilder)
         end
@@ -44,7 +44,7 @@ class DbLib:
         for annot in classAnnotations:
             dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
             if dbTable:
-                name = ife(dbTable is $String, dbTable, table.name) # Infer table name
+                name = ife(dbTable is String, dbTable, table.name) # Infer table name
                 sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n") # Construct SQL
                 @_sqlForFields(table, sqlBuilder) # Add column SQL
                 sqlBuilder.add(");\n")
@@ -62,10 +62,10 @@ class DbLib:
             for annot in keyAnnotations:
                 dbField = annot.dbField
                 if not dbField: continue
-                name = ife(dbField is $String, dbField, key) # Infer the name
+                name = ife(dbField is String, dbField, key) # Infer the name
                 $type = nil # Infer type based on calue associated with the field in class definition
-                if val is $Number: $type = "int"
-                elsif val is $String: $type = "varchar(255)"
+                if val is Number: $type = "int"
+                elsif val is String: $type = "varchar(255)"
                 elsif val is Date: $type = "date"
                 # ... of course, many more types could be added, including relationships to other tables
 

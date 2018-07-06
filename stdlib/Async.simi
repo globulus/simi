@@ -20,7 +20,7 @@ Async = [
             $line = lines.(i)
            if @KEYWORD in $line:
                if i > start:
-                   $prepend += $String.from(lines.slice(start, i + 1), "\n") + "\n"
+                   $prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
                end
                $jump = 1
                if $line.endsWith("["):
@@ -31,7 +31,7 @@ Async = [
                        elsif otherLine.startsWith("]"):
                            if $opens == 0:
                                $jump = j - i + 2
-                               $line = $String.from(lines.slice(i, j + 2), " ")
+                               $line = String.from(lines.slice(i, j + 2), " ")
                                break
                            end
                            else: $opens = $opens - 1
@@ -41,7 +41,7 @@ Async = [
                return $prepend + @_makeAwait(tempName + start, $line) + @_process(lines, i + $jump, tempName) + "\nend)"
             end
         end
-        return $prepend + $String.from(lines.slice(start, lines.len()), "\n")
+        return $prepend + String.from(lines.slice(start, lines.len()), "\n")
     end,
 
     _makeAwait = def (name, line):

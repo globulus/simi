@@ -14,8 +14,8 @@ class Json:
 
     def stringify(obj):
         if not obj: return @_strNull()
-        if obj is $Number: return @_strNumber(obj)
-        if obj is $String: return @_strString(obj)
+        if obj is Number: return @_strNumber(obj)
+        if obj is String: return @_strString(obj)
         if obj.isArray(): return @_strArray(obj)
         return @_strObject(obj)
     end
@@ -27,7 +27,7 @@ class Json:
     def _strString(str): return @_TOKENS.stringDelimiter + str + @_TOKENS.stringDelimiter
 
     def _strArray(arr):
-        str = $String.builder()
+        str = String.builder()
         str.add(@_TOKENS.arrayStart)
         $first = true
         for val in arr:
@@ -40,7 +40,7 @@ class Json:
     end
 
     def _strObject(obj):
-        str = $String.builder()
+        str = String.builder()
         str.add(@_TOKENS.objectStart)
         $first = true
         for key in obj.keys():
@@ -119,7 +119,7 @@ class Json:
             return str.substring($start, $curr).toNumber()
         end
 
-        tokens = $Object.array()
+        tokens = Object.array()
         while not isAtEnd():
             $start = $curr
             c = advance()
@@ -157,7 +157,7 @@ class Json:
                     if $token != @_TOKENS.comma: error("Expected a ,!")
                     $token = nextToken()
                 end
-                if $token is not $String: error("Expecting string for key!")
+                if $token is not String: error("Expecting string for key!")
                 key = $token
                 if nextToken() != @_TOKENS.colon: error("Expecting : after key!")
                 value = parseRaw(nextToken())
@@ -169,7 +169,7 @@ class Json:
 
         parseArray = def opener:
             if opener != @_TOKENS.arrayStart: return nil
-            arr = $Object.array()
+            arr = Object.array()
             while hasNext():
                 $token = nextToken()
                 if $token == @_TOKENS.arrayEnd: return arr

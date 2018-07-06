@@ -36,7 +36,7 @@ class Net:
 #            $line = lines.(i)
 #            if @KEYWORD_POST in $line:
 #                if i > start:
-#                    $prepend += $String.from(lines.slice(start, i + 1), "\n") + "\n"
+#                    $prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
 #                end
 #                $jump = 1
 #                if $line.endsWith("["):
@@ -47,7 +47,7 @@ class Net:
 #                        elsif otherLine.startsWith("]"):
 #                            if $opens == 0:
 #                                $jump = j - i + 2
-#                                $line = $String.from(lines.slice(i, j + 2), " ")
+#                                $line = String.from(lines.slice(i, j + 2), " ")
 #                                break
 #                            end
 #                            else: $opens = $opens - 1
@@ -57,7 +57,7 @@ class Net:
 #                return $prepend + @_makePost(tempName + start, $line) + @_process(lines, i + $jump, tempName) + "\nend)"
 #            end
 #        end
-#        return $prepend + $String.from(lines.slice(start, lines.len()), "\n")
+#        return $prepend + String.from(lines.slice(start, lines.len()), "\n")
 #    end
 #
 #    def _makePost(name, line):

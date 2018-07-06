@@ -70,6 +70,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
   static class Class extends Stmt {
 
+    final Token opener;
     final Token name;
     final List<Expr> superclasses;
     final List<Expr.Assign> constants;
@@ -77,9 +78,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
     final List<Stmt.Function> methods;
     final List<Stmt.Annotation> annotations;
 
-    Class(Token name, List<Expr> superclasses, List<Expr.Assign> constants,
-          List<Stmt.Class> innerClasses, List<Stmt.Function> methods,
-          List<Stmt.Annotation> annotations) {
+    Class(Token opener, Token name, List<Expr> superclasses,
+          List<Expr.Assign> constants, List<Stmt.Class> innerClasses,
+          List<Stmt.Function> methods, List<Stmt.Annotation> annotations) {
+      this.opener = opener;
       this.name = name;
       this.superclasses = superclasses;
       this.constants = constants;
@@ -99,7 +101,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
       // TODO add annotations - can't add them now as the order of statements is unknown
-      return new StringBuilder(TokenType.CLASS.toCode(indentationLevel, false))
+      return new StringBuilder(opener.type.toCode(indentationLevel, false))
               .append(" ").append(name.lexeme)
               .append(superclasses != null
                       ? TokenType.LEFT_PAREN.toCode() + superclasses.stream()
