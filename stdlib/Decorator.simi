@@ -33,7 +33,7 @@ Decorator = [
                 for _ in $decorators.len().times():
                     str.add(")")
                 end
-                needsBrackets = params.indexOf(',')
+                needsBrackets = "," in params
                 str\
                     .add("(").add(ife(needsBrackets, "[", ""))\
                     .add(params)\
@@ -120,6 +120,7 @@ Decorator = [
                     fcache.(fname) = def args:
                         cache = $[]
                         $arg = 0
+                        $worker = nil
                         workerLines = $Object.array()
                         workerLines.append($farg.anonymousDeclaration())
                         $temp = 0
@@ -145,7 +146,11 @@ Decorator = [
                                             if $parenCount == 0:
                                                 tempName = "temp" + $temp
                                                 $temp += 1
-                                                workerLines.append("$arg = " + rest.substring($firstParen, i + 1))
+                                                $params = rest.substring($firstParen, i + 1)
+                                                if $farg.arity != 1:
+                                                    $params = "[" + $params.substring(1, $params.len() - 1) + "]"
+                                                end
+                                                workerLines.append("$arg = " + $params)
                                                 workerLines.append(tempName + " = looper()")
                                                 parts.append(tempName)
                                                 $currentLine = rest.substring(i + 1)
@@ -161,16 +166,16 @@ Decorator = [
                         end
                         workerLines.append("end")
 #                        print workerLines
-                        worker = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
+                        $worker = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
                         looper = def ():
                            while true:
                             key = $arg.toString()
-                            if key not in cache: cache.(key) = worker($arg)
+                            if key not in cache: cache.(key) = $worker($arg)
 #                            else: print "found key in cache: " + key
                             yield cache.(key)
                          end
                        end
-                       return worker(args)
+                       return $worker(args)
                     end
                 end
                 yield fcache.(fname)

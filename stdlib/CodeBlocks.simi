@@ -12,6 +12,7 @@ class CodeBlocks:
             @ref = f
             @name = "" + f
             @lines = (ivic f).split("\n")
+            @_computeArity()
         end
 
         def init(lines, startLine):
@@ -32,6 +33,7 @@ class CodeBlocks:
                 end
             end
             @lines = fLines
+            @_computeArity()
         end
 
         def declaration(): return @lines.0
@@ -44,6 +46,19 @@ class CodeBlocks:
 
         def isDefLine(line):
             return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
+        end
+
+        def _computeArity():
+            $count = 0
+            params = @parametersWithoutParentheses()
+            if params.len() == 0:
+                @arity = 0
+                return
+            end
+            for c in params:
+                if c == ',': $count += 1
+            end
+            @arity = $count + 1
         end
     end
 end
