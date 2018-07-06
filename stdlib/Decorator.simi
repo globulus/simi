@@ -107,6 +107,7 @@ Decorator = [
     memoize = def f:
 #        print "In memoize"
         fcache = $[]
+        workerCache = $[]
         $farg = nil
         fworker = def f:
             $farg = CodeBlocks.Function(f)
@@ -117,65 +118,65 @@ Decorator = [
                 fname = $farg.name
 #                print "In flooper: " + fname
                 if fname not in fcache:
-                    fcache.(fname) = def args:
-                        cache = $[]
-                        $arg = 0
-                        $worker = nil
-                        workerLines = $Object.array()
-                        workerLines.append($farg.anonymousDeclaration())
-                        $temp = 0
-                        for line in $farg.body():
-                            trimmedLine = line.trim()
-                            if fname in trimmedLine:
-                                parts = $Object.array()
-                                $currentLine = trimmedLine
-                                while fname in $currentLine:
-                                    index = $currentLine.indexOf(fname)
-                                    parts.append($currentLine.substring(0, index))
-                                    rest = $currentLine.substring(index)
-                                    $parenCount = 0
-                                    $firstParen = -1
-                                    for i in rest.len().times():
-                                        c = rest.(i)
-                                        if c == '(':
-                                            if $parenCount == 0: $firstParen = i
-                                            $parenCount += 1
-                                        end
-                                        elsif c == ')':
-                                            $parenCount -= 1
-                                            if $parenCount == 0:
-                                                tempName = "temp" + $temp
-                                                $temp += 1
-                                                $params = rest.substring($firstParen, i + 1)
-                                                if $farg.arity != 1:
-                                                    $params = "[" + $params.substring(1, $params.len() - 1) + "]"
-                                                end
-                                                workerLines.append("$arg = " + $params)
-                                                workerLines.append(tempName + " = looper()")
-                                                parts.append(tempName)
-                                                $currentLine = rest.substring(i + 1)
-                                                break
+                    workerLines = $Object.array()
+                    workerLines.append($farg.anonymousDeclaration().replacing("(", "(looper, "))
+                    $temp = 0
+                    for line in $farg.body():
+                        trimmedLine = line.trim()
+                        if fname in trimmedLine:
+                            parts = $Object.array()
+                            $currentLine = trimmedLine
+                            while fname in $currentLine:
+                                index = $currentLine.indexOf(fname)
+                                parts.append($currentLine.substring(0, index))
+                                rest = $currentLine.substring(index)
+                                $parenCount = 0
+                                $firstParen = -1
+                                for i in rest.len().times():
+                                    c = rest.(i)
+                                    if c == '(':
+                                        if $parenCount == 0: $firstParen = i
+                                        $parenCount += 1
+                                    end
+                                    elsif c == ')':
+                                        $parenCount -= 1
+                                        if $parenCount == 0:
+                                            tempName = "temp" + $temp
+                                            $temp += 1
+                                            $params = rest.substring($firstParen, i + 1)
+                                            if $farg.arity != 1:
+                                                $params = "[" + $params.substring(1, $params.len() - 1) + "]"
                                             end
+                                            workerLines.append("$arg = " + $params)
+                                            workerLines.append(tempName + " = looper()")
+                                            parts.append(tempName)
+                                            $currentLine = rest.substring(i + 1)
+                                            break
                                         end
                                     end
                                 end
-#                                print parts
-                                workerLines.append($String.from(parts, " "))
                             end
-                            else: workerLines.append(line)
+#                                print parts
+                            workerLines.append($String.from(parts, " "))
                         end
-                        workerLines.append("end")
-#                        print workerLines
-                        $worker = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
+                        else: workerLines.append(line)
+                    end
+                    workerLines.append("end")
+#                    print workerLines
+                    workerCache.(fname) = gu ("[f = " + $String.from(workerLines, "\n") + "].f")
+                    fcache.(fname) = def args:
+                        cache = $[]
+                        $arg = 0
+                        $worker = workerCache.(fname)
                         looper = def ():
                            while true:
                             key = $arg.toString()
-                            if key not in cache: cache.(key) = $worker($arg)
+                            if key not in cache: cache.(key) = $worker([looper].joined($arg))
 #                            else: print "found key in cache: " + key
                             yield cache.(key)
                          end
                        end
-                       return $worker(args)
+                       return $worker([looper].joined(args))
                     end
                 end
                 yield fcache.(fname)

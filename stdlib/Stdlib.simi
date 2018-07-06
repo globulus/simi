@@ -82,7 +82,9 @@ class $Object:
     end
     def joined(with):
         clone = @clone()
-        clone.addAll(with)
+        $extra = with
+        if with is not $Object: $extra = [with]
+        clone.addAll($extra)
         return clone
     end
     def map(function):

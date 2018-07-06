@@ -37,16 +37,21 @@ Decorator.go(def ():
         return fib2(n - 2) + fib2(n - 1)
     end
 
+    decorate* "Decorator.memoize"
+    def gcd(a, b):
+        if b: return gcd(b, a % b)
+        return a
+    end
+
     decorate* "Decorator.timed"
     def testFib(n):
         print "Testing fib"
         print fib(n)
         print "Done testing fib"
     end
-    testFib(10)
-    testFib(10)
-    testFib(10)
-
+    for _ in 3.times():
+        testFib(10)
+    end
 
     decorate* "Decorator.timed"
     def testFib2(n):
@@ -54,9 +59,19 @@ Decorator.go(def ():
         print fib2(n)
         print "Done testing fib2"
     end
-    testFib2(100)
-    testFib2(100)
-    testFib2(100)
+    for _ in 3.times():
+        testFib2(10)
+    end
+
+    decorate* "Decorator.timed"
+    def testGcd(a, b):
+        print "Testing gcd"
+        print gcd(a, b)
+        print "Done testing gcd"
+    end
+    for _ in 3.times():
+        testGcd(10000, 41)
+    end
 end)()
 
 Decorator.test()
