@@ -1,0 +1,1 @@
+java -jar simi.jar $1
