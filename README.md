@@ -9,7 +9,8 @@ What Šimi offers:
 * Full OOP support.
 * [Metaprogramming operators](#metaprogramming-and-deserialization---gu-and-ivic) allows for language extensions and syntax sugar to be added by anyone.
 * Rich [Java API](#java-api) - if it exist in Java, you can easily bridge it into Šimi!
-* Run Šimi on any device that supports JRE, with special support for Android and iOS.
+* Run Šimi on any device that supports JRE, with special native support in Android.
+* Run natively on any Cocoa machine ([iOS or Mac OS X](https://github.com/globulus/simi-ios)).
 * Free to use and modify!
 ### Quickstart
 
