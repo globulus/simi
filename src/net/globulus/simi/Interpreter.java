@@ -582,16 +582,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     SimiObject instance;
     if (callee instanceof SimiValue.Object) {
       SimiObject value = callee.getObject();
-      if (!(value instanceof SimiClassImpl)) {
-        throw new RuntimeError(paren,"Can only call functions and classes.");
+      if (value instanceof SimiClassImpl) {
+        return ((SimiClassImpl) value).init(this, arguments);
+      } else {
+        return callee;
       }
-      return ((SimiClassImpl) value).init(this, arguments);
     } else if (callee instanceof SimiValue.Callable) {
       callable = callee.getCallable();
       methodName = ((SimiValue.Callable) callee).name;
       instance = ((SimiValue.Callable) callee).getInstance();
     } else if (callee instanceof TempNull) {
       return TempNull.INSTANCE;
+    } else if (callee != null) {
+      return callee;
     } else {
       throw new RuntimeError(paren,"Can only call functions and classes: " + callExprStack.peek().callee.toCode(0, true));
     }

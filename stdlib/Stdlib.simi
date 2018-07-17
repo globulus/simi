@@ -136,8 +136,8 @@ class NumberFormatException(Exception):
 end
 
 def ife(condition, ifval, elseval):
-    if condition: return ifval
-    else: return elseval
+    if condition: return ifval()
+    else: return elseval()
 end
 
 class Iterator:
@@ -190,7 +190,7 @@ class Range:
 end
 
 class$ Number:
-    def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
+    def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
 
