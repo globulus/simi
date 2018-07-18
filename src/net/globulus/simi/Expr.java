@@ -540,8 +540,7 @@ abstract class Expr implements Codifiable {
                 )
                 .append(needsNewline ? TokenType.NEWLINE.toCode() : "")
                 .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
-                .toString()
-                .replace("end\n,", "end,");
+                .toString();
       }
     }
 }

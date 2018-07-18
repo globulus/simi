@@ -733,7 +733,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitIvicExpr(Expr.Ivic expr) {
     SimiValue value = evaluate(expr.expr).getValue();
-    return new SimiValue.String(value.toCode(0, false));
+    String code = value.toCode(0, false)
+            .replace("end\n,", "end,")
+            .replace("end\n)", "end)");
+    return new SimiValue.String(code);
   }
 
   @Override
@@ -975,8 +978,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {
-    SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
     SimiObject right = SimiObjectImpl.getOrConvertObject(b, this);
+    if (a instanceof SimiValue.Callable
+            && right instanceof SimiClassImpl
+            && ((SimiClassImpl) right).name.equals(Constants.CLASS_FUNCTION)) {
+      return true;
+    }
+    SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
     if (left == null || right == null) {
       return false;
     }
@@ -1011,6 +1019,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     return className.equals(Constants.CLASS_OBJECT)
             || className.equals(Constants.CLASS_NUMBER)
             || className.equals(Constants.CLASS_STRING)
+            || className.equals(Constants.CLASS_FUNCTION)
             || className.equals(Constants.CLASS_EXCEPTION);
   }
 

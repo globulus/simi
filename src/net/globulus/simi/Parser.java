@@ -357,7 +357,7 @@ class Parser {
     } else {
       Stmt stmt = statement(true);
       if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
-        stmt = new Stmt.Return(declaration, ((Stmt.Expression) stmt).expression);
+        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line), ((Stmt.Expression) stmt).expression);
       }
       statements.add(stmt);
     }
@@ -634,7 +634,7 @@ class Parser {
     }
 
     if (match(COLON)) {
-      Token declaration = previous();
+      Token declaration = new Token(DEF, null, null, previous().line);
       return new Expr.Block(declaration, new ArrayList<>(), getBlockStatements(declaration, LAMBDA), true);
     }
 

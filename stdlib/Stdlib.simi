@@ -1,8 +1,6 @@
 import "./stdlib/Stdlib-java.jar"
 
-"Test for class"
 class$ Object:
-"Test for method"
     native len(): pass
     native keys(): pass
     native values(): pass
@@ -126,6 +124,9 @@ class$ Object:
    def slice(start): return @slice(start, @len())
 end
 
+class_ Function:
+end
+
 class Exception:
     def init(message): pass
 
@@ -246,6 +247,7 @@ class$ String:
     def lastIndexOf(str): return @lastIndexOf(str, @len() - 1)
     def removing(start): return @slice(start, @len())
     def substring(start): return @substring(start, @len())
+    def isEmpty(): return @len() == 0
 end
 
 Math = [

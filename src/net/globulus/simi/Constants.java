@@ -21,6 +21,7 @@ final class Constants {
     public static final String RAISE = "raise";
 
     public static final String CLASS_OBJECT = "Object";
+    public static final String CLASS_FUNCTION = "Function";
     public static final String CLASS_STRING = "String";
     public static final String CLASS_NUMBER = "Number";
     public static final String CLASS_CLASS = "Class";
