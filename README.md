@@ -1,5 +1,5 @@
 # Šimi - an awesome programming language
-Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated and runtime and features to be added to the language by anyone!
+Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
 You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios).
 
@@ -234,6 +234,11 @@ f(1, 2, 3) # The conventional way of doing it
 f([4, 5, 6]) # Invoking with an array
 f([a = 7, b = 8, c = 9]) # Invoking with dictionary
 # All these invocations do the same thing!
+```
+
+You can check if a value is a function by testing agains the *Function* class:
+```ruby
+fun is Function
 ```
 
 #### Objects
@@ -558,6 +563,23 @@ end
 While Šimi does not offer the ternary operator (?:), the Stdlib contains a global function named **ife**, which works exactly as ?: does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
 ```ruby
 max = ife(a < b, a, b)
+```
+##### *ife* and lazy loading
+If you look at the definition of the *ife* function, you'll see that it has call operator *()* for both of its "branches":
+```ruby
+def ife(condition, ifval, elseval):
+    if condition: return ifval()
+    else: return elseval()
+end
+```
+In Šimi, can can call any value other than nil - it's not just limited to functions and classes. If you invoke a call on a Number, String or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
+```ruby
+step = ife(min < max, 1, -1) # Works with non-function values
+
+# The following example uses functions to lazily compute only the value
+# which needs to be returned. Notice ":" syntax, which is shorthand for
+# def ():
+step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
 ```
 
 #### while loop
