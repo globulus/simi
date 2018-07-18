@@ -339,23 +339,29 @@ class Parser {
     }
     List<Token> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
+
+    return new Expr.Block(declaration, params, getBlockStatements(declaration, kind),
+            kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
+  }
+
+  private List<Stmt> getBlockStatements(Token declaration, String kind) {
     List<Stmt> statements = new ArrayList<>();
     if (match(NEWLINE)) {
-        while (!check(END) && !isAtEnd()) {
-            if (match(NEWLINE, PASS)) {
-              continue;
-            }
-            statements.add(declaration());
+      while (!check(END) && !isAtEnd()) {
+        if (match(NEWLINE, PASS)) {
+          continue;
         }
-        consume(END, "Expect 'end' after block.");
+        statements.add(declaration());
+      }
+      consume(END, "Expect 'end' after block.");
     } else {
-        Stmt stmt = statement(true);
-        if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
-          stmt = new Stmt.Return(declaration, ((Stmt.Expression) stmt).expression);
-        }
-        statements.add(stmt);
+      Stmt stmt = statement(true);
+      if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
+        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line), ((Stmt.Expression) stmt).expression);
+      }
+      statements.add(stmt);
     }
-    return new Expr.Block(declaration, params, statements, kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
+    return statements;
   }
 
   private List<Token> params(String kind, boolean lambda) {
@@ -625,6 +631,11 @@ class Parser {
 
     if (match(DEF, NATIVE)) {
         return block(LAMBDA, true);
+    }
+
+    if (match(COLON)) {
+      Token declaration = new Token(DEF, null, null, previous().line);
+      return new Expr.Block(declaration, new ArrayList<>(), getBlockStatements(declaration, LAMBDA), true);
     }
 
     if (match(IDENTIFIER)) {

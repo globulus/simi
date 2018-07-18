@@ -582,14 +582,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     SimiObject instance;
     if (callee instanceof SimiValue.Object) {
       SimiObject value = callee.getObject();
-      if (!(value instanceof SimiClassImpl)) {
-        throw new RuntimeError(paren,"Can only call functions and classes.");
+      if (value instanceof SimiClassImpl) {
+        return ((SimiClassImpl) value).init(this, arguments);
+      } else {
+        return callee;
       }
-      return ((SimiClassImpl) value).init(this, arguments);
     } else if (callee instanceof SimiValue.Callable) {
       callable = callee.getCallable();
       methodName = ((SimiValue.Callable) callee).name;
       instance = ((SimiValue.Callable) callee).getInstance();
+    } else if (callee instanceof TempNull) {
+      return TempNull.INSTANCE;
+    } else if (callee != null) {
+      return callee;
     } else {
       throw new RuntimeError(paren,"Can only call functions and classes: " + callExprStack.peek().callee.toCode(0, true));
     }
@@ -728,7 +733,10 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitIvicExpr(Expr.Ivic expr) {
     SimiValue value = evaluate(expr.expr).getValue();
-    return new SimiValue.String(value.toCode(0, false));
+    String code = value.toCode(0, false)
+            .replace("end\n,", "end,")
+            .replace("end\n)", "end)");
+    return new SimiValue.String(code);
   }
 
   @Override
@@ -970,8 +978,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {
-    SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
     SimiObject right = SimiObjectImpl.getOrConvertObject(b, this);
+    if (a instanceof SimiValue.Callable
+            && right instanceof SimiClassImpl
+            && ((SimiClassImpl) right).name.equals(Constants.CLASS_FUNCTION)) {
+      return true;
+    }
+    SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
     if (left == null || right == null) {
       return false;
     }
@@ -1006,6 +1019,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     return className.equals(Constants.CLASS_OBJECT)
             || className.equals(Constants.CLASS_NUMBER)
             || className.equals(Constants.CLASS_STRING)
+            || className.equals(Constants.CLASS_FUNCTION)
             || className.equals(Constants.CLASS_EXCEPTION);
   }
 
