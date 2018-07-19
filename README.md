@@ -572,7 +572,7 @@ def ife(condition, ifval, elseval):
     else: return elseval()
 end
 ```
-In Šimi, can can call any value other than nil - it's not just limited to functions and classes. If you invoke a call on a Number, String or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
+In Šimi, can can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
 ```ruby
 step = ife(min < max, 1, -1) # Works with non-function values
 
