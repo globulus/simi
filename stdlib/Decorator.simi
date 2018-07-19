@@ -49,9 +49,7 @@ Decorator = [
         return gu ("[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName)
     end,
 
-    _tempName = def ():
-        return "temp" + clock().toString().substring(5)
-    end,
+    _tempName = :"temp" + clock().toString().substring(5),
 
     test = def ():
         @go(def ():

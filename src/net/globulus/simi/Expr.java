@@ -37,12 +37,20 @@ abstract class Expr implements Codifiable {
       final List<Token> params;
       final List<Stmt> statements;
       final boolean canReturn;
+      final boolean isNative;
 
-        Block(Token declaration, List<Token> params, List<Stmt> statements, boolean canReturn) {
+        Block(Token declaration,
+              List<Token> params,
+              List<Stmt> statements,
+              boolean canReturn) {
             this.declaration = declaration;
             this.params = params;
             this.statements = statements;
             this.canReturn = canReturn;
+            this.isNative = (statements.size() == 1
+                    && statements.get(0) instanceof Stmt.Expression
+                    && ((Stmt.Expression) statements.get(0)).expression instanceof Expr.Literal
+                    && ((Literal) ((Stmt.Expression) statements.get(0)).expression).value instanceof Native);
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
@@ -50,10 +58,6 @@ abstract class Expr implements Codifiable {
             boolean execute = (params.length < 2) ? true : (Boolean) params[1];
             return visitor.visitBlockExpr(this, newScope, execute);
         }
-
-      boolean isNative() {
-        return declaration.type == TokenType.NATIVE;
-      }
 
       @Override
       public List<? extends SimiStatement> getStatements() {
@@ -87,7 +91,7 @@ abstract class Expr implements Codifiable {
 
       String toCode(int indentationLevel, boolean ignoreFirst, String name) {
         String opener;
-        if (declaration.type == TokenType.DEF || declaration.type == TokenType.NATIVE) {
+        if (declaration.type == TokenType.DEF) {
           opener = declaration.type.toCode() + " ";
         } else {
           opener = "";

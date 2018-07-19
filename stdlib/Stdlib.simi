@@ -1,41 +1,41 @@
 import "./stdlib/Stdlib-java.jar"
 
 class$ Object:
-    native len(): pass
-    native keys(): pass
-    native values(): pass
-    native enumerate(): pass
-    native zip(): pass
+    def len(): native
+    def keys(): native
+    def values(): native
+    def enumerate(): native
+    def zip(): native
 
-    native iterate(): pass
-    native has(obj): pass
-    native equals(other): pass
-    native compareTo(other): pass
-    native toString(): pass
-    native matches(other): pass
-    native matches(other, fields): pass
+    def iterate(): native
+    def has(obj): native
+    def equals(other): native
+    def compareTo(other): native
+    def toString(): native
+    def matches(other): native
+    def matches(other, fields): native
 
-    native append(elem): pass
-    native addAll(obj): pass
-    native clear(): pass
+    def append(elem): native
+    def addAll(obj): native
+    def clear(): native
 
-    native indexOf(elem): pass
-    native reversed(): pass
-    native sorted(): pass
-    native sorted(comparator): pass
-    native uniques(): pass
+    def indexOf(elem): native
+    def reversed(): native
+    def sorted(): native
+    def sorted(comparator): native
+    def uniques(): native
 
-    native clone(): pass
-    native clone(mutable): pass
-    native isMutable(): pass
-    native isArray(): pass
-    native classObject(): pass
+    def clone(): native
+    def clone(mutable): native
+    def isMutable(): native
+    def isArray(): native
+    def classObject(): native
 
-    native array(): pass
-    native array(capacity): pass
-    native array(capacity, fillValue): pass
-    native slice(start, stop): pass
-    native builder(): pass
+    def array(): native
+    def array(capacity): native
+    def array(capacity, fillValue): native
+    def slice(start, stop): native
+    def builder(): native
 
     def length(): return @len()
     def isEmpty(): return @len() == 0
@@ -130,7 +130,7 @@ end
 class Exception:
     def init(message): pass
 
-    native raise(): pass
+    def raise(): native
 end
 
 class NumberFormatException(Exception):
@@ -195,40 +195,40 @@ class$ Number:
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
 
-    native randomInt(max): pass
+    def randomInt(max): native
 
-    native equals(other): pass
-    native compareTo(other): pass
-    native toString(): pass
+   def equals(other): native
+   def compareTo(other): native
+   def toString(): native
 
     def sum(a, b): return a + b
     def product(a, b): return a * b
 end
 
 class$ String:
-    native len(): pass
-    native endsWith(suffix): pass
-    native format(args): pass
-    native indexOf(str, index): pass
-    native lastIndexOf(str, index): pass
-    native removing(start, stop): pass
-    native replacing(old, new): pass
-    native split(separator): pass
-    native startsWith(prefix): pass
-    native substring(start, stop): pass
-    native lowerCased(): pass
-    native upperCased(): pass
-    native trim(): pass
-    native isAlpha(): pass
-    native isDigit(): pass
+   def len(): native
+   def endsWith(suffix): native
+   def format(args): native
+   def indexOf(str, index): native
+   def lastIndexOf(str, index): native
+   def removing(start, stop): native
+   def replacing(old, new): native
+   def split(separator): native
+   def startsWith(prefix): native
+   def substring(start, stop): native
+   def lowerCased(): native
+   def upperCased(): native
+   def trim(): native
+   def isAlpha(): native
+   def isDigit(): native
 
-    native iterate(): pass
-    native has(obj): pass
-    native equals(other): pass
-    native compareTo(other): pass
-    native toNumber(): pass
+   def iterate(): native
+   def has(obj): native
+   def equals(other): native
+   def compareTo(other): native
+   def toNumber(): native
 
-    native builder(): pass
+   def builder(): native
 
     def sum(a, b): return a + b
     def from(array, separator):
@@ -251,44 +251,44 @@ class$ String:
 end
 
 Math = [
-    pow = native (a, b): pass,
-    max = native (a, b): pass,
-    min = native (a, b): pass,
-    atan2 = native (a, b): pass,
-    abs = native (a): pass,
-    acos = native (a): pass,
-    asin = native (a): pass,
-    atan = native (a): pass,
-    cbrt = native (a): pass,
-    ceil = native (a): pass,
-    cos = native (a): pass,
-    cosh = native (a): pass,
-    exp = native (a): pass,
-    floor = native (a): pass,
-    log = native (a): pass,
-    log10 = native (a): pass,
-    log1p = native (a): pass,
+    pow = def (a, b): native,
+    max = def (a, b): native,
+    min = def (a, b): native,
+    atan2 = def (a, b): native,
+    abs = def (a): native,
+    acos = def (a): native,
+    asin = def (a): native,
+    atan = def (a): native,
+    cbrt = def (a): native,
+    ceil = def (a): native,
+    cos = def (a): native,
+    cosh = def (a): native,
+    exp = def (a): native,
+    floor = def (a): native,
+    log = def (a): native,
+    log10 = def (a): native,
+    log1p = def (a): native,
     logn = def (a, b): return @log(a) / @log(b),
-    round = native (a): pass,
-    signum = native (a): pass,
-    sin = native (a): pass,
-    sinh = native (a): pass,
-    sqrt = native (a): pass,
-    tan = native (a): pass,
-    tanh = native (a): pass,
-    toDegrees = native (a): pass,
-    toRadians = native (a): pass
+    round = def (a): native,
+    signum = def (a): native,
+    sin = def (a): native,
+    sinh = def (a): native,
+    sqrt = def (a): native,
+    tan = def (a): native,
+    tanh = def (a): native,
+    toDegrees = def (a): native,
+    toRadians = def (a): native
 ]
 
 class Closeable:
-    def close(): pass
+    def close(): native
 end
 
 class Date:
     def init(timestamp): pass
 
-    native now(): pass
-    native format(pattern): pass
+    def now(): native
+    def format(pattern): native
 end
 
 class Enum:

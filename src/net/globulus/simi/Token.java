@@ -21,7 +21,7 @@ class Token {
   }
 
   static Token nativeCall(String name) {
-    return new Token(TokenType.NATIVE, name, null, 0);
+    return new Token(TokenType.DEF, name, null, 0);
   }
 
   static Token named(String name) {

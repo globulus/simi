@@ -54,7 +54,7 @@ end
 maxKnights = 5
 knights = Object.array()
 for _ in maxKnights.times():
-    knights.push(Knight(Field(0, 0), def (): pass))
+    knights.push(Knight(Field(0, 0), :pass))
 end
 
 for _ in 50.times():
