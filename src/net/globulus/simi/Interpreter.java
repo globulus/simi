@@ -243,7 +243,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
         String name = method.name.lexeme;
       SimiFunction function = new SimiFunction(method, environment,
-          name.equals(Constants.INIT), method.block.isNative(), getAnnotations(method));
+          name.equals(Constants.INIT), method.block.isNative, getAnnotations(method));
       methods.put(new OverloadableFunction(name, function.arity()), function);
     }
 
@@ -280,7 +280,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiValue visitFunctionStmt(Stmt.Function stmt) {
       applyAnnotations(stmt);
-    SimiFunction function = new SimiFunction(stmt, environment, false, stmt.block.isNative(), getAnnotations(stmt));
+    SimiFunction function = new SimiFunction(stmt, environment, false, stmt.block.isNative, getAnnotations(stmt));
     SimiValue value = new SimiValue.Callable(function, stmt.name.lexeme, null);
     environment.define(stmt.name.lexeme, new SimiPropertyImpl(value, function.annotations));
     return value;

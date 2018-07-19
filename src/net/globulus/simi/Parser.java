@@ -53,7 +53,7 @@ class Parser {
       if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
           return classDeclaration();
       }
-      if (match(DEF, NATIVE)) {
+      if (match(DEF)) {
           return function(FUNCTION);
       }
       if (match(BANG)) {
@@ -87,7 +87,7 @@ class Parser {
         if (match(NEWLINE)) {
           continue;
         }
-        if (match(DEF, NATIVE)) {
+        if (match(DEF)) {
             methods.add(function(METHOD));
         } else if (match(CLASS)) {
             innerClasses.add(classDeclaration());
@@ -600,6 +600,10 @@ class Parser {
       return new Expr.Literal(new Pass());
     }
 
+    if (match(NATIVE)) {
+      return new Expr.Literal(new Native());
+    }
+
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
     }
@@ -629,7 +633,7 @@ class Parser {
         return objectLiteral();
     }
 
-    if (match(DEF, NATIVE)) {
+    if (match(DEF)) {
         return block(LAMBDA, true);
     }
 

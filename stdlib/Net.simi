@@ -3,7 +3,7 @@ import "./stdlib/Net-java.jar"
 class Net:
     KEYWORD_POST = "post *"
 
-    native post(request, callback): pass
+    def post(request, callback): native
 
     def go(f):
         common = Async.KEYWORD + " Net."

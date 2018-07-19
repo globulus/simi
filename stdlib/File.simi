@@ -4,25 +4,25 @@ class IoException(Exception):
 end
 
 class ReadStream(Closeable):
-    native init(file): pass
-    native read(): pass
-    native readLine(): pass
-    native reset(): pass
-    native skip(n): pass
-    native close(): pass
+    def init(file): native
+    def read(): native
+    def readLine(): native
+    def reset(): native
+    def skip(n): native
+    def close(): native
 end
 
 class WriteStream(Closeable):
-    native init(file): pass
-    native write(string): pass
-    native close(): pass
+    def init(file): native
+    def write(string): native
+    def close(): native
 
     def newLine(): @write("\n")
 end
 
 class File:
-    def init(path): pass
+    def init(path): native
 
-    native readLines(path): pass
-    native readString(path): pass
+    def readLines(path): native
+    def readString(path): native
 end

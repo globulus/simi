@@ -24,7 +24,7 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   boolean isNative() {
-    return declaration.isNative();
+    return declaration.isNative;
   }
 
   @Override

@@ -108,8 +108,6 @@ print arr
 #### pass
 The *pass* keyword is used to denote an empty expression, and is put where a statement or expression is syntactically required, but nothing should actually happen.
 ```ruby
-# Pass is widely used in native functions, as their bodies need to be empty
-native len(): pass
 # It can also be used for specifying empty methods that are meant to be overriden
 def next(): pass
 ```
@@ -207,8 +205,9 @@ subtract = def (a, b):
     return c
 end
 
-# Functions that map to native code have empty bodies
-native pow(a, b): pass
+# Functions that map to native code have a single native statement
+# in their bodies
+def pow(a, b): native
 
 # Functions without parameters are required to have parentheses
 def printFunction(): print "printing"
@@ -217,7 +216,7 @@ def printFunction(): print "printing"
 # Lambdas with a single parameter needn't put the parameter in parentheses
 filteredArray = [1, 2, 3, 4, 5].filter(def i: i > 2)
 ```
-Functions start with the *def* keyword if they're implemented in Šimi, or with *native* keyword if they're implemented externally. Native functions are required to have empty bodies (i.e, a single *pass* statement).
+Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
 Functions in class bodies are called *methods* and have a few caveats to them, which we'll cover in the Classes section.
 
@@ -780,9 +779,9 @@ class Date:
     def init(timestamp): pass
 
     # These methods is implemented natively via Java API. Note the
-    # native keyword and the empty body.
-    native now(): pass
-    native format(pattern): pass
+    # native keyword as the only statement in function body.
+    def now(): native
+    def format(pattern): native
 end
 ```
 
@@ -840,6 +839,8 @@ print date.timestamp
 You'll notice that there's no performance degradation associated with using native methods as the code is accessed via reflection only once, when the JAR import is resolved. After that, all native method references are effectively statically typed.
 
 You may also expose *global* methods, i.e methods that aren't linked to a class via the *@SimiJavaGlobal* annotation. These methods needn't have the first two parameters set to SimiObject and SimiEnvironment. Global methods should be used to represent a stateless operation, e.g exposing a math function.
+
+(For Cocoa interop, please check out [the iOS/OSX project readme](https://github.com/globulus/simi-ios).)
 
 ### Annotations
 
