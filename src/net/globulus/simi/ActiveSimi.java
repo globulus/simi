@@ -74,36 +74,31 @@ public class ActiveSimi {
     }
 
     private static void run(String source) throws IOException {
-        Map<String, NativeModulesManager> nativeModulesManagers = new HashMap<>();
-        nativeModulesManagers.put("jar", new JavaNativeModulesManager());
-        nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
-        List<String> imports = new ArrayList<>();
+        Map<String, NativeModulesManager> nativeModulesManagers;
+        if (interpreter == null) {
+            nativeModulesManagers = new HashMap<>();
+            nativeModulesManagers.put("jar", new JavaNativeModulesManager());
+            nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
 
-        long time = System.currentTimeMillis();
-        System.out.print("Scanning and resolving imports...");
+            interpreter = new Interpreter(nativeModulesManagers.values());
+        } else {
+            nativeModulesManagers = null;
+        }
+
+        List<String> imports = new ArrayList<>();
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManagers);
-        System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
-        time = System.currentTimeMillis();
-        System.out.print("Parsing...");
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
         // Stop if there was a syntax error.
         if (hadError) return;
 
-        interpreter = new Interpreter(nativeModulesManagers.values());
-
         Resolver resolver = new Resolver(interpreter);
         resolver.resolve(statements);
-
-        System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
-        time = System.currentTimeMillis();
-        // Stop if there was a resolution error.
         if (hadError) return;
 
         interpreter.interpret(statements);
-        System.out.println("Interpreting... " + (System.currentTimeMillis() - time) + " ms");
     }
 
     private static SimiProperty runExpression(String expression) {
@@ -136,7 +131,7 @@ public class ActiveSimi {
             if (pathString.endsWith(".simi")) {
                 List<Token> tokens = new Scanner(readFile(location)).scanTokens(false);
                 result.addAll(scanImports(tokens, imports, nativeModulesManagers));
-            } else {
+            } else if (nativeModulesManagers != null) {
                 String extension = pathString.substring(pathString.lastIndexOf('.'));
                 NativeModulesManager manager = nativeModulesManagers.get(extension);
                 if (manager != null) {

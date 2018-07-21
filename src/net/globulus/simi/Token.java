@@ -20,6 +20,10 @@ class Token {
     return new Token(TokenType.SELF, Constants.SELF, null, 0);
   }
 
+  static Token selfDef() {
+    return new Token(TokenType.DEF, Constants.SELF_DEF, null, 0);
+  }
+
   static Token nativeCall(String name) {
     return new Token(TokenType.DEF, name, null, 0);
   }

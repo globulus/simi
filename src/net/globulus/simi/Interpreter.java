@@ -210,7 +210,14 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
           applyAnnotations(constant);
         }
           String key = constant.name.lexeme;
-          SimiProperty prop = evaluate(constant.value);
+          SimiProperty prop;
+          if (constant.value instanceof Expr.Block) {
+            SimiFunction function = new SimiFunction(new Stmt.Function(Token.named(key), (Expr.Block) constant.value, null),
+                    environment, false, ((Expr.Block) constant.value).isNative, null);
+            prop = new SimiValue.Callable(function, key, null);
+          } else {
+            prop = evaluate(constant.value);
+          }
           List<SimiObject> annotations = getAnnotations(constant);
           if (prop != null) {
             constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
@@ -327,6 +334,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         throw returnYield;
       }
       this.environment.endBlock(stmt, yieldedStmts);
+    }
+    return null;
+  }
+
+  @Override
+  public SimiProperty visitImportStmt(Stmt.Import stmt) {
+    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.value).getValue(), this);
+    if (!(object instanceof SimiClassImpl)) {
+        throw new RuntimeError(stmt.keyword, "Import statement must be followed by an identifier that resolves to a class!");
+    }
+    SimiClassImpl clazz = (SimiClassImpl) object;
+    for (Map.Entry<String, SimiProperty> entry : clazz.fields.entrySet()) {
+        environment.assign(Token.named(entry.getKey()), entry.getValue(), false);
     }
     return null;
   }
@@ -804,6 +824,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitSelfExpr(Expr.Self expr) {
+    if (expr.specifier != null) {
+      return lookUpVariable(expr.specifier, expr);
+    }
     return lookUpVariable(expr.keyword, expr);
   }
 

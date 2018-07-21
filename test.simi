@@ -4,6 +4,24 @@ import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
 
+clck = clock()
+ def ife1():
+        return ife(1 < 2, Math.pow(2, 32), Math.pow(2, 32))
+    end
+    print "testing ife1()"
+    print ife1()
+    print "" + (clock() - clck)
+    clck2 = clock()
+    def ife2():
+        return ife(1 < 2, :Math.pow(2, 32), :Math.pow(2, 32))
+    end
+    print "testing ife2()"
+    print ife2()
+    print "" + (clock() - clck2)
+
+print clck is Function
+print ife1 is Function
+
 Decorator.go(def ():
 
     def fib(n):
@@ -444,3 +462,18 @@ print ivic so
 clone = gu ivic so
 print clone.matches(so)
 print ivic clone
+
+class_ ModuleClass:
+
+    class ModuleClassA:
+        a = 5
+    end
+
+    class ModuleClassB:
+        b = 6
+    end
+end
+import ModuleClass
+print ModuleClassA
+print ModuleClassB
+print ModuleClassA.matches(ModuleClass.ModuleClassA)

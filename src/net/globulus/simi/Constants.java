@@ -8,6 +8,7 @@ final class Constants {
 
     public static final String INIT = "init";
     public static final String SELF = "self";
+    public static final String SELF_DEF = "self(def)";
     public static final String SUPER = "super";
     public static final String KEY = "key";
     public static final String VALUE = "value";

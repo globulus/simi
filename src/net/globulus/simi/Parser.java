@@ -32,9 +32,13 @@ class Parser {
   List<Stmt> parse() {
     List<Stmt> statements = new ArrayList<>();
     while (!isAtEnd()) {
-        if (match(IMPORT)) { // imports are handled during scanning phase
-            advance(); // skip path string
-            continue;
+        if (match(IMPORT)) {
+            Token keyword = previous();
+            if (match(IDENTIFIER)) {
+              statements.add(new Stmt.Import(keyword, new Expr.Variable(previous())));
+            } else { // String imports are handled during scanning phase
+              continue;
+            }
         }
         if (match(NEWLINE, PASS)) {
             continue;
@@ -321,7 +325,7 @@ class Parser {
       List<Stmt> statements = new ArrayList<>();
       for (Token param : block.params) {
         statements.add(new Stmt.Expression(new Expr.Set(name,
-                new Expr.Self(Token.self()), new Expr.Variable(param), new Expr.Variable(param))));
+                new Expr.Self(Token.self(), null), new Expr.Variable(param), new Expr.Variable(param))));
       }
       block = new Expr.Block(declaration, block.params, statements, true);
     }
@@ -626,7 +630,14 @@ class Parser {
 
     if (match(SELF)) {
       Token previous = previous();
-        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line));
+      Token specifier = null;
+       if (peekSequence(LEFT_PAREN, DEF, RIGHT_PAREN)) {
+         specifier = new Token(DEF, Constants.SELF_DEF, null, previous.line);
+         advance();
+         advance();
+         advance();
+       }
+        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line), specifier);
     }
 
     if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {

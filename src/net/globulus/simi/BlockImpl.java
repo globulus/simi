@@ -50,12 +50,17 @@ class BlockImpl implements SimiBlock, SimiCallable {
 
   @Override
   public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+    return call(interpreter, arguments, rethrow, null);
+  }
+
+  SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow, SimiCallable invoker) {
     Environment environment = new Environment(lastClosure != null ? lastClosure : closure);
     if (arguments != null) {
       for (int i = 0; i < declaration.params.size(); i++) {
         environment.define(declaration.params.get(i).lexeme, arguments.get(i));
       }
     }
+    environment.assign(Token.selfDef(), new SimiValue.Callable((invoker != null) ? invoker : this, null, null), false);
 
     try {
       interpreter.executeBlock(this, environment, (lastStatement != null) ? lastStatement : 0);

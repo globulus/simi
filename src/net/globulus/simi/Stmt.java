@@ -21,6 +21,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
     R visitFunctionStmt(Function stmt);
     R visitForStmt(For stmt);
     R visitIfStmt(If stmt);
+    R visitImportStmt(Import stmt);
     R visitPrintStmt(Print stmt);
     R visitRescueStmt(Rescue stmt);
     R visitReturnStmt(Return stmt);
@@ -291,6 +292,26 @@ abstract class Stmt implements SimiStatement, Codifiable {
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
       return keyword.type.toCode() + " " + block.toCode(indentationLevel, true);
+    }
+  }
+
+  static class Import extends Stmt {
+
+    final Token keyword;
+    final Expr value;
+
+    Import(Token keyword, Expr value) {
+      this.keyword = keyword;
+      this.value = value;
+    }
+
+    <R> R accept(Visitor<R> visitor, Object... args) {
+      return visitor.visitImportStmt(this);
+    }
+
+    @Override
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return keyword.type.toCode(indentationLevel, false) + " " + value.toCode(0, false) + TokenType.NEWLINE.toCode();
     }
   }
 
