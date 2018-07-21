@@ -49,7 +49,7 @@ class SimiFunction implements SimiCallable {
 
   @Override
   public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-    SimiProperty prop = block.call(interpreter, arguments, rethrow);
+    SimiProperty prop = block.call(interpreter, arguments, rethrow, this);
     if (isInitializer) {
         return block.closure.getAt(0, Constants.SELF);
     }

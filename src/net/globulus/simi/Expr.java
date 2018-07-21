@@ -464,9 +464,11 @@ abstract class Expr implements Codifiable {
   static class Self extends Expr {
 
     final Token keyword;
+    final Token specifier;
 
-    Self(Token keyword) {
+    Self(Token keyword, Token specifier) {
       this.keyword = keyword;
+      this.specifier = specifier;
     }
 
     <R> R accept(Visitor<R> visitor, Object... params) {
@@ -475,7 +477,13 @@ abstract class Expr implements Codifiable {
 
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
-      return keyword.type.toCode(indentationLevel, ignoreFirst);
+      StringBuilder sb = new StringBuilder(keyword.type.toCode(indentationLevel, ignoreFirst));
+      if (specifier != null) {
+        sb.append(TokenType.LEFT_PAREN.toCode())
+                .append(specifier.type.toCode())
+                .append(TokenType.RIGHT_PAREN.toCode());
+      }
+      return sb.toString();
     }
   }
 

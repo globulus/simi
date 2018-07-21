@@ -40,6 +40,7 @@ What Šimi offers:
         * [Objects vs Arrays](#objects-vs-arrays)
       - [Value conversions](#value-conversions)
     + [Classes](#classes)
+      - [Using classes as modules](#using-classes-as-modules)
     + [Operators](#operators)
       - [Arithmetic](#arithmetic)
       - [Assignment](#assignment)
@@ -55,6 +56,7 @@ What Šimi offers:
       - [if-elsif-else](#if-elsif-else)
       - [when](#when)
       - [The *ife* function](#the-ife-function)
+        * [*ife* and lazy loading](#ife-and-lazy-loading)
       - [while loop](#while-loop)
       - [for-in loop](#for-in-loop)
       - [Iterators and iterables](#iterators-and-iterables)
@@ -239,6 +241,14 @@ f([a = 7, b = 8, c = 9]) # Invoking with dictionary
 You can check if a value is a function by testing agains the *Function* class:
 ```ruby
 fun is Function
+```
+
+If you need to access a function from within itself, you can use the special *self(def)* construct:
+```ruby
+def f(a):
+    objectSelf = self # Resolves to invoked object (or nil)
+    functionSelf = self(def) # Returns function f
+end
 ```
 
 #### Objects
@@ -438,6 +448,45 @@ Car = Car.builder()\
     .model("CX-7")\
     .year(2009)\
     .build()
+```
+
+#### Using classes as modules
+
+Classes can be used to define namespaces and prevent naming collisions when working on a larger project. Just define a (preferrably final) class and define classes, methods and fields that you want to modularize inside it:
+```ruby
+class_ ModuleClass:
+
+    class ModuleClassA:
+        a = 5
+    end
+
+    class ModuleClassB:
+        b = 6
+    end
+end
+
+class_ AnotherModuleClass:
+
+    class ModuleClassA:
+        a = 5
+    end
+
+    class ModuleClassB:
+        b = 6
+    end
+end
+a = ModuleClass.ModuleClassA()
+anotherA = AnotherModuleClass.ModuleClassA()
+```
+
+You can also use the *import* statement to statically import all the values of the supplied class into the current environment:
+```ruby
+print ModuleClassA # nil
+
+import ModuleClass # Import all ModuleClass values into the current environment
+
+print ModuleClassA # works
+print ModuleClassA.matches(ModuleClass.ModuleClassA) # true
 ```
 
 ### Operators
