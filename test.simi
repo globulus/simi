@@ -465,8 +465,11 @@ print ivic clone
 
 class_ ModuleClass:
 
-    class ModuleClassA:
+    class_ ModuleClassA:
         a = 5
+
+        def methodA(): return 1
+        def methodA(a): return a + 1
     end
 
     class ModuleClassB:
@@ -477,3 +480,8 @@ import ModuleClass
 print ModuleClassA
 print ModuleClassB
 print ModuleClassA.matches(ModuleClass.ModuleClassA)
+
+class MixinTest:
+    import ModuleClassA
+end
+print "Mixin test: " + MixinTest().methodA(4)

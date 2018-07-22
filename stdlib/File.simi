@@ -22,7 +22,6 @@ end
 
 class File:
     def init(path): native
-
     def readLines(path): native
     def readString(path): native
 end

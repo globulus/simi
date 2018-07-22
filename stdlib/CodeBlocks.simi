@@ -1,9 +1,38 @@
-class CodeBlocks:
+class_ CodeBlocks:
+
+    END = "end"
 
     class InvalidBlockException(Exception):
     end
 
-    class Function:
+    class_ ClassCode: # Can't be named Class because of the Class metaclass
+        def init(c):
+            @ref = c
+            code = c.toString()
+            @name = code.substring(c.indexOf('('))
+        end
+    end
+
+    class_ ClassComposer:
+        def init(name):
+            @body = String.builder("class ").add(name).add(":\n")
+        end
+
+        def field(key, value): @body.add(key).add(" = ").add(ivic value).add("\n")
+
+        def method(m): @body.add(ivic f).add("\n")
+
+        def getString():
+            @body.add(CodeBlocks.END)
+            s = @body.build()
+            @body = nil
+            return s
+        end
+
+        def getClass(): return gu @getString()
+    end
+
+    class_ FunctionCode:
 
         _ANON_DEF = " = def"
         _BASIC_DEF = "def "
@@ -27,7 +56,7 @@ class CodeBlocks:
                 fLines.append(line)
                 trimmedLine = line.trim()
                 if trimmedLine.endsWith(":"): $endCount += 1
-                elsif trimmedLine == "end":
+                elsif trimmedLine == CodeBlocks.END:
                     $endCount -= 1
                     if $endCount == 0: break
                 end
@@ -45,9 +74,7 @@ class CodeBlocks:
         def parameters(): return @parametersWithoutParentheses().split(", ")
         def body(): return @lines.slice(1, @lines.len())
 
-        def isDefLine(line):
-            return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
-        end
+        def isDefLine(line): return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
 
         def _computeArity():
             $count = 0
@@ -62,4 +89,5 @@ class CodeBlocks:
             @arity = $count + 1
         end
     end
+
 end

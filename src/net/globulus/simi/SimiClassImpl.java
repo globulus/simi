@@ -12,7 +12,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
   final List<SimiClassImpl> superclasses;
   final Stmt.Class stmt;
 
-  private final Map<OverloadableFunction, SimiFunction> methods;
+  final Map<OverloadableFunction, SimiFunction> methods;
 
   static final SimiClassImpl CLASS = new SimiClassImpl(Type.REGULAR, Constants.CLASS_CLASS);
 

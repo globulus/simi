@@ -85,6 +85,7 @@ class Parser {
     consume(COLON, "Expect ':' before class body.");
 
     List<Expr.Assign> constants = new ArrayList<>();
+    List<Expr.Variable> mixins = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(END) && !isAtEnd()) {
@@ -93,8 +94,10 @@ class Parser {
         }
         if (match(DEF)) {
             methods.add(function(METHOD));
-        } else if (match(CLASS)) {
+        } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             innerClasses.add(classDeclaration());
+        } else if (match(IMPORT)) {
+          mixins.add(new Expr.Variable(advance()));
         } else if (match(BANG)) {
             annotations.add(annotation());
         } else {
@@ -107,7 +110,7 @@ class Parser {
 
     consume(END, "Expect 'end' after class body.");
 
-    return new Stmt.Class(opener, name, superclasses, constants, innerClasses, methods, getAnnotations());
+    return new Stmt.Class(opener, name, superclasses, mixins, constants, innerClasses, methods, getAnnotations());
   }
 
   private Stmt.Annotation annotation() {
@@ -794,7 +797,9 @@ class Parser {
 
       switch (peek().type) {
         case CLASS:
-            case DEF:
+        case CLASS_FINAL:
+        case CLASS_OPEN:
+          case DEF:
         case FOR:
         case IF:
         case WHILE:
