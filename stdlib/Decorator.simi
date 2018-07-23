@@ -17,8 +17,8 @@ Decorator = [
                 $decorators = (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
 #                print "Found decorators: " + $decorators
             end
-            elsif $decorators and CodeBlocks.Function.isDefLine(trimmedLine):
-                func = CodeBlocks.Function(lines, i)
+            elsif $decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine):
+                func = CodeBlocks.FunctionCode(lines, i)
                 params = func.parametersWithoutParentheses()
                 newLines.append(line)
                 tempName = @_tempName()
@@ -103,12 +103,11 @@ Decorator = [
     end,
 
     memoize = def f:
-#        print "In memoize"
         fcache = $[]
         workerCache = $[]
         $farg = nil
         fworker = def f:
-            $farg = CodeBlocks.Function(f)
+            $farg = CodeBlocks.FunctionCode(f)
             return flooper()
         end
         flooper = def ():

@@ -201,7 +201,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       environment = new Environment(environment);
       environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
+      Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
       Map<String, SimiProperty> constants = new HashMap<>();
+
       for (Expr.Assign constant : stmt.constants) {
         if (constant.annotations != null) {
           for (Stmt.Annotation annotation : constant.annotations) {
@@ -223,6 +225,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
           }
       }
+      for (Expr.Variable mixin : stmt.mixins) {
+        SimiClassImpl clazz = importClass(mixin.name, mixin, constants::put);
+        for (Map.Entry<OverloadableFunction, SimiFunction> method : clazz.methods.entrySet()) {
+          methods.put(method.getKey(), method.getValue());
+        }
+      }
       for (Stmt.Class innerClass : stmt.innerClasses) {
         if (innerClass.annotations != null) {
           for (Stmt.Annotation annotation : innerClass.annotations) {
@@ -238,7 +246,6 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
       }
 
-    Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
         if (method.annotations != null) {
             for (Stmt.Annotation annotation : method.annotations) {
@@ -340,14 +347,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitImportStmt(Stmt.Import stmt) {
-    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.value).getValue(), this);
-    if (!(object instanceof SimiClassImpl)) {
-        throw new RuntimeError(stmt.keyword, "Import statement must be followed by an identifier that resolves to a class!");
-    }
-    SimiClassImpl clazz = (SimiClassImpl) object;
-    for (Map.Entry<String, SimiProperty> entry : clazz.fields.entrySet()) {
-        environment.assign(Token.named(entry.getKey()), entry.getValue(), false);
-    }
+    importClass(stmt.keyword, stmt.value,
+            (key, value) -> environment.assign(Token.named(key), value, false));
     return null;
   }
 
@@ -1086,5 +1087,26 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     for (String name : names) {
       environment.define(name, null);
     }
+  }
+
+  private SimiClassImpl importClass(Token keyword, Expr expr, ClassImporter classImporter) {
+    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(expr).getValue(), this);
+    if (!(object instanceof SimiClassImpl)) {
+      throw new RuntimeError(keyword, "Import statement must be followed by an identifier that resolves to a class!");
+    }
+    SimiClassImpl clazz = (SimiClassImpl) object;
+    Set<Map.Entry<String, SimiProperty>> fields = new HashSet<>(clazz.fields.entrySet());
+    for (Map.Entry<String, SimiProperty> entry : fields) {
+      String key = entry.getKey();
+      if (!key.equals(Constants.INIT) && !key.startsWith(Constants.PRIVATE)) {
+        classImporter.importValue(key, entry.getValue());
+      }
+    }
+    return clazz;
+  }
+
+  @FunctionalInterface
+  private interface ClassImporter {
+    void importValue(String key, SimiProperty prop);
   }
 }

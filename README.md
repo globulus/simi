@@ -342,6 +342,8 @@ print d # nil
 class Car(Vehicle):
     wheels = 4
 
+    import ClassToMixin
+
     def init(brand, model, year): pass
 
     def refuel(amount): @fuel = Math.min(@tank, @fuel + amount)
@@ -363,7 +365,7 @@ Here's a quick rundown of classes:
     2. Check the leftmost superclass for that method name.
     3. Recursively check that superclass' lefmost superclass, all the way up.
 
-* All classes except base classes (Object, String, Number, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
+* All classes except base classes (Object, String, Number, Function, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
 * You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses (Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
 ```ruby
 class OtherCar(Car, Range): # This combination makes no sense :D
@@ -433,6 +435,7 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
+* Using the *import* keyword followed by a class name will crate a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
@@ -479,7 +482,7 @@ a = ModuleClass.ModuleClassA()
 anotherA = AnotherModuleClass.ModuleClassA()
 ```
 
-You can also use the *import* statement to statically import all the values of the supplied class into the current environment:
+You can also use the *import* statement to statically import all the public values of the supplied class into the current environment:
 ```ruby
 print ModuleClassA # nil
 

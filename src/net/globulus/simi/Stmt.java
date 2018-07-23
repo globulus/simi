@@ -74,17 +74,20 @@ abstract class Stmt implements SimiStatement, Codifiable {
     final Token opener;
     final Token name;
     final List<Expr> superclasses;
+    final List<Expr.Variable> mixins;
     final List<Expr.Assign> constants;
     final List<Stmt.Class> innerClasses;
     final List<Stmt.Function> methods;
     final List<Stmt.Annotation> annotations;
 
     Class(Token opener, Token name, List<Expr> superclasses,
-          List<Expr.Assign> constants, List<Stmt.Class> innerClasses,
-          List<Stmt.Function> methods, List<Stmt.Annotation> annotations) {
+          List<Expr.Variable> mixins, List<Expr.Assign> constants,
+          List<Stmt.Class> innerClasses, List<Stmt.Function> methods,
+          List<Stmt.Annotation> annotations) {
       this.opener = opener;
       this.name = name;
       this.superclasses = superclasses;
+      this.mixins = mixins;
       this.constants = constants;
       this.innerClasses = innerClasses;
       this.methods = methods;
@@ -112,6 +115,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
               )
               .append(TokenType.COLON.toCode())
               .append(TokenType.NEWLINE.toCode())
+              .append(mixins.stream()
+                      .map(m -> TokenType.IMPORT.toCode(indentationLevel + 1, false) + " " + m.toCode(0, false))
+                      .collect(Collectors.joining(TokenType.NEWLINE.toCode()))
+              )
               .append(constants.stream().map(c -> c.toCode(indentationLevel + 1, false)).collect(Collectors.joining(TokenType.NEWLINE.toCode())))
               .append(TokenType.NEWLINE.toCode())
               .append(methods.stream().map(m -> m.toCode(indentationLevel + 1, false)).collect(Collectors.joining()))
