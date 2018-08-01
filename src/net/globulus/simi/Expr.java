@@ -210,7 +210,7 @@ abstract class Expr implements Codifiable {
               )
               .append(TokenType.RIGHT_BRACKET.toCode())
               .append(" ").append(TokenType.EQUAL.toCode()).append(" ")
-              .append(((Get) assigns.get(0).value).object.toCode(0, false))
+              .append(((Get)((Binary) assigns.get(0).value).left).object.toCode(0, false))
               .toString();
     }
   }

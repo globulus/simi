@@ -194,6 +194,7 @@ def testObjectDecomp():
     [a, c] = obj
     print a
     print b
+    print c
 end
 testObjectDecomp()
 

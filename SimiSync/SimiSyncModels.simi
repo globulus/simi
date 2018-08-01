@@ -28,7 +28,7 @@ class_ SimiSyncModels:
             for file in File.listAll(path = "./models", recursive = true):
                 # Read and interpret the content of the file
                 modelCode = File.readString(file.path)
-                modelClass = gu File.readString(file.path)
+                modelClass = gu modelCode
                 # Each class should have a proper ModelClass annotation
                 modelClassAnnot = @_extractAnnot(modelClass, ModelClass)
                 if not modelClassAnnot : continue

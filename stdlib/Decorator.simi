@@ -9,8 +9,7 @@ Decorator = [
         $decorators = nil
         $skip = -1
         for e in lines.enumerate():
-            i = e.key
-            line = e.value
+            [i, line] = e
             trimmedLine = line.trim()
             if trimmedLine.startsWith(@KEYWORD):
 #                print trimmedLine.substring(@KEYWORD.len() + 1)

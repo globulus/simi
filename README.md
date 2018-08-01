@@ -321,9 +321,13 @@ There is an object decomposition syntax sugar for extracting multiple values out
 ```ruby
 obj = [a = 3, b = 4, c = 5]
 [a, b, d] = obj
+# Above compiles down to
+# a = obj.a ?? obj.0
+# b = obj.b ?? obj.1
+# d = obj.d ?? obj.2
 print a # 3
 print b # 4
-print d # nil
+print d # 5
 ```
 
 ##### Objects vs Arrays
@@ -434,7 +438,7 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
-* Using the *import* keyword followed by a class name will crate a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
+* Using the *import* keyword followed by a class name will create a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
@@ -442,7 +446,7 @@ Number.double = def (): @_ * 2
 a = 3
 b = a.double() # b == 6
 ```
-* Classes that are defined as **class_ Name** are *final classes*, which can't be subclasses. This feature is important as it normally all subclasses can alter instance fields from their superclasses, so being able to make classes non-subclassable adds to code safety and stability.
+* Classes that are defined as **class_ Name** are *final classes*, which can't be subclassed. This feature is important as it normally all subclasses can alter instance fields from their superclasses, so being able to make classes non-subclassable adds to code safety and stability.
 * The Object class has a native *builder()* method, meaning that any class in Šimi automatically implements the builder pattern:
 ```ruby
 Car = Car.builder()\
@@ -560,7 +564,7 @@ range = Range(1, 10)
 ```
 
 #### ?? - nil coalescence
-The ?? operator checks if the value for left is nil. If it is, it returns the right value, otherwise it returns the left value.
+The ?? operator checks if the value for left is nil. If it is, it returns the right value, otherwise it returns the left value. This operator is short-circuit (right won't be evaluated if left is not nil).
 ```ruby
 a = b ?? c # is equivalent to a = ife(b != nil, b, c)
 ```
@@ -845,16 +849,16 @@ A Java project contains the class that'll represent the native equivalent of our
 public class SimiDate {
 
     // Expose the Java methods via the @SimiJavaMethod annotation. The name should be
-    // the same as the name of the Simi method, and the returned value a SimiValue.
+    // the same as the name of the Simi method, and the returned value a SimiProperty.
     // All SimiJavaMethods must have at least two parameters, a SimiObject, and a
-    // BlockInterpreter. After that, you may supply any number of SimiValue params,
+    // BlockInterpreter. After that, you may supply any number of SimiProperty params,
     // which must correspond to the params in the Simi method declaration.
 
     // The now() method is meant to be used statically, hence the self param will
     // in fact be a SimiClass (Date), which can then be used to create a new
     // Date instance:
     @SimiJavaMethod
-    public static SimiValue now(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty now(SimiObject self, BlockInterpreter interpreter) {
         SimiClass clazz = (SimiClass) self;
         SimiValue timestamp = new SimiValue.Number(System.currentTimeMillis());
         return clazz.init(interpreter, Collections.singletonList(timestamp));
@@ -864,7 +868,7 @@ public class SimiDate {
     // self parameter will reflect the object on which the method was invoked.
     // This allows us to get its timestamp field and format based on that.
     @SimiJavaMethod
-    public static SimiValue format(SimiObject self, BlockInterpreter interpreter, SimiValue pattern) {
+    public static SimiProperty format(SimiObject self, BlockInterpreter interpreter, SimiProperty pattern) {
         // The self param represents the object which invokes the method. We then use
         // the get(String, SimiEnvironment) method to get the object's "timestamp" field,
         // which we know to be a number.
@@ -872,7 +876,7 @@ public class SimiDate {
 
         // We then use SimpleDateFormat class to format the java.util.Date represented
         // by the timestamp to the specified format string.
-        // The returned value must then be wrapped in a SimiValue again.
+        // The returned value must then be wrapped in a SimiValue/SimiProperty again.
         return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
     }
 }

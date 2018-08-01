@@ -508,8 +508,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiValue visitBinaryExpr(Expr.Binary expr) {
     SimiProperty leftProp = evaluate(expr.left);
-    SimiProperty rightProp = evaluate(expr.right);
     SimiValue left = (leftProp != null) ? leftProp.getValue() : null;
+    if (expr.operator.type == TokenType.QUESTION_QUESTION && left != null) { // Short-circuiting the nil coalescence operator
+      return left;
+    }
+    SimiProperty rightProp = evaluate(expr.right);
     SimiValue right = (rightProp != null) ? rightProp.getValue() : null;
 
     switch (expr.operator.type) {
@@ -560,7 +563,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             checkNumberOperands(expr.operator, left, right);
             return new SimiValue.Number(left.getNumber() % right.getNumber());
       case QUESTION_QUESTION:
-        return (left != null) ? left : right;
+        return right; // We already checked the condition where left is not null above.
     }
 
     // Unreachable.

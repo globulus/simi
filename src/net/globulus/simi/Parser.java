@@ -432,7 +432,7 @@ class Parser {
         } else {
           return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value), getAnnotations());
         }
-      } else if (expr instanceof Expr.Get) {
+      } else if (expr instanceof Expr.Get) { // Setter
         if (equals.type == EQUAL) {
           Expr.Get get = (Expr.Get) expr;
           return new Expr.Set(get.origin, get.object, get.name, value);
@@ -446,9 +446,13 @@ class Parser {
         }
         List<Expr.Assign> assigns = new ArrayList<>();
         List<Stmt.Annotation> annotations = getAnnotations();
-        for (Expr prop : objectLiteral.props) {
+        for (int i = 0; i < objectLiteral.props.size(); i++) {
+          Expr prop = objectLiteral.props.get(i);
           Token name = ((Expr.Variable) prop).name;
-          assigns.add(new Expr.Assign(name, new Expr.Get(name, value, prop, null), annotations));
+          Expr getByName = new Expr.Get(name, value, prop, null);
+          Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
+          Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
+          assigns.add(new Expr.Assign(name, nilCoalescence, annotations));
         }
         return new Expr.ObjectDecomp(assigns);
       }
