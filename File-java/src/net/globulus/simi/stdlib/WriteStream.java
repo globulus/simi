@@ -79,7 +79,17 @@ public class WriteStream {
         }
 
         @Override
+        public List<SimiValue> keys() {
+            return null;
+        }
+
+        @Override
         public List<SimiValue> values() {
+            return null;
+        }
+
+        @Override
+        public String toCode(int i, boolean b) {
             return null;
         }
     }

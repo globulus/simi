@@ -346,13 +346,17 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         SimiObjectImpl enumerate(SimiClassImpl objectClass) {
+            return SimiObjectImpl.fromArray(objectClass, true, getEnumeratedValues(objectClass));
+        }
+
+        protected ArrayList<SimiProperty> getEnumeratedValues(SimiClassImpl objectClass) {
             int size = length();
             ArrayList<SimiProperty> values = new ArrayList<>(size);
             for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
                 values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
                         new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
             }
-            return SimiObjectImpl.fromArray(objectClass, true, values);
+            return values;
         }
 
         @Override

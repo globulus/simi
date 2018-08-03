@@ -170,6 +170,16 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         return constructors;
   }
 
+    @Override
+    SimiObjectImpl enumerate(SimiClassImpl objectClass) {
+        ArrayList<SimiProperty> values = getEnumeratedValues(objectClass);
+        for (Map.Entry<OverloadableFunction, SimiFunction> entry : methods.entrySet()) {
+            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
+                    new SimiValue.String(entry.getKey().name), new SimiValue.Callable(entry.getValue(), entry.getKey().name, this))));
+        }
+        return SimiObjectImpl.fromArray(objectClass, true, values);
+    }
+
   Set<String> allKeys() {
       Set<String> keys = new HashSet<>(fields.keySet());
       if (superclasses != null) {

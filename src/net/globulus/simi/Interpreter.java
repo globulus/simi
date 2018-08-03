@@ -645,12 +645,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
         boolean isBaseClass = isBaseClass(clazz.name);
         if (!isBaseClass) {
-          for (NativeModulesManager manager : nativeModulesManagers) {
-            try {
-              return manager.call(clazz.name, methodName, instance, this, decomposedArgs);
-            } catch (IllegalArgumentException ignored) {
-            }
-          }
+          return invokeNativeCall(clazz.name, methodName, instance, decomposedArgs);
         }
         String className = isBaseClass ? clazz.name : Constants.CLASS_OBJECT;
         SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
@@ -662,13 +657,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         nativeArgs.addAll(decomposedArgs);
         return nativeMethod.call(this, nativeArgs, false);
       } else {
-        for (NativeModulesManager manager : nativeModulesManagers) {
-          try {
-            return manager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
-                    methodName, null, this, decomposedArgs);
-          } catch (IllegalArgumentException ignored) {
-          }
-        }
+        return invokeNativeCall(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME, methodName,
+                null, decomposedArgs);
       }
     }
     return callable.call(this, decomposedArgs, false);
@@ -683,6 +673,22 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       }
     }
     return arguments;
+  }
+
+  private SimiProperty invokeNativeCall(String className,
+                                        String methodName,
+                                        SimiObject self,
+                                        List<SimiProperty> args) {
+    for (NativeModulesManager manager : nativeModulesManagers) {
+      try {
+        SimiProperty prop = manager.call(className, methodName, self, this, args);
+        if (prop != null) {
+          return prop;
+        }
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    return null;
   }
 
   @Override

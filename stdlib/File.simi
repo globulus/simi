@@ -24,4 +24,5 @@ class File:
     def init(path): native
     def readLines(path): native
     def readString(path): native
+    def listAll(path, filter, recursive): native
 end

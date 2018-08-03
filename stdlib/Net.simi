@@ -10,13 +10,13 @@ class Net:
         lines = (ivic f).replacing(@KEYWORD_POST, common + "post(").split("\n").clone(false)
         $open = 0
         for e in lines.enumerate():
-            [key, value] = e
-            if value.endsWith("["): $open = $open + 1
-            elsif value.endsWith("]"):
+            [i, line] = e
+            if line.endsWith("["): $open = $open + 1
+            elsif line.endsWith("]"):
                 $open = $open - 1
-                if $open == 0: lines.(key) = value + ")"
+                if $open == 0: lines.(i) = line + ")"
             end
-            elsif common in value: lines.(key) = value + ")"
+            elsif common in line: lines.(i) = line + ")"
         end
         return gu Async.swl(lines)
     end

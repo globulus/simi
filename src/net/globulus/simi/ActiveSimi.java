@@ -3,6 +3,7 @@ package net.globulus.simi;
 import net.globulus.simi.api.SimiProperty;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -74,15 +75,20 @@ public class ActiveSimi {
     }
 
     private static void run(String source) throws IOException {
-        Map<String, NativeModulesManager> nativeModulesManagers;
+        Map<String, NativeModulesManager> nativeModulesManagers = new HashMap<>();
         if (interpreter == null) {
-            nativeModulesManagers = new HashMap<>();
             nativeModulesManagers.put("jar", new JavaNativeModulesManager());
             nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
 
             interpreter = new Interpreter(nativeModulesManagers.values());
         } else {
-            nativeModulesManagers = null;
+            for (NativeModulesManager manager : interpreter.nativeModulesManagers) {
+                if (manager instanceof JavaNativeModulesManager) {
+                    nativeModulesManagers.put("jar", manager);
+                } else if (manager instanceof CocoaNativeModulesManager) {
+                    nativeModulesManagers.put("framework", manager);
+                }
+            }
         }
 
         List<String> imports = new ArrayList<>();
@@ -132,10 +138,10 @@ public class ActiveSimi {
                 List<Token> tokens = new Scanner(readFile(location)).scanTokens(false);
                 result.addAll(scanImports(tokens, imports, nativeModulesManagers));
             } else if (nativeModulesManagers != null) {
-                String extension = pathString.substring(pathString.lastIndexOf('.'));
+                String extension = pathString.substring(pathString.lastIndexOf('.') + 1);
                 NativeModulesManager manager = nativeModulesManagers.get(extension);
                 if (manager != null) {
-                    manager.load(path.toUri().toURL().toString());
+                    manager.load(importResolver.resolve(path.toString()).toString());
                 }
             }
         }
@@ -169,6 +175,7 @@ public class ActiveSimi {
 
     public interface ImportResolver {
         String readFile(String fileName);
+        URL resolve(String nativeFileName);
     }
 
     public interface Callback {

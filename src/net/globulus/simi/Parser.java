@@ -63,6 +63,12 @@ class Parser {
       if (match(BANG)) {
         return annotation();
       }
+      if (match(IMPORT)) {
+        Token keyword = previous();
+        if (match(IDENTIFIER)) {
+          return new Stmt.Import(keyword, new Expr.Variable(previous()));
+        }
+      }
       return statement(false);
     } catch (ParseError error) {
       synchronize();
