@@ -3,12 +3,8 @@ package net.globulus.simi;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.ArrayList;
-//< Statements and State parser-imports
-//> Control Flow import-arrays
-//< Control Flow import-arrays
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static net.globulus.simi.TokenType.*;
 
@@ -81,11 +77,14 @@ class Parser {
     Token name = consume(IDENTIFIER, "Expect class name.");
 
     List<Expr> superclasses = null;
-    if (check(LEFT_PAREN)) {
-      superclasses = params("class", false)
-              .stream()
-              .map(Expr.Variable::new)
-              .collect(Collectors.toList());
+    if (match(LEFT_PAREN)) {
+      if (!check(RIGHT_PAREN)) {
+        superclasses = new ArrayList<>();
+        do {
+          superclasses.add(call());
+        } while (match(COMMA));
+      }
+      consume(RIGHT_PAREN, "Expect ')' after superclasses.");
     }
 
     consume(COLON, "Expect ':' before class body.");

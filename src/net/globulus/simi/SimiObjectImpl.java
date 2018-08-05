@@ -213,6 +213,9 @@ abstract class SimiObjectImpl implements SimiObject {
 
     @Override
     public SimiProperty get(String key, SimiEnvironment environment) {
+        if (key.equals("class")) {
+            return new SimiValue.Object(clazz);
+        }
         return get(Token.nativeCall(key), null, (Environment) environment);
     }
 
@@ -253,6 +256,9 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         SimiProperty get(Token name, Integer arity, Environment environment) {
             String key = name.lexeme;
+            if (key.equals("class")) {
+                return new SimiValue.Object(clazz);
+            }
             try {
                 int index = Integer.parseInt(key);
                 String implicitKey = Constants.IMPLICIT + index;
