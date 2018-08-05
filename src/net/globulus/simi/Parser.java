@@ -331,9 +331,9 @@ class Parser {
   private Stmt.Function function(String kind) {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+    List<Stmt.Annotation> annotations = getAnnotations();
     String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
     Expr.Block block = block(declaration, blockKind, false);
-
     // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
       List<Stmt> statements = new ArrayList<>();
@@ -344,7 +344,7 @@ class Parser {
       block = new Expr.Block(declaration, block.params, statements, true);
     }
 
-    return new Stmt.Function(name, block, getAnnotations());
+    return new Stmt.Function(name, block, annotations);
   }
 
   private Expr.Block block(String kind, boolean lambda) {
