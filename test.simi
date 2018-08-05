@@ -3,6 +3,9 @@ import "./Stdlib/Gson.simi"
 import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
+import "./SimiSync/SimiSyncModels.simi"
+
+#SimiSyncModels.ModelParser.parse(1)
 
 clck = clock()
  def ife1():
@@ -475,14 +478,26 @@ class_ ModuleClass:
 
     class ModuleClassB:
         b = 6
+        def methodA(a): return a + 3
     end
 end
-import ModuleClass
+#import ModuleClass
 print ModuleClassA
 print ModuleClassB
 print ModuleClassA.matches(ModuleClass.ModuleClassA)
 
 class MixinTest:
-    import ModuleClassA
+    import ModuleClass.ModuleClassB
 end
 print "Mixin test: " + MixinTest().methodA(4)
+
+class Router:
+    def init(a): pass
+end
+
+clazz = gu "!Router(2)
+class RouterTest:
+    !Router(5)
+    def b(): return 3
+end"
+print !!clazz

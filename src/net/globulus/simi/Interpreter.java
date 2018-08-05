@@ -225,8 +225,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
           }
       }
-      for (Expr.Variable mixin : stmt.mixins) {
-        SimiClassImpl clazz = importClass(mixin.name, mixin, constants::put);
+      for (Expr mixin : stmt.mixins) {
+        SimiClassImpl clazz = importClass(stmt.opener, mixin, constants::put);
+        if (clazz == null) {
+            ErrorHub.sharedInstance().error(stmt.name, "Trying to Mixin a null class!");
+        }
         for (Map.Entry<OverloadableFunction, SimiFunction> method : clazz.methods.entrySet()) {
           methods.put(method.getKey(), method.getValue());
         }
@@ -743,15 +746,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     String string = evaluate(expr.expr).getValue().getString();
     Scanner scanner = new Scanner(string + "\n");
     Parser parser = new Parser(scanner.scanTokens(true));
-    Stmt stmt = parser.parse().get(0);
-    if (stmt instanceof Stmt.Class) {
-      return visitClassStmt((Stmt.Class) stmt, false);
-    } else if (stmt instanceof Stmt.Expression) {
-      return evaluate(((Stmt.Expression) stmt).expression);
-    } else {
-      ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
-      return null;
+    for (Stmt stmt : parser.parse()) {
+        if (stmt instanceof Stmt.Annotation) {
+            visitAnnotationStmt((Stmt.Annotation) stmt);
+        } else if (stmt instanceof Stmt.Class) {
+            return visitClassStmt((Stmt.Class) stmt, false);
+        } else if (stmt instanceof Stmt.Expression) {
+            return evaluate(((Stmt.Expression) stmt).expression);
+        } else {
+            ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
+            return null;
+        }
     }
+    return null;
   }
 
   @Override
@@ -1099,7 +1106,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private SimiClassImpl importClass(Token keyword, Expr expr, ClassImporter classImporter) {
-    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(expr).getValue(), this);
+      SimiProperty value = evaluate(expr);
+      if (value == null) {
+          return null;
+      }
+    SimiObject object = SimiObjectImpl.getOrConvertObject(value.getValue(), this);
     if (!(object instanceof SimiClassImpl)) {
       throw new RuntimeError(keyword, "Import statement must be followed by an identifier that resolves to a class!");
     }

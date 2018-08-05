@@ -9,18 +9,18 @@ class_ CodeBlocks:
         def init(c):
             @ref = c
             code = c.toString()
-            @name = code.substring(c.indexOf('('))
+            @name = code.substring(0, code.indexOf('('))
         end
     end
 
     class_ ClassComposer:
         def init(name):
-            @body = String.builder("class ").add(name).add(":\n")
+            @body = String.builder().add("class ").add(name).add(":\n")
         end
 
         def field(key, value): @body.add(key).add(" = ").add(ivic value).add("\n")
 
-        def method(m): @body.add(ivic f).add("\n")
+        def method(m): @body.add(ivic m).add("\n")
 
         def getString():
             @body.add(CodeBlocks.END)

@@ -1,0 +1,43 @@
+import "./Stdlib/File.simi"
+import "./Stdlib/CodeBlocks.simi"
+import "./SimiSyncCommons.simi"
+
+class_ SimiSyncControllers:
+
+    class_ Route:
+        def init(endpoint, verb): pass
+    end
+
+    class_ Request:
+        def init(headers, body): pass
+    end
+
+    class_ Router:
+        import SimiSyncCommons.Parser
+
+        def parseControllers(resourceLoaderWrapper):
+            # By convention, all controller files should live in a directory named "controller" and its subdirectories
+            router = $[]
+            for file in File.listAll("static/controllers", "simi", true, resourceLoaderWrapper):
+                # Read and interpret the content of the file
+                controllerCode = File.readString(file.path)
+                controllerClass = gu @removeImports(controllerCode)
+                for e in controllerClass.enumerate().filter(def e: e.value is Function):
+                    value = controllerClass.(e.key)
+                    route = @extractAnnot(value, SimiSyncControllers.Route)
+                    if not route: continue
+                    router.(route.toString()) = value
+                end
+            end
+            @router = router
+        end
+
+        def route(endpoint, verb, headers, body):
+            route = SimiSyncControllers.Route(endpoint, verb)
+            print "Routing: " + route
+            func = @router.(route.toString())
+            print "Found route: " + func
+            return func(SimiSyncControllers.Request(headers, body))
+        end
+    end
+end

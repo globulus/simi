@@ -14,7 +14,10 @@ public class WriteStream {
         SimiClass clazz = (SimiClass) self;
         String path = file.getValue().getObject().get("path", interpreter.getEnvironment()).getValue().getString();
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+            File f = new File(path);
+            f.getParentFile().mkdirs();
+            f.createNewFile();
+            BufferedWriter writer = new BufferedWriter(new FileWriter(f));
             Wrapper wrapper = new Wrapper(writer);
             LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
             props.put("native_writer", new SimiValue.Object(wrapper));

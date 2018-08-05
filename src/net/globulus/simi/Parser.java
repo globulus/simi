@@ -91,7 +91,7 @@ class Parser {
     consume(COLON, "Expect ':' before class body.");
 
     List<Expr.Assign> constants = new ArrayList<>();
-    List<Expr.Variable> mixins = new ArrayList<>();
+    List<Expr> mixins = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(END) && !isAtEnd()) {
@@ -103,7 +103,12 @@ class Parser {
         } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             innerClasses.add(classDeclaration());
         } else if (match(IMPORT)) {
-          mixins.add(new Expr.Variable(advance()));
+          Expr expr = call();
+          if (expr instanceof Expr.Get || expr instanceof Expr.Variable) {
+            mixins.add(expr);
+          } else {
+            error(previous(), "Expected a get or variable expr after mixin import.");
+          }
         } else if (match(BANG)) {
             annotations.add(annotation());
         } else {
