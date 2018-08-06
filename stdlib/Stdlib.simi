@@ -250,6 +250,10 @@ class$ String:
     def isEmpty(): return @len() == 0
 end
 
+class TypeMismatchException(Exception):
+    def init(var, type): super.init("Expected: " + type + " but got " + var.("class"))
+end
+
 Math = [
     pow = def (a, b): native,
     max = def (a, b): native,

@@ -7,6 +7,20 @@ import "./SimiSync/SimiSyncModels.simi"
 
 #SimiSyncModels.ModelParser.parse(1)
 
+def typeCheckTest(a, b is String, c is Number, d is Range):
+    print "at end"
+end
+print ivic typeCheckTest
+class TypeCheckTestClass:
+    def init(a is String, b, c, d is Number): pass
+end
+print ivic TypeCheckTestClass.init
+typeCheckTest(1, "", 3, Range(1, 2))
+
+dejt = Date()
+print dejt
+print dejt.("class")
+
 clck = clock()
  def ife1():
         return ife(1 < 2, Math.pow(2, 32), Math.pow(2, 32))

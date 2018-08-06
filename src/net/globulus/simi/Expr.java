@@ -34,13 +34,13 @@ abstract class Expr implements Codifiable {
     static class Block extends Expr implements SimiBlock {
 
       final Token declaration;
-      final List<Token> params;
+      final List<Expr> params;
       final List<Stmt> statements;
       final boolean canReturn;
       final boolean isNative;
 
         Block(Token declaration,
-              List<Token> params,
+              List<Expr> params,
               List<Stmt> statements,
               boolean canReturn) {
             this.declaration = declaration;
@@ -105,7 +105,7 @@ abstract class Expr implements Codifiable {
           paramsBuilder.append(TokenType.LEFT_PAREN.toCode());
         }
         paramsBuilder.append(params.stream()
-                .map(p -> p.lexeme)
+                .map(p -> p.toCode(0, true))
                 .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
         );
         if (needsParenthesis) {

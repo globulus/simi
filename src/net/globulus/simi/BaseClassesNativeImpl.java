@@ -369,7 +369,7 @@ class BaseClassesNativeImpl {
                 final Set<String> params = constructors.stream()
                         .map(f -> f.declaration.block.params)
                         .flatMap(Collection::stream)
-                        .map(t -> t.lexeme)
+                        .map(BlockImpl::getParamLexeme)
                         .collect(Collectors.toSet());
                 LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
                 SimiNativeObject object = new SimiNativeObject(fields);
@@ -404,7 +404,7 @@ class BaseClassesNativeImpl {
                                 .min(Comparator.comparingInt(f -> Math.abs(f.arity() - size)));
                         if (closest.isPresent()) {
                             List<String> closestParams = closest.get().declaration.block.params.stream()
-                                    .map(t -> t.lexeme).collect(Collectors.toList());
+                                    .map(BlockImpl::getParamLexeme).collect(Collectors.toList());
                             List<SimiProperty> args = new ArrayList<>();
                             for (String param : closestParams) {
                                 args.add(fields.get(Constants.PRIVATE + param).getValue());

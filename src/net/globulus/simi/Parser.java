@@ -3,6 +3,7 @@ package net.globulus.simi;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -332,32 +333,45 @@ class Parser {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     List<Stmt.Annotation> annotations = getAnnotations();
     String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
-    Expr.Block block = block(declaration, blockKind, false);
+    Expr.Block block = block(declaration, blockKind, false, false);
+    List<Stmt> statements;
     // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
-      List<Stmt> statements = new ArrayList<>();
-      for (Token param : block.params) {
+      statements = new ArrayList<>();
+      for (Expr param : block.params) {
+        Expr.Variable paramName;
+        if (param instanceof Expr.Variable) {
+          paramName = (Expr.Variable) param;
+        } else {
+          Expr.Binary typeCheck = (Expr.Binary) param;
+          paramName = (Expr.Variable) typeCheck.left;
+        }
         statements.add(new Stmt.Expression(new Expr.Set(name,
-                new Expr.Self(Token.self(), null), new Expr.Variable(param), new Expr.Variable(param))));
+                        new Expr.Self(Token.self(), null), paramName, paramName)));
       }
-      block = new Expr.Block(declaration, block.params, statements, true);
+    } else {
+      statements = block.statements;
     }
-
+    addParamChecks(declaration, block.params, statements);
+    block = new Expr.Block(declaration, block.params, statements, true);
     return new Stmt.Function(name, block, annotations);
   }
 
   private Expr.Block block(String kind, boolean lambda) {
-    return block(null, kind, lambda);
+    return block(null, kind, lambda, true);
   }
 
-  private Expr.Block block(Token declaration, String kind, boolean lambda) {
+  private Expr.Block block(Token declaration, String kind, boolean lambda, boolean addParamChecks) {
     if (declaration == null) {
       declaration = previous();
     }
-    List<Token> params = params(kind, lambda);
+    List<Expr> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
-
-    return new Expr.Block(declaration, params, getBlockStatements(declaration, kind),
+    List<Stmt> statements = getBlockStatements(declaration, kind);
+    if (addParamChecks) {
+      addParamChecks(declaration, params, statements);
+    }
+    return new Expr.Block(declaration, params, statements,
             kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
   }
 
@@ -381,17 +395,25 @@ class Parser {
     return statements;
   }
 
-  private List<Token> params(String kind, boolean lambda) {
-    List<Token> params = new ArrayList<>();
+  private List<Expr> params(String kind, boolean lambda) {
+    List<Expr> params = new ArrayList<>();
     if (!check(LEFT_PAREN)) {
       if (lambda && !check(COLON)) {
-        params.add(consume(IDENTIFIER, "Expect parameter name."));
+        Token id = consume(IDENTIFIER, "Expect parameter name.");
+        params.add(new Expr.Variable(id));
       }
     } else {
       consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
       if (!check(RIGHT_PAREN)) {
         do {
-          params.add(consume(IDENTIFIER, "Expect parameter name."));
+          Expr.Variable id = new Expr.Variable(consume(IDENTIFIER, "Expect parameter name."));
+          if (match(IS)) {
+            Token is = previous();
+            Expr.Variable type = new Expr.Variable(consume(IDENTIFIER, "Expected type after is."));
+            params.add(new Expr.Binary(id, is, type));
+          } else {
+            params.add(id);
+          }
         } while (match(COMMA));
       }
       consume(RIGHT_PAREN, "Expect ')' after parameters.");
@@ -736,7 +758,6 @@ class Parser {
 
   private Token consume(TokenType type, String message) {
     if (check(type)) return advance();
-
     throw error(peek(), message);
   }
 
@@ -833,5 +854,25 @@ class Parser {
       List<Stmt.Annotation> copy = Collections.unmodifiableList(new ArrayList<>(annotations));
       annotations.clear();
       return copy;
+  }
+
+  private void addParamChecks(Token declaration, List<Expr> params, List<Stmt> stmts) {
+    for (Expr param : params) {
+      if (param instanceof Expr.Binary) {
+        Expr.Binary typeCheck = (Expr.Binary) param;
+        Expr paramName = typeCheck.left;
+        Expr paramType = typeCheck.right;
+          List<Stmt> exceptionStmt = Collections.singletonList(new Stmt.Expression(
+                  new Expr.Call(new Expr.Get(declaration,
+                          new Expr.Call(new Expr.Variable(Token.named(Constants.EXCEPTION_TYPE_MISMATCH)), declaration,
+                                  Arrays.asList(paramName, typeCheck.right)), new Expr.Variable(Token.named(Constants.RAISE)), 0),
+                  declaration, Collections.emptyList())
+          ));
+          stmts.add(0, new Stmt.If(
+                  new Stmt.Elsif(new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line), paramType),
+                          new Expr.Block(typeCheck.operator, Collections.emptyList(),
+                                  exceptionStmt, true)), Collections.emptyList(), null));
+      }
+    }
   }
 }
