@@ -228,7 +228,7 @@ difference = subtract(a = 5, b = pow(2, 3))
 printFunction()
 ```
 
-For functions that take no arguments or more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
+For functions that take more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
 ```ruby
 def f(a, b, c): pass
 f(1, 2, 3) # The conventional way of doing it
@@ -247,6 +247,27 @@ If you need to access a function from within itself, you can use the special *se
 def f(a):
     objectSelf = self # Resolves to invoked object (or nil)
     functionSelf = self(def) # Returns function f
+end
+```
+
+There's a syntax sugar that allows for static type checking of selected parameters:
+```ruby
+# Note the x is Type syntax to enforce static type checking
+# Checked and unchecked params can be freely mixed
+def f(a is Number, b is Range, c):
+    print "something"
+end
+```
+The above function is upon parsing internally stored with prepended type checks that raise *TypeMismatchException*:
+```ruby
+def f(a, b, c):
+    if a is not Number:
+        TypeMismatchException(a, Number).raise()
+    end
+    if b is not Range:
+        TypeMismatchException(b, Range).raise()
+    end
+    print "something"
 end
 ```
 

@@ -105,7 +105,7 @@ abstract class Expr implements Codifiable {
           paramsBuilder.append(TokenType.LEFT_PAREN.toCode());
         }
         paramsBuilder.append(params.stream()
-                .map(p -> p.toCode(0, true))
+                .map(BlockImpl::getParamLexeme)
                 .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
         );
         if (needsParenthesis) {
