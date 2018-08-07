@@ -316,7 +316,7 @@ class Parser {
   }
 
   private void checkStatementEnd(boolean lambda) {
-    if (match(NEWLINE)) {
+    if (match(NEWLINE, EOF)) {
       return;
     }
     if (lambda) {
@@ -762,7 +762,7 @@ class Parser {
   }
 
   private boolean check(TokenType tokenType) {
-    if (isAtEnd()) return false;
+    if (isAtEnd()) return tokenType == EOF;
     return peek().type == tokenType;
   }
 
