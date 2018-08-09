@@ -20,6 +20,10 @@ class Token {
     return new Token(TokenType.SELF, Constants.SELF, null, 0);
   }
 
+  static Token superToken() {
+    return new Token(TokenType.SUPER, Constants.SUPER, null, 0);
+  }
+
   static Token selfDef() {
     return new Token(TokenType.DEF, Constants.SELF_DEF, null, 0);
   }

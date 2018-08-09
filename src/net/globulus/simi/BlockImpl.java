@@ -19,7 +19,11 @@ class BlockImpl implements SimiBlock, SimiCallable {
 
   BlockImpl bind(SimiObjectImpl instance) {
     Environment environment = new Environment(closure);
-    environment.assign(Token.self(), new SimiValue.Object(instance), false);
+    environment.assign(Token.self(), new SimiValue.Object(instance), true);
+    SimiClassImpl clazz = instance.clazz;
+    if (clazz != null) {
+      environment.assign(Token.superToken(), new SimiClassImpl.SuperClassesList(clazz.superclasses), true);
+    }
     return new BlockImpl(declaration, environment);
   }
 

@@ -43,6 +43,25 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         return new SimiValue.Number((double)System.currentTimeMillis() / 1000.0);
       }
     }, "clock", null));
+    globals.define("guid", new SimiValue.Callable(new SimiCallable() {
+
+      @Override
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return "guid()";
+      }
+
+      @Override
+      public int arity() {
+        return 0;
+      }
+
+      @Override
+      public SimiProperty call(BlockInterpreter interpreter,
+                               List<SimiProperty> arguments,
+                               boolean rethrow) {
+        return new SimiValue.String(UUID.randomUUID().toString());
+      }
+    }, "guid", null));
   }
 
   SimiProperty interpret(List<Stmt> statements) {
@@ -198,8 +217,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       } else if (!isBaseClass) {
           superclasses = Collections.singletonList(getObjectClass());
       }
-      environment = new Environment(environment);
-      environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
+//      environment = new Environment(environment);
+//      environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
       Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
       Map<String, SimiProperty> constants = new HashMap<>();
@@ -351,7 +370,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitImportStmt(Stmt.Import stmt) {
     importClass(stmt.keyword, stmt.value,
-            (key, value) -> environment.assign(Token.named(key), value, false));
+            (key, value) -> environment.assign(Token.named(key), value, true));
     return null;
   }
 
@@ -810,9 +829,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiValue visitSuperExpr(Expr.Super expr) {
-    int distance = locals.get(expr);
+//    int distance = locals.get(expr);
     SimiMethod method = null;
-    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.getAt(distance, Constants.SUPER).getValue()).value;
+    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.get(Token.superToken()).getValue()).value;
     if (expr.superclass != null) {
       superclasses = superclasses.stream()
               .filter(superclass -> superclass.name.equals(expr.superclass.lexeme)).collect(Collectors.toList());
@@ -822,7 +841,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     }
 
     // "self" is always one level nearer than "super"'s environment.
-    SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getValue().getObject();
+    SimiObjectImpl object = (SimiObjectImpl) environment.get(Token.self()).getValue().getObject();
 
     for (SimiClassImpl superclass : superclasses) {
       method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
