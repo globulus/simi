@@ -2,7 +2,6 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.SimiProperty;
 
-import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,9 +17,11 @@ public class ActiveSimi {
     static boolean hadRuntimeError = false;
     private static ImportResolver importResolver;
 
+    private static List<String> resolvedImports = new ArrayList<>();
+
     private ActiveSimi() { }
 
-    public static void load(String... files) throws IOException {
+    public static void load(String... files) {
         ErrorHub.sharedInstance().removeWatcher(WATCHER);
         ErrorHub.sharedInstance().addWatcher(WATCHER);
         StringBuilder source = new StringBuilder("import \"stdlib/Stdlib.simi\"\n\n");
@@ -74,7 +75,7 @@ public class ActiveSimi {
         return importResolver.readFile(path);
     }
 
-    private static void run(String source) throws IOException {
+    private static void run(String source) {
         Map<String, NativeModulesManager> nativeModulesManagers = new HashMap<>();
         if (interpreter == null) {
             nativeModulesManagers.put("jar", new JavaNativeModulesManager());
@@ -91,9 +92,8 @@ public class ActiveSimi {
             }
         }
 
-        List<String> imports = new ArrayList<>();
         Scanner scanner = new Scanner(source);
-        List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManagers);
+        List<Token> tokens = scanImports(scanner.scanTokens(true), nativeModulesManagers);
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
@@ -114,8 +114,7 @@ public class ActiveSimi {
     }
 
     private static List<Token> scanImports(List<Token> input,
-                                           List<String> imports,
-                                           Map<String, NativeModulesManager> nativeModulesManagers) throws IOException {
+                                           Map<String, NativeModulesManager> nativeModulesManagers) {
         List<Token> result = new ArrayList<>();
         int len = input.size();
         for (int i = 0; i < len; i++) {
@@ -129,14 +128,15 @@ public class ActiveSimi {
                 continue;
             }
             String location = nextToken.literal.getString();
-            if (imports.contains(location)) {
+            if (resolvedImports.contains(location)) {
                 continue;
             }
+            resolvedImports.add(location);
             Path path = Paths.get(location);
             String pathString = path.toString().toLowerCase();
             if (pathString.endsWith(".simi")) {
                 List<Token> tokens = new Scanner(readFile(location)).scanTokens(false);
-                result.addAll(scanImports(tokens, imports, nativeModulesManagers));
+                result.addAll(scanImports(tokens, nativeModulesManagers));
             } else if (nativeModulesManagers != null) {
                 String extension = pathString.substring(pathString.lastIndexOf('.') + 1);
                 NativeModulesManager manager = nativeModulesManagers.get(extension);
