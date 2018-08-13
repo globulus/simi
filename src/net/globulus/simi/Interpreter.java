@@ -19,6 +19,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   private Map<Object, List<SimiObject>> annotations = new HashMap<>();
   private List<SimiObject> annotationsBuffer = new ArrayList<>();
 
+  private boolean addClassesToRootEnv;
+
   static Interpreter sharedInstance;
 
   Interpreter(Collection<NativeModulesManager> nativeModulesManagers) {
@@ -65,6 +67,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   SimiProperty interpret(List<Stmt> statements) {
+   return interpret(statements, false);
+  }
+
+  SimiProperty interpret(List<Stmt> statements, boolean addClassesToRootEnv) {
+    this.addClassesToRootEnv = addClassesToRootEnv;
     SimiProperty result = null;
     try {
       for (Stmt statement : statements) {
@@ -76,6 +83,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       }
     } catch (RuntimeError error) {
       ErrorHub.sharedInstance().runtimeError(error);
+    } finally {
+      this.addClassesToRootEnv = false;
     }
     return result;
   }
@@ -177,7 +186,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitAnnotationStmt(Stmt.Annotation stmt) {
-    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.expr).getValue(), this);
+    SimiProperty annot = evaluate(stmt.expr);
+    if (annot == null) {
+      return null;
+    }
+    SimiObject object = SimiObjectImpl.getOrConvertObject(annot.getValue(), this);
     annotationsBuffer.add(object);
     return null;
   }
@@ -293,7 +306,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     if (isBaseClass) {
         globals.assign(stmt.name, classProp, false);
     } else if (addToEnv) {
-        environment.assign(stmt.name, classProp, false);
+        Environment env = addClassesToRootEnv ? globals : environment;
+        env.assign(stmt.name, classProp, false);
     }
     return classProp;
   }

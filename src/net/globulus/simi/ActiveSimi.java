@@ -30,7 +30,7 @@ public class ActiveSimi {
                     .append(file)
                     .append("\"\n");
         }
-        run(source.toString());
+        run(source.toString(), true);
     }
 
     public static SimiProperty eval(String className, String methodName, SimiProperty... params) {
@@ -75,7 +75,7 @@ public class ActiveSimi {
         return importResolver.readFile(path);
     }
 
-    private static void run(String source) {
+    private static void run(String source, boolean isLoad) {
         Map<String, NativeModulesManager> nativeModulesManagers = new HashMap<>();
         if (interpreter == null) {
             nativeModulesManagers.put("jar", new JavaNativeModulesManager());
@@ -104,7 +104,7 @@ public class ActiveSimi {
         resolver.resolve(statements);
         if (hadError) return;
 
-        interpreter.interpret(statements);
+        interpreter.interpret(statements, isLoad);
     }
 
     private static SimiProperty runExpression(String expression) {
