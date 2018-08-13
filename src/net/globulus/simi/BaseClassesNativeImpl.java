@@ -50,6 +50,29 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true, self.keys()));
             }
         });
+        methods.put(new OverloadableFunction("methods", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                SimiClassImpl clazz = (self instanceof SimiClassImpl) ? (SimiClassImpl) self : self.clazz;
+                Map<String, ArrayList<SimiProperty>> tempMap = new HashMap<>();
+                for (Map.Entry<OverloadableFunction, SimiFunction> method : clazz.methods.entrySet()) {
+                    OverloadableFunction key = method.getKey();
+                    List<SimiProperty> list = tempMap.computeIfAbsent(key.name, k -> new ArrayList<>());
+                    list.add(new SimiPropertyImpl(new SimiValue.Callable(method.getValue(), null, self), method.getValue().annotations));
+                }
+                LinkedHashMap<String, SimiProperty> map = new LinkedHashMap<>(tempMap.size());
+                for (Map.Entry<String, ArrayList<SimiProperty>> entry : tempMap.entrySet()) {
+                    map.put(entry.getKey(), new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true, entry.getValue())));
+                }
+                return new SimiValue.Object(SimiObjectImpl.fromMap(getObjectClass(interpreter), true, map));
+            }
+        });
         methods.put(new OverloadableFunction("values", 0), new SimiCallable() {
             @Override
             public int arity() {

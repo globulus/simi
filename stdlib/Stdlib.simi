@@ -4,6 +4,7 @@ class$ Object:
     def len(): native
     def keys(): native
     def values(): native
+    def methods(): native
     def enumerate(): native
     def zip(): native
 

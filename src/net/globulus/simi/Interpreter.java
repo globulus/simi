@@ -796,10 +796,15 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitIvicExpr(Expr.Ivic expr) {
-    SimiValue value = evaluate(expr.expr).getValue();
-    String code = value.toCode(0, false)
-            .replace("end\n,", "end,")
-            .replace("end\n)", "end)");
+    SimiProperty prop = evaluate(expr.expr);
+    String code;
+    if (prop == null) {
+      code = TempNull.INSTANCE.toCode(0, false);
+    } else {
+      code = prop.getValue().toCode(0, false)
+              .replace("end\n,", "end,")
+              .replace("end\n)", "end)");
+    }
     return new SimiValue.String(code);
   }
 
