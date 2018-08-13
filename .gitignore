@@ -83,3 +83,7 @@ Net-java/.idea/modules.xml
 Net-java/.idea/workspace.xml
 Net-java/.idea/misc.xml
 Net-java/out/production/Net-java/generated/net/globulus/simi/api/JavaApi.java
+File-java/out/production/File-java/generated/net/globulus/simi/api/File_java.java
+Net-java/out/production/Net-java/generated/net/globulus/simi/api/Net_java.java
+Stdlib-java/out/production/Stdlib-java/generated/net/globulus/simi/api/JavaApi.java
+Stdlib-java/out/production/Stdlib-java/generated/net/globulus/simi/api/Stdlib_java.java

@@ -13,6 +13,7 @@ import java.util.concurrent.BlockingDeque;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SimiJavaConfig(apiClassName = "File_java")
 @SimiJavaClass(name = "File")
 public class SimiFile {
 

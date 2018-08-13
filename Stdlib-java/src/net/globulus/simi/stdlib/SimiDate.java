@@ -5,6 +5,7 @@ import net.globulus.simi.api.*;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 
+@SimiJavaConfig(apiClassName = "Stdlib_java")
 @SimiJavaClass(name = "Date")
 public class SimiDate {
 

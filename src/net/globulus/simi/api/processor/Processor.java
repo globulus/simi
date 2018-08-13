@@ -24,7 +24,8 @@ public class Processor extends AbstractProcessor {
 	private static final List<Class<? extends Annotation>> ANNOTATIONS = Arrays.asList(
 			SimiJavaGlobal.class,
 			SimiJavaClass.class,
-			SimiJavaMethod.class
+			SimiJavaMethod.class,
+			SimiJavaConfig.class
 	);
 
 	private Elements mElementUtils;
@@ -52,6 +53,18 @@ public class Processor extends AbstractProcessor {
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+		String apiClassName = null;
+		for (Element element : roundEnv.getElementsAnnotatedWith(SimiJavaConfig.class)) {
+			SimiJavaConfig annot = element.getAnnotation(SimiJavaConfig.class);
+			if (annot != null) {
+				String className = annot.apiClassName();
+				if (!className.isEmpty()) {
+					apiClassName = className;
+				}
+			}
+		}
+		ProcessorLog.note(null, "Found apiclass " + apiClassName);
+
 		List<ExposedClass> exposedClasses = new ArrayList<>();
 
 		List<ExposedMethod> globals = new ArrayList<>();
@@ -92,7 +105,9 @@ public class Processor extends AbstractProcessor {
 			}
 		}
 
-		new SimiJavaCodeGen().generate(mFiler, exposedClasses);
+		if (!exposedClasses.isEmpty()) {
+            new SimiJavaCodeGen().generate(mFiler, apiClassName, exposedClasses);
+        }
 
 		return true;
 	}

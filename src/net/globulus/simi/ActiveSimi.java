@@ -141,7 +141,8 @@ public class ActiveSimi {
                 String extension = pathString.substring(pathString.lastIndexOf('.') + 1);
                 NativeModulesManager manager = nativeModulesManagers.get(extension);
                 if (manager != null) {
-                    manager.load(importResolver.resolve(path.toString()).toString());
+                    manager.load(importResolver.resolve(path.toString()).toString(),
+                            importResolver.useApiClassName(path.toString()));
                 }
             }
         }
@@ -176,6 +177,7 @@ public class ActiveSimi {
     public interface ImportResolver {
         String readFile(String fileName);
         URL resolve(String nativeFileName);
+        boolean useApiClassName(String nativeFileName);
     }
 
     public interface Callback {
