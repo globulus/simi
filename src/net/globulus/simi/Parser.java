@@ -719,6 +719,7 @@ class Parser {
         do {
           matchAllNewlines();
           props.add(dictionary ? assignment() : or());
+          matchAllNewlines();
         } while (match(COMMA));
         matchAllNewlines();
       }

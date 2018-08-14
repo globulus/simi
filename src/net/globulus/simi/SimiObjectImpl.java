@@ -473,8 +473,9 @@ abstract class SimiObjectImpl implements SimiObject {
                     )
                     .append(fields.entrySet().stream()
                             .map(e -> indentation + e.getKey() + " "
-                                    + TokenType.EQUAL.toCode() + " "
-                                    + e.getValue().getValue().toCode(indentationLevel + 1, true))
+                                        + TokenType.EQUAL.toCode() + " "
+                                        + e.getValue().getValue().toCode(indentationLevel + 1, true)
+                            )
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
                     )
                     .append(TokenType.NEWLINE.toCode(indentationLevel, false))
@@ -720,7 +721,7 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         boolean isArray() {
             if (underlying == null) {
-                return false;
+                return true;
             }
             return underlying.isArray();
         }
