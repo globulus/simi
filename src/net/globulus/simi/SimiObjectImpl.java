@@ -269,7 +269,11 @@ abstract class SimiObjectImpl implements SimiObject {
                         String value = fields.get(Constants.PRIVATE).getValue().getString();
                         return new SimiValue.String("" + value.charAt(index));
                     }
-                    return bind(implicitKey, new ArrayList<>(fields.values()).get(index));
+                    List<SimiProperty> values = new ArrayList<>(fields.values());
+                    if (values.size() > index) {
+                        return bind(implicitKey, values.get(index));
+                    }
+                    return null;
                 }
             } catch (NumberFormatException ignored) { }
 

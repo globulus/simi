@@ -42,7 +42,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       public SimiProperty call(BlockInterpreter interpreter,
                           List<SimiProperty> arguments,
                             boolean rethrow) {
-        return new SimiValue.Number((double)System.currentTimeMillis() / 1000.0);
+        return new SimiValue.Number(System.currentTimeMillis());
       }
     }, "clock", null));
     globals.define("guid", new SimiValue.Callable(new SimiCallable() {
@@ -356,11 +356,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitIfStmt(Stmt.If stmt) {
-    if (visitElsifStmt(stmt.ifstmt).getValue().getNumber() != 0) {
+    if (visitElsifStmt(stmt.ifstmt).getValue().getNumber().asLong() != 0) {
       return null;
     }
     for (Stmt.Elsif elsif : stmt.elsifs) {
-      if (visitElsifStmt(elsif).getValue().getNumber() != 0) {
+      if (visitElsifStmt(elsif).getValue().getNumber().asLong() != 0) {
         return null;
       }
     }
@@ -565,39 +565,39 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             return new SimiValue.Number(!isIn(left, right, expr));
       case GREATER:
         checkNumberOperands(expr.operator, left, right);
-        return new SimiValue.Number(left.getNumber() > right.getNumber());
+        return left.getNumber().greaterThan(right.getNumber());
       case GREATER_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() >= right.getNumber());
+          return left.getNumber().greaterOrEqual(right.getNumber());
       case LESS:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() < right.getNumber());
+          return left.getNumber().lessThan(right.getNumber());
       case LESS_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() <= right.getNumber());
+          return left.getNumber().lessOrEqual(right.getNumber());
       case MINUS:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() - right.getNumber());
+          return left.getNumber().subtract(right.getNumber());
       case PLUS: {
         if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
-          return new SimiValue.Number(left.getNumber() + right.getNumber());
-        } // [plus]
+            return left.getNumber().add(right.getNumber());
+        }
         String leftStr = (left != null) ? left.toString() : "nil";
         String rightStr = (right != null) ? right.toString() : "nil";
         return new SimiValue.String(leftStr + rightStr);
       }
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() / right.getNumber());
+          return left.getNumber().divide(right.getNumber());
       case SLASH_SLASH:
         checkNumberOperands(expr.operator, left, right);
-        return new SimiValue.Number(left.getNumber().longValue() / right.getNumber().longValue());
+        return new SimiValue.Number(left.getNumber().asLong() / right.getNumber().asLong());
       case STAR:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() * right.getNumber());
+          return left.getNumber().multiply(right.getNumber());
         case MOD:
             checkNumberOperands(expr.operator, left, right);
-            return new SimiValue.Number(left.getNumber() % right.getNumber());
+            return left.getNumber().mod(right.getNumber());
       case QUESTION_QUESTION:
         return right; // We already checked the condition where left is not null above.
     }
@@ -895,7 +895,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         return new SimiValue.Number(!isTruthy(right));
       case MINUS:
         checkNumberOperand(expr.operator, right);
-        return new SimiValue.Number(-right.getNumber());
+        return right.getNumber().negate();
       case QUESTION:
         return (right == null) ? TempNull.INSTANCE : right;
     }
@@ -1011,7 +1011,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         return false;
     }
     try {
-        double value = object.getValue().getNumber();
+        long value = object.getValue().getNumber().asLong();
         return value != 0;
     } catch (SimiValue.IncompatibleValuesException e) {
         return true;
@@ -1029,7 +1029,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     if (a instanceof SimiValue.Object) {
       Token equals = new Token(TokenType.IDENTIFIER, Constants.EQUALS, null, expr.operator.line);
       return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment).getValue(),
-              equals, Collections.singletonList(b)).getValue().getNumber() != 0;
+              equals, Collections.singletonList(b)).getValue().getNumber().asLong() != 0;
     }
     return a.equals(b);
   }
@@ -1077,7 +1077,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 //          throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line);
-      return call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a)).getValue().getNumber() != 0;
+      SimiProperty p = call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a));
+      return p.getValue().getNumber().asLong() != 0;
   }
 
   private String stringify(SimiProperty object) {

@@ -67,7 +67,7 @@ public class ReadStream {
     @SimiJavaMethod
     public static SimiProperty skip(SimiObject self, BlockInterpreter interpreter, SimiProperty length) {
         try {
-            return new SimiValue.Number(getReader(self, interpreter).skip(length.getValue().getNumber().longValue()));
+            return new SimiValue.Number(getReader(self, interpreter).skip(length.getValue().getNumber().asLong()));
         } catch (IOException e) {
             Utils.raiseIoException(e, interpreter);
             return null;

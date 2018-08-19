@@ -51,7 +51,7 @@ public class SimiFile {
                                        SimiProperty path,
                                        SimiProperty filter,
                                        SimiProperty recursive) {
-        int maxDepth = (recursive.getValue().getNumber() == 0) ? 1 : 999;
+        int maxDepth = (recursive.getValue().getNumber().asLong() == 0) ? 1 : 999;
         String filterRegex;
         if (filter.getValue() instanceof SimiValue.String) {
             filterRegex = filter.getValue().getString();

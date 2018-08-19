@@ -10,7 +10,7 @@ Async = [
 
     swl = def (lines):
         timestamp = clock().toString()
-        tempName = "temp" + timestamp.substring(timestamp.indexOf('.') + 1)
+        tempName = "temp" + timestamp
         return "[f = " + @_process(lines, 0, tempName).trim() + "\nend].f"
     end,
 

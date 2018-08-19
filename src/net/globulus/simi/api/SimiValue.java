@@ -31,9 +31,9 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         throw new IncompatibleValuesException(this.getClass(), String.class);
     }
 
-    public Double getNumber() {
+    public Number getNumber() {
         if (this instanceof Number) {
-            return ((Number) this).value;
+            return (Number) this;
         }
         throw new IncompatibleValuesException(this.getClass(), Number.class);
     }
@@ -67,7 +67,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         @Override
         public boolean equals(java.lang.Object obj) {
-            if (obj == null || !(obj instanceof SimiValue.String)) {
+            if (!(obj instanceof String)) {
                 return false;
             }
             return value.equals(((String) obj).value);
@@ -99,39 +99,56 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
     public static class Number extends SimiValue {
 
-        public final double value;
+        private final Double valueDouble;
+        private final Long valueLong;
 
         public static final Number TRUE = new Number(true);
         public static final Number FALSE = new Number(false);
 
         public Number(double value) {
-            this.value = value;
+            this.valueDouble = value;
+            this.valueLong = null;
+        }
+
+        public Number(long value) {
+            this.valueLong = value;
+            this.valueDouble = null;
         }
 
         public Number(boolean value) {
-            this.value = value ? 1 : 0;
+            this(value ? 1L : 0L);
+        }
+
+        public double asDouble() {
+            return (valueDouble != null) ? valueDouble : (valueLong * 1.0);
+        }
+
+        public long asLong() {
+            return (valueLong != null) ? valueLong : Math.round(valueDouble);
         }
 
         @Override
         public java.lang.String toString() {
-            java.lang.String text = "" + value;
-            if (text.endsWith(".0")) {
-                text = text.substring(0, text.length() - 2);
-            }
-            return text;
+            return (valueDouble != null) ? valueDouble.toString() : valueLong.toString();
         }
 
         @Override
         public boolean equals(java.lang.Object obj) {
-            if (obj == null || !(obj instanceof SimiValue.Number)) {
+            if (!(obj instanceof Number)) {
                 return false;
             }
-            return Double.compare(value, ((Number) obj).value) == 0;
+            if (valueLong != null) {
+                return Long.compare(valueLong, ((Number) obj).asLong()) == 0;
+            }
+            return Double.compare(valueDouble, ((Number) obj).asDouble()) == 0;
         }
 
         @Override
         public SimiValue copy() {
-            return new Number(value);
+            if (valueLong != null) {
+                return new Number(valueLong);
+            }
+            return new Number(valueDouble);
         }
 
         @Override
@@ -143,13 +160,89 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         public int compareTo(SimiValue o) {
             if (!(o instanceof Number)) {
                 throw new IncompatibleValuesException(this.getClass(), o.getClass());
+            }if (valueLong != null) {
+                return Long.compare(valueLong, ((Number) o).asLong());
             }
-            return Double.compare(this.value, ((Number) o).value);
+            return Double.compare(valueDouble, ((Number) o).asDouble());
         }
 
         @Override
         public java.lang.String toCode(int indentationLevel, boolean ignoreFirst) {
             return toString();
+        }
+
+        public Number lessThan(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong < o.valueLong);
+            }
+            return new Number(asDouble() < o.asDouble());
+        }
+
+        public Number lessOrEqual(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong <= o.valueLong);
+            }
+            return new Number(asDouble() <= o.asDouble());
+        }
+
+        public Number greaterThan(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong > o.valueLong);
+            }
+            return new Number(asDouble() > o.asDouble());
+        }
+
+        public Number greaterOrEqual(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong >= o.valueLong);
+            }
+            return new Number(asDouble() >= o.asDouble());
+        }
+
+        public Number add(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong + o.valueLong);
+            }
+            return new Number(asDouble() + asDouble());
+        }
+
+        public Number subtract(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong - o.valueLong);
+            }
+            return new Number(asDouble() - asDouble());
+        }
+
+        public Number multiply(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong * o.valueLong);
+            }
+            return new Number(asDouble() * asDouble());
+        }
+
+        public Number divide(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong / o.valueLong);
+            }
+            return new Number(asDouble() / asDouble());
+        }
+
+        public Number mod(Number o) {
+            if (valueLong != null && o.valueLong != null) {
+                return new Number(valueLong % o.valueLong);
+            }
+            return new Number(asDouble() % asDouble());
+        }
+
+        public Number negate() {
+            if (valueLong != null) {
+                return new Number(-valueLong);
+            }
+            return new Number(-valueDouble);
+        }
+
+        public java.lang.Object getJavaValue() {
+            return (valueLong != null) ? valueLong : valueDouble;
         }
     }
 

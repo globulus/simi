@@ -224,9 +224,14 @@ class Scanner {
       }
       while (isDigitOrUnderscore(peek())) advance();
     }
-
-    addToken(TokenType.NUMBER,
-        new SimiValue.Number(Double.parseDouble(source.substring(start, current).replace("_", ""))));
+    String numberString = source.substring(start, current).replace("_", "");
+    SimiValue.Number literal;
+    try {
+      literal = new SimiValue.Number(Long.parseLong(numberString));
+    } catch (NumberFormatException e) {
+      literal = new SimiValue.Number(Double.parseDouble(numberString));
+    }
+    addToken(TokenType.NUMBER, literal);
   }
 
   protected void string(char opener) {

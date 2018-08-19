@@ -124,12 +124,15 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
           if (initializer.function.isNative) {
               Interpreter in = (Interpreter) interpreter;
               for (NativeModulesManager manager : in.nativeModulesManagers) {
-                  SimiProperty inst = manager.call(name, Constants.INIT, this, in, arguments);
-                  if (inst != null) {
-                      instance = (SimiObjectImpl) inst.getValue().getObject();
-                      if (instance != null) {
-                          break;
+                  try {
+                      SimiProperty inst = manager.call(name, Constants.INIT, this, in, arguments);
+                      if (inst != null) {
+                          instance = (SimiObjectImpl) inst.getValue().getObject();
+                          if (instance != null) {
+                              break;
+                          }
                       }
+                  } catch (IllegalArgumentException ignored) {
                   }
               }
           } else {
