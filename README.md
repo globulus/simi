@@ -150,7 +150,9 @@ $e = "another string"
 5. Nil - represents an absence of value. Invoking operations on nils generally results in a NilPointerException.
 
 #### Numbers
-Šimi doesn't make a distinction between integers and floating point numbers, but instead has only a double-precision floating point type, which doubles as a boolean type as 0 represents a false value.
+At surface, Šimi doesn't make a distinction between integers and floating point numbers, but instead has one number type, 8 bytes long, which doubles as a boolean type where 0 represents a false value.
+
+Internally, Šimi uses *either* a 64-bit interger (long) or a 64-bit floating-point (double) to store the numerical value passed to it, depening on if the supplied value is an integer or not. This allows for precision when dealing with both integer and decimal values, and requires attentiveness when creating Number instances via native calls. When two numbers are involved in an operation, the result will be integer of both values are internally integers, otherwise it'll be a decimal number.
 
 When numbers are used as objects, they're boxed into an instance of open Stdlib class Number, which contains useful methods for converting numbers to strings, rounding, etc.
 
