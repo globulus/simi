@@ -93,7 +93,11 @@ public class SimiMapper {
         } else if (value instanceof Float) {
             return new SimiValue.Number(((Float) value).doubleValue());
         } else if (value instanceof Double) {
-            return new SimiValue.Number((Double) value);
+            double num = (Double) value;
+            if (num == Math.floor(num)) {
+                return new SimiValue.Number(Math.round(num));
+            }
+            return new SimiValue.Number(num);
         } else if (value instanceof Boolean) {
             return new SimiValue.Number((Boolean) value ? 1 : 0);
         } else if (value instanceof String) {
