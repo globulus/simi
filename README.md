@@ -1,7 +1,7 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
-You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/web)
+You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web)
 
 What Šimi offers:
 * Modern, powerful and expressive syntax.
