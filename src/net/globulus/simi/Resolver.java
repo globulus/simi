@@ -328,9 +328,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   private void resolveFunctionBlock(Expr.Block block) {
       beginScope();
-      for (Token param : block.params) {
-          declare(param, false);
-          define(param);
+      for (Expr param : block.params) {
+          Token name;
+          if (param instanceof Expr.Variable) {
+            name = ((Expr.Variable) param).name;
+          } else {
+            name = ((Expr.Variable) ((Expr.Binary) param).left).name;
+          }
+          declare(name, false);
+          define(name);
       }
       resolve(block, false);
       endScope();

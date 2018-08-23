@@ -1,16 +1,17 @@
 import "./Stdlib/File.simi"
 import "./Stdlib/CodeBlocks.simi"
+import "./SimiSync/SimiSyncCommons.simi"
 
 class_ SimiSyncModels:
 
     # Model annotation class
-    class_ ModelClass:
+    class_ Model:
         def init(version): pass
         def init(version, clientName): pass
     end
 
     # Model field annotation class
-    class_ ModelField:
+    class_ Field:
         def init(): @init(false, 1)
         def init(serverOnly): pass
         def init(serverOnly, version): pass
@@ -18,42 +19,54 @@ class_ SimiSyncModels:
     end
 
     # Model method annotation class
-    class_ ModelMethod:
+    class_ Method:
     end
 
-    class_ ModelParser:
+    class_ ModelParser():
+        import SimiSyncCommons.Parser
+
         def parse(version):
             import CodeBlocks
             # By convention, all model files should live in a directory named "models" and its subdirectories
-            for file in File.listAll(path = "./models", recursive = true):
+            $dirPath = nil
+            print File.listAll("./SimiSync/models", "simi", true)
+            for file in File.listAll("./SimiSync/models", "simi", true):
+                if not $dirPath:
+                    $dirPath = file.path.substring(0, file.path.lastIndexOf('/') + 1) +  "clientModels/" + version + "/"
+                    print "found dirpath " + $dirPath
+                end
                 # Read and interpret the content of the file
                 modelCode = File.readString(file.path)
-                modelClass = gu File.readString(file.path)
+                modelClass = gu @removeImports(modelCode)
                 # Each class should have a proper ModelClass annotation
-                modelClassAnnot = @_extractAnnot(modelClass, ModelClass)
+                modelClassAnnot = @extractAnnot(modelClass, SimiSyncModels.Model)
                 if not modelClassAnnot : continue
                 className = modelClassAnnot.clientName ?? ClassCode(modelClass).name
                 classComposer = ClassComposer(className)
                 for e in modelClass.enumerate():
-                    [key, value] = e
+                    key = e.key
+                    value = modelClass.(key)
                     if value is Function:
-                        if not @_extractAnnot(value, ModelMethod): continue
+                        if not @extractAnnot(value, SimiSyncModels.Method): continue
                         classComposer.method(value)
                     end
                     else:
-                        fieldAnnot = @_extractAnnot(value, ModelField)
+                        fieldAnnot = @extractAnnot(value, SimiSyncModels.Field)
                         if not fieldAnnot or fieldAnnot.serverOnly or fieldAnnot.version > version: continue
                         classComposer.field(fieldAnnot.clientName ?? key, value)
                     end
                 end
                 clientCode = classComposer.getString()
-                writer = WriteStream(File("./clientModels/" + className + "_" + version + ".simi"))
+                print clientCode
+                f = File($dirPath + className + ".simi")
+                print f
+                writer = WriteStream(f)
                 writer.write(clientCode)
-                writer.close()
+                rescue ex:
+                    if ex: print ex.message
+                    writer.close()
+                end
             end
-
         end
-
-        def _extractAnnot(field, annotClass): return ?(!!field).filter(def a: a is annotClass).first()
     end
 end

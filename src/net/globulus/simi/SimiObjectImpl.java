@@ -213,6 +213,9 @@ abstract class SimiObjectImpl implements SimiObject {
 
     @Override
     public SimiProperty get(String key, SimiEnvironment environment) {
+        if (key.equals("class")) {
+            return new SimiValue.Object(clazz);
+        }
         return get(Token.nativeCall(key), null, (Environment) environment);
     }
 
@@ -253,6 +256,9 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         SimiProperty get(Token name, Integer arity, Environment environment) {
             String key = name.lexeme;
+            if (key.equals("class")) {
+                return new SimiValue.Object(clazz);
+            }
             try {
                 int index = Integer.parseInt(key);
                 String implicitKey = Constants.IMPLICIT + index;
@@ -263,7 +269,11 @@ abstract class SimiObjectImpl implements SimiObject {
                         String value = fields.get(Constants.PRIVATE).getValue().getString();
                         return new SimiValue.String("" + value.charAt(index));
                     }
-                    return bind(implicitKey, new ArrayList<>(fields.values()).get(index));
+                    List<SimiProperty> values = new ArrayList<>(fields.values());
+                    if (values.size() > index) {
+                        return bind(implicitKey, values.get(index));
+                    }
+                    return null;
                 }
             } catch (NumberFormatException ignored) { }
 
@@ -346,13 +356,17 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         SimiObjectImpl enumerate(SimiClassImpl objectClass) {
+            return SimiObjectImpl.fromArray(objectClass, true, getEnumeratedValues(objectClass));
+        }
+
+        protected ArrayList<SimiProperty> getEnumeratedValues(SimiClassImpl objectClass) {
             int size = length();
             ArrayList<SimiProperty> values = new ArrayList<>(size);
             for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
                 values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
                         new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
             }
-            return SimiObjectImpl.fromArray(objectClass, true, values);
+            return values;
         }
 
         @Override
@@ -463,8 +477,9 @@ abstract class SimiObjectImpl implements SimiObject {
                     )
                     .append(fields.entrySet().stream()
                             .map(e -> indentation + e.getKey() + " "
-                                    + TokenType.EQUAL.toCode() + " "
-                                    + e.getValue().getValue().toCode(indentationLevel + 1, true))
+                                        + TokenType.EQUAL.toCode() + " "
+                                        + e.getValue().getValue().toCode(indentationLevel + 1, true)
+                            )
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
                     )
                     .append(TokenType.NEWLINE.toCode(indentationLevel, false))
@@ -710,7 +725,7 @@ abstract class SimiObjectImpl implements SimiObject {
         @Override
         boolean isArray() {
             if (underlying == null) {
-                return false;
+                return true;
             }
             return underlying.isArray();
         }

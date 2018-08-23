@@ -1,7 +1,7 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
-You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios).
+You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/web)
 
 What Šimi offers:
 * Modern, powerful and expressive syntax.
@@ -12,6 +12,8 @@ What Šimi offers:
 * Run Šimi on any device that supports JRE, with special native support in Android.
 * Run natively on any Cocoa machine ([iOS or Mac OS X](https://github.com/globulus/simi-ios)).
 * Free to use and modify!
+
+
 ### Quickstart
 
 1. At the very least, download [Šimi JAR](simi.jar). Downloading [the shell script](simi.sh) makes running even easier.
@@ -151,7 +153,9 @@ $e = "another string"
 5. Nil - represents an absence of value. Invoking operations on nils generally results in a NilPointerException.
 
 #### Numbers
-Šimi doesn't make a distinction between integers and floating point numbers, but instead has only a double-precision floating point type, which doubles as a boolean type as 0 represents a false value.
+At surface, Šimi doesn't make a distinction between integers and floating point numbers, but instead has one number type, 8 bytes long, which doubles as a boolean type where 0 represents a false value.
+
+Internally, Šimi uses *either* a 64-bit interger (long) or a 64-bit floating-point (double) to store the numerical value passed to it, depening on if the supplied value is an integer or not. This allows for precision when dealing with both integer and decimal values, and requires attentiveness when creating Number instances via native calls. When two numbers are involved in an operation, the result will be integer of both values are internally integers, otherwise it'll be a decimal number.
 
 When numbers are used as objects, they're boxed into an instance of open Stdlib class Number, which contains useful methods for converting numbers to strings, rounding, etc.
 
@@ -229,7 +233,7 @@ difference = subtract(a = 5, b = pow(2, 3))
 printFunction()
 ```
 
-For functions that take no arguments or more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
+For functions that take more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
 ```ruby
 def f(a, b, c): pass
 f(1, 2, 3) # The conventional way of doing it
@@ -248,6 +252,27 @@ If you need to access a function from within itself, you can use the special *se
 def f(a):
     objectSelf = self # Resolves to invoked object (or nil)
     functionSelf = self(def) # Returns function f
+end
+```
+
+There's a syntax sugar that allows for static type checking of selected parameters:
+```ruby
+# Note the x is Type syntax to enforce static type checking
+# Checked and unchecked params can be freely mixed
+def f(a is Number, b is Range, c):
+    print "something"
+end
+```
+The above function is upon parsing internally stored with prepended type checks that raise *TypeMismatchException*:
+```ruby
+def f(a, b, c):
+    if a is not Number:
+        TypeMismatchException(a, Number).raise()
+    end
+    if b is not Range:
+        TypeMismatchException(b, Range).raise()
+    end
+    print "something"
 end
 ```
 
@@ -322,9 +347,13 @@ There is an object decomposition syntax sugar for extracting multiple values out
 ```ruby
 obj = [a = 3, b = 4, c = 5]
 [a, b, d] = obj
+# Above compiles down to
+# a = obj.a ?? obj.0
+# b = obj.b ?? obj.1
+# d = obj.d ?? obj.2
 print a # 3
 print b # 4
-print d # nil
+print d # 5
 ```
 
 ##### Objects vs Arrays
@@ -435,7 +464,7 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
-* Using the *import* keyword followed by a class name will crate a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
+* Using the *import* keyword followed by a class name will create a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
@@ -443,7 +472,7 @@ Number.double = def (): @_ * 2
 a = 3
 b = a.double() # b == 6
 ```
-* Classes that are defined as **class_ Name** are *final classes*, which can't be subclasses. This feature is important as it normally all subclasses can alter instance fields from their superclasses, so being able to make classes non-subclassable adds to code safety and stability.
+* Classes that are defined as **class_ Name** are *final classes*, which can't be subclassed. This feature is important as it normally all subclasses can alter instance fields from their superclasses, so being able to make classes non-subclassable adds to code safety and stability.
 * The Object class has a native *builder()* method, meaning that any class in Šimi automatically implements the builder pattern:
 ```ruby
 Car = Car.builder()\
@@ -561,7 +590,7 @@ range = Range(1, 10)
 ```
 
 #### ?? - nil coalescence
-The ?? operator checks if the value for left is nil. If it is, it returns the right value, otherwise it returns the left value.
+The ?? operator checks if the value for left is nil. If it is, it returns the right value, otherwise it returns the left value. This operator is short-circuit (right won't be evaluated if left is not nil).
 ```ruby
 a = b ?? c # is equivalent to a = ife(b != nil, b, c)
 ```
@@ -846,16 +875,16 @@ A Java project contains the class that'll represent the native equivalent of our
 public class SimiDate {
 
     // Expose the Java methods via the @SimiJavaMethod annotation. The name should be
-    // the same as the name of the Simi method, and the returned value a SimiValue.
+    // the same as the name of the Simi method, and the returned value a SimiProperty.
     // All SimiJavaMethods must have at least two parameters, a SimiObject, and a
-    // BlockInterpreter. After that, you may supply any number of SimiValue params,
+    // BlockInterpreter. After that, you may supply any number of SimiProperty params,
     // which must correspond to the params in the Simi method declaration.
 
     // The now() method is meant to be used statically, hence the self param will
     // in fact be a SimiClass (Date), which can then be used to create a new
     // Date instance:
     @SimiJavaMethod
-    public static SimiValue now(SimiObject self, BlockInterpreter interpreter) {
+    public static SimiProperty now(SimiObject self, BlockInterpreter interpreter) {
         SimiClass clazz = (SimiClass) self;
         SimiValue timestamp = new SimiValue.Number(System.currentTimeMillis());
         return clazz.init(interpreter, Collections.singletonList(timestamp));
@@ -865,7 +894,7 @@ public class SimiDate {
     // self parameter will reflect the object on which the method was invoked.
     // This allows us to get its timestamp field and format based on that.
     @SimiJavaMethod
-    public static SimiValue format(SimiObject self, BlockInterpreter interpreter, SimiValue pattern) {
+    public static SimiProperty format(SimiObject self, BlockInterpreter interpreter, SimiProperty pattern) {
         // The self param represents the object which invokes the method. We then use
         // the get(String, SimiEnvironment) method to get the object's "timestamp" field,
         // which we know to be a number.
@@ -873,7 +902,7 @@ public class SimiDate {
 
         // We then use SimpleDateFormat class to format the java.util.Date represented
         // by the timestamp to the specified format string.
-        // The returned value must then be wrapped in a SimiValue again.
+        // The returned value must then be wrapped in a SimiValue/SimiProperty again.
         return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
     }
 }

@@ -110,7 +110,7 @@ public class Simi {
       Path path = Paths.get(location);
       String pathString = path.toString().toLowerCase();
       if (pathString.endsWith(".jar")) {
-          nativeModulesManager.load(path.toUri().toURL().toString());
+          nativeModulesManager.load(path.toUri().toURL().toString(), true);
       } else if (pathString.endsWith(".simi")) {
           List<Token> tokens = new Scanner(readFile(location, false)).scanTokens(false);
           result.addAll(scanImports(tokens, imports, nativeModulesManager));

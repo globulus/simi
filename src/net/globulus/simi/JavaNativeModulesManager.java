@@ -1,9 +1,7 @@
 package net.globulus.simi;
 
+import net.globulus.simi.api.*;
 import net.globulus.simi.api.Constants;
-import net.globulus.simi.api.SimiApiClass;
-import net.globulus.simi.api.SimiObject;
-import net.globulus.simi.api.SimiProperty;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -25,15 +23,22 @@ class JavaNativeModulesManager implements NativeModulesManager {
     }
 
     @Override
-    public void load(String path) {
-        try {
-            URL url = new URL(path);
-            ClassLoader loader = URLClassLoader.newInstance(
-                    new URL[] { url },
-                    getClass().getClassLoader()
-            );
+    public void load(String path, boolean useApiClassName) {
+       load(path, useApiClassName, useApiClassName);
+    }
+
+    public void load(String path, boolean useApiClassName, boolean useCustomLoader) {
             try {
-                SimiApiClass apiClass = (SimiApiClass) Class.forName(API_CLASS, true, loader).newInstance();
+                SimiApiClass apiClass;
+                ClassLoader loader;
+                if (useCustomLoader) {
+                    URL url = new URL(path);
+                    loader = URLClassLoader.newInstance(new URL[]{url}, getClass().getClassLoader());
+                    apiClass = (SimiApiClass) Class.forName(getApiClassName(path, useApiClassName), true, loader).newInstance();
+                } else {
+                    apiClass = (SimiApiClass) Class.forName(getApiClassName(path, useApiClassName)).newInstance();
+                }
+
                 for (String className : apiClass.classNames()) {
                     classes.put(className, apiClass);
                 }
@@ -41,6 +46,14 @@ class JavaNativeModulesManager implements NativeModulesManager {
                     globals.put(globalMethodName, apiClass);
                 }
             } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                if (useApiClassName) {
+                    load(path, false, true);
+                } else if (useCustomLoader) {
+                    load(path, false, false);
+                } else {
+                    e.printStackTrace();
+                }
+            } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
 //        for (Class<?> clazz : javaApi.getClasses()) {
@@ -57,9 +70,15 @@ class JavaNativeModulesManager implements NativeModulesManager {
 //                }
 //            }
 //        }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+    }
+
+    private String getApiClassName(String path, boolean useApiClassName) {
+        if (useApiClassName) {
+            return API_CLASS;
         }
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        fileName = fileName.substring(0, fileName.indexOf('.'));
+        return Constants.PACKAGE_SIMI_API + "." + fileName.replace('-', '_');
     }
 
     @Override

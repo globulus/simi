@@ -3,12 +3,9 @@ package net.globulus.simi;
 import net.globulus.simi.api.SimiValue;
 
 import java.util.ArrayList;
-//< Statements and State parser-imports
-//> Control Flow import-arrays
-//< Control Flow import-arrays
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static net.globulus.simi.TokenType.*;
 
@@ -63,6 +60,12 @@ class Parser {
       if (match(BANG)) {
         return annotation();
       }
+      if (match(IMPORT)) {
+        Token keyword = previous();
+        if (match(IDENTIFIER)) {
+          return new Stmt.Import(keyword, new Expr.Variable(previous()));
+        }
+      }
       return statement(false);
     } catch (ParseError error) {
       synchronize();
@@ -75,17 +78,20 @@ class Parser {
     Token name = consume(IDENTIFIER, "Expect class name.");
 
     List<Expr> superclasses = null;
-    if (check(LEFT_PAREN)) {
-      superclasses = params("class", false)
-              .stream()
-              .map(Expr.Variable::new)
-              .collect(Collectors.toList());
+    if (match(LEFT_PAREN)) {
+      if (!check(RIGHT_PAREN)) {
+        superclasses = new ArrayList<>();
+        do {
+          superclasses.add(call());
+        } while (match(COMMA));
+      }
+      consume(RIGHT_PAREN, "Expect ')' after superclasses.");
     }
 
     consume(COLON, "Expect ':' before class body.");
 
     List<Expr.Assign> constants = new ArrayList<>();
-    List<Expr.Variable> mixins = new ArrayList<>();
+    List<Expr> mixins = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(END) && !isAtEnd()) {
@@ -97,7 +103,12 @@ class Parser {
         } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             innerClasses.add(classDeclaration());
         } else if (match(IMPORT)) {
-          mixins.add(new Expr.Variable(advance()));
+          Expr expr = call();
+          if (expr instanceof Expr.Get || expr instanceof Expr.Variable) {
+            mixins.add(expr);
+          } else {
+            error(previous(), "Expected a get or variable expr after mixin import.");
+          }
         } else if (match(BANG)) {
             annotations.add(annotation());
         } else {
@@ -305,7 +316,7 @@ class Parser {
   }
 
   private void checkStatementEnd(boolean lambda) {
-    if (match(NEWLINE)) {
+    if (match(NEWLINE, EOF)) {
       return;
     }
     if (lambda) {
@@ -320,34 +331,47 @@ class Parser {
   private Stmt.Function function(String kind) {
       Token declaration = previous();
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+    List<Stmt.Annotation> annotations = getAnnotations();
     String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
-    Expr.Block block = block(declaration, blockKind, false);
-
+    Expr.Block block = block(declaration, blockKind, false, false);
+    List<Stmt> statements;
     // Check empty init and put assignments into it
     if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
-      List<Stmt> statements = new ArrayList<>();
-      for (Token param : block.params) {
+      statements = new ArrayList<>();
+      for (Expr param : block.params) {
+        Expr.Variable paramName;
+        if (param instanceof Expr.Variable) {
+          paramName = (Expr.Variable) param;
+        } else {
+          Expr.Binary typeCheck = (Expr.Binary) param;
+          paramName = (Expr.Variable) typeCheck.left;
+        }
         statements.add(new Stmt.Expression(new Expr.Set(name,
-                new Expr.Self(Token.self(), null), new Expr.Variable(param), new Expr.Variable(param))));
+                        new Expr.Self(Token.self(), null), paramName, paramName)));
       }
-      block = new Expr.Block(declaration, block.params, statements, true);
+    } else {
+      statements = block.statements;
     }
-
-    return new Stmt.Function(name, block, getAnnotations());
+    addParamChecks(declaration, block.params, statements);
+    block = new Expr.Block(declaration, block.params, statements, true);
+    return new Stmt.Function(name, block, annotations);
   }
 
   private Expr.Block block(String kind, boolean lambda) {
-    return block(null, kind, lambda);
+    return block(null, kind, lambda, true);
   }
 
-  private Expr.Block block(Token declaration, String kind, boolean lambda) {
+  private Expr.Block block(Token declaration, String kind, boolean lambda, boolean addParamChecks) {
     if (declaration == null) {
       declaration = previous();
     }
-    List<Token> params = params(kind, lambda);
+    List<Expr> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
-
-    return new Expr.Block(declaration, params, getBlockStatements(declaration, kind),
+    List<Stmt> statements = getBlockStatements(declaration, kind);
+    if (addParamChecks) {
+      addParamChecks(declaration, params, statements);
+    }
+    return new Expr.Block(declaration, params, statements,
             kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
   }
 
@@ -371,17 +395,25 @@ class Parser {
     return statements;
   }
 
-  private List<Token> params(String kind, boolean lambda) {
-    List<Token> params = new ArrayList<>();
+  private List<Expr> params(String kind, boolean lambda) {
+    List<Expr> params = new ArrayList<>();
     if (!check(LEFT_PAREN)) {
       if (lambda && !check(COLON)) {
-        params.add(consume(IDENTIFIER, "Expect parameter name."));
+        Token id = consume(IDENTIFIER, "Expect parameter name.");
+        params.add(new Expr.Variable(id));
       }
     } else {
       consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
       if (!check(RIGHT_PAREN)) {
         do {
-          params.add(consume(IDENTIFIER, "Expect parameter name."));
+          Expr.Variable id = new Expr.Variable(consume(IDENTIFIER, "Expect parameter name."));
+          if (match(IS)) {
+            Token is = previous();
+            Expr.Variable type = new Expr.Variable(consume(IDENTIFIER, "Expected type after is."));
+            params.add(new Expr.Binary(id, is, type));
+          } else {
+            params.add(id);
+          }
         } while (match(COMMA));
       }
       consume(RIGHT_PAREN, "Expect ')' after parameters.");
@@ -432,7 +464,7 @@ class Parser {
         } else {
           return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value), getAnnotations());
         }
-      } else if (expr instanceof Expr.Get) {
+      } else if (expr instanceof Expr.Get) { // Setter
         if (equals.type == EQUAL) {
           Expr.Get get = (Expr.Get) expr;
           return new Expr.Set(get.origin, get.object, get.name, value);
@@ -446,9 +478,13 @@ class Parser {
         }
         List<Expr.Assign> assigns = new ArrayList<>();
         List<Stmt.Annotation> annotations = getAnnotations();
-        for (Expr prop : objectLiteral.props) {
+        for (int i = 0; i < objectLiteral.props.size(); i++) {
+          Expr prop = objectLiteral.props.get(i);
           Token name = ((Expr.Variable) prop).name;
-          assigns.add(new Expr.Assign(name, new Expr.Get(name, value, prop, null), annotations));
+          Expr getByName = new Expr.Get(name, value, prop, null);
+          Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
+          Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
+          assigns.add(new Expr.Assign(name, nilCoalescence, annotations));
         }
         return new Expr.ObjectDecomp(assigns);
       }
@@ -683,6 +719,7 @@ class Parser {
         do {
           matchAllNewlines();
           props.add(dictionary ? assignment() : or());
+          matchAllNewlines();
         } while (match(COMMA));
         matchAllNewlines();
       }
@@ -722,12 +759,11 @@ class Parser {
 
   private Token consume(TokenType type, String message) {
     if (check(type)) return advance();
-
     throw error(peek(), message);
   }
 
   private boolean check(TokenType tokenType) {
-    if (isAtEnd()) return false;
+    if (isAtEnd()) return tokenType == EOF;
     return peek().type == tokenType;
   }
 
@@ -819,5 +855,25 @@ class Parser {
       List<Stmt.Annotation> copy = Collections.unmodifiableList(new ArrayList<>(annotations));
       annotations.clear();
       return copy;
+  }
+
+  private void addParamChecks(Token declaration, List<Expr> params, List<Stmt> stmts) {
+    for (Expr param : params) {
+      if (param instanceof Expr.Binary) {
+        Expr.Binary typeCheck = (Expr.Binary) param;
+        Expr paramName = typeCheck.left;
+        Expr paramType = typeCheck.right;
+          List<Stmt> exceptionStmt = Collections.singletonList(new Stmt.Expression(
+                  new Expr.Call(new Expr.Get(declaration,
+                          new Expr.Call(new Expr.Variable(Token.named(Constants.EXCEPTION_TYPE_MISMATCH)), declaration,
+                                  Arrays.asList(paramName, typeCheck.right)), new Expr.Variable(Token.named(Constants.RAISE)), 0),
+                  declaration, Collections.emptyList())
+          ));
+          stmts.add(0, new Stmt.If(
+                  new Stmt.Elsif(new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line), paramType),
+                          new Expr.Block(typeCheck.operator, Collections.emptyList(),
+                                  exceptionStmt, true)), Collections.emptyList(), null));
+      }
+    }
   }
 }

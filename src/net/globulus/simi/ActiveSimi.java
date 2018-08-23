@@ -2,7 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.SimiProperty;
 
-import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -17,9 +17,11 @@ public class ActiveSimi {
     static boolean hadRuntimeError = false;
     private static ImportResolver importResolver;
 
+    private static List<String> resolvedImports = new ArrayList<>();
+
     private ActiveSimi() { }
 
-    public static void load(String... files) throws IOException {
+    public static void load(String... files) {
         ErrorHub.sharedInstance().removeWatcher(WATCHER);
         ErrorHub.sharedInstance().addWatcher(WATCHER);
         StringBuilder source = new StringBuilder("import \"stdlib/Stdlib.simi\"\n\n");
@@ -28,7 +30,7 @@ public class ActiveSimi {
                     .append(file)
                     .append("\"\n");
         }
-        run(source.toString());
+        run(source.toString(), true);
     }
 
     public static SimiProperty eval(String className, String methodName, SimiProperty... params) {
@@ -73,21 +75,25 @@ public class ActiveSimi {
         return importResolver.readFile(path);
     }
 
-    private static void run(String source) throws IOException {
-        Map<String, NativeModulesManager> nativeModulesManagers;
+    private static void run(String source, boolean isLoad) {
+        Map<String, NativeModulesManager> nativeModulesManagers = new HashMap<>();
         if (interpreter == null) {
-            nativeModulesManagers = new HashMap<>();
             nativeModulesManagers.put("jar", new JavaNativeModulesManager());
             nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
 
             interpreter = new Interpreter(nativeModulesManagers.values());
         } else {
-            nativeModulesManagers = null;
+            for (NativeModulesManager manager : interpreter.nativeModulesManagers) {
+                if (manager instanceof JavaNativeModulesManager) {
+                    nativeModulesManagers.put("jar", manager);
+                } else if (manager instanceof CocoaNativeModulesManager) {
+                    nativeModulesManagers.put("framework", manager);
+                }
+            }
         }
 
-        List<String> imports = new ArrayList<>();
         Scanner scanner = new Scanner(source);
-        List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManagers);
+        List<Token> tokens = scanImports(scanner.scanTokens(true), nativeModulesManagers);
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
@@ -98,7 +104,7 @@ public class ActiveSimi {
         resolver.resolve(statements);
         if (hadError) return;
 
-        interpreter.interpret(statements);
+        interpreter.interpret(statements, isLoad);
     }
 
     private static SimiProperty runExpression(String expression) {
@@ -108,8 +114,7 @@ public class ActiveSimi {
     }
 
     private static List<Token> scanImports(List<Token> input,
-                                           List<String> imports,
-                                           Map<String, NativeModulesManager> nativeModulesManagers) throws IOException {
+                                           Map<String, NativeModulesManager> nativeModulesManagers) {
         List<Token> result = new ArrayList<>();
         int len = input.size();
         for (int i = 0; i < len; i++) {
@@ -123,19 +128,21 @@ public class ActiveSimi {
                 continue;
             }
             String location = nextToken.literal.getString();
-            if (imports.contains(location)) {
+            if (resolvedImports.contains(location)) {
                 continue;
             }
+            resolvedImports.add(location);
             Path path = Paths.get(location);
             String pathString = path.toString().toLowerCase();
             if (pathString.endsWith(".simi")) {
                 List<Token> tokens = new Scanner(readFile(location)).scanTokens(false);
-                result.addAll(scanImports(tokens, imports, nativeModulesManagers));
+                result.addAll(scanImports(tokens, nativeModulesManagers));
             } else if (nativeModulesManagers != null) {
-                String extension = pathString.substring(pathString.lastIndexOf('.'));
+                String extension = pathString.substring(pathString.lastIndexOf('.') + 1);
                 NativeModulesManager manager = nativeModulesManagers.get(extension);
                 if (manager != null) {
-                    manager.load(path.toUri().toURL().toString());
+                    manager.load(importResolver.resolve(path.toString()).toString(),
+                            importResolver.useApiClassName(path.toString()));
                 }
             }
         }
@@ -169,6 +176,8 @@ public class ActiveSimi {
 
     public interface ImportResolver {
         String readFile(String fileName);
+        URL resolve(String nativeFileName);
+        boolean useApiClassName(String nativeFileName);
     }
 
     public interface Callback {

@@ -5,6 +5,7 @@ import net.globulus.simi.api.*;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 
+@SimiJavaConfig(apiClassName = "Stdlib_java")
 @SimiJavaClass(name = "Date")
 public class SimiDate {
 
@@ -17,7 +18,7 @@ public class SimiDate {
 
     @SimiJavaMethod
     public static SimiProperty format(SimiObject self, BlockInterpreter interpreter, SimiProperty pattern) {
-        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getValue().getNumber().longValue();
+        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getValue().getNumber().asLong();
         return new SimiValue.String(new SimpleDateFormat(pattern.getValue().getString()).format(new java.util.Date(timestamp)));
     }
 }

@@ -3,6 +3,7 @@ package net.globulus.simi.stdlib;
 import net.globulus.simi.api.BlockInterpreter;
 import net.globulus.simi.api.SimiClass;
 import net.globulus.simi.api.SimiException;
+import net.globulus.simi.api.SimiJavaConfig;
 
 import java.io.IOException;
 

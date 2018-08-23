@@ -74,14 +74,14 @@ abstract class Stmt implements SimiStatement, Codifiable {
     final Token opener;
     final Token name;
     final List<Expr> superclasses;
-    final List<Expr.Variable> mixins;
+    final List<Expr> mixins;
     final List<Expr.Assign> constants;
     final List<Stmt.Class> innerClasses;
     final List<Stmt.Function> methods;
     final List<Stmt.Annotation> annotations;
 
     Class(Token opener, Token name, List<Expr> superclasses,
-          List<Expr.Variable> mixins, List<Expr.Assign> constants,
+          List<Expr> mixins, List<Expr.Assign> constants,
           List<Stmt.Class> innerClasses, List<Stmt.Function> methods,
           List<Stmt.Annotation> annotations) {
       this.opener = opener;

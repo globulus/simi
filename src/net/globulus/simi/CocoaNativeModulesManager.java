@@ -8,7 +8,7 @@ import java.util.List;
 public class CocoaNativeModulesManager implements NativeModulesManager {
 
     @Override
-    public void load(String path) {
+    public void load(String path, boolean useApiClassName) {
         // FIXME: Impment in objc
     }
 

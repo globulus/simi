@@ -87,13 +87,17 @@ public class SimiMapper {
 
     private static SimiProperty toSimiProperty(Object value, SimiClassImpl objectClass) {
         if (value instanceof Integer) {
-            return new SimiValue.Number(((Integer) value).doubleValue());
+            return new SimiValue.Number(((Integer) value).longValue());
         } else if (value instanceof Long) {
-            return new SimiValue.Number(((Long) value).doubleValue());
+            return new SimiValue.Number(((Long) value));
         } else if (value instanceof Float) {
             return new SimiValue.Number(((Float) value).doubleValue());
         } else if (value instanceof Double) {
-            return new SimiValue.Number((Double) value);
+            double num = (Double) value;
+            if (num == Math.floor(num)) {
+                return new SimiValue.Number(Math.round(num));
+            }
+            return new SimiValue.Number(num);
         } else if (value instanceof Boolean) {
             return new SimiValue.Number((Boolean) value ? 1 : 0);
         } else if (value instanceof String) {
@@ -111,7 +115,7 @@ public class SimiMapper {
 
     public static Object fromSimiValue(SimiValue value) {
         if (value instanceof SimiValue.Number) {
-            return value.getNumber();
+            return value.getNumber().getJavaValue();
         } else if (value instanceof SimiValue.String) {
             return value.getString();
         } else if (value instanceof SimiValue.Object) {

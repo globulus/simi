@@ -4,6 +4,7 @@ class$ Object:
     def len(): native
     def keys(): native
     def values(): native
+    def methods(): native
     def enumerate(): native
     def zip(): native
 
@@ -56,7 +57,7 @@ class$ Object:
         return true
     end
     def filter(predicate):
-        buffer = $[]
+        buffer = Object.array()
         for item in self:
             if predicate(item): buffer.append(item)
         end
@@ -77,6 +78,7 @@ class$ Object:
     end
     def forEach(function):
         for item in self: function(item)
+        return self
     end
     def joined(with):
         clone = @clone()
@@ -86,7 +88,7 @@ class$ Object:
         return clone
     end
     def map(function):
-        buffer = $[]
+        buffer = Object.array()
         for item in self: buffer.append(function(item))
         if @isArray(): return buffer
         else: return buffer.zip()
@@ -250,6 +252,10 @@ class$ String:
     def isEmpty(): return @len() == 0
 end
 
+class TypeMismatchException(Exception):
+    def init(var, type): super.init("Expected: " + type + " but got " + var.("class"))
+end
+
 Math = [
     pow = def (a, b): native,
     max = def (a, b): native,
@@ -301,7 +307,7 @@ class Enum:
 
         timestamp = clock().toString()
         joined = obj.reduce("", String.sum)
-        className = "EnumClass" + joined + timestamp.substring(timestamp.indexOf('.') + 1)
+        className = "EnumClass" + joined + timestamp
 
         isArray = obj.isArray()
         isFirstValueScalar = obj.0 is not Object

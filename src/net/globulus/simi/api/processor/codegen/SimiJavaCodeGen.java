@@ -18,10 +18,11 @@ import java.util.List;
 public class SimiJavaCodeGen {
 
 	public void generate(Filer filer,
+						 String apiClassName,
 						 List<ExposedClass> classes) {
 		try {
 			String packageName = Constants.PACKAGE_SIMI_API;
-			String className = Constants.API_CLASS_NAME;
+			String className = (apiClassName != null) ? apiClassName : Constants.API_CLASS_NAME;
 
 			JavaFileObject jfo = filer.createSourceFile(packageName + "." + className);
 			Writer writer = jfo.openWriter();

@@ -19,6 +19,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   private Map<Object, List<SimiObject>> annotations = new HashMap<>();
   private List<SimiObject> annotationsBuffer = new ArrayList<>();
 
+  private boolean addClassesToRootEnv;
+
   static Interpreter sharedInstance;
 
   Interpreter(Collection<NativeModulesManager> nativeModulesManagers) {
@@ -40,12 +42,36 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       public SimiProperty call(BlockInterpreter interpreter,
                           List<SimiProperty> arguments,
                             boolean rethrow) {
-        return new SimiValue.Number((double)System.currentTimeMillis() / 1000.0);
+        return new SimiValue.Number(System.currentTimeMillis());
       }
     }, "clock", null));
+    globals.define("guid", new SimiValue.Callable(new SimiCallable() {
+
+      @Override
+      public String toCode(int indentationLevel, boolean ignoreFirst) {
+        return "guid()";
+      }
+
+      @Override
+      public int arity() {
+        return 0;
+      }
+
+      @Override
+      public SimiProperty call(BlockInterpreter interpreter,
+                               List<SimiProperty> arguments,
+                               boolean rethrow) {
+        return new SimiValue.String(UUID.randomUUID().toString());
+      }
+    }, "guid", null));
   }
 
   SimiProperty interpret(List<Stmt> statements) {
+   return interpret(statements, false);
+  }
+
+  SimiProperty interpret(List<Stmt> statements, boolean addClassesToRootEnv) {
+    this.addClassesToRootEnv = addClassesToRootEnv;
     SimiProperty result = null;
     try {
       for (Stmt statement : statements) {
@@ -57,6 +83,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       }
     } catch (RuntimeError error) {
       ErrorHub.sharedInstance().runtimeError(error);
+    } finally {
+      this.addClassesToRootEnv = false;
     }
     return result;
   }
@@ -158,7 +186,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitAnnotationStmt(Stmt.Annotation stmt) {
-    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(stmt.expr).getValue(), this);
+    SimiProperty annot = evaluate(stmt.expr);
+    if (annot == null) {
+      return null;
+    }
+    SimiObject object = SimiObjectImpl.getOrConvertObject(annot.getValue(), this);
     annotationsBuffer.add(object);
     return null;
   }
@@ -198,8 +230,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       } else if (!isBaseClass) {
           superclasses = Collections.singletonList(getObjectClass());
       }
-      environment = new Environment(environment);
-      environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
+//      environment = new Environment(environment);
+//      environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
       Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
       Map<String, SimiProperty> constants = new HashMap<>();
@@ -225,8 +257,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             constants.put(key, new SimiPropertyImpl(prop.getValue(), annotations));
           }
       }
-      for (Expr.Variable mixin : stmt.mixins) {
-        SimiClassImpl clazz = importClass(mixin.name, mixin, constants::put);
+      for (Expr mixin : stmt.mixins) {
+        SimiClassImpl clazz = importClass(stmt.opener, mixin, constants::put);
+        if (clazz == null) {
+            ErrorHub.sharedInstance().error(stmt.name, "Trying to Mixin a null class!");
+        }
         for (Map.Entry<OverloadableFunction, SimiFunction> method : clazz.methods.entrySet()) {
           methods.put(method.getKey(), method.getValue());
         }
@@ -271,7 +306,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     if (isBaseClass) {
         globals.assign(stmt.name, classProp, false);
     } else if (addToEnv) {
-        environment.assign(stmt.name, classProp, false);
+        Environment env = addClassesToRootEnv ? globals : environment;
+        env.assign(stmt.name, classProp, false);
     }
     return classProp;
   }
@@ -320,11 +356,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiProperty visitIfStmt(Stmt.If stmt) {
-    if (visitElsifStmt(stmt.ifstmt).getValue().getNumber() != 0) {
+    if (visitElsifStmt(stmt.ifstmt).getValue().getNumber().asLong() != 0) {
       return null;
     }
     for (Stmt.Elsif elsif : stmt.elsifs) {
-      if (visitElsifStmt(elsif).getValue().getNumber() != 0) {
+      if (visitElsifStmt(elsif).getValue().getNumber().asLong() != 0) {
         return null;
       }
     }
@@ -348,7 +384,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitImportStmt(Stmt.Import stmt) {
     importClass(stmt.keyword, stmt.value,
-            (key, value) -> environment.assign(Token.named(key), value, false));
+            (key, value) -> environment.assign(Token.named(key), value, true));
     return null;
   }
 
@@ -508,8 +544,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiValue visitBinaryExpr(Expr.Binary expr) {
     SimiProperty leftProp = evaluate(expr.left);
-    SimiProperty rightProp = evaluate(expr.right);
     SimiValue left = (leftProp != null) ? leftProp.getValue() : null;
+    if (expr.operator.type == TokenType.QUESTION_QUESTION && left != null) { // Short-circuiting the nil coalescence operator
+      return left;
+    }
+    SimiProperty rightProp = evaluate(expr.right);
     SimiValue right = (rightProp != null) ? rightProp.getValue() : null;
 
     switch (expr.operator.type) {
@@ -526,41 +565,41 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
             return new SimiValue.Number(!isIn(left, right, expr));
       case GREATER:
         checkNumberOperands(expr.operator, left, right);
-        return new SimiValue.Number(left.getNumber() > right.getNumber());
+        return left.getNumber().greaterThan(right.getNumber());
       case GREATER_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() >= right.getNumber());
+          return left.getNumber().greaterOrEqual(right.getNumber());
       case LESS:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() < right.getNumber());
+          return left.getNumber().lessThan(right.getNumber());
       case LESS_EQUAL:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() <= right.getNumber());
+          return left.getNumber().lessOrEqual(right.getNumber());
       case MINUS:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() - right.getNumber());
+          return left.getNumber().subtract(right.getNumber());
       case PLUS: {
         if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
-          return new SimiValue.Number(left.getNumber() + right.getNumber());
-        } // [plus]
+            return left.getNumber().add(right.getNumber());
+        }
         String leftStr = (left != null) ? left.toString() : "nil";
         String rightStr = (right != null) ? right.toString() : "nil";
         return new SimiValue.String(leftStr + rightStr);
       }
       case SLASH:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() / right.getNumber());
+          return left.getNumber().divide(right.getNumber());
       case SLASH_SLASH:
         checkNumberOperands(expr.operator, left, right);
-        return new SimiValue.Number(left.getNumber().longValue() / right.getNumber().longValue());
+        return new SimiValue.Number(left.getNumber().asLong() / right.getNumber().asLong());
       case STAR:
         checkNumberOperands(expr.operator, left, right);
-          return new SimiValue.Number(left.getNumber() * right.getNumber());
+          return left.getNumber().multiply(right.getNumber());
         case MOD:
             checkNumberOperands(expr.operator, left, right);
-            return new SimiValue.Number(left.getNumber() % right.getNumber());
+            return left.getNumber().mod(right.getNumber());
       case QUESTION_QUESTION:
-        return (left != null) ? left : right;
+        return right; // We already checked the condition where left is not null above.
     }
 
     // Unreachable.
@@ -642,12 +681,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         }
         boolean isBaseClass = isBaseClass(clazz.name);
         if (!isBaseClass) {
-          for (NativeModulesManager manager : nativeModulesManagers) {
-            try {
-              return manager.call(clazz.name, methodName, instance, this, decomposedArgs);
-            } catch (IllegalArgumentException ignored) {
-            }
-          }
+          return invokeNativeCall(clazz.name, methodName, instance, decomposedArgs);
         }
         String className = isBaseClass ? clazz.name : Constants.CLASS_OBJECT;
         SimiCallable nativeMethod = baseClassesNativeImpl.get(className, methodName, callable.arity());
@@ -659,13 +693,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         nativeArgs.addAll(decomposedArgs);
         return nativeMethod.call(this, nativeArgs, false);
       } else {
-        for (NativeModulesManager manager : nativeModulesManagers) {
-          try {
-            return manager.call(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME,
-                    methodName, null, this, decomposedArgs);
-          } catch (IllegalArgumentException ignored) {
-          }
-        }
+        return invokeNativeCall(net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME, methodName,
+                null, decomposedArgs);
       }
     }
     return callable.call(this, decomposedArgs, false);
@@ -680,6 +709,22 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       }
     }
     return arguments;
+  }
+
+  private SimiProperty invokeNativeCall(String className,
+                                        String methodName,
+                                        SimiObject self,
+                                        List<SimiProperty> args) {
+    for (NativeModulesManager manager : nativeModulesManagers) {
+      try {
+        SimiProperty prop = manager.call(className, methodName, self, this, args);
+        if (prop != null) {
+          return prop;
+        }
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    return null;
   }
 
   @Override
@@ -734,23 +779,32 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     String string = evaluate(expr.expr).getValue().getString();
     Scanner scanner = new Scanner(string + "\n");
     Parser parser = new Parser(scanner.scanTokens(true));
-    Stmt stmt = parser.parse().get(0);
-    if (stmt instanceof Stmt.Class) {
-      return visitClassStmt((Stmt.Class) stmt, false);
-    } else if (stmt instanceof Stmt.Expression) {
-      return evaluate(((Stmt.Expression) stmt).expression);
-    } else {
-      ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
-      return null;
+    for (Stmt stmt : parser.parse()) {
+        if (stmt instanceof Stmt.Annotation) {
+            visitAnnotationStmt((Stmt.Annotation) stmt);
+        } else if (stmt instanceof Stmt.Class) {
+            return visitClassStmt((Stmt.Class) stmt, false);
+        } else if (stmt instanceof Stmt.Expression) {
+            return evaluate(((Stmt.Expression) stmt).expression);
+        } else {
+            ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
+            return null;
+        }
     }
+    return null;
   }
 
   @Override
   public SimiProperty visitIvicExpr(Expr.Ivic expr) {
-    SimiValue value = evaluate(expr.expr).getValue();
-    String code = value.toCode(0, false)
-            .replace("end\n,", "end,")
-            .replace("end\n)", "end)");
+    SimiProperty prop = evaluate(expr.expr);
+    String code;
+    if (prop == null) {
+      code = TempNull.INSTANCE.toCode(0, false);
+    } else {
+      code = prop.getValue().toCode(0, false)
+              .replace("end\n,", "end,")
+              .replace("end\n)", "end)");
+    }
     return new SimiValue.String(code);
   }
 
@@ -794,9 +848,9 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   @Override
   public SimiValue visitSuperExpr(Expr.Super expr) {
-    int distance = locals.get(expr);
+//    int distance = locals.get(expr);
     SimiMethod method = null;
-    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.getAt(distance, Constants.SUPER).getValue()).value;
+    List<SimiClassImpl> superclasses = ((SimiClassImpl.SuperClassesList) environment.get(Token.superToken()).getValue()).value;
     if (expr.superclass != null) {
       superclasses = superclasses.stream()
               .filter(superclass -> superclass.name.equals(expr.superclass.lexeme)).collect(Collectors.toList());
@@ -806,7 +860,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     }
 
     // "self" is always one level nearer than "super"'s environment.
-    SimiObjectImpl object = (SimiObjectImpl) environment.getAt(distance - 1, Constants.SELF).getValue().getObject();
+    SimiObjectImpl object = (SimiObjectImpl) environment.get(Token.self()).getValue().getObject();
 
     for (SimiClassImpl superclass : superclasses) {
       method = superclass.findMethod(object, expr.method.lexeme, expr.arity);
@@ -841,7 +895,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         return new SimiValue.Number(!isTruthy(right));
       case MINUS:
         checkNumberOperand(expr.operator, right);
-        return new SimiValue.Number(-right.getNumber());
+        return right.getNumber().negate();
       case QUESTION:
         return (right == null) ? TempNull.INSTANCE : right;
     }
@@ -957,7 +1011,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
         return false;
     }
     try {
-        double value = object.getValue().getNumber();
+        long value = object.getValue().getNumber().asLong();
         return value != 0;
     } catch (SimiValue.IncompatibleValuesException e) {
         return true;
@@ -975,7 +1029,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     if (a instanceof SimiValue.Object) {
       Token equals = new Token(TokenType.IDENTIFIER, Constants.EQUALS, null, expr.operator.line);
       return call(((SimiObjectImpl) a.getObject()).get(equals, 1, environment).getValue(),
-              equals, Collections.singletonList(b)).getValue().getNumber() != 0;
+              equals, Collections.singletonList(b)).getValue().getNumber().asLong() != 0;
     }
     return a.equals(b);
   }
@@ -1023,7 +1077,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 //          throw new RuntimeError(expr.operator, "Right side must be an Object!");
       }
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line);
-      return call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a)).getValue().getNumber() != 0;
+      SimiProperty p = call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a));
+      return p.getValue().getNumber().asLong() != 0;
   }
 
   private String stringify(SimiProperty object) {
@@ -1090,7 +1145,11 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private SimiClassImpl importClass(Token keyword, Expr expr, ClassImporter classImporter) {
-    SimiObject object = SimiObjectImpl.getOrConvertObject(evaluate(expr).getValue(), this);
+      SimiProperty value = evaluate(expr);
+      if (value == null) {
+          return null;
+      }
+    SimiObject object = SimiObjectImpl.getOrConvertObject(value.getValue(), this);
     if (!(object instanceof SimiClassImpl)) {
       throw new RuntimeError(keyword, "Import statement must be followed by an identifier that resolves to a class!");
     }

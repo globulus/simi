@@ -50,6 +50,29 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true, self.keys()));
             }
         });
+        methods.put(new OverloadableFunction("methods", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                SimiClassImpl clazz = (self instanceof SimiClassImpl) ? (SimiClassImpl) self : self.clazz;
+                Map<String, ArrayList<SimiProperty>> tempMap = new HashMap<>();
+                for (Map.Entry<OverloadableFunction, SimiFunction> method : clazz.methods.entrySet()) {
+                    OverloadableFunction key = method.getKey();
+                    List<SimiProperty> list = tempMap.computeIfAbsent(key.name, k -> new ArrayList<>());
+                    list.add(new SimiPropertyImpl(new SimiValue.Callable(method.getValue(), null, self), method.getValue().annotations));
+                }
+                LinkedHashMap<String, SimiProperty> map = new LinkedHashMap<>(tempMap.size());
+                for (Map.Entry<String, ArrayList<SimiProperty>> entry : tempMap.entrySet()) {
+                    map.put(entry.getKey(), new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true, entry.getValue())));
+                }
+                return new SimiValue.Object(SimiObjectImpl.fromMap(getObjectClass(interpreter), true, map));
+            }
+        });
         methods.put(new OverloadableFunction("values", 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -369,7 +392,7 @@ class BaseClassesNativeImpl {
                 final Set<String> params = constructors.stream()
                         .map(f -> f.declaration.block.params)
                         .flatMap(Collection::stream)
-                        .map(t -> t.lexeme)
+                        .map(BlockImpl::getParamLexeme)
                         .collect(Collectors.toSet());
                 LinkedHashMap<String, SimiProperty> fields = new LinkedHashMap<>();
                 SimiNativeObject object = new SimiNativeObject(fields);
@@ -404,7 +427,7 @@ class BaseClassesNativeImpl {
                                 .min(Comparator.comparingInt(f -> Math.abs(f.arity() - size)));
                         if (closest.isPresent()) {
                             List<String> closestParams = closest.get().declaration.block.params.stream()
-                                    .map(t -> t.lexeme).collect(Collectors.toList());
+                                    .map(BlockImpl::getParamLexeme).collect(Collectors.toList());
                             List<SimiProperty> args = new ArrayList<>();
                             for (String param : closestParams) {
                                 args.add(fields.get(Constants.PRIVATE + param).getValue());
@@ -436,7 +459,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                int capacity = arguments.get(1).getValue().getNumber().intValue();
+                int capacity = Math.toIntExact(arguments.get(1).getValue().getNumber().asLong());
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false, new ArrayList<>(capacity)));
             }
         });
@@ -448,7 +471,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                int capacity = arguments.get(1).getValue().getNumber().intValue();
+                int capacity = Math.toIntExact(arguments.get(1).getValue().getNumber().asLong());
                 SimiValue fillValue = arguments.get(2).getValue();
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false,
                         new ArrayList<>(Collections.nCopies(capacity, fillValue))));
@@ -463,8 +486,8 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                int start = arguments.get(1).getValue().getNumber().intValue();
-                int stop = arguments.get(2).getValue().getNumber().intValue();
+                int start = Math.toIntExact(arguments.get(1).getValue().getNumber().asLong());
+                int stop = Math.toIntExact(arguments.get(2).getValue().getNumber().asLong());
                 if (self.isArray()) {
                     return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true,
                         new ArrayList<>(self.asArray().fields.subList(start, stop - 1))));
@@ -516,7 +539,7 @@ class BaseClassesNativeImpl {
                 int i = 0;
                 for (SimiValue simiValue : argsObject.values()) {
                     if (simiValue instanceof SimiValue.Number) {
-                        args[i] = simiValue.getNumber();
+                        args[i] = simiValue.getNumber().asDouble();
                     } else {
                         args[1] = simiValue.toString();
                     }
@@ -535,7 +558,7 @@ class BaseClassesNativeImpl {
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String str = arguments.get(1).getValue().getString();
-                int index = arguments.get(2).getValue().getNumber().intValue();
+                int index = Math.toIntExact(arguments.get(2).getValue().getNumber().asLong());
                 int i = value.indexOf(str, index);
                 if (i == -1) {
                     return null;
@@ -553,7 +576,7 @@ class BaseClassesNativeImpl {
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String value = prepareValueNativeCall(interpreter, arguments).getString();
                 String str = arguments.get(1).getValue().getString();
-                int index = arguments.get(2).getValue().getNumber().intValue();
+                int index = Math.toIntExact(arguments.get(2).getValue().getNumber().asLong());
                 int i = value.lastIndexOf(str, index);
                 if (i == -1) {
                     return null;
@@ -570,8 +593,8 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String value = prepareValueNativeCall(interpreter, arguments).getString();
-                int start = arguments.get(1).getValue().getNumber().intValue();
-                int stop = arguments.get(2).getValue().getNumber().intValue();
+                int start = (int) arguments.get(1).getValue().getNumber().asLong();
+                int stop = Math.toIntExact(arguments.get(2).getValue().getNumber().asLong());
                 return new SimiValue.String(value.substring(0, start).concat(value.substring(stop, value.length())));
             }
         });
@@ -628,8 +651,8 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String value = prepareValueNativeCall(interpreter, arguments).getString();
-                int start = arguments.get(1).getValue().getNumber().intValue();
-                int stop = arguments.get(2).getValue().getNumber().intValue();
+                int start = (int) arguments.get(1).getValue().getNumber().asLong();
+                int stop = (int) arguments.get(2).getValue().getNumber().asLong();
                 return new SimiValue.String(value.substring(start, stop));
             }
         });
@@ -785,13 +808,18 @@ class BaseClassesNativeImpl {
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 String string = prepareValueNativeCall(interpreter, arguments).getString();
                 try {
-                    double number = Double.parseDouble(string);
+                    long number = Long.parseLong(string);
                     return new SimiValue.Number(number);
                 } catch (NumberFormatException e) {
-                    SimiException se = new SimiException((SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
-                            "Invalid number format!");
-                    interpreter.raiseException(se);
-                    return null;
+                    try {
+                        double number = Double.parseDouble(string);
+                        return new SimiValue.Number(number);
+                    } catch (NumberFormatException e2) {
+                        SimiException se = new SimiException((SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
+                                "Invalid number format!");
+                        interpreter.raiseException(se);
+                        return null;
+                    }
                 }
             }
         });
@@ -851,7 +879,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                int max = arguments.get(1).getValue().getNumber().intValue();
+                int max = Math.toIntExact(arguments.get(1).getValue().getNumber().asLong());
                 return new SimiValue.Number(ThreadLocalRandom.current().nextInt(max));
             }
         });
@@ -975,7 +1003,7 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-                double a = arguments.get(1).getValue().getNumber();
+                double a = arguments.get(1).getValue().getNumber().asDouble();
                 return new SimiValue.Number(Math.round(a));
             }
         });
@@ -996,7 +1024,7 @@ class BaseClassesNativeImpl {
             if (comparator == null) {
                 nativeComparator = Comparator.naturalOrder();
             } else {
-                nativeComparator = (o1, o2) -> comparator.call(interpreter, Arrays.asList(o1, o2), false).getValue().getNumber().intValue();
+                nativeComparator = (o1, o2) -> Math.toIntExact(comparator.call(interpreter, Arrays.asList(o1, o2), false).getValue().getNumber().asLong());
             }
             return new SimiValue.Object(self.sorted(nativeComparator));
         } else {
@@ -1004,10 +1032,10 @@ class BaseClassesNativeImpl {
             if (comparator == null) {
                 nativeComparator = Comparator.comparing(Map.Entry::getKey);
             } else {
-                nativeComparator = (o1, o2) -> comparator.call(interpreter, Arrays.asList(
+                nativeComparator = (o1, o2) -> Math.toIntExact(comparator.call(interpreter, Arrays.asList(
                         new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.String(o1.getKey()), o1.getValue())),
                         new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.String(o2.getKey()), o2.getValue()))
-                    ), false).getValue().getNumber().intValue();
+                ), false).getValue().getNumber().asLong());
             }
             return new SimiValue.Object(self.sorted(nativeComparator));
         }
@@ -1029,13 +1057,13 @@ class BaseClassesNativeImpl {
     }
 
     private SimiValue doMath(List<SimiProperty> arguments, BiFunction<Double, Double, Double> op) {
-        double a = arguments.get(1).getValue().getNumber();
-        double b = arguments.get(2).getValue().getNumber();
+        double a = arguments.get(1).getValue().getNumber().asDouble();
+        double b = arguments.get(2).getValue().getNumber().asDouble();
         return new SimiValue.Number(op.apply(a, b));
     }
 
     private SimiValue doMath(List<SimiProperty> arguments, Function<Double, Double> op) {
-        double a = arguments.get(1).getValue().getNumber();
+        double a = arguments.get(1).getValue().getNumber().asDouble();
         return new SimiValue.Number(op.apply(a));
     }
 

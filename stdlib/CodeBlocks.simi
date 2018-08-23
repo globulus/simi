@@ -1,35 +1,56 @@
 class_ CodeBlocks:
 
-    END = "end"
-
     class InvalidBlockException(Exception):
     end
 
     class_ ClassCode: # Can't be named Class because of the Class metaclass
         def init(c):
             @ref = c
-            code = c.toString()
-            @name = code.substring(c.indexOf('('))
+            code = c.toString() ?? ("" + c)
+            firstLine = code.substring(0, code.indexOf('['))
+            @name = firstLine.substring(0, firstLine.indexOf('(') ?? firstLine.indexOf(' = '))
         end
     end
 
     class_ ClassComposer:
-        def init(name):
-            @body = String.builder("class ").add(name).add(":\n")
+        def init(name): @init(name, "")
+
+        def init(name, type):
+            @name = name
+            @body = String.builder().add("class").add(type).add(" ").add(name).add(":\n")
         end
 
         def field(key, value): @body.add(key).add(" = ").add(ivic value).add("\n")
 
-        def method(m): @body.add(ivic f).add("\n")
+        def method(m): @body.add(ivic m).add("\n")
+
+        def add(code): @body.add(code).add("\n")
 
         def getString():
-            @body.add(CodeBlocks.END)
+            @body.add("end")
             s = @body.build()
             @body = nil
             return s
         end
 
         def getClass(): return gu @getString()
+    end
+
+    class_ FunctionComposer:
+        def init(name, params):
+            @body = String.builder().add("def ").add(name).add("(").add(String.from(params, ", ")).add("):\n")
+        end
+
+        def line(line): @body.add("   ").add(line).add("\n")
+
+        def getString():
+            @body.add("end")
+            s = @body.build()
+            @body = nil
+            return s
+        end
+
+        def getFunction(): return gu @getString()
     end
 
     class_ FunctionCode:
@@ -56,7 +77,7 @@ class_ CodeBlocks:
                 fLines.append(line)
                 trimmedLine = line.trim()
                 if trimmedLine.endsWith(":"): $endCount += 1
-                elsif trimmedLine == CodeBlocks.END:
+                elsif trimmedLine == "end":
                     $endCount -= 1
                     if $endCount == 0: break
                 end

@@ -124,9 +124,15 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
           if (initializer.function.isNative) {
               Interpreter in = (Interpreter) interpreter;
               for (NativeModulesManager manager : in.nativeModulesManagers) {
-                  instance = (SimiObjectImpl) manager.call(name, Constants.INIT, this, in, arguments).getValue().getObject();
-                  if (instance != null) {
-                      break;
+                  try {
+                      SimiProperty inst = manager.call(name, Constants.INIT, this, in, arguments);
+                      if (inst != null) {
+                          instance = (SimiObjectImpl) inst.getValue().getObject();
+                          if (instance != null) {
+                              break;
+                          }
+                      }
+                  } catch (IllegalArgumentException ignored) {
                   }
               }
           } else {
@@ -169,6 +175,16 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         }
         return constructors;
   }
+
+    @Override
+    SimiObjectImpl enumerate(SimiClassImpl objectClass) {
+        ArrayList<SimiProperty> values = getEnumeratedValues(objectClass);
+        for (Map.Entry<OverloadableFunction, SimiFunction> entry : methods.entrySet()) {
+            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
+                    new SimiValue.String(entry.getKey().name), new SimiValue.Callable(entry.getValue(), entry.getKey().name, this))));
+        }
+        return SimiObjectImpl.fromArray(objectClass, true, values);
+    }
 
   Set<String> allKeys() {
       Set<String> keys = new HashSet<>(fields.keySet());
