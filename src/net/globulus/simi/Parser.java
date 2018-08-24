@@ -450,7 +450,8 @@ class Parser {
 
   private Expr assignment() {
     Expr expr = or();
-    if (match(EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, MOD_EQUAL)) {
+    if (match(EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, SLASH_SLASH_EQUAL,
+            MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
       Token equals = previous();
       Expr value = assignment();
 
@@ -811,8 +812,14 @@ class Parser {
       case SLASH_EQUAL:
         type = SLASH;
         break;
+      case SLASH_SLASH_EQUAL:
+        type = SLASH_SLASH;
+        break;
       case MOD_EQUAL:
         type = MOD;
+        break;
+      case QUESTION_QUESTION_EQUAL:
+        type = QUESTION_QUESTION;
         break;
       default:
         throw new IllegalArgumentException("Unable to process assignment operator: " + assignOp.type);

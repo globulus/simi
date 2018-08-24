@@ -30,6 +30,7 @@ final class Constants {
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
 
     public static final String EXCEPTION_NUMBER_FORMAT = "NumberFormatException";
+    public static final String EXCEPTION_NIL_REFERENCE = "NilReferenceException";
     public static final String EXCEPTION_TYPE_MISMATCH = "TypeMismatchException";
 
     private Constants() { }

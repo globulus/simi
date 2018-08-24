@@ -222,7 +222,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         public Number divide(Number o) {
             if (valueLong != null && o.valueLong != null) {
-                return new Number(valueLong / o.valueLong);
+                return new Number(valueLong * 1.0 / o.valueLong);
             }
             return new Number(asDouble() / asDouble());
         }

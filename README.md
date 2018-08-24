@@ -51,7 +51,7 @@ What Šimi offers:
       - [is and is not](#is-and-is-not)
       - [in and not in](#in-and-not-in)
       - [?? - nil coalescence](#---nil-coalescence)
-      - [? - nil silencing](#---nil-silencing)
+      - [? - nil check](#---nil-check)
       - [@ - self referencing](#---self-referencing)
     + [Control flow](#control-flow)
       - [Truth](#truth)
@@ -534,7 +534,7 @@ print ModuleClassA.matches(ModuleClass.ModuleClassA) # true
 
 #### Assignment
 
-=, +=, -=, *=, /=, %=
+=, +=, -=, *=, /=, //=, %=
 
 #### Logical
 
@@ -594,17 +594,31 @@ The ?? operator checks if the value for left is nil. If it is, it returns the ri
 ```ruby
 a = b ?? c # is equivalent to a = ife(b != nil, b, c)
 ```
+You can use ??= with variables to assign a value to it only if its current value is nil:
+```ruby
+$a = nil
+$a ??= 5 # $a is 5
+$b = 3
+$b ??= 5 # $b is 3
+```
 
-#### ? - nil silencing
-Using a method call, getter or setter on a nil results in a NilPointerException, but you can silence that by using the ? operator. Basically, the ? operator will check if its operand is nil. If it is, it's going to disregard all the .s and ()s after it, and return a nil value.
+#### ? - nil check
+Using a method call, getter or setter on a nil results in a nil, which sometimes may lead to bugs or force you to check if the value is nil before invoking any calls on it. To simplify this, you can enforce a nil check using the ? operator. Basically, the ? operator will check if its operand is nil. If it is, it's going to raise a Stdlib NilReferenceException if you attempt to invoke any calls, getters or setters on it. You may think of it in a way that it asserts if a value is not nil before doing any operations with it. Of course, you may always account for that scenario by using a *rescue* block beneath the check.
 ```ruby
 obj = nil
-a = obj.property # CRASH
-b = ?obj.property # b = nil, no crash
+a = obj.property # a = nil, no crash
+b = ?obj.property # b = nil, but NilReferenceException is raised
 ```
 
 #### @ - self referencing
 The @ operator maps exactly to *self.*, i.e @tank is identical to writing self.tank. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.*s).
+
+#### Bitwise operators
+
+All bitwise operators (and, or, xor, unary complement, shift left, shift right, unsigned shift right) are implemented as methods on the Number class:
+```ruby
+print 12.bitAnd(25) # prints 8
+```
 
 ### Control flow
 

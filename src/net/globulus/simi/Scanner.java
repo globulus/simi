@@ -84,7 +84,17 @@ class Scanner {
         addToken(TokenType.DOT);
       break;
 //> two-char-tokens
-      case '?': addToken(match('?') ? TokenType.QUESTION_QUESTION : TokenType.QUESTION); break;
+      case '?': {
+        if (match('?')) {
+          if (match('=')) {
+            addToken(TokenType.QUESTION_QUESTION_EQUAL);
+          } else {
+            addToken(TokenType.QUESTION_QUESTION);
+          }
+        } else {
+          addToken(TokenType.QUESTION);
+        }
+      } break;
       case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
       case '<': {
         if (match('>')) {
@@ -109,7 +119,11 @@ class Scanner {
       case '-': addToken(match('=') ? TokenType.MINUS_EQUAL : TokenType.MINUS); break;
       case '/': {
         if (match('/')) {
-          addToken(TokenType.SLASH_SLASH);
+          if ((match('='))) {
+            addToken(TokenType.SLASH_SLASH_EQUAL);
+          } else {
+            addToken(TokenType.SLASH_SLASH);
+          }
         } else if (match('=')) {
           addToken(TokenType.SLASH_EQUAL);
         } else {

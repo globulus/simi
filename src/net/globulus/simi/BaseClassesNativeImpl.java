@@ -917,6 +917,96 @@ class BaseClassesNativeImpl {
                 return new SimiValue.String(value.getNumber().toString());
             }
         });
+        methods.put(new OverloadableFunction("bitAnd", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value & other);
+            }
+        });
+        methods.put(new OverloadableFunction("bitOr", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value | other);
+            }
+        });
+        methods.put(new OverloadableFunction("bitXor", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value ^ other);
+            }
+        });
+        methods.put(new OverloadableFunction("bitInv", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                return new SimiValue.Number(~value);
+            }
+        });
+        methods.put(new OverloadableFunction("bitShl", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value << other);
+            }
+        });
+        methods.put(new OverloadableFunction("bitShr", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value >> other);
+            }
+        });
+        methods.put(new OverloadableFunction("bitUshr", 1), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                long value = prepareValueNativeCall(interpreter, arguments).getNumber().asLong();
+                long other = arguments.get(1).getValue().getNumber().asLong();
+                return new SimiValue.Number(value >>> other);
+            }
+        });
         return new SimiNativeClass(Constants.CLASS_NUMBER, methods);
     }
 

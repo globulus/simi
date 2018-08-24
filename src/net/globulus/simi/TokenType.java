@@ -16,10 +16,10 @@ enum TokenType implements Codifiable {
     PLUS, PLUS_EQUAL,
     MINUS, MINUS_EQUAL,
   STAR, STAR_STAR, STAR_EQUAL,
-    SLASH, SLASH_SLASH, SLASH_EQUAL,
+    SLASH, SLASH_SLASH, SLASH_EQUAL, SLASH_SLASH_EQUAL,
   MOD, MOD_MOD, MOD_EQUAL,
   DOLLAR_LEFT_BRACKET,
-  QUESTION, QUESTION_QUESTION,
+  QUESTION, QUESTION_QUESTION, QUESTION_QUESTION_EQUAL,
 
   // Literals.
   IDENTIFIER, STRING, NUMBER,
@@ -92,6 +92,8 @@ enum TokenType implements Codifiable {
         return "//";
       case SLASH_EQUAL:
         return "/=";
+      case SLASH_SLASH_EQUAL:
+        return "//=";
       case MOD:
         return "%";
       case MOD_MOD:
@@ -104,6 +106,8 @@ enum TokenType implements Codifiable {
         return "?";
       case QUESTION_QUESTION:
         return "??";
+      case QUESTION_QUESTION_EQUAL:
+        return "??=";
       case IDENTIFIER:
       case STRING:
       case NUMBER:

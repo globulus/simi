@@ -138,6 +138,9 @@ end
 class NumberFormatException(Exception):
 end
 
+class NilReferenceException(Exception):
+end
+
 def ife(condition, ifval, elseval):
     if condition: return ifval()
     else: return elseval()
@@ -205,6 +208,14 @@ class$ Number:
 
     def sum(a, b): return a + b
     def product(a, b): return a * b
+
+    def bitAnd(num): native
+    def bitOr(num): native
+    def bitXor(num): native
+    def bitInv(): native
+    def bitShl(num): native
+    def bitShr(num): native
+    def bitUshr(num): native
 end
 
 class$ String:

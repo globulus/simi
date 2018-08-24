@@ -6,7 +6,6 @@ import "./Stdlib/Decorator.simi"
 import "./SimiSync/SimiSyncModels.simi"
 
 #SimiSyncModels.ModelParser.parse(1)
-
 def typeCheckTest(a, b is String, c is Number, d is Range):
     print "at end"
 end
@@ -381,7 +380,7 @@ def refillCar():
     njuKar.refill(10)
     print "should be skipped"
     rescue ex:
-        print ?ex.message
+        print ex.message
         if ex: print "rescue from: " + ex.message
         if ex is CarException: print "car exc"
         else: print ex
@@ -515,3 +514,9 @@ class RouterTest:
     def b(): return 3
 end"
 print !!clazz
+
+print 12.bitAnd(25)
+
+$aa = 3
+$aa //= 5
+print $aa
