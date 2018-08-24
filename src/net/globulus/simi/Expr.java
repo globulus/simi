@@ -5,7 +5,10 @@ import net.globulus.simi.api.SimiBlock;
 import net.globulus.simi.api.SimiStatement;
 import net.globulus.simi.api.SimiValue;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 abstract class Expr implements Codifiable {
@@ -39,6 +42,8 @@ abstract class Expr implements Codifiable {
       final boolean canReturn;
       final boolean isNative;
 
+      private final List<Stmt> processedStatements;
+
         Block(Token declaration,
               List<Expr> params,
               List<Stmt> statements,
@@ -51,6 +56,8 @@ abstract class Expr implements Codifiable {
                     && statements.get(0) instanceof Stmt.Expression
                     && ((Stmt.Expression) statements.get(0)).expression instanceof Expr.Literal
                     && ((Literal) ((Stmt.Expression) statements.get(0)).expression).value instanceof Native);
+
+            processedStatements = processStatements();
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
@@ -61,7 +68,7 @@ abstract class Expr implements Codifiable {
 
       @Override
       public List<? extends SimiStatement> getStatements() {
-        return statements;
+        return processedStatements;
       }
 
       @Override
@@ -128,6 +135,33 @@ abstract class Expr implements Codifiable {
       @Override
       public String toCode(int indentationLevel, boolean ignoreFirst) {
           return toCode(indentationLevel, ignoreFirst, null);
+      }
+
+      private List<Stmt> processStatements() {
+          List<Stmt> localStatements = new ArrayList<>();
+          final int size = statements.size();
+          for (int i = 0; i < size; i++) {
+            Stmt stmt = statements.get(i);
+            if (stmt instanceof Stmt.Expression && ((Stmt.Expression) stmt).expression instanceof Yield) {
+              Yield expr = (Yield) ((Stmt.Expression) stmt).expression;
+              Variable response = new Variable(Token.named("response_" + System.currentTimeMillis() + "_" + Math.abs(new Random().nextLong())));
+              Stmt assignment = new Stmt.Expression(Parser.getAssignExpr(null, expr.var, expr.assign, response));
+              List<Stmt> otherStmts = new ArrayList<>(size - i + 1);
+              otherStmts.add(assignment);
+              otherStmts.addAll(statements.subList(i + 1, size));
+              Expr.Call call = new Expr.Call(expr.value.callee, expr.value.paren, new ArrayList<>(expr.value.arguments));
+              call.arguments.add(new Expr.Block(
+                      new Token(TokenType.DEF, null, null, expr.assign.line),
+                      Collections.singletonList(response),
+                      otherStmts,
+                      true));
+              localStatements.add(new Stmt.Expression(call));
+              break;
+            } else {
+              localStatements.add(stmt);
+            }
+          }
+          return localStatements;
       }
     }
 
@@ -555,4 +589,34 @@ abstract class Expr implements Codifiable {
                 .toString();
       }
     }
+
+  static class Yield extends Expr {
+
+    final Expr var;
+    final Token assign;
+    final Token keyword;
+    final Expr.Call value;
+
+    Yield(Expr var, Token assign, Token keyword, Expr.Call value) {
+      this.var = var;
+      this.assign = assign;
+      this.keyword = keyword;
+      this.value = value;
+    }
+
+    <R> R accept(Visitor<R> visitor, Object... args) {
+      return null;
+    }
+
+    @Override
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return var.toCode(indentationLevel, false)
+              + " "
+              + assign.type.toCode(0, false)
+              + " "
+              + keyword.type.toCode(0, false)
+              + " "
+              + value.toCode(0, false);
+    }
+  }
 }

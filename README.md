@@ -53,6 +53,7 @@ What Šimi offers:
       - [?? - nil coalescence](#---nil-coalescence)
       - [? - nil check](#---nil-check)
       - [@ - self referencing](#---self-referencing)
+      - [Bitwise operations](#bitwise-operations)
     + [Control flow](#control-flow)
       - [Truth](#truth)
       - [if-elsif-else](#if-elsif-else)
@@ -64,6 +65,7 @@ What Šimi offers:
       - [Iterators and iterables](#iterators-and-iterables)
       - [break and continue](#break-and-continue)
       - [return and yield](#return-and-yield)
+      - [Asnyc programming with yield expressions](#async-programming-with-yield-expressions)
     + [Exception handling](#exception-handling)
       - [Exceptions](#exceptions)
       - [The *rescue* block](#the-rescue-block)
@@ -613,9 +615,9 @@ b = ?obj.property # b = nil, but NilReferenceException is raised
 #### @ - self referencing
 The @ operator maps exactly to *self.*, i.e @tank is identical to writing self.tank. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.*s).
 
-#### Bitwise operators
+#### Bitwise operations
 
-All bitwise operators (and, or, xor, unary complement, shift left, shift right, unsigned shift right) are implemented as methods on the Number class:
+All bitwise operations (and, or, xor, unary complement, shift left, shift right, unsigned shift right) are implemented as methods on the Number class:
 ```ruby
 print 12.bitAnd(25) # prints 8
 ```
@@ -758,6 +760,35 @@ before yield # ...and we see that it does restart
 yield 0
 ```
 Yielding allows for coding of generators, and serves as a lightweight basis for concurrency, allowing a code to do multiple "returns" without having to resort to using callbacks.
+
+#### Async programming with yield expressions
+
+*yield* can also be used as a part of assignments to avoid [callback hell.](http://blog.mclain.ca/assets/images/callbackhell.png) Basically, the function you're in will yield its execution to the other function, which needs to be async (i.e, its last parameter must be a single-parameter callback) and resume once the callback is invoked. This allows for a flat code hierarchy that's easier to read and maintain, while in fact, behind the scenes, callbacks are being invoked and code is executed asynchronously:
+```ruby
+def testYieldExpr():
+    # The async function can take any number of parameters, but its
+    # last one must be a function that accepts 1 param
+    asyncFunc = def (a, callback):
+        if a % 2: callback(10)
+        else: callback(20)
+    end
+
+    test = def ():
+        print "Before yield expr test"
+        a = yield asyncFunc(5)
+        # After the asyncFunc callback is invoked, its value will
+        # be assigned to a, and the code beneath will be executed
+        print "10 == " + a
+        # You can have multiple yield expressions in a single function
+        b = yield asyncFunc(10)
+        print "20 == " + b
+        print "After all"
+    end
+    test()
+end
+testYieldExpr()
+```
+The [Stdlib Async class](stdlib/Async.simi) used to do the same thing, but is now deprecated.
 
 ### Exception handling
 
@@ -1172,18 +1203,5 @@ You can use Šimi in your iOS app. Check out [our other project](https://github.
 ### To-Dos
 
 Here's a list of features that might make it into the language at some point in the future:
-1. **async/function yield** expression: a function would yield until the execution of another function is done, and then resume its execution. This would allow for clearer code, without using callbacks. The basis for this is already implemented via the *yield statement*.
-```ruby
-def post(body):
-    request = Request(body, [cookie = "123])
-
-    # The execution of post() will stop here, and resume once executePost() returns.
-    result = yield NetworkingLib.executePost(request)
-
-    if result ...etc etc...
-end
-```
-**This is currently supported via the [Stdlib Async class](stdlib/Async.simi).**
-
-2. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
+1. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
 **This is currently supported via the [Decorator class](stdlib/Decorator.simi).**

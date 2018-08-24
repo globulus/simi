@@ -453,43 +453,17 @@ class Parser {
     if (match(EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, SLASH_SLASH_EQUAL,
             MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
       Token equals = previous();
-      Expr value = assignment();
-
-      if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
-        Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
-        return new Expr.Assign(literal, value, getAnnotations());
-      } else if (expr instanceof Expr.Variable) {
-        Token name = ((Expr.Variable)expr).name;
-        if (equals.type == EQUAL) {
-          return new Expr.Assign(name, value, getAnnotations());
+      if (match(YIELD)) {
+        Token keyword = previous();
+        Expr call = call();
+        if (call instanceof Expr.Call) {
+          return new Expr.Yield(expr, equals, keyword, (Expr.Call) call);
         } else {
-          return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value), getAnnotations());
+          ErrorHub.sharedInstance().error(keyword, "yield expressions must involve a call!");
         }
-      } else if (expr instanceof Expr.Get) { // Setter
-        if (equals.type == EQUAL) {
-          Expr.Get get = (Expr.Get) expr;
-          return new Expr.Set(get.origin, get.object, get.name, value);
-        } else {
-          ErrorHub.sharedInstance().error(equals, "Cannot use compound assignment operators with setters!");
-        }
-      } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
-        Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
-        if (objectLiteral.isDictionary || objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
-          ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
-        }
-        List<Expr.Assign> assigns = new ArrayList<>();
-        List<Stmt.Annotation> annotations = getAnnotations();
-        for (int i = 0; i < objectLiteral.props.size(); i++) {
-          Expr prop = objectLiteral.props.get(i);
-          Token name = ((Expr.Variable) prop).name;
-          Expr getByName = new Expr.Get(name, value, prop, null);
-          Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
-          Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
-          assigns.add(new Expr.Assign(name, nilCoalescence, annotations));
-        }
-        return new Expr.ObjectDecomp(assigns);
       }
-      ErrorHub.sharedInstance().error(equals, "Invalid assignment target.");
+      Expr value = assignment();
+      return getAssignExpr(this, expr, equals, value);
     }
     return expr;
   }
@@ -797,7 +771,7 @@ class Parser {
     return tokens.get(current - 1);
   }
 
-  private Token operatorFromAssign(Token assignOp) {
+  private static Token operatorFromAssign(Token assignOp) {
     TokenType type;
     switch (assignOp.type) {
       case PLUS_EQUAL:
@@ -882,5 +856,45 @@ class Parser {
                                   exceptionStmt, true)), Collections.emptyList(), null));
       }
     }
+  }
+
+  static Expr getAssignExpr(Parser parser, Expr expr, Token equals, Expr value) {
+    if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
+      Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
+      return new Expr.Assign(literal, value, (parser != null) ? parser.getAnnotations() : null);
+    } else if (expr instanceof Expr.Variable) {
+      Token name = ((Expr.Variable)expr).name;
+      if (equals.type == EQUAL) {
+        return new Expr.Assign(name, value, (parser != null) ? parser.getAnnotations() : null);
+      } else {
+        return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value),
+                (parser != null) ? parser.getAnnotations() : null);
+      }
+    } else if (expr instanceof Expr.Get) { // Setter
+      if (equals.type == EQUAL) {
+        Expr.Get get = (Expr.Get) expr;
+        return new Expr.Set(get.origin, get.object, get.name, value);
+      } else {
+        ErrorHub.sharedInstance().error(equals, "Cannot use compound assignment operators with setters!");
+      }
+    } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
+      Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
+      if (objectLiteral.isDictionary || objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
+        ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
+      }
+      List<Expr.Assign> assigns = new ArrayList<>();
+      List<Stmt.Annotation> annotations = (parser != null) ? parser.getAnnotations() : null;
+      for (int i = 0; i < objectLiteral.props.size(); i++) {
+        Expr prop = objectLiteral.props.get(i);
+        Token name = ((Expr.Variable) prop).name;
+        Expr getByName = new Expr.Get(name, value, prop, null);
+        Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
+        Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
+        assigns.add(new Expr.Assign(name, nilCoalescence, annotations));
+      }
+      return new Expr.ObjectDecomp(assigns);
+    }
+    ErrorHub.sharedInstance().error(equals, "Invalid assignment target.");
+    return null;
   }
 }

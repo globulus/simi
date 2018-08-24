@@ -38,7 +38,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     if (newScope) {
       beginScope();
     }
-    resolve(stmt.statements);
+    resolve((List<Stmt>) stmt.getStatements());
     if (newScope) {
       endScope();
     }

@@ -210,7 +210,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
       @Override
       public List<BlockStmt> getChildren() {
-        return thenBranch.statements.stream()
+        return thenBranch.getStatements().stream()
                 .filter(s -> s instanceof BlockStmt)
                 .map(s -> (BlockStmt) s)
                 .collect(Collectors.toList());
@@ -245,7 +245,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
       children.add(ifstmt);
       children.addAll(elsifs);
       if (elseBranch != null) {
-        children.addAll(elseBranch.statements.stream()
+        children.addAll(elseBranch.getStatements().stream()
                 .filter(s -> s instanceof BlockStmt)
                 .map(s -> (BlockStmt) s)
                 .collect(Collectors.toList()));
@@ -358,7 +358,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
     @Override
     public List<BlockStmt> getChildren() {
-      return body.statements.stream()
+      return body.getStatements().stream()
               .filter(s -> s instanceof BlockStmt)
               .map(s -> (BlockStmt) s)
               .collect(Collectors.toList());
@@ -392,7 +392,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
     @Override
     public List<BlockStmt> getChildren() {
-      return body.statements.stream()
+      return body.getStatements().stream()
               .filter(s -> s instanceof BlockStmt)
               .map(s -> (BlockStmt) s)
               .collect(Collectors.toList());

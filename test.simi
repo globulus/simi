@@ -520,3 +520,23 @@ print 12.bitAnd(25)
 $aa = 3
 $aa //= 5
 print $aa
+
+def testYieldExpr():
+    asyncFunc = def (a, callback):
+        if a % 2: callback(10)
+        else: callback(20)
+    end
+
+    test = def ():
+#        print ivic self(def)
+        print "Before yield expr test"
+        a = yield asyncFunc(5)
+        print "10 == " + a
+        b = yield asyncFunc(10)
+        print "20 == " + b
+        print "After all"
+    end
+    test()
+    print ivic test
+end
+testYieldExpr()
