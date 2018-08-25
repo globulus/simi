@@ -540,3 +540,14 @@ def testYieldExpr():
     print ivic test
 end
 testYieldExpr()
+
+def testArgDecomp():
+    print ivic self(def)
+    f0 = :print "f0"
+    f1 = def a: print "f1 \(a)"
+    f2 = def (a, b): print "f2 \(a + 3) \((b + 3) * 2)"
+    f0([])
+    f1([1])
+    f2([1, 2])
+end
+testArgDecomp()

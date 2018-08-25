@@ -702,11 +702,13 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private List<SimiProperty> decomposeArguments(SimiCallable callable, List<SimiProperty> arguments) {
-    if (arguments.size() == 1 && arguments.get(0).getValue() instanceof SimiValue.Object) {
-      SimiObject argObject = arguments.get(0).getValue().getObject();
-      List<SimiValue> values = argObject.values();
-      if (argObject.values().size() == callable.arity()) {
-        return values.stream().map(v -> (SimiProperty) v).collect(Collectors.toList());
+    if (arguments.size() == 1) {
+      SimiValue value = arguments.get(0).getValue();
+      if (value instanceof SimiValue.Object) {
+        List<SimiValue> values = value.getObject().values();
+        if (values.size() == callable.arity()) {
+          return values.stream().map(v -> (SimiProperty) v).collect(Collectors.toList());
+        }
       }
     }
     return arguments;

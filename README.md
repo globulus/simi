@@ -171,6 +171,15 @@ string = "this is a
  string with tabs"
 anotherString = 'this is another "string"'
 ```
+String interpolation is supported by enclosing the nested expressions into *\\(SOMETHING)*:
+```ruby
+a = 2
+b = 3
+print "a doubled is \(a * 2) and b minus 1 halved is \((b - 1) / 2)"
+# Prints: a doubled is 4 and b minus 1 halved is 1
+```
+
+
 When used as objects, strings are boxed into an instance of open Stdlib class String, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
 
 Strings are pass-by-value, and boxed strings are pass-by-copy.
@@ -223,6 +232,12 @@ def printFunction(): print "printing"
 # A lambda function passed to filter an array, has implicit return if it's single line
 # Lambdas with a single parameter needn't put the parameter in parentheses
 filteredArray = [1, 2, 3, 4, 5].filter(def i: i > 2)
+
+# There is a shorthand syntax for parameterless lambdas.
+# You can think of this syntax as storing uninterpreter Šimi code that
+# can be invoked later on. This pattern is heavily used with lazy loading
+# and the ife function.
+storedExpression = :2+2 # Parses into: def (): return 2 + 2
 ```
 Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
@@ -235,7 +250,7 @@ difference = subtract(a = 5, b = pow(2, 3))
 printFunction()
 ```
 
-For functions that take more than 1 argument, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
+For functions that take 0 or 2 or more arguments, you can invoke them by passing an object whose size is the same as the number of expected arguments. The object will be decomposed by the interpreter, and its values passed as function parameters. This allows both functions and their invocations to be fully dynamic:
 ```ruby
 def f(a, b, c): pass
 f(1, 2, 3) # The conventional way of doing it
@@ -243,6 +258,7 @@ f([4, 5, 6]) # Invoking with an array
 f([a = 7, b = 8, c = 9]) # Invoking with dictionary
 # All these invocations do the same thing!
 ```
+Obviously, argument decomposition can't be applied to functions that take one argument, as the interpreter can't know whether it should unpack the argument or not.
 
 You can check if a value is a function by testing agains the *Function* class:
 ```ruby
@@ -674,8 +690,8 @@ In Šimi, can can call any value - it's not just limited to functions and classe
 step = ife(min < max, 1, -1) # Works with non-function values
 
 # The following example uses functions to lazily compute only the value
-# which needs to be returned. Notice ":" syntax, which is shorthand for
-# def ():
+# which needs to be returned. Notice ":SOMETHING" syntax, which is shorthand for
+# def (): return SOMETHING
 step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
 ```
 
