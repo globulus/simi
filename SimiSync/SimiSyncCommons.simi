@@ -13,6 +13,6 @@ class_ SimiSyncCommons:
             return String.from(lines.slice($start, lines.len() + 1), "\n")
         end
 
-        def extractAnnot(field, annotClass): return ?(!!field).filter(def a: a is annotClass).first()
+        def extractAnnot(field, annotClass): return ?(!!field).where(def a: a is annotClass).first()
     end
 end

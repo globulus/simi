@@ -41,7 +41,7 @@ end
 class StmtElsif(Stmt, BlockStmt):
     def init(condition, thenBranch): pass
     def accept(visitor): visitor.visitElsifStmt(self)
-    def children(): return @thenBranch.statements.filter(def s: s is BlockStmt)
+    def children(): return @thenBranch.statements.where(def s: s is BlockStmt)
 end
 
 class StmtIf(Stmt, BlockStmt):
@@ -50,7 +50,7 @@ class StmtIf(Stmt, BlockStmt):
     def children():
         children = $[@ifstmt]
         children.addAll(@elsifs)
-        if @elseBranch: children.addAll(@elseBranch.statements.filter(def s: s is BlockStmt))
+        if @elseBranch: children.addAll(@elseBranch.statements.where(def s: s is BlockStmt))
         return children
     end
 end
@@ -73,13 +73,13 @@ end
 class StmtWhile(Stmt, BlockStmt):
     def init(condition, block): pass
     def accept(visitor): visitor.visitWhileStmt(self)
-    def children(): return @body.statements.filter(def s: s is BlockStmt)
+    def children(): return @body.statements.where(def s: s is BlockStmt)
 end
 
 class StmtFor(Stmt, BlockStmt):
     def init(var, iterable, body): pass
     def accept(visitor): visitor.visitForStmt(self)
-    def children(): return @body.statements.filter(def s: s is BlockStmt)
+    def children(): return @body.statements.where(def s: s is BlockStmt)
 end
 
 class StmtYield(Stmt):

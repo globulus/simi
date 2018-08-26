@@ -105,7 +105,7 @@ a = 5 # This is a line
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .filter(def i: i <= 5)\
+    .where(def i: i <= 5)\
     .map(def i: i * 2)\
     .sorted(def (l, r): -(l <> r))
 print arr
@@ -231,7 +231,7 @@ def printFunction(): print "printing"
 
 # A lambda function passed to filter an array, has implicit return if it's single line
 # Lambdas with a single parameter needn't put the parameter in parentheses
-filteredArray = [1, 2, 3, 4, 5].filter(def i: i > 2)
+filteredArray = [1, 2, 3, 4, 5].where(def i: i > 2)
 
 # There is a shorthand syntax for parameterless lambdas.
 # You can think of this syntax as storing uninterpreter Šimi code that
@@ -528,6 +528,7 @@ end
 a = ModuleClass.ModuleClassA()
 anotherA = AnotherModuleClass.ModuleClassA()
 ```
+Module classes should generally be final (*class_*).
 
 You can also use the *import* statement to statically import all the public values of the supplied class into the current environment:
 ```ruby
@@ -817,7 +818,7 @@ All exceptions thrown in Šimi do (and should) extend the base class *Exception*
 ```ruby
 def abs(value):
   if value is not Number: InvalidParameterException("Expected a number!").raise()
-  return Math.abs(value)
+  return value.abs()
 end
 
 def testAbs():

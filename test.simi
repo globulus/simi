@@ -405,7 +405,7 @@ end
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .filter(def i: i <= 5)\
+    .where(def i: i <= 5)\
     .map(def i: i * 2)\
     .sorted(def (l, r): -(l <> r))
 print arr

@@ -242,7 +242,10 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         }
 
         public java.lang.Object getJavaValue() {
-            return (valueLong != null) ? valueLong : valueDouble;
+            if (valueLong != null) {
+                return valueLong;
+            }
+            return valueDouble;
         }
     }
 

@@ -56,7 +56,7 @@ class$ Object:
         end
         return true
     end
-    def filter(predicate):
+    def where(predicate):
         buffer = Object.array()
         for item in self:
             if predicate(item): buffer.append(item)
@@ -151,7 +151,6 @@ class Iterator:
 end
 
 class RangeIterator(Iterator):
-
     def init(range):
         @range = range
         @current = @range.start
@@ -168,7 +167,6 @@ class RangeIterator(Iterator):
 end
 
 class Range:
-
     def init(start, stop):
         @start = start
         @stop = stop
@@ -264,7 +262,7 @@ class$ String:
 end
 
 class TypeMismatchException(Exception):
-    def init(var, type): super.init("Expected: " + type + " but got " + var.("class"))
+    def init(var, type): super.init("Expected: \(type) but got " + var.("class"))
 end
 
 Math = [
