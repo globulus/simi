@@ -528,7 +528,6 @@ end
 a = ModuleClass.ModuleClassA()
 anotherA = AnotherModuleClass.ModuleClassA()
 ```
-Module classes should generally be final (*class_*).
 
 You can also use the *import* statement to statically import all the public values of the supplied class into the current environment:
 ```ruby

@@ -52,11 +52,22 @@ abstract class Expr implements Codifiable {
             this.params = params;
             this.statements = statements;
             this.canReturn = canReturn;
-            this.isNative = (statements.size() == 1
-                    && statements.get(0) instanceof Stmt.Expression
-                    && ((Stmt.Expression) statements.get(0)).expression instanceof Expr.Literal
-                    && ((Literal) ((Stmt.Expression) statements.get(0)).expression).value instanceof Native);
 
+            boolean isNative = false;
+            if (statements.size() == 1) {
+              Stmt stmt = statements.get(0);
+              Expr expr = null;
+              if (stmt instanceof Stmt.Expression) {
+                expr = ((Stmt.Expression) stmt).expression;
+              } else if (stmt instanceof Stmt.Return) {
+                expr = ((Stmt.Return) stmt).value;
+              }
+              if (expr instanceof Expr.Literal && ((Literal) expr).value instanceof Native) {
+                isNative = true;
+              }
+            }
+
+            this.isNative = isNative;
             processedStatements = processStatements();
         }
 
