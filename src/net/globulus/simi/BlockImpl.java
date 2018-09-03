@@ -83,7 +83,7 @@ class BlockImpl implements SimiBlock, SimiCallable {
       }
     }
     clearYield();
-    return null;
+    return environment.get(Token.self());
   }
 
   @Override

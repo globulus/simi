@@ -117,7 +117,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
           if (raisedExceptions.isEmpty()) {
             Stmt statement = (Stmt) statements.get(i);
             execute(statement);
-          } else {
+          } else { // Look for nearest rescue block
             Stmt.Rescue rescue = null;
             for (; i < size; i++) {
               Stmt statement = (Stmt) statements.get(i);
@@ -126,7 +126,7 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
                 break;
               }
             }
-            if (rescue != null) {
+            if (rescue != null) { // If not rescue block is available in this scope, maybe one is in scopes above
               SimiException e = raisedExceptions.pop();
               executeRescueBlock(rescue, e);
             } else if (block.canReturn()) {

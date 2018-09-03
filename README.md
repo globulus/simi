@@ -308,6 +308,23 @@ def f(a, b, c):
     print "something"
 end
 ```
+Functions that don't explicity [return or yield](#return-and-yield) have an implcit **return self**. This allows for chanining calls to methods that don't return a value.
+```ruby
+class Button:
+    def setTitle(title): @title = title
+    def setBackgroundColor(color): @color = color
+    def setOnClickListener(listener): @listener = listener
+    def performClick(): @listener(self)
+end
+
+button = Button()\ # implicit return self
+    .setTitle("Click me")\
+    .setBackgroundColor(Color.WHITE)\
+    .setOnClickListener(def sender: print sender.title)
+# More code...
+button.performClick()
+```
+It also forces the programmer to explicity use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
 
 #### Objects
 Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above. **Nils are not permitted as object values, and associating a nil with a key will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:

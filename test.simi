@@ -569,3 +569,15 @@ def testArgDecomp():
 end
 testArgDecomp()
 
+class Button:
+    def setTitle(title): @title = title
+    def setBackgroundColor(color): @color = color
+    def setOnClickListener(listener): @listener = listener
+    def performClick(): @listener(self)
+end
+
+button = Button()\
+    .setTitle("Click me")\
+    .setBackgroundColor(Color.WHITE)\
+    .setOnClickListener(def sender: print sender.title)
+button.performClick()
