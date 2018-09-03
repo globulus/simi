@@ -528,12 +528,12 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
       assignAnnotations = prop.getAnnotations();
     }
     SimiProperty newProp = new SimiPropertyImpl(value, assignAnnotations);
-    if (expr.name.lexeme.startsWith(Constants.MUTABLE)) {
+    if (expr.operator.type == TokenType.DOLLAR_EQUAL) { // Mutating assignment
       Integer distance = locals.get(expr);
       if (distance != null) {
-        environment.assignAt(distance, expr.name, newProp);
+        environment.assignAt(distance, expr.name, newProp, true);
       } else {
-        globals.assign(expr.name, newProp, false);
+        globals.assign(expr.name, newProp, true);
       }
     } else {
       environment.assignAt(0, expr.name, newProp);

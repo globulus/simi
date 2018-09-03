@@ -95,7 +95,7 @@ print b # They span until the end of the line
 Šimi currently does not support multiline comments.
 
 #### Identifiers
-Identifiers start with a letter, _ or $, and then may contain any combination of letters, numbers, underscores or dollar signs. Identifiers are case sensitive. Note that identifiers that start with _ or $ have special meanings in some instances.
+Identifiers start with a letter, _ or $, and then may contain any combination of letters, numbers, underscores or dollar signs. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
 
 #### Newlines
 Line breaks separate Šimi statements and as such are meaningful. E.g, a block that has a newline after ":" must be completed with an *end*. Similarly, an assignment statement must be terminated with a newline. If your line is very long, you can break it into multiple lines by ending each line with a backslash (\\) for readability purposes.
@@ -132,18 +132,33 @@ Blocks are used everywhere with the exact same syntax, for classes, functions, l
 #### Variables and constants
 In Šimi, you needn't declare the variable before using it, a simple assignment expression both declares and defines a variable.
 
-By default, all variables in Šimi are constants, i.e their value can't change once it's been assigned (and it's assigned right at the declaration). If you want a real variable, its name must start with a dollar sign ($). This makes sure that, at all times, you know that the value of a variable you're accessing could've been changed somewhere in the code, which is not the case with constants.
+By default, all variables in Šimi are constants, i.e their value can't change once it's been assigned (and it's assigned right at the declaration). If you wish to alter the value of the variable, you need to use the *$=* operator instead of *=*. This serves two purposes:
+1. It allows for clear and easy scoping: you can think of the = operator as a *declaration*, and of $= as *assignment*:
 ```ruby
 # Here are some constants
 a = 5
 b = "str"
 c = [name = "Peter", surname = "Parker"]
 
-# Here are some variables
-$d = 5
-while $d < 15: $d *= 2
-$e = "another string"
+def f1():
+    print a # 5
+    a = 10 # declares new variable a inside the given scope
+    print a # 10
+end
+f1()
+
+print a # 5, as the value didn't change within the function
+
+def f2():
+    a $= 20 # now we're changing the value of a from outside the scope
+    print a # 20
+end
+f2()
+print a # 20
 ```
+2. It also forces the programmer to be aware of the fact that they're changing the value of a variable defined outside the current scope, and that immutability may not be preserved.
+
+Compound operators (+=, -=, etc.) are invoked with $= by default. Also, $= cannot be used with set expressions.
 
 ### Values
 
@@ -614,10 +629,10 @@ a = b ?? c # is equivalent to a = ife(b != nil, b, c)
 ```
 You can use ??= with variables to assign a value to it only if its current value is nil:
 ```ruby
-$a = nil
-$a ??= 5 # $a is 5
-$b = 3
-$b ??= 5 # $b is 3
+a = nil
+a ??= 5 # a is 5
+b = 3
+b ??= 5 # b is 3
 ```
 
 #### ? - nil check
@@ -698,9 +713,9 @@ step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
 #### while loop
 The *while* block is executed as long as its condition is true:
 ```ruby
-while $a < 10:
-  print $a
-  $a *= 2
+while a < 10:
+  print a
+  a *= 2
 end
 ```
 
@@ -1067,15 +1082,15 @@ class DbLib:
                 dbField = annot.dbField
                 if not dbField: continue
                 name = ife(dbField is String, dbField, key) # Infer the name
-                $type = nil # Infer type based on calue associated with the field in class definition
-                if val is Number: $type = "int"
-                elsif val is String: $type = "varchar(255)"
-                elsif val is Date: $type = "date"
+                type = nil # Infer type based on calue associated with the field in class definition
+                if val is Number: type $= "int"
+                elsif val is String: type $= "varchar(255)"
+                elsif val is Date: type $= "date"
                 # ... of course, many more types could be added, including relationships to other tables
 
-                sqlBuilder.add(name).add(" ").add($type)
+                sqlBuilder.add(name).add(" ").add(type)
                 if annot.primaryKey: # Check for "primary key" field in the annotation
-                    if $type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                    if type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
                     sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
                 end
                 else: sqlBuilder.add(",")
@@ -1187,7 +1202,7 @@ print clone.matches(obj) # true
 These operators also allow for some interesting approaches to metaprogramming. Take, for example, how *gu* is used in *Enum.of()* function to generate the enum class and associate values with it:
 ```ruby
 guStr = "class " + className + "(Enum):
-    def init(" + $args + "): pass
+    def init(" + args + "): pass
     def equals(other): return @matches(other)
 end"
 clazz = gu guStr
@@ -1195,15 +1210,15 @@ clazz = gu guStr
 ...
 
 for key in obj:
-    $val = nil
-    if isArray: $val = clazz(key)
-    elsif isFirstValueScalar: $val = clazz(obj.(key))
+    val = nil
+    if isArray: val $= clazz(key)
+    elsif isFirstValueScalar: val $= clazz(obj.(key))
     else:
         args = String.from(obj.(key).values(), ", ")
         constructor =  "clazz(" + args + ")"
-        $val = gu constructor
+        val $= gu constructor
     end
-    clazz.(key) = $val
+    clazz.(key) = val
 end
 ```
 Combining this with *ivic* allows for creation of programs that *change their code on the fly*. Simply, dump a block/function/method to code with *ivic*, use string manipulation to alter its body, and use it again by supplying the altered code to *gu*. Check out this [simple genetic algorithm](https://github.com/globulus/simi/blob/develop/genetic.simi) to see the duo in action!

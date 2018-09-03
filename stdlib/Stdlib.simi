@@ -82,9 +82,9 @@ class$ Object:
     end
     def joined(with):
         clone = @clone()
-        $extra = with
-        if with is not Object: $extra = [with]
-        clone.addAll($extra)
+        extra = with
+        if with is not Object: extra $= [with]
+        clone.addAll(extra)
         return clone
     end
     def map(function):
@@ -103,11 +103,11 @@ class$ Object:
         end
    end
    def reduce(initialValue, reducer):
-        $val = initialValue
+        val = initialValue
         for item in self:
-            $val = reducer($val, item)
+            val $= reducer(val, item)
         end
-        return $val
+        return val
    end
    def reduceRight(initialValue, reducer): return @reversed().reduce(initiaValue, reducer)
    def shift():
@@ -243,12 +243,12 @@ class$ String:
 
     def sum(a, b): return a + b
     def from(array, separator):
-        $first = true
+        first = true
         f = def (a, b):
-            $s = ""
-            if $first: $first = false
-            else: $s = separator
-            return a + $s + b
+            s = ""
+            if first: first $= false
+            else: s $= separator
+            return a + s + b
        end
        return array.reduce("", f)
     end
@@ -320,25 +320,25 @@ class Enum:
 
         isArray = obj.isArray()
         isFirstValueScalar = obj.0 is not Object
-        $args = "value"
-        if not isArray and not isFirstValueScalar: $args = String.from(obj.0, ", ")
+        args = "value"
+        if not isArray and not isFirstValueScalar: args $= String.from(obj.0, ", ")
 
         guStr = "class$ " + className + "(Enum):
-            def init(" + $args + "): pass
+            def init(" + args + "): pass
             def equals(other): return @matches(other)
         end"
         clazz = gu guStr
 
         for key in obj:
-            $val = nil
-            if isArray: $val = clazz(key)
-            elsif isFirstValueScalar: $val = clazz(obj.(key))
+            val = nil
+            if isArray: val $= clazz(key)
+            elsif isFirstValueScalar: val $= clazz(obj.(key))
             else:
-                args = String.from(obj.(key).values(), ", ")
+                args $= String.from(obj.(key).values(), ", ")
                 constructor =  "clazz(" + args + ")"
-                $val = gu constructor
+                val $= gu constructor
             end
-            clazz.(key) = $val
+            clazz.(key) = val
         end
 
         for key in funs:
@@ -351,8 +351,8 @@ end
 
 Meta = [
     go = def (mutators, f):
-        $mutated = f
-        mutators.forEach(def m: $mutated = m.go($mutated))
-        return $mutated
+        mutated = f
+        mutators.forEach(def m: mutated $= m.go($mutated))
+        return mutated
     end
 ]

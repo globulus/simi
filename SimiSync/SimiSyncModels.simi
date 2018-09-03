@@ -28,12 +28,11 @@ class_ SimiSyncModels:
         def parse(version):
             import CodeBlocks
             # By convention, all model files should live in a directory named "models" and its subdirectories
-            $dirPath = nil
+            dirPath = nil
             print File.listAll("./SimiSync/models", "simi", true)
             for file in File.listAll("./SimiSync/models", "simi", true):
-                if not $dirPath:
-                    $dirPath = file.path.substring(0, file.path.lastIndexOf('/') + 1) +  "clientModels/" + version + "/"
-                    print "found dirpath " + $dirPath
+                if not dirPath:
+                    dirPath $= file.path.substring(0, file.path.lastIndexOf('/') + 1) +  "clientModels/" + version + "/"
                 end
                 # Read and interpret the content of the file
                 modelCode = File.readString(file.path)
@@ -58,7 +57,7 @@ class_ SimiSyncModels:
                 end
                 clientCode = classComposer.getString()
                 print clientCode
-                f = File($dirPath + className + ".simi")
+                f = File(dirPath + className + ".simi")
                 print f
                 writer = WriteStream(f)
                 writer.write(clientCode)

@@ -6,17 +6,17 @@ Decorator = [
     go = def (f):
         lines = (ivic f).split("\n")
         newLines = Object.array()
-        $decorators = nil
-        $skip = -1
+        decorators = nil
+        skip = -1
         for e in lines.enumerate():
             [i, line] = e
             trimmedLine = line.trim()
             if trimmedLine.startsWith(@KEYWORD):
 #                print trimmedLine.substring(@KEYWORD.len() + 1)
-                $decorators = (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
-#                print "Found decorators: " + $decorators
+                 decorators $= (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
+#                print "Found decorators: " + decorators
             end
-            elsif $decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine):
+            elsif decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine):
                 func = CodeBlocks.FunctionCode(lines, i)
                 params = func.parametersWithoutParentheses()
                 newLines.append(line)
@@ -25,11 +25,11 @@ Decorator = [
                 newLines.addAll(func.body().map(def l: l.replacing(func.name + "(", tempName + "(")))
                 newLines.append("end")
                 str = String.builder().add("return ")
-                for f in $decorators:
+                for f in decorators:
                     str.add(f).add("(")
                 end
                 str.add(tempName)
-                for _ in $decorators.len().times():
+                for _ in decorators.len().times():
                     str.add(")")
                 end
                 needsBrackets = params.isEmpty() or "," in params
@@ -38,10 +38,10 @@ Decorator = [
                     .add(params)\
                     .add(ife(needsBrackets, "]", "")).add(")")
                 newLines.append(str.build())
-                $decorators = nil
-                $skip = i + func.body().len()
+                decorators $= nil
+                skip $= i + func.body().len()
             end
-            elsif i > $skip: newLines.append(line)
+            elsif i > skip: newLines.append(line)
         end
         tempName = @_tempName()
         print  "[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName
@@ -69,20 +69,20 @@ Decorator = [
 
             decorate* "timed"
             def sum(n):
-                $sum = 0
+                res = 0
                 for i in n.times():
-                    $sum += i
+                    res += i
                 end
-                return $sum
+                return res
             end
 
             decorate* "timed"
             def exp(a, b):
-                $res = 1
+                res = 1
                 for _ in b.times():
-                    $res *= a
+                    res *= a
                 end
-                return $res
+                return res
             end
 
             printf("%.2f", [1.1111])
@@ -104,49 +104,49 @@ Decorator = [
     memoize = def f:
         fcache = $[]
         workerCache = $[]
-        $farg = nil
+        farg = nil
         fworker = def f:
-            $farg = CodeBlocks.FunctionCode(f)
+            farg $= CodeBlocks.FunctionCode(f)
             return flooper()
         end
         flooper = def ():
             while true:
-                fname = $farg.name
+                fname = farg.name
 #                print "In flooper: " + fname
                 if fname not in fcache:
                     workerLines = Object.array()
-                    workerLines.append($farg.anonymousDeclaration().replacing("(", "(looper, "))
-                    $temp = 0
-                    for line in $farg.body():
+                    workerLines.append(farg.anonymousDeclaration().replacing("(", "(looper, "))
+                    temp = 0
+                    for line in farg.body():
                         trimmedLine = line.trim()
                         if fname in trimmedLine:
                             parts = Object.array()
-                            $currentLine = trimmedLine
-                            while fname in $currentLine:
-                                index = $currentLine.indexOf(fname)
-                                parts.append($currentLine.substring(0, index))
+                            currentLine = trimmedLine
+                            while fname in currentLine:
+                                index = currentLine.indexOf(fname)
+                                parts.append(currentLine.substring(0, index))
                                 rest = $currentLine.substring(index)
-                                $parenCount = 0
-                                $firstParen = -1
+                                parenCount = 0
+                                firstParen = -1
                                 for i in rest.len().times():
                                     c = rest.(i)
                                     if c == '(':
-                                        if $parenCount == 0: $firstParen = i
-                                        $parenCount += 1
+                                        if parenCount == 0: firstParen $= i
+                                        parenCount += 1
                                     end
                                     elsif c == ')':
-                                        $parenCount -= 1
-                                        if $parenCount == 0:
-                                            tempName = "temp" + $temp
-                                            $temp += 1
-                                            $params = rest.substring($firstParen, i + 1)
-                                            if $farg.arity != 1:
-                                                $params = "[" + $params.substring(1, $params.len() - 1) + "]"
+                                        parenCount -= 1
+                                        if parenCount == 0:
+                                            tempName = "temp" + temp
+                                            temp += 1
+                                            params $= rest.substring(firstParen, i + 1)
+                                            if farg.arity != 1:
+                                                params $= "[" + params.substring(1, params.len() - 1) + "]"
                                             end
-                                            workerLines.append("$arg = " + $params)
+                                            workerLines.append("arg $= " + params)
                                             workerLines.append(tempName + " = looper()")
                                             parts.append(tempName)
-                                            $currentLine = rest.substring(i + 1)
+                                            currentLine $= rest.substring(i + 1)
                                             break
                                         end
                                     end
@@ -162,17 +162,17 @@ Decorator = [
                     workerCache.(fname) = gu ("[f = " + String.from(workerLines, "\n") + "].f")
                     fcache.(fname) = def args:
                         cache = $[]
-                        $arg = 0
-                        $worker = workerCache.(fname)
+                        arg = 0
+                        worker = workerCache.(fname)
                         looper = def ():
                            while true:
-                            key = $arg.toString()
-                            if key not in cache: cache.(key) = $worker([looper].joined($arg))
+                            key = arg.toString()
+                            if key not in cache: cache.(key) = worker([looper].joined(arg))
 #                            else: print "found key in cache: " + key
                             yield cache.(key)
                          end
                        end
-                       return $worker([looper].joined(args))
+                       return worker([looper].joined(args))
                     end
                 end
                 yield fcache.(fname)

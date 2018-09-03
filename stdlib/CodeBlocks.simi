@@ -71,15 +71,15 @@ class_ CodeBlocks:
             if @_ANON_DEF in defLine: @name = defLine.substring(0, defLine.indexOf(@_ANON_DEF))
             else: @name = defLine.substring(@_BASIC_DEF.len(), defLine.indexOf('('))
             fLines = Object.array()
-            $endCount = 0
+            endCount = 0
             for i in Range(startLine, lines.len()):
                 line = lines.(i)
                 fLines.append(line)
                 trimmedLine = line.trim()
-                if trimmedLine.endsWith(":"): $endCount += 1
+                if trimmedLine.endsWith(":"): endCount += 1
                 elsif trimmedLine == "end":
-                    $endCount -= 1
-                    if $endCount == 0: break
+                    endCount -= 1
+                    if endCount == 0: break
                 end
             end
             @lines = fLines
@@ -98,17 +98,16 @@ class_ CodeBlocks:
         def isDefLine(line): return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
 
         def _computeArity():
-            $count = 0
+            count = 0
             params = @parametersWithoutParentheses()
             if params.len() == 0:
                 @arity = 0
                 return
             end
             for c in params:
-                if c == ',': $count += 1
+                if c == ',': count += 1
             end
-            @arity = $count + 1
+            @arity = count + 1
         end
     end
-
 end

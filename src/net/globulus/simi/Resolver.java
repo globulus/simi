@@ -57,7 +57,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitClassStmt(Stmt.Class stmt, boolean addToEnv) {
-    declare(stmt.name, false);
+    declare(stmt.name, false, false);
     define(stmt.name);
     ClassType enclosingClass = currentClass;
     currentClass = ClassType.CLASS;
@@ -81,6 +81,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       resolveFunction(method, declaration); // [local]
     }
 
+    for (Stmt.Class innerClass : stmt.innerClasses) {
+      visitClassStmt(innerClass, true);
+    }
+
     endScope();
 
     if (hasSuperclass) endScope();
@@ -102,7 +106,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
-    declare(stmt.name, false);
+    declare(stmt.name, false, false);
     define(stmt.name);
     resolveFunction(stmt, FunctionType.FUNCTION);
     return null;
@@ -149,9 +153,9 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //    }
 
     if (stmt.value != null) {
-      if (currentFunction == FunctionType.INITIALIZER) {
-        ErrorHub.sharedInstance().error(stmt.keyword, "Cannot return a value from an initializer.");
-      }
+//      if (currentFunction == FunctionType.INITIALIZER) {
+//        ErrorHub.sharedInstance().error(stmt.keyword, "Cannot return a value from an initializer.");
+//      }
       resolve(stmt.value);
     }
 
@@ -201,7 +205,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitAssignExpr(Expr.Assign expr) {
-    if (!declare(expr.name, true)) {
+    if (!declare(expr.name,true, expr.operator.type == TokenType.DOLLAR_EQUAL)) {
       ErrorHub.sharedInstance().error(expr.name, "Constant with this name already declared in this scope.");
     }
     resolve(expr.value);
@@ -314,7 +318,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
-//    resolve(expr);
+    for (Expr prop : expr.props) {
+      Expr toResolve = expr.isDictionary ? ((Expr.Assign) prop).value : prop;
+      resolve(toResolve);
+    }
     return null;
   }
 
@@ -335,15 +342,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
           } else {
             name = ((Expr.Variable) ((Expr.Binary) param).left).name;
           }
-          declare(name, false);
+          declare(name, false, false);
           define(name);
       }
       resolve(block, false);
       endScope();
   }
 
-  private void resolveFunction(
-      Stmt.Function function, FunctionType type) {
+  private void resolveFunction(Stmt.Function function, FunctionType type) {
     FunctionType enclosingFunction = currentFunction;
     currentFunction = type;
     resolveFunctionBlock(function.block);
@@ -358,9 +364,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     scopes.pop();
   }
 
-  private boolean declare(Token name, boolean autodefine) {
+  private boolean declare(Token name, boolean autodefine, boolean mutable) {
     String var = name.lexeme;
-    boolean mutable = var.startsWith(Constants.MUTABLE);
     if (scopes.isEmpty()) {
       if (globalScope.contains(var)) {
         return mutable;
@@ -368,9 +373,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       globalScope.add(var);
       return true;
     }
-    for (Map<String, Boolean> scope : scopes) {
-      if (scope.containsKey(var)) {
-        return mutable;
+    if (mutable) {
+      for (Map<String, Boolean> scope : scopes) {
+        if (scope.containsKey(var)) {
+          return true;
+        }
       }
     }
     Map<String, Boolean> scope = scopes.peek();

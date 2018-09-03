@@ -200,11 +200,13 @@ abstract class Expr implements Codifiable {
   static class Assign extends Expr {
 
     final Token name;
+    final Token operator;
     final Expr value;
     final List<Stmt.Annotation> annotations;
 
-    Assign(Token name, Expr value, List<Stmt.Annotation> annotations) {
+    Assign(Token name, Token operator, Expr value, List<Stmt.Annotation> annotations) {
       this.name = name;
+      this.operator = operator;
       this.value = value;
       this.annotations = annotations;
     }
@@ -224,7 +226,7 @@ abstract class Expr implements Codifiable {
               )
               .append(Codifiable.getIndentation(indentationLevel))
               .append(name.lexeme)
-              .append(" ").append(TokenType.EQUAL.toCode()).append(" ")
+              .append(" ").append(operator.type.toCode()).append(" ")
               .append(value.toCode(0, false))
               .toString();
     }

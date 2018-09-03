@@ -450,8 +450,8 @@ class Parser {
 
   private Expr assignment() {
     Expr expr = or();
-    if (match(EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, SLASH_SLASH_EQUAL,
-            MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
+    if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
+            SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
       Token equals = previous();
       if (match(YIELD)) {
         Token keyword = previous();
@@ -592,9 +592,6 @@ class Parser {
         List<Expr> arguments = new ArrayList<>();
         if (!check(RIGHT_PAREN)) {
             do {
-//                if (arguments.size() >= 8) {
-//                    Simi.error(peek(), "Cannot have more than 8 arguments.");
-//                }
                 matchSequence(IDENTIFIER, EQUAL); // allows for named params, e.g substr(start=1,end=2)
                 arguments.add(expression());
             } while (match(COMMA));
@@ -861,13 +858,14 @@ class Parser {
   static Expr getAssignExpr(Parser parser, Expr expr, Token equals, Expr value) {
     if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
       Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
-      return new Expr.Assign(literal, value, (parser != null) ? parser.getAnnotations() : null);
+      return new Expr.Assign(literal, equals, value, (parser != null) ? parser.getAnnotations() : null);
     } else if (expr instanceof Expr.Variable) {
       Token name = ((Expr.Variable)expr).name;
-      if (equals.type == EQUAL) {
-        return new Expr.Assign(name, value, (parser != null) ? parser.getAnnotations() : null);
+      if (equals.type == EQUAL || equals.type == DOLLAR_EQUAL) {
+        return new Expr.Assign(name, equals, value, (parser != null) ? parser.getAnnotations() : null);
       } else {
-        return new Expr.Assign(name, new Expr.Binary(expr, operatorFromAssign(equals), value),
+        return new Expr.Assign(name, new Token(DOLLAR_EQUAL, null, null, equals.line),
+                new Expr.Binary(expr, operatorFromAssign(equals), value),
                 (parser != null) ? parser.getAnnotations() : null);
       }
     } else if (expr instanceof Expr.Get) { // Setter
@@ -890,7 +888,7 @@ class Parser {
         Expr getByName = new Expr.Get(name, value, prop, null);
         Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
         Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
-        assigns.add(new Expr.Assign(name, nilCoalescence, annotations));
+        assigns.add(new Expr.Assign(name, equals, nilCoalescence, annotations));
       }
       return new Expr.ObjectDecomp(assigns);
     }

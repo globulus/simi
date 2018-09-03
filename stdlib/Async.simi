@@ -15,33 +15,33 @@ Async = [
     end,
 
     _process = def (lines, start, tempName):
-        $prepend = "\n"
+        prepend = "\n"
         for i in Range(start, lines.len()):
-            $line = lines.(i)
-           if @KEYWORD in $line:
+            line = lines.(i)
+           if @KEYWORD in line:
                if i > start:
-                   $prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
+                   prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
                end
-               $jump = 1
-               if $line.endsWith("["):
-                   $opens = 0
+               jump = 1
+               if line.endsWith("["):
+                   opens = 0
                    for j in Range(i + 1, lines.len()):
                        otherLine = lines.(j)
-                       if otherLine.endsWith("["): $opens = $opens + 1
+                       if otherLine.endsWith("["): opens += 1
                        elsif otherLine.startsWith("]"):
-                           if $opens == 0:
-                               $jump = j - i + 2
-                               $line = String.from(lines.slice(i, j + 2), " ")
+                           if opens == 0:
+                               jump $= j - i + 2
+                               line $= String.from(lines.slice(i, j + 2), " ")
                                break
                            end
-                           else: $opens = $opens - 1
+                           else: opens -= 1
                        end
                    end
                end
-               return $prepend + @_makeAwait(tempName + start, $line) + @_process(lines, i + $jump, tempName) + "\nend)"
+               return prepend + @_makeAwait(tempName + start, line) + @_process(lines, i + jump, tempName) + "\nend)"
             end
         end
-        return $prepend + String.from(lines.slice(start, lines.len()), "\n")
+        return prepend + String.from(lines.slice(start, lines.len()), "\n")
     end,
 
     _makeAwait = def (name, line):

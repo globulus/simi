@@ -11,63 +11,16 @@ class Net:
     def go(f):
         common = Async.KEYWORD + " Net."
         lines = (ivic f).replacing(@KEYWORD_POST, common + "post(").split("\n").clone(false)
-        $open = 0
+        open = 0
         for e in lines.enumerate():
             [i, line] = e
-            if line.endsWith("["): $open = $open + 1
+            if line.endsWith("["): open += 1
             elsif line.endsWith("]"):
-                $open = $open - 1
-                if $open == 0: lines.(i) = line + ")"
+                open -= 1
+                if open == 0: lines.(i) = line + ")"
             end
             elsif common in line: lines.(i) = line + ")"
         end
         return gu Async.swl(lines)
     end
-
-#    def go(f):
-#        timestamp = clock().toString()
-#        tempName = timestamp.substring(timestamp.indexOf('.') + 1)
-#        flines = (ivic f).split("\n")
-#        newlines = "[f = " + @_process(flines, 0, tempName).trim() + "\nend].f"
-#        print newlines
-#        return gu newlines
-#    end
-#
-#    def _process(lines, start, tempName):
-#        $prepend = "\n"
-#        for i in Range(start, lines.len()):
-#            $line = lines.(i)
-#            if @KEYWORD_POST in $line:
-#                if i > start:
-#                    $prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
-#                end
-#                $jump = 1
-#                if $line.endsWith("["):
-#                    $opens = 0
-#                    for j in Range(i + 1, lines.len()):
-#                        otherLine = lines.(j)
-#                        if otherLine.endsWith("["): $opens = $opens + 1
-#                        elsif otherLine.startsWith("]"):
-#                            if $opens == 0:
-#                                $jump = j - i + 2
-#                                $line = String.from(lines.slice(i, j + 2), " ")
-#                                break
-#                            end
-#                            else: $opens = $opens - 1
-#                        end
-#                    end
-#                end
-#                return $prepend + @_makePost(tempName + start, $line) + @_process(lines, i + $jump, tempName) + "\nend)"
-#            end
-#        end
-#        return $prepend + String.from(lines.slice(start, lines.len()), "\n")
-#    end
-#
-#    def _makePost(name, line):
-#        varName = line.substring(0, line.indexOf("=")).trim()
-#        request = line.substring(line.indexOf(@KEYWORD_POST) + @KEYWORD_POST.len() + 1).trim()
-#        rVar = "response" + name
-#        return "Net.post(" + request + ", def " + rVar + ":
-#            " + varName + " = " + rVar
-#    end
 end

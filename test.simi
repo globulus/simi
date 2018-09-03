@@ -5,6 +5,33 @@ import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
 import "./SimiSync/SimiSyncModels.simi"
 
+def closureTest():
+   a = 5
+   (def ():
+    print a + " == 5"
+    a = 6
+    print a + " == 6"
+   end)()
+   print a + " == 5"
+   (def ():
+    print a + " == 5"
+    a $= 3
+    print a + " == 3"
+   end)()
+   print a + " == 3"
+   (def ():
+    print a + " == 3"
+    a $= 4
+    print a + " == 4"
+    a = 7
+    print a + " == 7"
+    a $= 8
+    print a + " == 8"
+   end)()
+   print a + " == 4"
+end
+closureTest()
+
 #SimiSyncModels.ModelParser.parse(1)
 def typeCheckTest(a, b is String, c is Number, d is Range):
     print "at end"
@@ -38,75 +65,75 @@ clck = clock()
 print clck is Function
 print ife1 is Function
 
-Decorator.go(def ():
-
-    def fib(n):
-#        print "first time in fib"
-        cache = $[]
-        $arg = 0
-        inner = def n:
-            if n < 2: return n
-            $arg = n - 1
-            a = loop()
-            $arg = n - 2
-            b = loop()
-            return a + b
-        end
-        loop = def ():
-           while true:
-#            print cache
-            key = $arg.toString()
-            if key not in cache: cache.(key) = inner($arg)
-#            else: print "have cache for " + key
-#            print "about to yield " + cache.(key)
-            yield cache.(key)
-         end
-        end
-        return inner(n)
-    end
-
-    decorate* "Decorator.memoize"
-    def fib2(n):
-        if n < 2: return n
-        return fib2(n - 2) + fib2(n - 1)
-    end
-
-    decorate* "Decorator.memoize"
-    def gcd(a, b):
-        if b: return gcd(b, a % b)
-        return a
-    end
-
-    decorate* "Decorator.timed"
-    def testFib(n):
-        print "Testing fib"
-        print fib(n)
-        print "Done testing fib"
-    end
-    for _ in 3.times():
-        testFib(10)
-    end
-
-    decorate* "Decorator.timed"
-    def testFib2(n):
-        print "Testing fib2"
-        print fib2(n)
-        print "Done testing fib2"
-    end
-    for _ in 3.times():
-        testFib2(10)
-    end
-
-    decorate* "Decorator.timed"
-    def testGcd(a, b):
-        print "Testing gcd"
-        print gcd(a, b)
-        print "Done testing gcd"
-    end
-    for _ in 3.times():
-        testGcd(10000, 41)
-    end
-end)()
+#Decorator.go(def ():
+#
+#    def fib(n):
+##        print "first time in fib"
+#        cache = $[]
+#        arg = 0
+#        inner = def n:
+#            if n < 2: return n
+#            arg $= n - 1
+#            a = loop()
+#            arg $= n - 2
+#            b = loop()
+#            return a + b
+#        end
+#        loop = def ():
+#           while true:
+##            print cache
+#            key = arg.toString()
+#            if key not in cache: cache.(key) = inner(arg)
+##            else: print "have cache for " + key
+##            print "about to yield " + cache.(key)
+#            yield cache.(key)
+#         end
+#        end
+#        return inner(n)
+#    end
+#
+#    decorate* "Decorator.memoize"
+#    def fib2(n):
+#        if n < 2: return n
+#        return fib2(n - 2) + fib2(n - 1)
+#    end
+#
+#    decorate* "Decorator.memoize"
+#    def gcd(a, b):
+#        if b: return gcd(b, a % b)
+#        return a
+#    end
+#
+#    decorate* "Decorator.timed"
+#    def testFib(n):
+#        print "Testing fib"
+#        print fib(n)
+#        print "Done testing fib"
+#    end
+#    for _ in 3.times():
+#        testFib(10)
+#    end
+#
+#    decorate* "Decorator.timed"
+#    def testFib2(n):
+#        print "Testing fib2"
+#        print fib2(n)
+#        print "Done testing fib2"
+#    end
+#    for _ in 3.times():
+#        testFib2(10)
+#    end
+#
+#    decorate* "Decorator.timed"
+#    def testGcd(a, b):
+#        print "Testing gcd"
+#        print gcd(a, b)
+#        print "Done testing gcd"
+#    end
+#    for _ in 3.times():
+#        testGcd(10000, 41)
+#    end
+#end)()
 
 Decorator.test()
 
@@ -261,10 +288,6 @@ class Point:
    # def equals(other): return @matches(other)
 end
 
-$var = 1
-$var += 2
-print $var
-
 p1 = Point(1, 2)
 p2 = Point(1, 2)
 print p1 == p2
@@ -272,12 +295,6 @@ print p1 == p2
 date = Date.now()
 print date
 print date.format("dd/MM/yyyy hh:mm:ss")
-
-#$a = 3
-#b = 5
-#c = $a + b
-#$a = 4
-#print c
 
 def testStringNumberConversion():
     numStr = "123.3ž"
@@ -299,9 +316,9 @@ def testNestedRescue():
     end
 end
 def addStringAndTryToConvert(number):
-    $str = number.toString()
-    if Number.randomInt(2): $str += "a"
-    numVal = $str.toNumber()
+    str = number.toString()
+    if Number.randomInt(2): str += "a"
+    numVal = str.toNumber()
 end
 testNestedRescue()
 
@@ -444,10 +461,10 @@ print "gg" in dict
 str = "this is a 'string'"
 print str
 
-$a = 2
-while $a < 10:
-    print $a
-    $a = $a + 1
+a = 2
+while a < 10:
+    print a
+    a += 1
 end
 
 for i in Range(start=10, stop=-20, step=-3):
@@ -517,9 +534,9 @@ print !!clazz
 
 print 12.bitAnd(25)
 
-$aa = 3
-$aa //= 5
-print $aa
+aa = 3
+aa //= 5
+print aa
 
 def testYieldExpr():
     asyncFunc = def (a, callback):
@@ -551,3 +568,4 @@ def testArgDecomp():
     f2([1, 2])
 end
 testArgDecomp()
+
