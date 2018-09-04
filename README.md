@@ -167,7 +167,7 @@ Compound operators (+=, -=, etc.) are invoked with $= by default. Also, $= canno
 2. String - represents a (multiline) piece of text, enclosed in either single or double quotes.
 3. Function - a parametrized block of code that can be invoked. Functions are first-class citizens in Šimi and can be passed around as normal values.
 4. Object - the most powerful Šimi construct, represents a mutable or immutable array/list, set, dictionary/map/hash, or a class instance.
-5. Nil - represents an absence of value. Invoking operations on nils generally results in a NilPointerException.
+5. Nil - represents an absence of value. Invoking operations on nils generally results in a nil, unless the [nil check operator is used](#---nil-check).
 
 #### Numbers
 At surface, Šimi doesn't make a distinction between integers and floating point numbers, but instead has one number type, 8 bytes long, which doubles as a boolean type where 0 represents a false value.
@@ -308,7 +308,7 @@ def f(a, b, c):
     print "something"
 end
 ```
-Functions that don't explicity [return or yield](#return-and-yield) have an implcit **return self**. This allows for chanining calls to methods that don't return a value.
+Functions that don't explicity [return or yield](#return-and-yield) have an implicit **return self**. This allows for chanining calls to methods that don't return a value.
 ```ruby
 class Button:
     def setTitle(title): @title = title
@@ -469,7 +469,7 @@ end
 ```
 * Classes themselves are objects, with "class" set to a void object named "Class".
 * From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
-* Instance vars and methods are mutable by default from within the class, and don't require their names to start with $.
+* Instance vars and methods are mutable by default from within the class, and don't require usage of the $= operator.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
 * Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
 ```ruby
@@ -584,7 +584,7 @@ print ModuleClassA.matches(ModuleClass.ModuleClassA) # true
 
 #### Assignment
 
-=, +=, -=, *=, /=, //=, %=
+=, $=, +=, -=, *=, /=, //=, %=, ??=
 
 #### Logical
 
@@ -657,7 +657,7 @@ Using a method call, getter or setter on a nil results in a nil, which sometimes
 ```ruby
 obj = nil
 a = obj.property # a = nil, no crash
-b = ?obj.property # b = nil, but NilReferenceException is raised
+b = ?obj.property # NilReferenceException is raised
 ```
 
 #### @ - self referencing
@@ -685,11 +685,13 @@ Not much to say here, Šimi offers the usual if-elsif-...-elsif-else structure f
 if a < b:
   c = d
   print c
-end elsif a < c: print "a < c"
+end
+elsif a < c: print "a < c"
 elsif a < d:
   a = e
   print e
-end else: print f
+end
+else: print f
 ```
 
 #### when
@@ -717,7 +719,7 @@ def ife(condition, ifval, elseval):
     else: return elseval()
 end
 ```
-In Šimi, can can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
+In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
 ```ruby
 step = ife(min < max, 1, -1) # Works with non-function values
 
@@ -811,7 +813,7 @@ Yielding allows for coding of generators, and serves as a lightweight basis for 
 
 #### Async programming with yield expressions
 
-*yield* can also be used as a part of assignments to avoid [callback hell.](http://blog.mclain.ca/assets/images/callbackhell.png) Basically, the function you're in will yield its execution to the other function, which needs to be async (i.e, its last parameter must be a single-parameter callback) and resume once the callback is invoked. This allows for a flat code hierarchy that's easier to read and maintain, while in fact, behind the scenes, callbacks are being invoked and code is executed asynchronously:
+*yield* can also be used as a part of assignments to avoid [callback hell.](http://blog.mclain.ca/assets/images/callbackhell.png) Basically, the function you're in will yield its execution to the other function, which needs to be async (i.e, its last parameter must be a single-parameter function) and resume once the callback is invoked. This allows for a flat code hierarchy that's easier to read and maintain, while in fact, behind the scenes, callbacks are being invoked and code is executed asynchronously:
 ```ruby
 def testYieldExpr():
     # The async function can take any number of parameters, but its
@@ -870,7 +872,7 @@ The rescue block works as following:
 * If no rescue blocks are found by the time interpreter executes the next global statement, the program will crash.
 * If a rescue block is encountered during normal program execution, it is executed with a *nil* parameter.
 
-You can think of all the code above a rescue block as a part of try block, with the catch/except and else blocks being the if/else of the rescue block. The finally part is unecessary as all the statements above the rescue block are a part of the same scope as the statements below it. Check out the example above, rewritten in Python:
+You can think of all the code above a rescue block as a part of try block, with the catch/except and else blocks being the if/else of the rescue block. The finally part is unecessary as all the statements above the rescue block are a part of the same scope as the statements below it. Check out the example above, rewritten in **Python**:
 
 ```python
 def testAbs():
@@ -1137,6 +1139,8 @@ PRIMARY KEY (id),
 userId varchar(255),
 );
 ```
+
+[Šimi server also makes heavy use of annotations!](https://github.com/globulus/simi-sync/tree/master/web)
 
 ### Metaprogramming and (de)serialization - *gu* and *ivic*
 
