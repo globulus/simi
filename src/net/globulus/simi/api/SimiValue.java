@@ -269,7 +269,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         @Override
         public java.lang.String toString() {
-            return value.toString();
+            return (value != null) ? value.toString() : "nil";
         }
 
         @Override
@@ -284,7 +284,7 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         @Override
         public SimiValue clone(boolean mutable) {
-            return new Object(value.clone(mutable));
+            return (value != null) ? new Object(value.clone(mutable)) : null;
         }
 
         @Override
