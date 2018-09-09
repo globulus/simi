@@ -12,6 +12,7 @@ class Interpreter implements
         Debugger.Evaluator {
 
   final Collection<NativeModulesManager> nativeModulesManagers;
+  private List<Stmt> statements;
   private final Environment globals = new Environment();
   private Environment environment = globals;
   private final Map<Expr, Integer> locals = new HashMap<>();
@@ -82,6 +83,7 @@ class Interpreter implements
 
   SimiProperty interpret(List<Stmt> statements, boolean addClassesToRootEnv) {
     this.addClassesToRootEnv = addClassesToRootEnv;
+    this.statements = statements;
     SimiProperty result = null;
     try {
       for (Stmt statement : statements) {
@@ -116,7 +118,16 @@ class Interpreter implements
     if (debugger == null) {
         return;
     }
-    debugger.push(new Debugger.Frame(environment, stmt));
+//    int index = statements.indexOf(stmt);
+    Codifiable[] before = null;
+//    if (index > 1) {
+//      before = new Codifiable[] { statements.get(index - 2), statements.get(index - 1) };
+//    }
+    Codifiable[] after = null;
+//    if (index < statements.size() - 2) {
+//      after = new Codifiable[] { statements.get(index + 1), statements.get(index + 2) };
+//    }
+    debugger.push(new Debugger.Frame(environment.deepClone(), stmt, before, after));
     if (stmt.hasBreakPoint()) {
         debugger.triggerBreakpoint();
     }
@@ -1195,10 +1206,14 @@ class Interpreter implements
   }
 
     @Override
-    public String eval(String input) {
+    public String eval(String input, Environment environment) {
+        Environment currentEnv = this.environment;
+        this.environment = environment;
         Scanner scanner = new Scanner(input + "\n", null);
         Parser parser = new Parser(scanner.scanTokens(true), null);
-        return execute(parser.parse().get(0)).toString();
+        String result = execute(parser.parse().get(0)).toString();
+        this.environment = currentEnv;
+        return result;
     }
 
     @Override

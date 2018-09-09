@@ -2,7 +2,9 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.Codifiable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 
 final class Debugger {
@@ -12,6 +14,7 @@ final class Debugger {
     private FrameStack stack;
     private Scanner scanner;
     private Evaluator evaluator;
+    private Environment inspectingEnvironment;
 
     Debugger() {
         stack = new FrameStack();
@@ -26,18 +29,35 @@ final class Debugger {
         stack.push(frame);
     }
 
-    void print(int frameIndex) {
+    private void print(int frameIndex) {
         List<Frame> frames = stack.toList();
+        System.out.println("============================");
+        Frame focusFrame = frames.get(frameIndex);
+        inspectingEnvironment = focusFrame.environment;
+        if (focusFrame.before != null) {
+            for (Codifiable codifiable : focusFrame.before) {
+                System.out.println(codifiable.toCode(0, true));
+            }
+        }
+        System.out.println(focusFrame.line.toCode(0, true));
+        if (focusFrame.after != null) {
+            for (Codifiable codifiable : focusFrame.after) {
+                System.out.println(codifiable.toCode(0, true));
+            }
+        }
+        System.out.println("============================");
         for (int i = 0; i < frames.size(); i++) {
             Frame frame = frames.get(i);
             System.out.print("[" + i + "] Line " + frame.line.getLineNumber() + ": ");
             System.out.println(frame.line.toCode(0, true));
         }
-        System.out.println(frames.get(frameIndex).environment.toStringWithoutGlobal());
+        System.out.println("\n#### ENVIRONMENT ####\n");
+        System.out.println(focusFrame.environment.toStringWithoutGlobal());
         printHelp();
     }
 
     void triggerBreakpoint() {
+        System.out.println("***** BREAKPOINT *****\n");
         print(0);
         scanInput();
     }
@@ -64,15 +84,18 @@ final class Debugger {
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
-                System.out.println(evaluator.eval(input.substring(2)));
+                System.out.println(evaluator.eval(input.substring(2), inspectingEnvironment));
+                printHelp();
             } break;
             case 'g': { // Print global environment
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
                 System.out.println(evaluator.getGlobalEnvironment().toString());
+                printHelp();
             } break;
-            default: return;
+            default:
+                return;
         }
         scanInput();
     }
@@ -81,16 +104,23 @@ final class Debugger {
 
         final Environment environment;
         final Codifiable line;
+        final Codifiable[] before;
+        final Codifiable[] after;
 
-        Frame(Environment environment, Codifiable line) {
+        Frame(Environment environment,
+              Codifiable line,
+              Codifiable[] before,
+              Codifiable[] after) {
             this.environment = environment;
             this.line = line;
+            this.before = before;
+            this.after = after;
         }
     }
 
     private static class FrameStack {
 
-        private static final int MAX_SIZE = 10;
+        private static final int MAX_SIZE = 20;
 
         private Frame[] stack;
         private int index;
@@ -126,7 +156,7 @@ final class Debugger {
     }
 
     interface Evaluator {
-        String eval(String input);
+        String eval(String input, Environment environment);
         Environment getGlobalEnvironment();
     }
 }

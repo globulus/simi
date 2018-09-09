@@ -17,7 +17,7 @@ final class SimiPropertyImpl implements SimiProperty, Comparable<SimiPropertyImp
     }
 
     public SimiPropertyImpl clone(boolean mutable) {
-        return new SimiPropertyImpl(value.clone(mutable), annotations);
+        return new SimiPropertyImpl((value != null) ? value.clone(mutable) : null, annotations);
     }
 
     @Override
