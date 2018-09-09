@@ -341,7 +341,7 @@ class Car:
         print "Doing something"
         if amount < 0: CarException("Amount < 0!").raise()
         if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity
+        if @tank + amount > @capacity: @tank = @capacity # BP
         else: @tank = @tank + amount
     end
 
@@ -495,7 +495,7 @@ end
 print ivic so
 clone = gu ivic so
 print clone.matches(so)
-print ivic clone
+print ivic clone # BP
 
 class_ ModuleClass:
 

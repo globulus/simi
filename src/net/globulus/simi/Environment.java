@@ -108,7 +108,17 @@ class Environment implements SimiEnvironment {
     if (enclosing != null) {
       result += " -> " + enclosing.toString();
     }
+    return result;
+  }
 
+  String toStringWithoutGlobal() {
+    if (enclosing == null) {
+      return "Global";
+    }
+    String result = props.toString();
+    if (enclosing.enclosing != null) {
+      result += " -> " + enclosing.toStringWithoutGlobal();
+    }
     return result;
   }
 

@@ -4,7 +4,6 @@ import net.globulus.simi.api.SimiObject;
 import net.globulus.simi.api.SimiProperty;
 import net.globulus.simi.api.SimiValue;
 
-import java.util.Collections;
 import java.util.List;
 
 final class SimiPropertyImpl implements SimiProperty, Comparable<SimiPropertyImpl> {
@@ -28,7 +27,7 @@ final class SimiPropertyImpl implements SimiProperty, Comparable<SimiPropertyImp
 
     @Override
     public String toString() {
-        return value.toString();
+        return (value == null) ? null : value.toString();
     }
 
     @Override

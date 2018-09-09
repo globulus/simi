@@ -7,7 +7,9 @@ class Token {
   final TokenType type;
   final String lexeme;
   final SimiValue literal;
-  final int line; // [location]
+  final int line;
+
+  boolean hasBreakpoint = false;
 
   Token(TokenType type, String lexeme, SimiValue literal, int line) {
     this.type = type;

@@ -242,6 +242,16 @@ abstract class SimiObjectImpl implements SimiObject {
       return value.getObject();
     }
 
+    @Override
+    public int getLineNumber() {
+        return -1;
+    }
+
+    @Override
+    public boolean hasBreakPoint() {
+        return false;
+    }
+
     static class Dictionary extends SimiObjectImpl {
 
         final LinkedHashMap<String, SimiProperty> fields;

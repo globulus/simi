@@ -24,6 +24,16 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
         return null;
     }
 
+    @Override
+    public int getLineNumber() {
+        return -1;
+    }
+
+    @Override
+    public boolean hasBreakPoint() {
+        return false;
+    }
+
     public java.lang.String getString() {
         if (this instanceof String) {
             return ((String) this).value;

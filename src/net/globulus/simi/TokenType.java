@@ -135,4 +135,14 @@ enum TokenType implements Codifiable {
     }
     return Codifiable.getIndentation(indentationLevel) + toCode();
   }
+
+  @Override
+  public int getLineNumber() {
+    return -1;
+  }
+
+  @Override
+  public boolean hasBreakPoint() {
+    return false;
+  }
 }

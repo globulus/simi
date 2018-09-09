@@ -48,4 +48,14 @@ public final class SimiException extends RuntimeException implements SimiObject 
     public String toCode(int indentationLevel, boolean ignoreFirst) {
         return null; // TODO revisit
     }
+
+    @Override
+    public int getLineNumber() {
+        return -1;
+    }
+
+    @Override
+    public boolean hasBreakPoint() {
+        return false;
+    }
 }

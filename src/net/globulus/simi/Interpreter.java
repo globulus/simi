@@ -5,7 +5,11 @@ import net.globulus.simi.api.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.Visitor<SimiProperty> {
+class Interpreter implements
+        BlockInterpreter,
+        Expr.Visitor<SimiProperty>,
+        Stmt.Visitor<SimiProperty>,
+        Debugger.Evaluator {
 
   final Collection<NativeModulesManager> nativeModulesManagers;
   private final Environment globals = new Environment();
@@ -21,11 +25,17 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
 
   private boolean addClassesToRootEnv;
 
+  private Debugger debugger;
+
   static Interpreter sharedInstance;
 
-  Interpreter(Collection<NativeModulesManager> nativeModulesManagers) {
+  Interpreter(Collection<NativeModulesManager> nativeModulesManagers, Debugger debugger) {
     sharedInstance = this;
     this.nativeModulesManagers = nativeModulesManagers;
+    this.debugger = debugger;
+    if (debugger != null) {
+        debugger.setEvaluator(this);
+    }
     globals.define("clock", new SimiValue.Callable(new SimiCallable() {
 
       @Override
@@ -98,7 +108,18 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   }
 
   private SimiProperty execute(Stmt stmt) {
+      debug(stmt);
     return stmt.accept(this);
+  }
+
+  private void debug(Stmt stmt) {
+    if (debugger == null) {
+        return;
+    }
+    debugger.push(new Debugger.Frame(environment, stmt));
+    if (stmt.hasBreakPoint()) {
+        debugger.triggerBreakpoint();
+    }
   }
 
   void resolve(Expr expr, int depth) {
@@ -781,8 +802,8 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
   @Override
   public SimiProperty visitGuExpr(Expr.Gu expr) {
     String string = evaluate(expr.expr).getValue().getString();
-    Scanner scanner = new Scanner(string + "\n");
-    Parser parser = new Parser(scanner.scanTokens(true));
+    Scanner scanner = new Scanner(string + "\n", null);
+    Parser parser = new Parser(scanner.scanTokens(true), null);
     for (Stmt stmt : parser.parse()) {
         if (stmt instanceof Stmt.Annotation) {
             visitAnnotationStmt((Stmt.Annotation) stmt);
@@ -1173,7 +1194,19 @@ class Interpreter implements BlockInterpreter, Expr.Visitor<SimiProperty>, Stmt.
     raisedExceptions.push(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
   }
 
-  @FunctionalInterface
+    @Override
+    public String eval(String input) {
+        Scanner scanner = new Scanner(input + "\n", null);
+        Parser parser = new Parser(scanner.scanTokens(true), null);
+        return execute(parser.parse().get(0)).toString();
+    }
+
+    @Override
+    public Environment getGlobalEnvironment() {
+        return globals;
+    }
+
+    @FunctionalInterface
   private interface ClassImporter {
     void importValue(String key, SimiProperty prop);
   }

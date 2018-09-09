@@ -20,10 +20,13 @@ class Parser {
   private final List<Token> tokens;
   private int current = 0;
 
+  private final Debugger debugger;
+
   private List<Stmt.Annotation> annotations = new ArrayList<>();
 
-  Parser(List<Token> tokens) {
+  Parser(List<Token> tokens, Debugger debugger) {
     this.tokens = tokens;
+    this.debugger = debugger;
   }
 
   List<Stmt> parse() {

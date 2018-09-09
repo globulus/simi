@@ -14,6 +14,7 @@ import java.util.List;
 public class Simi {
 
   private static Interpreter interpreter;
+  private static Debugger debugger = new Debugger();
   static boolean hadError = false;
   static boolean hadRuntimeError = false;
 
@@ -63,18 +64,18 @@ public class Simi {
 
       long time = System.currentTimeMillis();
       System.out.print("Scanning and resolving imports...");
-    Scanner scanner = new Scanner(source);
+    Scanner scanner = new Scanner(source, debugger);
     List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManager);
     System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
     time = System.currentTimeMillis();
     System.out.print("Parsing...");
-    Parser parser = new Parser(tokens);
+    Parser parser = new Parser(tokens, debugger);
     List<Stmt> statements = parser.parse();
 
     // Stop if there was a syntax error.
     if (hadError) return;
 
-    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager));
+    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager), debugger);
 
     Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);
@@ -112,7 +113,7 @@ public class Simi {
       if (pathString.endsWith(".jar")) {
           nativeModulesManager.load(path.toUri().toURL().toString(), true);
       } else if (pathString.endsWith(".simi")) {
-          List<Token> tokens = new Scanner(readFile(location, false)).scanTokens(false);
+          List<Token> tokens = new Scanner(readFile(location, false), debugger).scanTokens(false);
           result.addAll(scanImports(tokens, imports, nativeModulesManager));
       }
     }

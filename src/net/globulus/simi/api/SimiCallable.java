@@ -10,4 +10,10 @@ public interface SimiCallable extends Codifiable {
   default String toCode(int indentationLevel, boolean ignoreFirst) {
     return null;
   }
+  default int getLineNumber() {
+    return -1;
+  }
+  default boolean hasBreakPoint() {
+    return false;
+  }
 }
