@@ -11,6 +11,7 @@ What Šimi offers:
 * Rich [Java API](#java-api) - if it exist in Java, you can easily bridge it into Šimi!
 * Run Šimi on any device that supports JRE, with special native support in Android.
 * Run natively on any Cocoa machine ([iOS or Mac OS X](https://github.com/globulus/simi-ios)).
+* [Debugger included.](#debugger)
 * Free to use and modify!
 
 
@@ -74,6 +75,8 @@ What Šimi offers:
     + [Java API](#java-api)
     + [Annotations](#annotations)
     + [Metaprogramming and (de)serialization - *gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic)
+    + [Debugger](#debugger)
+        - [Breakpoints](#breakpoints)
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
@@ -1243,6 +1246,30 @@ for key in obj:
 end
 ```
 Combining this with *ivic* allows for creation of programs that *change their code on the fly*. Simply, dump a block/function/method to code with *ivic*, use string manipulation to alter its body, and use it again by supplying the altered code to *gu*. Check out this [simple genetic algorithm](https://github.com/globulus/simi/blob/develop/genetic.simi) to see the duo in action!
+
+
+### Debugger
+
+Šimi has a limited built-in debugger that can be used to place breakpoints and examine environment when they trigger. The debugger is autoenabled for CLI Šimi invocations (using simi.jar), and can be used with ActiveSimi through *setDebugMode(true)*. Using a debugger adds a small overhead in both speed and memory.
+
+#### Breakpoints
+
+To set a breakpoint at a given line, add a comment at its end that starts with **BP**:
+```ruby
+a = 5
+b = 6 # BP (this will trigger a breakpoint)
+c = 7
+```
+As the program runs and encounters a breakpoint, it will pause and print out:
+1. a stack trace 10 frames deep,
+2. environment for the first frame, not including the global environment.
+
+When a breakpoint triggers, you can type in the following commands to use the debugger:
+* *i \[index]* - prints the environment for the frame at given index.
+* *e \[expr]* - evaluates the provided expression in the current environment and prints out the result.
+* *g* - prints out global environment.
+
+Typing in anything else (or a newline) will resume the execution of the program.
 
 ### Android integration
 
