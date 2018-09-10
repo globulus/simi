@@ -137,6 +137,7 @@ In Šimi, you needn't declare the variable before using it, a simple assignment 
 
 By default, all variables in Šimi are constants, i.e their value can't change once it's been assigned (and it's assigned right at the declaration). If you wish to alter the value of the variable, you need to use the *$=* operator instead of *=*. This serves two purposes:
 1. It allows for clear and easy scoping: you can think of the = operator as a *declaration*, and of $= as *assignment*:
+
 ```ruby
 # Here are some constants
 a = 5
