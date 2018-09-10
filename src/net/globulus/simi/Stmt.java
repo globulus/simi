@@ -11,6 +11,11 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
   abstract <R> R accept(Visitor<R> visitor, Object... args);
 
+  @Override
+  public int hashCode() {
+    return super.hashCode() + toCode(0, true).hashCode();
+  }
+
   interface Visitor<R> {
     R visitAnnotationStmt(Annotation stmt);
     R visitBreakStmt(Break stmt);
@@ -448,7 +453,9 @@ abstract class Stmt implements SimiStatement, Codifiable {
 
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
-      return keyword.type.toCode(indentationLevel, false) + " " + value.toCode(0, false) + TokenType.NEWLINE.toCode();
+      return keyword.type.toCode(indentationLevel, false) + " "
+              + ((value != null) ? value.toCode(0, false) : TempNull.INSTANCE.toCode(0, false))
+              + TokenType.NEWLINE.toCode();
     }
 
     @Override

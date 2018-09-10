@@ -2,9 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.Codifiable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.Scanner;
 
 final class Debugger {
@@ -15,10 +13,13 @@ final class Debugger {
     private Scanner scanner;
     private Evaluator evaluator;
     private Environment inspectingEnvironment;
+    private Set<Stmt> ignoredBreakpoints;
+    private Stmt currentBreakpoint;
 
     Debugger() {
         stack = new FrameStack();
         scanner = new Scanner(System.in);
+        ignoredBreakpoints = new HashSet<>();
     }
 
     void setEvaluator(Evaluator evaluator) {
@@ -27,6 +28,16 @@ final class Debugger {
 
     void push(Frame frame) {
         stack.push(frame);
+    }
+
+    void triggerBreakpoint(Stmt stmt) {
+        if (ignoredBreakpoints.contains(stmt)) {
+            return;
+        }
+        currentBreakpoint = stmt;
+        System.out.println("***** BREAKPOINT *****\n");
+        print(0);
+        scanInput();
     }
 
     private void print(int frameIndex) {
@@ -56,16 +67,11 @@ final class Debugger {
         printHelp();
     }
 
-    void triggerBreakpoint() {
-        System.out.println("***** BREAKPOINT *****\n");
-        print(0);
-        scanInput();
-    }
-
     private void printHelp() {
         System.out.println("\nCommands:\n" +
                 "i [index]: Inspect environment at stack index\n" +
                 "e [expr]: Evaluates expression within current environment\n" +
+                "r: Remove current breakpoint for this debugger session\n" +
                 "g: Prints global environment\n" +
                 "anything else: continue with program execution\n");
     }
@@ -85,6 +91,14 @@ final class Debugger {
                     throw new IllegalStateException("Evaluator not set!");
                 }
                 System.out.println(evaluator.eval(input.substring(2), inspectingEnvironment));
+                printHelp();
+            } break;
+            case 'r': {
+                if (currentBreakpoint != null) {
+                    ignoredBreakpoints.add(currentBreakpoint);
+                    currentBreakpoint = null;
+                }
+                System.out.println("Breakpoint removed.");
                 printHelp();
             } break;
             case 'g': { // Print global environment

@@ -129,7 +129,7 @@ class Interpreter implements
 //    }
     debugger.push(new Debugger.Frame(environment.deepClone(), stmt, before, after));
     if (stmt.hasBreakPoint()) {
-        debugger.triggerBreakpoint();
+        debugger.triggerBreakpoint(stmt);
     }
   }
 

@@ -1261,12 +1261,13 @@ b = 6 # BP (this will trigger a breakpoint)
 c = 7
 ```
 As the program runs and encounters a breakpoint, it will pause and print out:
-1. a stack trace 10 frames deep,
+1. a stack trace 20 frames deep,
 2. environment for the first frame, not including the global environment.
 
 When a breakpoint triggers, you can type in the following commands to use the debugger:
 * *i \[index]* - prints the environment for the frame at given index.
 * *e \[expr]* - evaluates the provided expression in the current environment and prints out the result.
+* *r* - removes the current breakpoint. You cannot alter breakpoints at runtime as they are gathered from comments during the scanning phase, but you can choose to ignore some in your current debugging session by using the *r* command.
 * *g* - prints out global environment.
 
 Typing in anything else (or a newline) will resume the execution of the program.
