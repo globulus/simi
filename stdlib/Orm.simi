@@ -45,9 +45,9 @@ class_ Orm(Closeable):
 
     class _Query:
         def init(orm is Orm, tableData, columns): pass
-        def where(where is String): @where = where
-        def orderBy(orderBy is Object): @orderBy = orderBy
-        def limit(limit is Number): @limit = limit
+        def where(where is String): @_where = where
+        def orderBy(orderBy is Object): @_orderBy = orderBy
+        def limit(limit is Number): @_limit = limit
 
         def query(): return @orm.executeRaw(@_toSql())
         def queryForIterator():
@@ -79,11 +79,12 @@ class_ Orm(Closeable):
             if @columns is String: sql.add(@columns)
             else: sql.add(String.from(@columns, ", "))
             sql.add(" FROM ").add(@tableData.name)
-            if @where: sql.add(" WHERE (").add(@where).add(")")
-            if @orderBy: sql.add(" ORDER BY ")\
-                            .add(String.from(@orderBy.map(def (k, v): "\(k) \(ife(v, 'ASC', 'DESC'))").values(), ", "))
-            if @limit: sql.add(" LIMIT ").add(@limit)
-            return sql.build()
+            if @_where: sql.add(" WHERE (").add(@_where).add(")")
+            if @_orderBy: sql.add(" ORDER BY ")\
+                            .add(String.from(@_orderBy.map(def (k, v): "\(k) \(ife(v, 'ASC', 'DESC'))").values(), ", "))
+            if @_limit: sql.add(" LIMIT ").add(@_limit)
+            sqlStr = sql.build()
+            return sqlStr
         end
     end
 
@@ -137,6 +138,12 @@ class_ Orm(Closeable):
     def query(clazz, columns): return @_query(clazz, columns)
     def _query(clazz, param): return @_Query(self, @_tableData.(clazz.toString()), param)
 
+    def queryForId(clazz, id):
+        query = @query(clazz)
+        where = @_whereForId(query.tableData, id)
+        return query.where(where).limit(1).queryForFirst()
+    end
+
     def createOrUpdate(obj is Object):
         data = @_prepareForOp(obj, "create or update")
         sql = "INSERT INTO \(data.name) (\(String.from(data.columns, ', ')))
@@ -154,7 +161,7 @@ class_ Orm(Closeable):
 
     def deleteForId(clazz, id):
         tableData = @_tableData.(clazz.toString())
-        sql = "DELETE FROM \(tableData.name) WHERE (\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
+        sql = "DELETE FROM \(tableData.name) WHERE \(@_whereForId(tableData, id))"
         return @executeRaw(sql) # BP
     end
 
@@ -196,6 +203,8 @@ class_ Orm(Closeable):
             joined = joined
         ]
     end
+
+    def _whereForId(tableData, id): return "(\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
 
     def _valueToSqlString(value):
         if value is String: return "'\(value)'"

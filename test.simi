@@ -613,6 +613,7 @@ def mariaDbTest():
     orm.createOrUpdate(OrmTesting(2, "Test2"))
 #    orm.delete(OrmTesting(2, "Test2"))
 #    orm.deleteForId(OrmTesting, 2)
+    print orm.queryForId(OrmTesting, 2)
     orm.close()
     rescue ex:
         if ex: print ex.message
