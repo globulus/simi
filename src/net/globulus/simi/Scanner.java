@@ -47,6 +47,7 @@ class Scanner {
     keywords.put("yield",  TokenType.YIELD);
   }
 
+  private final String fileName;
   private final String source;
   private final Debugger debugger;
   private final List<Token> tokens = new ArrayList<>();
@@ -57,7 +58,8 @@ class Scanner {
   private int stringInterpolationParentheses = 0;
   private char lastStringOpener = '"';
 
-  Scanner(String source, Debugger debugger) {
+  Scanner(String fileName, String source, Debugger debugger) {
+    this.fileName = fileName;
     this.source = source;
     this.debugger = debugger;
   }
@@ -70,7 +72,7 @@ class Scanner {
     }
 
     if (addEof) {
-      tokens.add(new Token(TokenType.EOF, "", null, line));
+      tokens.add(new Token(TokenType.EOF, "", null, line, fileName));
     }
     return tokens;
   }
@@ -402,6 +404,6 @@ class Scanner {
 
   private void addToken(TokenType type, SimiValue literal) {
     String text = source.substring(start, current);
-    tokens.add(new Token(type, text, literal, line));
+    tokens.add(new Token(type, text, literal, line, fileName));
   }
 }

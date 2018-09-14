@@ -35,6 +35,11 @@ class$ Object:
     def array(): native
     def array(capacity): native
     def array(capacity, fillValue): native
+    def arrayWithIterator(iterator):
+        buffer = Object.array()
+        for item in iterator: buffer.append(item)
+        return buffer
+    end
     def slice(start, stop): native
     def builder(): native
 
@@ -88,10 +93,16 @@ class$ Object:
         return clone
     end
     def map(function):
-        buffer = Object.array()
-        for item in self: buffer.append(function(item))
-        if @isArray(): return buffer
-        else: return buffer.zip()
+        if @isArray():
+             buffer = Object.array()
+             for item in self: buffer.append(function(item))
+             return buffer
+        end
+        else:
+            buffer = $[]
+            for key in self: buffer.(key) = function(key, @(key))
+            return buffer
+        end
     end
     def pop():
         len = @len()
@@ -139,6 +150,9 @@ class NumberFormatException(Exception):
 end
 
 class NilReferenceException(Exception):
+end
+
+class IllegalArgumentException(Exception):
 end
 
 def ife(condition, ifval, elseval):
@@ -194,6 +208,8 @@ class Range:
 end
 
 class$ Number:
+    def isInteger(): native
+
     def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
     def to(limit): return Range(@_, limit)
     def downto(limit): return Range(limit, @_)
@@ -307,9 +323,7 @@ class Date:
 end
 
 class Enum:
-    def of(obj):
-        return Enum.of(obj, nil)
-    end
+    def of(obj): return @of(obj, nil)
 
     def of(obj, funs):
        if not obj or obj.isEmpty(): return nil
@@ -322,19 +336,21 @@ class Enum:
         isFirstValueScalar = obj.0 is not Object
         args = "value"
         if not isArray and not isFirstValueScalar: args $= String.from(obj.0, ", ")
+        args += ", key"
 
-        guStr = "class$ " + className + "(Enum):
-            def init(" + args + "): pass
+        guStr = "class$ \(className)(Enum):
+            def init(\(args)): pass
             def equals(other): return @matches(other)
         end"
         clazz = gu guStr
 
         for key in obj:
             val = nil
-            if isArray: val $= clazz(key)
-            elsif isFirstValueScalar: val $= clazz(obj.(key))
+            if isArray: val $= clazz(key, key)
+            elsif isFirstValueScalar: val $= clazz(obj.(key), key)
             else:
                 args $= String.from(obj.(key).values(), ", ")
+                args += ", \(key)"
                 constructor =  "clazz(" + args + ")"
                 val $= gu constructor
             end

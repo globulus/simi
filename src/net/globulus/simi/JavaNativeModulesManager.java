@@ -95,6 +95,12 @@ class JavaNativeModulesManager implements NativeModulesManager {
         } else {
             SimiApiClass apiClass = classes.get(className);
             if (apiClass != null) {
+                Environment environment = (Environment) interpreter.getEnvironment();
+                environment.assign(Token.self(), new SimiValue.Object(self), true);
+                SimiClassImpl clazz = (SimiClassImpl) self.getSimiClass();
+                if (clazz != null) {
+                    environment.assign(Token.superToken(), new SimiClassImpl.SuperClassesList(clazz.superclasses), true);
+                }
                 return apiClass.call(className, methodName, self, interpreter, args);
             }
         }

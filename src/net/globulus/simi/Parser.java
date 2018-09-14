@@ -223,7 +223,7 @@ class Parser {
           elseBranch = block("else", true);
           break;
         } else {
-          op = new Token(EQUAL_EQUAL, null, null, when.line);
+          op = new Token(EQUAL_EQUAL, null, null, when.line, when.file);
         }
         Expr right = call();
         conditions.add(new Expr.Binary(left, op, right));
@@ -233,7 +233,7 @@ class Parser {
         continue;
       }
       Expr condition = conditions.get(0);
-      Token or = new Token(OR, null, null, when.line);
+      Token or = new Token(OR, null, null, when.line, when.file);
       for (int i = 1; i < conditions.size(); i++) {
         condition = new Expr.Logical(condition, or, conditions.get(i));
       }
@@ -337,23 +337,28 @@ class Parser {
     List<Stmt.Annotation> annotations = getAnnotations();
     String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
     Expr.Block block = block(declaration, blockKind, false, false);
-    List<Stmt> statements;
-    // Check empty init and put assignments into it
-    if (name.lexeme.equals(Constants.INIT) && block.isEmpty()) {
-      statements = new ArrayList<>();
-      for (Expr param : block.params) {
-        Expr.Variable paramName;
-        if (param instanceof Expr.Variable) {
-          paramName = (Expr.Variable) param;
-        } else {
-          Expr.Binary typeCheck = (Expr.Binary) param;
-          paramName = (Expr.Variable) typeCheck.left;
+    List<Stmt> statements = null;
+    // Check empty init or set* and put assignments into it
+    if (block.isEmpty()) {
+      if (name.lexeme.equals(Constants.INIT)) {
+        statements = new ArrayList<>();
+        for (Expr param : block.params) {
+          Expr.Variable paramName = extractParamName(param);
+          statements.add(new Stmt.Expression(new Expr.Set(name,
+                  new Expr.Self(Token.self(), null), paramName, paramName)));
         }
+      } else if (name.lexeme.startsWith(Constants.SET) && block.params.size() == 1) {
+          statements = new ArrayList<>();
+          int offset = Constants.SET.length();
+        Token valueName = new Token(TokenType.IDENTIFIER, name.lexeme.substring(offset, offset + 1).toLowerCase()
+                + name.lexeme.substring(offset + 1), null, name.line, name.file);
+        Expr.Variable paramName = extractParamName(block.params.get(0));
         statements.add(new Stmt.Expression(new Expr.Set(name,
-                        new Expr.Self(Token.self(), null), paramName, paramName)));
+                new Expr.Self(Token.self(), null), new Expr.Variable(valueName), paramName)));
       }
-    } else {
-      statements = block.statements;
+    }
+    if (statements == null) {
+        statements = block.statements;
     }
     addParamChecks(declaration, block.params, statements);
     block = new Expr.Block(declaration, block.params, statements, true);
@@ -391,7 +396,7 @@ class Parser {
     } else {
       Stmt stmt = statement(true);
       if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
-        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line), ((Stmt.Expression) stmt).expression);
+        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), ((Stmt.Expression) stmt).expression);
       }
       statements.add(stmt);
     }
@@ -412,7 +417,7 @@ class Parser {
           Expr.Variable id = new Expr.Variable(consume(IDENTIFIER, "Expect parameter name."));
           if (match(IS)) {
             Token is = previous();
-            Expr.Variable type = new Expr.Variable(consume(IDENTIFIER, "Expected type after is."));
+            Expr type = call();
             params.add(new Expr.Binary(id, is, type));
           } else {
             params.add(id);
@@ -646,12 +651,12 @@ class Parser {
       Token previous = previous();
       Token specifier = null;
        if (peekSequence(LEFT_PAREN, DEF, RIGHT_PAREN)) {
-         specifier = new Token(DEF, Constants.SELF_DEF, null, previous.line);
+         specifier = new Token(DEF, Constants.SELF_DEF, null, previous.line, previous.file);
          advance();
          advance();
          advance();
        }
-        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line), specifier);
+        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line, previous.file), specifier);
     }
 
     if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {
@@ -663,7 +668,7 @@ class Parser {
     }
 
     if (match(COLON)) {
-      Token declaration = new Token(DEF, null, null, previous().line);
+      Token declaration = new Token(DEF, null, null, previous().line, previous().file);
       return new Expr.Block(declaration, new ArrayList<>(), getBlockStatements(declaration, LAMBDA), true);
     }
 
@@ -798,7 +803,7 @@ class Parser {
       default:
         throw new IllegalArgumentException("Unable to process assignment operator: " + assignOp.type);
     }
-    return new Token(type, assignOp.lexeme, null, assignOp.line);
+    return new Token(type, assignOp.lexeme, null, assignOp.line, assignOp.file);
   }
 
   private ParseError error(Token token, String message) {
@@ -851,7 +856,7 @@ class Parser {
                   declaration, Collections.emptyList())
           ));
           stmts.add(0, new Stmt.If(
-                  new Stmt.Elsif(new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line), paramType),
+                  new Stmt.Elsif(new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line, declaration.file), paramType),
                           new Expr.Block(typeCheck.operator, Collections.emptyList(),
                                   exceptionStmt, true)), Collections.emptyList(), null));
       }
@@ -860,14 +865,14 @@ class Parser {
 
   static Expr getAssignExpr(Parser parser, Expr expr, Token equals, Expr value) {
     if (expr instanceof Expr.Literal && ((Expr.Literal) expr).value instanceof SimiValue.String) {
-      Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line);
+      Token literal = new Token(TokenType.STRING, null, ((Expr.Literal) expr).value, equals.line, equals.file);
       return new Expr.Assign(literal, equals, value, (parser != null) ? parser.getAnnotations() : null);
     } else if (expr instanceof Expr.Variable) {
       Token name = ((Expr.Variable)expr).name;
       if (equals.type == EQUAL || equals.type == DOLLAR_EQUAL) {
         return new Expr.Assign(name, equals, value, (parser != null) ? parser.getAnnotations() : null);
       } else {
-        return new Expr.Assign(name, new Token(DOLLAR_EQUAL, null, null, equals.line),
+        return new Expr.Assign(name, new Token(DOLLAR_EQUAL, null, null, equals.line, equals.file),
                 new Expr.Binary(expr, operatorFromAssign(equals), value),
                 (parser != null) ? parser.getAnnotations() : null);
       }
@@ -890,12 +895,20 @@ class Parser {
         Token name = ((Expr.Variable) prop).name;
         Expr getByName = new Expr.Get(name, value, prop, null);
         Expr getByIndex = new Expr.Get(name, value, new Expr.Literal(new SimiValue.Number(i)), null);
-        Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line), getByIndex);
+        Expr nilCoalescence = new Expr.Binary(getByName, new Token(TokenType.QUESTION_QUESTION, null, null, name.line, name.file), getByIndex);
         assigns.add(new Expr.Assign(name, equals, nilCoalescence, annotations));
       }
       return new Expr.ObjectDecomp(assigns);
     }
     ErrorHub.sharedInstance().error(equals, "Invalid assignment target.");
     return null;
+  }
+
+  private Expr.Variable extractParamName(Expr param) {
+    if (param instanceof Expr.Variable) {
+      return (Expr.Variable) param;
+    }
+    Expr.Binary typeCheck = (Expr.Binary) param;
+    return (Expr.Variable) typeCheck.left;
   }
 }

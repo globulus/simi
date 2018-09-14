@@ -4,6 +4,7 @@ import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
 import "./SimiSync/SimiSyncModels.simi"
+import "./Stdlib/Mariadb.simi"
 
 def closureTest():
    a = 5
@@ -341,7 +342,7 @@ class Car:
         print "Doing something"
         if amount < 0: CarException("Amount < 0!").raise()
         if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity # BP
+        if @tank + amount > @capacity: @tank = @capacity
         else: @tank = @tank + amount
     end
 
@@ -495,7 +496,7 @@ end
 print ivic so
 clone = gu ivic so
 print clone.matches(so)
-print ivic clone # BP
+print ivic clone
 
 class_ ModuleClass:
 
@@ -581,3 +582,40 @@ button = Button()\
     .setBackgroundColor(Color.WHITE)\
     .setOnClickListener(def sender: print sender.title)
 button.performClick()
+
+!Orm.Table()
+class OrmTesting:
+    !Orm.Column()
+    !Orm.PrimaryKey()
+    id = 0
+
+    !Orm.Column()
+    first = ""
+
+    def init(id, first): pass
+end
+
+def mariaDbTest():
+    db = MariaDb()
+    orm = Orm(db, "localhost", 3306, "test", "root", "")
+    print db
+    print "db open"
+    orm.createTable(OrmTesting)
+#    sql = "CREATE TABLE IF NOT EXISTS REGISTRATION (id INTEGER not NULL, first VARCHAR(255), last VARCHAR(255), age INTEGER, PRIMARY KEY ( id ))"
+#    db.execute(sql)
+#    results = db.execute("SELECT * FROM REGISTRATION")
+    results = orm.query(OrmTesting).where("id = 1").orderBy(["id" = false]).limit(2).queryForArray()
+    print results
+    while results.next():
+        print "results.next()"
+        print results.getString("first")
+    end
+    orm.createOrUpdate(OrmTesting(2, "Test2"))
+#    orm.delete(OrmTesting(2, "Test2"))
+#    orm.deleteForId(OrmTesting, 2)
+    orm.close()
+    rescue ex:
+        if ex: print ex.message
+    end
+end
+mariaDbTest()

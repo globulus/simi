@@ -133,8 +133,11 @@ abstract class SimiObjectImpl implements SimiObject {
     abstract int length();
 
   void checkMutability(Token name, Environment environment) {
-      if (this.immutable && environment.get(Token.self()).getObject() != this) {
-          throw new RuntimeError(name, "Trying to alter an immutable object!");
+      if (this.immutable) {
+          SimiValue self = environment.get(Token.self());
+          if (self != null && self.getObject() != this) {
+              throw new RuntimeError(name, "Trying to alter an immutable object!");
+          }
       }
   }
 
@@ -182,9 +185,11 @@ abstract class SimiObjectImpl implements SimiObject {
 
   @Override
   public String toString() {
-      SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
-      if (method != null && !method.function.isNative) {
-          return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getValue().getString();
+      if (clazz != null) {
+          SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
+          if (method != null && !method.function.isNative) {
+              return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getValue().getString();
+          }
       }
     StringBuilder sb = new StringBuilder();
     sb.append("[\n");

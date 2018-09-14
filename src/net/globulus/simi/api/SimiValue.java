@@ -257,6 +257,10 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
             }
             return valueDouble;
         }
+
+        public boolean isInteger() {
+            return valueLong != null;
+        }
     }
 
     public static class Object extends SimiValue {

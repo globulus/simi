@@ -100,11 +100,11 @@ abstract class Expr implements Codifiable {
         if (!(stmt instanceof Stmt.Expression)) {
           return false;
         }
-        Stmt.Expression expr = (Stmt.Expression) stmt;
-        if (!(expr.expression instanceof Expr.Literal)) {
+        Expr expr = ((Stmt.Expression) stmt).expression;
+        if (!(expr instanceof Expr.Literal)) {
           return false;
         }
-        return ((Expr.Literal) expr.expression).value instanceof Pass;
+        return ((Expr.Literal) expr).value instanceof Pass;
       }
 
       String toCode(int indentationLevel, boolean ignoreFirst, String name) {
@@ -172,7 +172,7 @@ abstract class Expr implements Codifiable {
               otherStmts.addAll(statements.subList(i + 1, size));
               Expr.Call call = new Expr.Call(expr.value.callee, expr.value.paren, new ArrayList<>(expr.value.arguments));
               call.arguments.add(new Expr.Block(
-                      new Token(TokenType.DEF, null, null, expr.assign.line),
+                      new Token(TokenType.DEF, null, null, expr.assign.line, expr.assign.file),
                       Collections.singletonList(response),
                       otherStmts,
                       true));

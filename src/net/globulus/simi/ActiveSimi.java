@@ -12,6 +12,8 @@ import java.util.Map;
 
 public class ActiveSimi {
 
+    private static final String FILE_ACTIVE_SIMI = "ActiveSimi";
+
     private static Interpreter interpreter;
     private static Debugger debugger;
     static boolean hadError = false;
@@ -101,7 +103,7 @@ public class ActiveSimi {
             }
         }
 
-        Scanner scanner = new Scanner(source, debugger);
+        Scanner scanner = new Scanner(FILE_ACTIVE_SIMI, source, debugger);
         List<Token> tokens = scanImports(scanner.scanTokens(true), nativeModulesManagers);
         Parser parser = new Parser(tokens, debugger);
         List<Stmt> statements = parser.parse();
@@ -117,7 +119,7 @@ public class ActiveSimi {
     }
 
     private static SimiProperty runExpression(String expression) {
-        List<Token> tokens  = new Scanner(expression, debugger).scanTokens(true);
+        List<Token> tokens  = new Scanner(FILE_ACTIVE_SIMI, expression, debugger).scanTokens(true);
         List<Stmt> statements = new Parser(tokens, debugger).parse();
         return interpreter.interpret(statements);
     }
@@ -144,7 +146,7 @@ public class ActiveSimi {
             Path path = Paths.get(location);
             String pathString = path.toString().toLowerCase();
             if (pathString.endsWith(".simi")) {
-                List<Token> tokens = new Scanner(readFile(location), debugger).scanTokens(false);
+                List<Token> tokens = new Scanner(pathString, readFile(location), debugger).scanTokens(false);
                 result.addAll(scanImports(tokens, nativeModulesManagers));
             } else if (nativeModulesManagers != null) {
                 String extension = pathString.substring(pathString.lastIndexOf('.') + 1);
@@ -171,7 +173,7 @@ public class ActiveSimi {
         public void runtimeError(RuntimeError error) {
 
             System.err.println(error.getMessage() +
-                    "\n[line " + error.token.line + "]");
+                    "\n[" + error.token.file + " line " + error.token.line + "]");
             hadRuntimeError = true;
         }
     };

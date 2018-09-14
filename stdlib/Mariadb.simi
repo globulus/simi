@@ -1,0 +1,37 @@
+import "./stdlib/Mariadb-java.jar"
+import "./stdlib/Orm.simi"
+
+class SqlException(Exception):
+end
+
+class MariaDb(Orm.Db, Closeable):
+    def open(props): native
+    def execute(sql): native
+    def close(): native
+end
+
+class ResultSet(Closeable):
+    def moveTo(row): native
+    def moveBy(rows): native
+    def afterLast(): native
+    def beforeFirst(): native
+    def findColumn(label): native
+    def first(): native
+    def getBoolean(label): native
+    def getInt(label): native
+    def getLong(label): native
+    def getDate(label): native
+    def getFloat(label): native
+    def getDouble(label): native
+    def getString(label): native
+    def getTime(label): native
+    def isAfterLast(): native
+    def isBeforeFirst(): native
+    def isClosed(): native
+    def isFirst(): native
+    def isLast(): native
+    def last(): native
+    def previous(): native
+    def next(): native
+    def close(): native
+end

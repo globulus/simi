@@ -13,6 +13,8 @@ import java.util.List;
 
 public class Simi {
 
+  private static final String FILE_SIMI = "Simi";
+
   private static Interpreter interpreter;
   private static Debugger debugger = new Debugger();
   static boolean hadError = false;
@@ -64,7 +66,7 @@ public class Simi {
 
       long time = System.currentTimeMillis();
       System.out.print("Scanning and resolving imports...");
-    Scanner scanner = new Scanner(source, debugger);
+    Scanner scanner = new Scanner(FILE_SIMI, source, debugger);
     List<Token> tokens = scanImports(scanner.scanTokens(true), imports, nativeModulesManager);
     System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
     time = System.currentTimeMillis();
@@ -113,7 +115,7 @@ public class Simi {
       if (pathString.endsWith(".jar")) {
           nativeModulesManager.load(path.toUri().toURL().toString(), true);
       } else if (pathString.endsWith(".simi")) {
-          List<Token> tokens = new Scanner(readFile(location, false), debugger).scanTokens(false);
+          List<Token> tokens = new Scanner(pathString, readFile(location, false), debugger).scanTokens(false);
           result.addAll(scanImports(tokens, imports, nativeModulesManager));
       }
     }
@@ -133,7 +135,7 @@ public class Simi {
     public void runtimeError(RuntimeError error) {
 
       System.err.println(error.getMessage() +
-              "\n[line " + error.token.line + "]");
+              "\n[" + error.token.file + " line " + error.token.line + "]");
       hadRuntimeError = true;
     }
   };

@@ -120,6 +120,7 @@ The *pass* keyword is used to denote an empty expression, and is put where a sta
 # It can also be used for specifying empty methods that are meant to be overriden
 def next(): pass
 ```
+It is also used to denote that a block should be autofilled by the interpreter (e.g, for [inits and setters](#classes)).
 
 #### Code blocks
 A part of Šimi's consistent syntax is reflected in its use of code blocks - every single block of code starts with a colon (:), followed by one or multiple statements. If the block has only one statement, it can be placed in the same line as the block, otherwise the statements must start in a new line, and the block needs to be termined with an *end*.
@@ -499,6 +500,20 @@ class Point:
     # In value classes, you may want to override the equals method
     # to check against fields, i.e to use matches() with == operator:
     def equals(other): return @matches(other)
+end
+```
+* Similarly, an empty method that starts with *set* and takes a single parameter will be autofilled with a setter for the given value.
+```ruby
+class Person:
+    def setId(id): pass
+    def setName(n is String): pass
+
+    # This is fully equivalent to:
+    # def setId(id): @id = id
+    # def setName(n is String):
+    #   if n is not String: TypeMismatchException(n, String).raise()
+    #   @name = n
+    # end
 end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.

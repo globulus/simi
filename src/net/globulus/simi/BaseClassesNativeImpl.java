@@ -871,6 +871,18 @@ class BaseClassesNativeImpl {
 
     private SimiNativeClass getNumberClass() {
         Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction("isInteger", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
+                SimiValue.Number value = prepareValueNativeCall(interpreter, arguments).getNumber();
+                return new SimiValue.Number(value.isInteger());
+            }
+        });
         methods.put(new OverloadableFunction("randomInt", 1), new SimiCallable() {
             @Override
             public int arity() {

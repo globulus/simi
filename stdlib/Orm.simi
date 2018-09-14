@@ -1,0 +1,204 @@
+import "./stdlib/CodeBlocks.simi"
+
+class_ Orm(Closeable):
+
+    DataType = Enum.of(["BOOL" = "getBoolean",
+                        "INTEGER" = "getInt",
+                        "BIGINT" = "getLong",
+                        "FLOAT" = "getFloat",
+                        "DOUBLE" = "getDouble",
+                        "VARCHAR" = "getString",
+                        "DATE" = "getDate",
+                        "TIME" = "getTime",
+                        "SERIAL" = "getLong"])
+
+    class_ Table:
+        def init(): pass
+        def init(name is String): pass
+    end
+
+    class_ Column:
+        def init(): pass
+        def init(name is String): pass
+        def init(name is String, dataType is DataType): pass
+        def init(name is String, dataType is DataType, notNull is Number): pass
+    end
+
+    class_ PrimaryKey:
+    end
+
+    class Db:
+        def open(props): pass
+        def execute(sql): pass
+        def close(): pass
+    end
+
+    class _TableData:
+        def init(name): pass
+        def setColumns(c): pass
+        def setPrimaryKey(pk): pass
+
+        class Column:
+            def init(name, dataType): pass
+        end
+    end
+
+    class _Query:
+        def init(orm is Orm, tableData, columns): pass
+        def where(where is String): @where = where
+        def orderBy(orderBy is Object): @orderBy = orderBy
+        def limit(limit is Number): @limit = limit
+
+        def query(): return @orm.executeRaw(@_toSql())
+        def queryForIterator():
+            return [results = @query(),
+                    tableData = @tableData(),
+                     next = def ():
+                        if @results.next():
+                            values = @tableData.columns.map(def c: "@results.\(c.dataType.value)(\"\(c.name)\")")
+                            guStr = "\(@tableData.name)(\(String.from(values, ', ')))"
+                            return gu guStr
+                        end
+                        @close()
+                        return nil
+                    end,
+                    close = :@results.close()
+            ]
+        end
+        def queryForArray(): return Object.arrayWithIterator(@queryForIterator())
+        def queryForFirst():
+            it = @queryForIterator()
+            res = it.next()
+            it.close()
+            return res
+        end
+
+        def _toSql():
+            sql = String.builder()
+            sql.add("SELECT ")
+            if @columns is String: sql.add(@columns)
+            else: sql.add(String.from(@columns, ", "))
+            sql.add(" FROM ").add(@tableData.name)
+            if @where: sql.add(" WHERE (").add(@where).add(")")
+            if @orderBy: sql.add(" ORDER BY ")\
+                            .add(String.from(@orderBy.map(def (k, v): "\(k) \(ife(v, 'ASC', 'DESC'))").values(), ", "))
+            if @limit: sql.add(" LIMIT ").add(@limit)
+            return sql.build()
+        end
+    end
+
+    def init(db is Orm.Db, ip is String, port is Number, database is String, username is String, password is String):
+        @db = db
+        db.open([ip = ip, port = port, db = database, user = username, password = password])
+        @_tableData = $[]
+    end
+    def close(): @db.close()
+
+    def executeRaw(sql is String): return @db.execute(sql)
+
+    def createTable(clazz):
+        tableName = @_checkAndGetTableName(clazz)
+        primaryKey = nil
+        columns = Object.array()
+        tableDataColumns = Object.array()
+        for field in clazz:
+            value = clazz.(field)
+            column = @_extractAnnot(value, Orm.Column)
+            if not column: continue
+            columnName = column.name ?? field
+            if @_extractAnnot(value, Orm.PrimaryKey): primaryKey $= columnName
+            columnDef = String.builder()
+            columnDef.add(columnName).add(' ')
+            dataType = column.dataType ?? @_inferDataType(value)
+            columnDef.add(dataType.key)
+            if dataType == Orm.DataType.VARCHAR: columnDef.add("(255)")
+            columnDef.add(' ')
+            if column.notNull: columnDef.add("NOT NULL")
+            columns.append(columnDef.build())
+            tableDataColumns.append(@_TableData.Column(columnName, dataType))
+        end
+        tableData = @_tableData.(clazz.toString())
+        tableData.setColumns(tableDataColumns)
+        if primaryKey:
+            columns.append("PRIMARY KEY (\(primaryKey))")
+            tableData.setPrimaryKey(primaryKey)
+        end
+        sql = "CREATE TABLE IF NOT EXISTS \(tableName) (\(String.from(columns, ', ')))"
+        return @executeRaw(sql)
+    end
+
+    def dropTable(clazz):
+        tableName = @_checkAndGetTableName(clazz)
+        sql = "DROP TABLE IF EXISTS \(tableName)"
+        return @executeRaw(sql)
+    end
+
+    def query(clazz): return @_query(clazz, "*")
+    def query(clazz, columns): return @_query(clazz, columns)
+    def _query(clazz, param): return @_Query(self, @_tableData.(clazz.toString()), param)
+
+    def createOrUpdate(obj is Object):
+        data = @_prepareForOp(obj, "create or update")
+        sql = "INSERT INTO \(data.name) (\(String.from(data.columns, ', ')))
+               VALUES (\(String.from(data.values, ', ')))
+               ON DUPLICATE KEY UPDATE
+               \(String.from(data.joined, ', '));"
+       return @executeRaw(sql)
+    end
+
+    def delete(obj is Object):
+        data = @_prepareForOp(obj, "delete")
+        sql = "DELETE FROM \(data.name) WHERE (\(String.from(data.joined, ' AND ')))"
+        return @executeRaw(sql)
+    end
+
+    def deleteForId(clazz, id):
+        tableData = @_tableData.(clazz.toString())
+        sql = "DELETE FROM \(tableData.name) WHERE (\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
+        return @executeRaw(sql) # BP
+    end
+
+    def _extractAnnot(field, annotClass): return (!!field).where(def a: a is annotClass).first()
+
+    def _checkAndGetTableName(clazz):
+        classStr = clazz.toString()
+        tableName = @_tableData.(classStr).name
+        if not tableName:
+            import CodeBlocks
+            table = @_extractAnnot(clazz, Orm.Table)
+            if not table: IllegalArgumentException("\(clazz) must be annotated with \(Orm.Table)!").raise()
+            tableName $= table.name ?? ClassCode(clazz).name
+            @_tableData.(classStr) = @_TableData(tableName)
+        end
+        return tableName
+    end
+
+    def _inferDataType(value):
+        when value:
+            is Number: return ife(value.isInteger(), Orm.DataType.BIGINT, Orm.DataType.DOUBLE)
+            is String: return Orm.DataType.VARCHAR
+            is Date: return Orm.DataType.DATE
+            else: IllegalArgumentException("Can't infer data type for value: \(value)").raise()
+        end
+    end
+
+    def _prepareForOp(obj is Object, op is String):
+        clazz = obj.("class")
+        tableData = @_tableData.(clazz.toString())
+        if not tableData: IllegalArgumentException("Cannot \(op) object of type: \(clazz)!").raise()
+        columns = tableData.columns.map(def c: c.name)
+        values = columns.map(def c: @_valueToSqlString(obj.(c)))
+        joined = columns.enumerate().map(def e: "\(e.value)=\(values.(e.key))")
+        return [
+            name = tableData.name,
+            columns = columns,
+            values = values,
+            joined = joined
+        ]
+    end
+
+    def _valueToSqlString(value):
+        if value is String: return "'\(value)'"
+        return value # TODO dates
+    end
+end
