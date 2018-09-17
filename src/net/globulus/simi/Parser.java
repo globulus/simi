@@ -179,11 +179,27 @@ class Parser {
   }
 
   private Stmt forStatement() {
-      Token var = consume(IDENTIFIER, "Expected identifier.");
+      Token forToken = previous();
+      Token var = null;
+      Expr decompExpr = null;
+      if (match(IDENTIFIER)) {
+        var = previous();
+      } else if (match(LEFT_BRACKET)) {
+        var = new Token(IDENTIFIER, "var" + System.currentTimeMillis(), null, forToken.line, forToken.file);
+        decompExpr = objectLiteral();
+      } else {
+        error(peek(), "Expected identifier or object decomp in for loop.");
+      }
       consume(IN, "Expected 'in'.");
       Expr iterable = expression();
-      Expr.Block body = block("for", true);
-      return new Stmt.For(new Expr.Variable(var), iterable, body);
+      List<Stmt> prependedStmts = null;
+      Expr.Variable varExpr = new Expr.Variable(var);
+      if (decompExpr != null) {
+        prependedStmts = new ArrayList<>();
+        prependedStmts.add(new Stmt.Expression(getAssignExpr(this, decompExpr, forToken, varExpr)));
+      }
+      Expr.Block body = block("for", true, prependedStmts);
+      return new Stmt.For(varExpr, iterable, body);
   }
 
   private Stmt ifStatement() {
@@ -336,7 +352,7 @@ class Parser {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     List<Stmt.Annotation> annotations = getAnnotations();
     String blockKind = name.lexeme.equals(Constants.INIT) ? Constants.INIT : kind;
-    Expr.Block block = block(declaration, blockKind, false, false);
+    Expr.Block block = block(declaration, blockKind, false, null, false);
     List<Stmt> statements = null;
     // Check empty init or set* and put assignments into it
     if (block.isEmpty()) {
@@ -366,16 +382,31 @@ class Parser {
   }
 
   private Expr.Block block(String kind, boolean lambda) {
-    return block(null, kind, lambda, true);
+    return block(kind, lambda, null);
   }
 
-  private Expr.Block block(Token declaration, String kind, boolean lambda, boolean addParamChecks) {
+  private Expr.Block block(String kind, boolean lambda, List<Stmt> prependedStmts) {
+    return block(null, kind, lambda, prependedStmts, true);
+  }
+
+  private Expr.Block block(Token declaration,
+                           String kind,
+                           boolean lambda,
+                           List<Stmt> prependedStmts,
+                           boolean addParamChecks) {
     if (declaration == null) {
       declaration = previous();
     }
     List<Expr> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
-    List<Stmt> statements = getBlockStatements(declaration, kind);
+    List<Stmt> blockStmts = getBlockStatements(declaration, kind);
+    List<Stmt> statements;
+    if (prependedStmts != null) {
+      statements = prependedStmts;
+      statements.addAll(blockStmts);
+    } else {
+      statements = blockStmts;
+    }
     if (addParamChecks) {
       addParamChecks(declaration, params, statements);
     }

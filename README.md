@@ -762,10 +762,15 @@ end
 ```ruby
 for i in 6.times(): print i # Prints 0 1 2 3 4 5 6
 for c in "abcdef": print c # Prints a b c d e f
+
+# Iterating over array iterates over its values
 for value in [10, 20, 30, 40]: print value # Prints 10 20 30 40
+
 object = [a = 1, b = "str", c = Pen(color = "blue")]
+# Iterating over keyed objects over its keys
 for key in object: print key # Prints a, b, c
-for item in object.enumerate(): print item.key + " = " + item.value # Prints a = 1, b = str, etc.
+# Object decomposition syntax can be used with for loop as well
+for [key, value] in object.enumerate(): print key + " = " + value # Prints a = 1, b = str, etc.
 ```
 If the expression can't evaluate to an iterator or an iterable, an exception will be thrown.
 
