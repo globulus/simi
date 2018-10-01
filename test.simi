@@ -4,7 +4,7 @@ import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
 import "./SimiSync/SimiSyncModels.simi"
-import "./Stdlib/Mariadb.simi"
+import "./Stdlib/sql/Mariadb.simi"
 
 def closureTest():
    a = 5
@@ -604,7 +604,7 @@ def mariaDbTest():
 #    sql = "CREATE TABLE IF NOT EXISTS REGISTRATION (id INTEGER not NULL, first VARCHAR(255), last VARCHAR(255), age INTEGER, PRIMARY KEY ( id ))"
 #    db.execute(sql)
 #    results = db.execute("SELECT * FROM REGISTRATION")
-    results = orm.query(OrmTesting).where("id = 1").orderBy(["id" = false]).limit(2).queryForArray()
+    results = orm.query(OrmTesting).queryForArray()
     print results
     while results.next():
         print "results.next()"

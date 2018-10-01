@@ -30,6 +30,11 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
     }
 
     @Override
+    public java.lang.String getFileName() {
+        return null;
+    }
+
+    @Override
     public boolean hasBreakPoint() {
         return false;
     }

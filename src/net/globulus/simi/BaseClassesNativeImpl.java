@@ -359,7 +359,11 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                SimiObjectImpl other = (SimiObjectImpl) arguments.get(1).getValue().getObject();
+                SimiProperty otherProp = arguments.get(1);
+                if (otherProp == null) {
+                    return new SimiValue.Number(false);
+                }
+                SimiObjectImpl other = (SimiObjectImpl) otherProp.getValue().getObject();
                 return new SimiValue.Number(self.matches(other, null));
             }
         });

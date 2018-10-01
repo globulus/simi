@@ -13,6 +13,7 @@ public interface SimiCallable extends Codifiable {
   default int getLineNumber() {
     return -1;
   }
+  default String getFileName() { return null; }
   default boolean hasBreakPoint() {
     return false;
   }

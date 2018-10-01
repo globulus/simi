@@ -129,7 +129,7 @@ class Interpreter implements
 //    if (index < statements.size() - 2) {
 //      after = new Codifiable[] { statements.get(index + 1), statements.get(index + 2) };
 //    }
-    debugger.push(new Debugger.Frame(environment.deepClone(), stmt, before, after));
+    debugger.pushLine(new Debugger.Frame(environment.deepClone(), stmt, before, after));
     if (stmt.hasBreakPoint()) {
         debugger.triggerBreakpoint(stmt);
     }
@@ -166,7 +166,7 @@ class Interpreter implements
             } else if (block.canReturn()) {
               throw new Return(null);
             } else {
-              throw new Break();
+              throw new Break(raisedExceptions.peek());
             }
           }
         } catch (Yield yield) {
@@ -642,8 +642,14 @@ class Interpreter implements
 
   @Override
   public SimiProperty visitCallExpr(Expr.Call expr) {
+    if (debugger != null) {
+      debugger.pushCall(new Debugger.Frame(environment.deepClone(), expr, null, null));
+    }
     SimiProperty callee = evaluate(expr.callee);
     SimiProperty result = call(callee, expr.arguments, expr.paren);
+    if (debugger != null) {
+      debugger.popCall();
+    }
     return result;
   }
 

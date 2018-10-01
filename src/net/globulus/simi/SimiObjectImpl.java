@@ -253,6 +253,11 @@ abstract class SimiObjectImpl implements SimiObject {
     }
 
     @Override
+    public String getFileName() {
+        return null;
+    }
+
+    @Override
     public boolean hasBreakPoint() {
         return false;
     }

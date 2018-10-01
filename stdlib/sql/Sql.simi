@@ -1,13 +1,6 @@
-import "./stdlib/Mariadb-java.jar"
-import "./stdlib/Orm.simi"
+import "./stdlib/sql/Sql-java.jar"
 
 class SqlException(Exception):
-end
-
-class MariaDb(Orm.Db, Closeable):
-    def open(props): native
-    def execute(sql): native
-    def close(): native
 end
 
 class ResultSet(Closeable):

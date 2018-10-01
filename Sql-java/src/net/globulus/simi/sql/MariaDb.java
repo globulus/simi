@@ -1,4 +1,4 @@
-package net.globulus.simi.mariadb;
+package net.globulus.simi.sql;
 
 import net.globulus.simi.SimiMapper;
 import net.globulus.simi.api.*;
@@ -85,6 +85,7 @@ public class MariaDb {
     private static Connection getConn(SimiObject self, BlockInterpreter interpreter) {
         return ((ConnectionWrapper) self.get(NATIVE_CONN, interpreter.getEnvironment()).getValue().getObject()).conn;
     }
+
     private static class ConnectionWrapper implements SimiObject {
 
         Connection conn;

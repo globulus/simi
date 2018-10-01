@@ -153,7 +153,12 @@ abstract class Expr implements Codifiable {
         return declaration.line;
       }
 
-        @Override
+      @Override
+      public String getFileName() {
+        return declaration.file;
+      }
+
+      @Override
         public boolean hasBreakPoint() {
             return declaration.hasBreakpoint;
         }
@@ -211,7 +216,12 @@ abstract class Expr implements Codifiable {
         return tokens.get(0).line;
       }
 
-        @Override
+      @Override
+      public String getFileName() {
+        return tokens.get(0).file;
+      }
+
+      @Override
         public boolean hasBreakPoint() {
             return false;
         }
@@ -256,7 +266,12 @@ abstract class Expr implements Codifiable {
       return name.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return name.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return name.hasBreakpoint;
       }
@@ -296,7 +311,12 @@ abstract class Expr implements Codifiable {
       return assigns.get(0).getLineNumber();
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return assigns.get(0).getFileName();
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return assigns.get(0).hasBreakPoint();
       }
@@ -328,7 +348,12 @@ abstract class Expr implements Codifiable {
       return operator.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return operator.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return operator.hasBreakpoint;
       }
@@ -367,7 +392,12 @@ abstract class Expr implements Codifiable {
       return paren.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return paren.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return paren.hasBreakpoint;
       }
@@ -401,7 +431,12 @@ abstract class Expr implements Codifiable {
       return origin.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return origin.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return origin.hasBreakpoint;
       }
@@ -434,7 +469,12 @@ abstract class Expr implements Codifiable {
       return expression.getLineNumber();
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return expression.getFileName();
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return expression.hasBreakPoint();
       }
@@ -465,7 +505,12 @@ abstract class Expr implements Codifiable {
       return expr.getLineNumber();
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return expr.getFileName();
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return expr.hasBreakPoint();
       }
@@ -496,7 +541,12 @@ abstract class Expr implements Codifiable {
       return expr.getLineNumber();
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return expr.getFileName();
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return expr.hasBreakPoint();
       }
@@ -527,7 +577,12 @@ abstract class Expr implements Codifiable {
       return (value == null) ? -1 : value.getLineNumber();
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return (value == null) ? null : value.getFileName();
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return (value != null) && value.hasBreakPoint();
       }
@@ -564,7 +619,12 @@ abstract class Expr implements Codifiable {
       return operator.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return operator.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return operator.hasBreakpoint;
       }
@@ -603,7 +663,12 @@ abstract class Expr implements Codifiable {
       return origin.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return origin.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return origin.hasBreakpoint;
       }
@@ -642,7 +707,12 @@ abstract class Expr implements Codifiable {
       return keyword.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return keyword.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return keyword.hasBreakpoint;
       }
@@ -678,7 +748,12 @@ abstract class Expr implements Codifiable {
       return keyword.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return keyword.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return keyword.hasBreakpoint;
       }
@@ -708,7 +783,12 @@ abstract class Expr implements Codifiable {
       return operator.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return operator.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return operator.hasBreakpoint;
       }
@@ -736,7 +816,12 @@ abstract class Expr implements Codifiable {
         return name.line;
       }
 
-        @Override
+      @Override
+      public String getFileName() {
+        return name.file;
+      }
+
+      @Override
         public boolean hasBreakPoint() {
             return name.hasBreakpoint;
         }
@@ -777,7 +862,12 @@ abstract class Expr implements Codifiable {
         return opener.line;
       }
 
-        @Override
+      @Override
+      public String getFileName() {
+        return opener.file;
+      }
+
+      @Override
         public boolean hasBreakPoint() {
             return opener.hasBreakpoint;
         }
@@ -817,7 +907,12 @@ abstract class Expr implements Codifiable {
       return keyword.line;
     }
 
-      @Override
+    @Override
+    public String getFileName() {
+      return keyword.file;
+    }
+
+    @Override
       public boolean hasBreakPoint() {
           return keyword.hasBreakpoint;
       }

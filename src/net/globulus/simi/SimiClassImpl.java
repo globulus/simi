@@ -1,6 +1,9 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.*;
+import net.globulus.simi.api.BlockInterpreter;
+import net.globulus.simi.api.SimiClass;
+import net.globulus.simi.api.SimiProperty;
+import net.globulus.simi.api.SimiValue;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,7 +52,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
         if (method != null) {
             return new SimiPropertyImpl(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
         }
-        if (superclasses != null) {
+        if (superclasses != null && !name.lexeme.startsWith(Constants.PRIVATE)) {
             for (SimiClassImpl superclass : superclasses) {
                 SimiProperty superclassProp = superclass.get(name, arity, environment);
                 if (superclassProp != null) {
@@ -77,7 +80,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
             }
         }
 
-    if (superclasses != null) {
+    if (superclasses != null && !name.startsWith(Constants.PRIVATE)) {
         for (SimiClassImpl superclass : superclasses) {
             SimiMethod method  = superclass.findMethod(instance, name, arity);
             if (method != null) {
@@ -243,7 +246,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
       @Override
       public SimiValue clone(boolean mutable) {
-          throw new AssertionError();
+          return copy();
       }
 
       @Override

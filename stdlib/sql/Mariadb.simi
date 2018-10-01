@@ -1,0 +1,7 @@
+import "./stdlib/sql/Orm.simi"
+
+class MariaDb(Orm.Db, Closeable):
+    def open(props): native
+    def execute(sql): native
+    def close(): native
+end

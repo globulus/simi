@@ -1,15 +1,11 @@
-package net.globulus.simi.mariadb;
+package net.globulus.simi.sql;
 
 import net.globulus.simi.api.*;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.sql.Connection;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 

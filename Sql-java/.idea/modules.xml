@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Mariadb-java.iml" filepath="$PROJECT_DIR$/Mariadb-java.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Sql-java.iml" filepath="$PROJECT_DIR$/Sql-java.iml" />
     </modules>
   </component>
 </project>

@@ -1,4 +1,5 @@
 import "./stdlib/CodeBlocks.simi"
+import "./stdlib/sql/Sql.simi"
 
 class_ Orm(Closeable):
 
@@ -8,7 +9,7 @@ class_ Orm(Closeable):
                         "FLOAT" = "getFloat",
                         "DOUBLE" = "getDouble",
                         "VARCHAR" = "getString",
-                        "DATE" = "getDate",
+                        "DATETIME" = "getDate",
                         "TIME" = "getTime",
                         "SERIAL" = "getLong"])
 
@@ -39,7 +40,7 @@ class_ Orm(Closeable):
         def setPrimaryKey(pk): pass
 
         class Column:
-            def init(name, dataType): pass
+            def init(name, dataType, fieldName): pass
         end
     end
 
@@ -49,14 +50,14 @@ class_ Orm(Closeable):
         def orderBy(orderBy is Object): @_orderBy = orderBy
         def limit(limit is Number): @_limit = limit
 
-        def query(): return @orm.executeRaw(@_toSql())
-        def queryForIterator():
-            return [results = @query(),
+        def resultSet(): return @orm.executeRaw(@_toSql())
+        def iterator():
+            return [results = @resultSet(),
                     tableData = @tableData(),
                      next = def ():
                         if @results.next():
-                            values = @tableData.columns.map(def c: "@results.\(c.dataType.value)(\"\(c.name)\")")
-                            guStr = "\(@tableData.name)(\(String.from(values, ', ')))"
+                            values = @tableData.columns.map(def c: "\(c.fieldName)(@results.\(c.dataType.value)(\"\(c.name)\"))")
+                            guStr = "\(@tableData.name).builder().\(String.from(values, '.')).build()"
                             return gu guStr
                         end
                         @close()
@@ -65,9 +66,9 @@ class_ Orm(Closeable):
                     close = :@results.close()
             ]
         end
-        def queryForArray(): return Object.arrayWithIterator(@queryForIterator())
-        def queryForFirst():
-            it = @queryForIterator()
+        def array(): return Object.arrayWithIterator(@iterator())
+        def first():
+            it = @iterator()
             res = it.next()
             it.close()
             return res
@@ -116,7 +117,7 @@ class_ Orm(Closeable):
             columnDef.add(' ')
             if column.notNull: columnDef.add("NOT NULL")
             columns.append(columnDef.build())
-            tableDataColumns.append(@_TableData.Column(columnName, dataType))
+            tableDataColumns.append(@_TableData.Column(columnName, dataType, field))
         end
         tableData = @_tableData.(clazz.toString())
         tableData.setColumns(tableDataColumns)
@@ -141,7 +142,7 @@ class_ Orm(Closeable):
     def queryForId(clazz, id):
         query = @query(clazz)
         where = @_whereForId(query.tableData, id)
-        return query.where(where).limit(1).queryForFirst()
+        return query.where(where).limit(1).first()
     end
 
     def createOrUpdate(obj is Object):
@@ -162,7 +163,7 @@ class_ Orm(Closeable):
     def deleteForId(clazz, id):
         tableData = @_tableData.(clazz.toString())
         sql = "DELETE FROM \(tableData.name) WHERE \(@_whereForId(tableData, id))"
-        return @executeRaw(sql) # BP
+        return @executeRaw(sql)
     end
 
     def _extractAnnot(field, annotClass): return (!!field).where(def a: a is annotClass).first()
@@ -184,7 +185,7 @@ class_ Orm(Closeable):
         when value:
             is Number: return ife(value.isInteger(), Orm.DataType.BIGINT, Orm.DataType.DOUBLE)
             is String: return Orm.DataType.VARCHAR
-            is Date: return Orm.DataType.DATE
+            is Date: return Orm.DataType.DATETIME
             else: IllegalArgumentException("Can't infer data type for value: \(value)").raise()
         end
     end
@@ -207,7 +208,10 @@ class_ Orm(Closeable):
     def _whereForId(tableData, id): return "(\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
 
     def _valueToSqlString(value):
-        if value is String: return "'\(value)'"
-        return value # TODO dates
+        when value:
+            is String: return "'\(value)'"
+            is Date: return "'\(value.format("YYYY-MM-dd HH:mm:ss"))'"
+            else: return value
+        end
     end
 end

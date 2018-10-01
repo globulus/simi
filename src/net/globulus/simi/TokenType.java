@@ -142,6 +142,11 @@ enum TokenType implements Codifiable {
   }
 
   @Override
+  public String getFileName() {
+    return null;
+  }
+
+  @Override
   public boolean hasBreakPoint() {
     return false;
   }
