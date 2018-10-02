@@ -363,9 +363,10 @@ class Parser {
           statements.add(new Stmt.Expression(new Expr.Set(name,
                   new Expr.Self(Token.self(), null), paramName, paramName)));
         }
-      } else if (name.lexeme.startsWith(Constants.SET) && block.params.size() == 1) {
+      } else if ((name.lexeme.startsWith(Constants.SET) || name.lexeme.startsWith(Constants.PRIVATE + Constants.SET))
+              && block.params.size() == 1) {
           statements = new ArrayList<>();
-          int offset = Constants.SET.length();
+          int offset = name.lexeme.startsWith(Constants.SET) ? Constants.SET.length() : (Constants.PRIVATE.length() + Constants.SET.length());
         Token valueName = new Token(TokenType.IDENTIFIER, name.lexeme.substring(offset, offset + 1).toLowerCase()
                 + name.lexeme.substring(offset + 1), null, name.line, name.file);
         Expr.Variable paramName = extractParamName(block.params.get(0));

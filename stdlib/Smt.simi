@@ -1,0 +1,114 @@
+class Smt:
+    _STMT = "%%"
+    _EXPR_START = "<%="
+    _END = "%>"
+    _SKIP = "%_"
+
+    class FormatException(Exception):
+    end
+
+    def parse(template):
+        smt = Smt()
+        parts = Object.array()
+        lines = template.split("\n")
+        skip = 0
+        for [i, line] in lines.enumerate():
+            if i < skip: continue
+            trimmed = line.trim()
+            if trimmed.startsWith(@_STMT):
+                stmt = @_parseStmt(trimmed, i, lines)
+                parts.append(stmt.part)
+                parts.append("\n")
+                skip $= stmt.skip
+            end
+            else: parts.addAll(@_parseLine(line, i))
+        end
+        smt._setParts(parts)
+        return smt
+    end
+
+    def _parseStmt(trimmed, idx, lines):
+        var = "__var" + clock()
+        body = String.builder().add("(def ():
+            \(var) = String.builder()
+            \(trimmed.substring(@_STMT.len()))
+        ")
+        endCount = 1
+        skip = nil
+        for [i, line] in lines.slice(idx + 1).enumerate():
+            tl = line.trim()
+            if tl == @_STMT + "end":
+                body.add("\nend\n")
+                endCount -= 1
+                if endCount == 0:
+                    skip $= i + idx + 2
+                    break
+                end
+            end
+            elsif tl.startsWith(@_STMT):
+                body.add(tl.substring(@_STMT.len())).add("\n")
+                endCount += 1
+            end
+            else:
+                for part in @_parseLine(line, i):
+                    partVal = nil
+                    if part is String: partVal $= "\"\(part)\""
+                    else:
+                        funcBody = ivic part
+                        partVal $= "(\(funcBody.substring(0, funcBody.len() - 1)))()"
+                    end
+                    body.add(var).add(".add(").add(partVal).add(")\n")
+                end
+            end
+        end
+        body.add("return \(var).build()
+        end)")
+        return [part = gu body.build(), skip = skip] # B
+    end
+
+    def _parseLine(line, idx):
+        i = 0
+        arr = Object.array()
+        while true:
+            j = line.indexOf(@_EXPR_START, i)
+            if j:
+                arr.append(@_checkSkipTrim(line.substring(i, j)))
+                k = line.indexOf(@_END, j)
+                if not k: Smt.FormatException("Expected \(@_END) at line \(idx): \(line)").raise()
+                body = "(:" + line.substring(j + @_EXPR_START.len(), k) + ")"
+                arr.append(gu body)
+                i $= k + @_END.len()
+            end
+            else: # No expressions left in the string
+                lastPart = line.substring(i)
+                if arr.isEmpty(): lastPart $= @_checkSkipTrim(lastPart)
+                if lastPart.endsWith(@_SKIP): arr.append(lastPart.substring(0, lastPart.len() - @_SKIP.len()))
+                else: arr.append(lastPart + "\n")
+                break
+            end
+        end
+        return arr
+    end
+
+    def _checkSkipTrim(str):
+        trimmed = str.trim()
+        if trimmed.startsWith(@_SKIP): return trimmed.substring(@_SKIP.len())
+        return str
+    end
+
+    def _runPart(part):
+        when part:
+            is String: return part
+            is Function: return part()
+            else: return part.toString()
+        end
+    end
+
+    def _setParts(v): pass
+
+    def run():
+        str = String.builder() # B
+        for part in @parts: str.add(@_runPart(part))
+        return str.build()
+    end
+end

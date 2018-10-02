@@ -45,6 +45,7 @@ class$ Object:
 
     def length(): return @len()
     def isEmpty(): return @len() == 0
+    def isntEmpty(): return not @isEmpty()
     def first():
         if @isEmpty(): return nil
         else: return @0
@@ -275,6 +276,7 @@ class$ String:
     def removing(start): return @slice(start, @len())
     def substring(start): return @substring(start, @len())
     def isEmpty(): return @len() == 0
+    def isntEmpty(): return not @isEmpty()
 end
 
 class TypeMismatchException(Exception):

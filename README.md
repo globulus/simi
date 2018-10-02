@@ -77,6 +77,12 @@ What Šimi offers:
     + [Metaprogramming and (de)serialization - *gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic)
     + [Debugger](#debugger)
         - [Breakpoints](#breakpoints)
+    + [Basic modules](#basic-modules)
+        - [Stdlib](#stdlib)
+        - [File](#file)
+        - [Net](#net)
+        - [SMT](#smt)
+        - [SQL and ORM](#sql-and-orm)
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
@@ -1292,6 +1298,82 @@ When a breakpoint triggers, you can type in the following commands to use the de
 * *g* - prints out global environment.
 
 Typing in anything else (or a newline) will resume the execution of the program.
+
+### Basic modules
+
+Šimi's Stdlib comes built in with a number of modules that can be used to accomplish various tasks. Below is a quick outline of most of them:
+
+#### Stdlib
+
+
+
+#### File
+
+#### Net
+
+
+#### SMT
+
+SMT stands for ŠimiText, and is a method of embedding Šimi into text files, so that their content may be generated at runtime using the Šimi interpreter. Its purpose and usage makes it similar to [ERB](https://www.stuartellis.name/articles/erb/) or [JSX](https://reactjs.org/docs/introducing-jsx.html).
+
+Stdlib class named [Smt](https://github.com/globulus/simi/blob/master/stdlib/Smt.simi) does all the magic. To use SMT, first invoke a static method *parse*, supplying a template which is an SMT string. This will return an Smt class instance, on which you can then invoke method *run*, which will interpret all the previously parsed Šimi code in the current environment, and return the resulting string.
+
+Consider the following SMT text file that represents HTML code interspersed with Šimi:
+```html
+<html>
+    <body>
+        Value is: <b><%= value %></b> (should be 3)
+        <ul>
+            %%for i in 5.times():
+                <li>Loop value is <%= i %>%_
+                %%if i % 2:
+                    %_ odd%_
+                %%end
+                %%else:
+                    %_ even%_
+                %%end
+                %_ number</li>
+            %%end
+        </ul>
+    <body>
+</html>
+```
+Here are the rules for injecting Šimi code into any text:
+* To insert a textual result of a Šimi expression, use **<%= EXPRESSION %>**.
+* **%%** denotes that this line contains a Šimi statement, such  as a loop or a branching. The entire line is considered to be the statement, and not text can appear in it. Every statement must have an accompanying **%%end**, meaning that one-line bodies are not allowed. The body of the statement can be anything - more statements, text, or expression injections.
+* **%_** denotes that whitespace should be ommited - when placed at the start of a line, it'll ignore the whitespace before it. When at the end of a line, it will not insert a newline (normally, newlines are rendered as found in the template).
+
+Running the above template with the following code:
+```ruby
+import "./Stdlib/File.simi"
+import "./Stdlib/Smt.simi"
+
+value = 3
+template = File.readString("testSmt.html.smt")
+smt = Smt.parse(template)
+result = smt.run()
+print result
+```
+will produce the following output:
+```html
+<html>
+    <body>
+        Value is: <b>3</b> (should be 3)
+        <ul>
+                <li>Loop value is 0 even number</li>
+                <li>Loop value is 1 odd number</li>
+                <li>Loop value is 2 even number</li>
+                <li>Loop value is 3 odd number</li>
+                <li>Loop value is 4 even number</li>
+
+        </ul>
+    <body>
+</html>
+```
+Smt is heavily used with [Šimi servers](https://github.com/globulus/simi-sync/tree/master/web) to render views.
+
+#### SQL and ORM
+
 
 ### Android integration
 
