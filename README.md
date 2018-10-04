@@ -1316,7 +1316,7 @@ Typing in anything else (or a newline) will resume the execution of the program.
 
 SMT stands for ŠimiText, and is a method of embedding Šimi into text files, so that their content may be generated at runtime using the Šimi interpreter. Its purpose and usage makes it similar to [ERB](https://www.stuartellis.name/articles/erb/) or [JSX](https://reactjs.org/docs/introducing-jsx.html).
 
-Stdlib class named [Smt](https://github.com/globulus/simi/blob/master/stdlib/Smt.simi) does all the magic. To use SMT, first invoke a static method *parse*, supplying a template which is an SMT string. This will return an Smt class instance, on which you can then invoke method *run*, which will interpret all the previously parsed Šimi code in the current environment, and return the resulting string.
+Stdlib class named [Smt](stdlib/Smt.simi) does all the magic. To use SMT, first invoke a static method *compile*, supplying a template which is an SMT string. This will return an Smt class instance, on which you can then invoke method *run*, which will interpret all the previously parsed Šimi code in the current environment, and return the resulting string.
 
 Consider the following SMT text file that represents HTML code interspersed with Šimi:
 ```html
@@ -1374,6 +1374,9 @@ Smt is heavily used with [Šimi servers](https://github.com/globulus/simi-sync/t
 
 #### SQL and ORM
 
+Files located in [stdlib/sql](stdlib/sql/) serve as an interface for connecting to relational databases. Currently, [MariaDB](https://mariadb.com/) is used to illustrate how to natively connect to a DB and map its result into Šimi Db and ResultSet classes.
+
+The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows.
 
 ### Android integration
 

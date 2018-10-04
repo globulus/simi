@@ -139,7 +139,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
                   }
               }
           } else {
-              initializer.function.call(interpreter, arguments, false);
+              initializer.function.call(interpreter, null, arguments, false);
           }
       }
       return new SimiValue.Object(instance);

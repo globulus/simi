@@ -53,6 +53,7 @@ class Interpreter implements
 
       @Override
       public SimiProperty call(BlockInterpreter interpreter,
+                          SimiEnvironment environment,
                           List<SimiProperty> arguments,
                             boolean rethrow) {
         return new SimiValue.Number(System.currentTimeMillis());
@@ -72,6 +73,7 @@ class Interpreter implements
 
       @Override
       public SimiProperty call(BlockInterpreter interpreter,
+                               SimiEnvironment environment,
                                List<SimiProperty> arguments,
                                boolean rethrow) {
         return new SimiValue.String(UUID.randomUUID().toString());
@@ -373,7 +375,7 @@ class Interpreter implements
     if (isTruthy(evaluate(stmt.condition))) {
       BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.thenBranch, yieldedStmts);
       try {
-        block.call(this, null, true);
+        block.call(this, null, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
           this.environment.endBlock(stmt, yieldedStmts);
@@ -401,7 +403,7 @@ class Interpreter implements
     if (stmt.elseBranch != null) {
       BlockImpl elseBlock = this.environment.getOrAssignBlock(stmt, stmt.elseBranch, yieldedStmts);
       try {
-        elseBlock.call(this, null, true);
+        elseBlock.call(this, null, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
           this.environment.endBlock(stmt, yieldedStmts);
@@ -459,7 +461,7 @@ class Interpreter implements
     BlockImpl block = this.environment.getOrAssignBlock(stmt, stmt.body, yieldedStmts);
     while (isTruthy(evaluate(stmt.condition))) {
       try {
-        block.call(this, null, true);
+        block.call(this, null, null, true);
       } catch (Return | Yield returnYield) {
           if (returnYield instanceof Return) {
             this.environment.endBlock(stmt, yieldedStmts);
@@ -509,7 +511,7 @@ class Interpreter implements
       }
       block.closure.assign(stmt.var.name, var,true);
       try {
-        block.call(this, null, true);
+        block.call(this, null, null, true);
       } catch (Return | Yield returnYield) {
         if (returnYield instanceof Return) {
           this.environment.endBlock(stmt, yieldedStmts);
@@ -694,6 +696,8 @@ class Interpreter implements
       return callee;
     }
 
+    Environment env = (paren.type == TokenType.DOLLAR_LEFT_PAREN) ? new Environment(environment) : null;
+
     List<SimiProperty> decomposedArgs = arguments;
     if (arguments.size() != callable.arity()) {
       // See if we can decompose argument array/object into actual arguments
@@ -733,7 +737,7 @@ class Interpreter implements
           List<SimiProperty> nativeArgs = new ArrayList<>();
           nativeArgs.add(new SimiValue.Object(instance));
           nativeArgs.addAll(decomposedArgs);
-          result = nativeMethod.call(this, nativeArgs, false);
+          result = nativeMethod.call(this, env, nativeArgs, false);
         } else {
           result = invokeNativeCall(clazz.name, methodName, instance, decomposedArgs);
         }
@@ -744,7 +748,7 @@ class Interpreter implements
                 null, decomposedArgs);
       }
     }
-    return callable.call(this, decomposedArgs, false);
+    return callable.call(this, env, decomposedArgs, false);
   }
 
   private List<SimiProperty> decomposeArguments(SimiCallable callable, List<SimiProperty> arguments) {

@@ -20,7 +20,7 @@ Async = [
             line = lines.(i)
            if @KEYWORD in line:
                if i > start:
-                   prepend += String.from(lines.slice(start, i + 1), "\n") + "\n"
+                   prepend += String.from(lines.slice(start, i), "\n") + "\n"
                end
                jump = 1
                if line.endsWith("["):
@@ -31,7 +31,7 @@ Async = [
                        elsif otherLine.startsWith("]"):
                            if opens == 0:
                                jump $= j - i + 2
-                               line $= String.from(lines.slice(i, j + 2), " ")
+                               line $= String.from(lines.slice(i, j + 1), " ")
                                break
                            end
                            else: opens -= 1

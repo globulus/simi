@@ -462,10 +462,10 @@ class Parser {
   }
 
   private Integer peekParams() {
-    if (!check(LEFT_PAREN)) {
+    if (!check(LEFT_PAREN) && !check(DOLLAR_LEFT_PAREN)) {
       return null;
     }
-    if (peekSequence(LEFT_PAREN, RIGHT_PAREN)) {
+    if (peekSequence(LEFT_PAREN, RIGHT_PAREN) || peekSequence(DOLLAR_LEFT_PAREN, RIGHT_PAREN)) {
       return 0;
     }
     int len = tokens.size();
@@ -473,7 +473,7 @@ class Parser {
     int parenCount = 0;
     for (int i = current + 1; i < len; i++) {
       TokenType type = tokens.get(i).type;
-      if (type == LEFT_PAREN || type == LEFT_BRACKET || type == DOLLAR_LEFT_BRACKET) {
+      if (type == LEFT_PAREN || type == LEFT_BRACKET || type == DOLLAR_LEFT_PAREN || type == DOLLAR_LEFT_BRACKET) {
         parenCount++;
       } else if (type == RIGHT_PAREN || type == RIGHT_BRACKET) {
         if (parenCount == 0) {
@@ -607,7 +607,7 @@ class Parser {
   private Expr call() {
     Expr expr = primary();
     while (true) {
-      if (match(LEFT_PAREN)) {
+      if (match(LEFT_PAREN, DOLLAR_LEFT_PAREN)) {
         expr = finishCall(expr);
       } else if (match(DOT)) {
           Token dot = previous();
@@ -629,6 +629,7 @@ class Parser {
   }
 
     private Expr finishCall(Expr callee) {
+        Token paren = previous();
         List<Expr> arguments = new ArrayList<>();
         if (!check(RIGHT_PAREN)) {
             do {
@@ -636,7 +637,7 @@ class Parser {
                 arguments.add(expression());
             } while (match(COMMA));
         }
-        Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
+        consume(RIGHT_PAREN, "Expect ')' after arguments.");
         return new Expr.Call(callee, paren, arguments);
     }
 
@@ -881,11 +882,12 @@ class Parser {
         Expr.Binary typeCheck = (Expr.Binary) param;
         Expr paramName = typeCheck.left;
         Expr paramType = typeCheck.right;
+        Token paren = new Token(LEFT_PAREN, null, null, declaration.line, declaration.file);
           List<Stmt> exceptionStmt = Collections.singletonList(new Stmt.Expression(
                   new Expr.Call(new Expr.Get(declaration,
-                          new Expr.Call(new Expr.Variable(Token.named(Constants.EXCEPTION_TYPE_MISMATCH)), declaration,
+                          new Expr.Call(new Expr.Variable(Token.named(Constants.EXCEPTION_TYPE_MISMATCH)), paren,
                                   Arrays.asList(paramName, typeCheck.right)), new Expr.Variable(Token.named(Constants.RAISE)), 0),
-                  declaration, Collections.emptyList())
+                  paren, Collections.emptyList())
           ));
           stmts.add(0, new Stmt.If(
                   new Stmt.Elsif(new Expr.Binary(

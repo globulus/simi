@@ -7,7 +7,7 @@ class Smt:
     class FormatException(Exception):
     end
 
-    def parse(template):
+    def compile(template):
         smt = Smt()
         parts = Object.array()
         lines = template.split("\n")
@@ -21,7 +21,16 @@ class Smt:
                 parts.append("\n")
                 skip $= stmt.skip
             end
-            else: parts.addAll(@_parseLine(line, i))
+            else:
+                lineParts = @_parseLine(line, i)
+                first = lineParts.first()
+                last = parts.last()
+                if first is String and last is String:
+                    parts.(parts.len() - 1) = last + first
+                    parts.addAll(lineParts.slice(1))
+                end
+                else: parts.addAll(lineParts)
+            end
         end
         smt._setParts(parts)
         return smt
@@ -99,7 +108,7 @@ class Smt:
     def _runPart(part):
         when part:
             is String: return part
-            is Function: return part()
+            is Function: return part$()
             else: return part.toString()
         end
     end
@@ -107,8 +116,11 @@ class Smt:
     def _setParts(v): pass
 
     def run():
-        str = String.builder() # B
-        for part in @parts: str.add(@_runPart(part))
+        str = String.builder()
+        for part in @parts:
+            partValue = @_runPart$(part)
+            str.add(partValue)
+        end
         return str.build()
     end
 end

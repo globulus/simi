@@ -18,7 +18,7 @@ enum TokenType implements Codifiable {
   STAR, STAR_STAR, STAR_EQUAL,
     SLASH, SLASH_SLASH, SLASH_EQUAL, SLASH_SLASH_EQUAL,
   MOD, MOD_MOD, MOD_EQUAL,
-  DOLLAR_LEFT_BRACKET, DOLLAR_EQUAL,
+  DOLLAR_LEFT_PAREN, DOLLAR_LEFT_BRACKET, DOLLAR_EQUAL,
   QUESTION, QUESTION_QUESTION, QUESTION_QUESTION_EQUAL,
 
   // Literals.
@@ -100,6 +100,8 @@ enum TokenType implements Codifiable {
         return "%%";
       case MOD_EQUAL:
         return "%=";
+      case DOLLAR_LEFT_PAREN:
+        return "$(";
       case DOLLAR_LEFT_BRACKET:
         return "$[";
       case DOLLAR_EQUAL:

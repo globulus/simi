@@ -378,7 +378,7 @@ abstract class Expr implements Codifiable {
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
       return new StringBuilder(callee.toCode(indentationLevel, ignoreFirst))
-              .append(TokenType.LEFT_PAREN.toCode())
+              .append(paren.type.toCode())
               .append(arguments.stream()
                       .map(a -> a.toCode(0, false))
                       .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))

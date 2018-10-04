@@ -53,21 +53,42 @@ class BlockImpl implements SimiBlock, SimiCallable {
   }
 
   @Override
-  public SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow) {
-    return call(interpreter, arguments, rethrow, null);
+  public SimiProperty call(BlockInterpreter interpreter,
+                           SimiEnvironment environment,
+                           List<SimiProperty> arguments,
+                           boolean rethrow) {
+    return call(interpreter, environment, arguments, rethrow, null);
   }
 
-  SimiProperty call(BlockInterpreter interpreter, List<SimiProperty> arguments, boolean rethrow, SimiCallable invoker) {
-    Environment environment = new Environment(lastClosure != null ? lastClosure : closure);
+  SimiProperty call(BlockInterpreter interpreter,
+                    SimiEnvironment environment,
+                    List<SimiProperty> arguments,
+                    boolean rethrow,
+                    SimiCallable invoker) {
+    Environment originalEnv;
+    if (environment != null) {
+      originalEnv = (Environment) environment;
+      SimiProperty selfProp = closure.get(Token.self());
+      if (selfProp != null) {
+        originalEnv.assign(Token.self(), selfProp, true);
+      }
+      SimiProperty superProp = closure.get(Token.superToken());
+      if (superProp != null) {
+        originalEnv.assign(Token.superToken(), superProp, true);
+      }
+    } else {
+      originalEnv = closure;
+    }
+    Environment env = new Environment(lastClosure != null ? lastClosure : originalEnv);
     if (arguments != null) {
       for (int i = 0; i < declaration.params.size(); i++) {
-        environment.define(getParamLexeme(declaration.params.get(i)), arguments.get(i));
+        env.define(getParamLexeme(declaration.params.get(i)), arguments.get(i));
       }
     }
-    environment.assign(Token.selfDef(), new SimiValue.Callable((invoker != null) ? invoker : this, null, null), false);
+    env.assign(Token.selfDef(), new SimiValue.Callable((invoker != null) ? invoker : this, null, null), false);
 
     try {
-      interpreter.executeBlock(this, environment, (lastStatement != null) ? lastStatement : 0);
+      interpreter.executeBlock(this, env, (lastStatement != null) ? lastStatement : 0);
     } catch (Return returnValue) {
       clearYield();
       if (rethrow) {
@@ -83,7 +104,7 @@ class BlockImpl implements SimiBlock, SimiCallable {
       }
     }
     clearYield();
-    return environment.get(Token.self());
+    return env.get(Token.self());
   }
 
   @Override

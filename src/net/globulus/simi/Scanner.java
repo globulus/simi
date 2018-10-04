@@ -169,16 +169,17 @@ class Scanner {
           addToken(TokenType.MOD);
         }
       } break;
-        case '$': {
-            if (match('=')) {
-              addToken(TokenType.DOLLAR_EQUAL);
-            }
-            else if (match('[')) {
-                addToken(TokenType.DOLLAR_LEFT_BRACKET);
-            } else {
-                identifier();
-            }
-        } break;
+      case '$': {
+          if (match('=')) {
+            addToken(TokenType.DOLLAR_EQUAL);
+          } else if (match('(')) {
+            addToken(TokenType.DOLLAR_LEFT_PAREN);
+          } else if (match('[')) {
+              addToken(TokenType.DOLLAR_LEFT_BRACKET);
+          } else {
+              identifier();
+          }
+      } break;
       case '#': {
         // A comment goes until the end of the line.
         while (peek() != '\n' && !isAtEnd()) {
@@ -370,7 +371,7 @@ class Scanner {
   private boolean isAlpha(char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
-            c == '_' || c == '$';
+            c == '_';
   }
 
   private boolean isAlphaNumeric(char c) {

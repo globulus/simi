@@ -188,7 +188,7 @@ abstract class SimiObjectImpl implements SimiObject {
       if (clazz != null) {
           SimiMethod method = clazz.findMethod(this, Constants.TO_STRING, 0);
           if (method != null && !method.function.isNative) {
-              return method.call(Interpreter.sharedInstance, new ArrayList<>(), false).getValue().getString();
+              return method.call(Interpreter.sharedInstance, null, new ArrayList<>(), false).getValue().getString();
           }
       }
     StringBuilder sb = new StringBuilder();
@@ -371,7 +371,7 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         public ArrayList<SimiValue> values() {
-            return fields.values().stream().map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
+            return fields.values().stream().filter(Objects::nonNull).map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
         }
 
         @Override
@@ -478,7 +478,8 @@ abstract class SimiObjectImpl implements SimiObject {
         public SimiObject clone(boolean mutable) {
             LinkedHashMap<String, SimiProperty> fieldsClone = new LinkedHashMap<>();
             for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
-                fieldsClone.put(entry.getKey(), entry.getValue().clone(mutable));
+                SimiProperty value = entry.getValue();
+                fieldsClone.put(entry.getKey(), (value != null) ? value.clone(mutable) : null);
             }
             return new Dictionary(clazz, mutable, fieldsClone);
         }
@@ -586,7 +587,7 @@ abstract class SimiObjectImpl implements SimiObject {
 
         @Override
         public ArrayList<SimiValue> values() {
-            return fields.stream().map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
+            return fields.stream().filter(Objects::nonNull).map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
         }
 
         @Override
