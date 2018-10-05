@@ -105,7 +105,7 @@ print b # They span until the end of the line
 Šimi currently does not support multiline comments.
 
 #### Identifiers
-Identifiers start with a letter, _ or $, and then may contain any combination of letters, numbers, underscores or dollar signs. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
+Identifiers start with a letter, or _, and then may contain any combination of letters, numbers, or underscores. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
 
 #### Newlines
 Line breaks separate Šimi statements and as such are meaningful. E.g, a block that has a newline after ":" must be completed with an *end*. Similarly, an assignment statement must be terminated with a newline. If your line is very long, you can break it into multiple lines by ending each line with a backslash (\\) for readability purposes.
@@ -1319,18 +1319,21 @@ Typing in anything else (or a newline) will resume the execution of the program.
 
 #### Stdlib
 
-
+TBA
 
 #### File
 
+TBA
+
 #### Net
 
+TBA
 
 #### SMT
 
 SMT stands for ŠimiText, and is a method of embedding Šimi into text files, so that their content may be generated at runtime using the Šimi interpreter. Its purpose and usage makes it similar to [ERB](https://www.stuartellis.name/articles/erb/) or [JSX](https://reactjs.org/docs/introducing-jsx.html).
 
-Stdlib class named [Smt](stdlib/Smt.simi) does all the magic. To use SMT, first invoke a static method *compile*, supplying a template which is an SMT string. This will return an Smt class instance, on which you can then invoke method *run*, which will interpret all the previously parsed Šimi code in the current environment, and return the resulting string.
+Stdlib class named [Smt](stdlib/Smt.simi) does all the magic. To use SMT, first invoke a static method *compile*, supplying a template which is an SMT string. This will return an Smt class instance, on which you can then invoke method *run*, which will interpret all the previously parsed Šimi code in the current environment, and return the resulting string. (Note that you may have to use [environment invocation]((#closure-vs-environment-invocation)) with *run*.)
 
 Consider the following SMT text file that represents HTML code interspersed with Šimi:
 ```html
