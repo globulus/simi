@@ -84,6 +84,7 @@ What Šimi offers:
         - [Net](#net)
         - [SMT](#smt)
         - [SQL and ORM](#sql-and-orm)
+        - [CodeBlocks](#codeblocks)
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
@@ -1327,7 +1328,11 @@ TBA
 
 #### Net
 
-TBA
+The [Simi Net module](stdlib/Net.simi) is meant to provide easy access to basic HTTP calls, backed by a native implementation ([Java](https://hc.apache.org/httpcomponents-client-ga/quickstart.html) and [Android](http://hc.apache.org/httpcomponents-client-4.3.x/android-port.html) are backed by their Apache HttpClient libs, while iOS is backed by [AFNetworking](https://github.com/AFNetworking/AFNetworking)).
+
+All methods (get, post, put, and delete) take a request object as a parameter, which should contain a url, headers, and an optional body. All methods take a single callback, so they're well-suited for usage with [async yield](#async-programming-with-yield-expressions)).
+
+Check out [SimiSync-generated Client Tasks code](https://github.com/globulus/simi-sync/tree/master/web#client-tasks) to see the Net module in action!
 
 #### SMT
 
@@ -1393,7 +1398,19 @@ Smt is heavily used with [Šimi servers](https://github.com/globulus/simi-sync/t
 
 Files located in [stdlib/sql](stdlib/sql/) serve as an interface for connecting to relational databases. Currently, [MariaDB](https://mariadb.com/) is used to illustrate how to natively connect to a DB and map its result into Šimi Db and ResultSet classes.
 
-The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows.
+The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows. To start, annotate a class with **Orm.Table**. Then, use **Orm.Column** annotation on its fields to declare the table colums. Names, nullability and data types can be inferred, or stated explicitly. **Orm.PrimaryKey** annotation is used in addition to Orm.Column to denote the primary key column. To boot your Orm instance, invoke the *createTable* method with all the table classes you wish to support, and it will sert everything up for you. From there on, you can perform selection, insert, update and delete by using fluent syntax that works with the annotated classes instead of plain objects.
+
+Check out ŠimiSync's [DbHelper](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/db/DbHelper.simi) and [BeerController](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/controllers/BeerController.simi) classes to see the Orm action on a Šimi backend!
+
+#### CodeBlocks
+
+The [CodeBlocks](stdlib/CodeBlocks.simi) module is meant for easy (de)composition of Šimi code in order to manipulate it and facilitate its usage with [*gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic). Currently it holds the following classes:
+* **ClassCode** - converts a Class into code, allowing you to extract its name and body.
+* **ClassComposer** - allows for easy, fluent composition of a Class, starting with a name, and then adding fields, methods, or other code (e.g imports for mixins). You can extract the code with *getString* or the class with *getClass*.
+* **FunctionComposer** - allows for Function composition, starting either from name and params, or another base function. Allows for adding line functions, and extracting the code with *getString* or function itself with *getFunction*.
+* **FunctionCode** - converts a Function into code, allowing you to extract its name, parameters, arity, declaration, anonymous declaration, and body.
+
+Check out ŠimiSync's [SimiSyncControllers class](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/SimiSyncControllers.simi) as it uses CodeBlocks extensively to precompute controllers and their rendering!
 
 ### Android integration
 
