@@ -39,6 +39,7 @@ What Šimi offers:
       - [Strings](#strings)
         * [Boxed numbers and strings](#boxed-numbers-and-strings)
       - [Functions](#functions)
+        * [Closure vs. environment invocation](#closure-vs-environment-invocation)
       - [Objects](#objects)
         * [Objects vs Arrays](#objects-vs-arrays)
       - [Value conversions](#value-conversions)
@@ -336,6 +337,19 @@ button = Button()\ # implicit return self
 button.performClick()
 ```
 It also forces the programmer to explicity use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
+
+##### Closure vs. environment invocation
+
+Šimi functions (and any blocks for that matter) are closures that capture the environment as it was when they were created. When invoking a function, it created a new environment based on its closure, and defines *self* and *super*, if necessary. This is intentional and makes it so that functions shouldn't rely on external data to run their code - their parameters and closure environment should be enough.
+
+There are, however, rare instances where a function can take an unknown number of parameters that can't be nicely set during invocation; the [SMT's *run* function](#smt) is an example of that: it relies on an external environment that defines the values it is to inject into the template. This is so-called **environment invocation** - a function's execution environment won't be its closure, but the current environment in which it was invoked. Environment invocation uses **$()** instead of ().
+```ruby
+func() # closure invocation
+func$() # environment invocation
+```
+
+Environment invocations should seldom be used and can be viewed as an advanced feature of the langauge. It's also worth noting that doing environment invocations needs to be a deliberate effort within the code, as, presumably, *all nested function invocations should use $() as well*. Check out the [SMT class' run method implementation](stdlib/Smt.simi) for more details.
+
 
 #### Objects
 Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above. **Nils are not permitted as object values, and associating a nil with a key will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:
@@ -1340,7 +1354,7 @@ Consider the following SMT text file that represents HTML code interspersed with
 ```
 Here are the rules for injecting Šimi code into any text:
 * To insert a textual result of a Šimi expression, use **<%= EXPRESSION %>**.
-* **%%** denotes that this line contains a Šimi statement, such  as a loop or a branching. The entire line is considered to be the statement, and not text can appear in it. Every statement must have an accompanying **%%end**, meaning that one-line bodies are not allowed. The body of the statement can be anything - more statements, text, or expression injections.
+* **%%** denotes that this line contains a Šimi statement, such  as a loop or a branching. The entire line is considered to be the statement, and no text can appear in it. Every statement must have an accompanying **%%end**, meaning that one-line bodies are not allowed. The body of the statement can be anything - more statements, text, or expression injections.
 * **%_** denotes that whitespace should be ommited - when placed at the start of a line, it'll ignore the whitespace before it. When at the end of a line, it will not insert a newline (normally, newlines are rendered as found in the template).
 
 Running the above template with the following code:
