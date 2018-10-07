@@ -831,12 +831,10 @@ abstract class Expr implements Codifiable {
 
       final Token opener;
       final List<Expr> props;
-      final boolean isDictionary;
 
-        ObjectLiteral(Token opener, List<Expr> props, boolean isDictionary) {
+        ObjectLiteral(Token opener, List<Expr> props) {
             this.opener = opener;
             this.props = props;
-            this.isDictionary = isDictionary;
         }
 
         <R> R accept(Visitor<R> visitor, Object... params) {
@@ -845,14 +843,11 @@ abstract class Expr implements Codifiable {
 
       @Override
       public String toCode(int indentationLevel, boolean ignoreFirst) {
-          boolean needsNewline = isDictionary && !props.isEmpty();
         return new StringBuilder(opener.type.toCode(indentationLevel, ignoreFirst))
-                .append(needsNewline ? TokenType.NEWLINE.toCode() : "")
                 .append(props.stream()
-                  .map(p -> p.toCode(needsNewline ? indentationLevel + 1 : 0, false))
-                  .collect(Collectors.joining(TokenType.COMMA.toCode() + (needsNewline ? TokenType.NEWLINE.toCode() : " ")))
+                  .map(p -> p.toCode(indentationLevel + 1, false))
+                  .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
                 )
-                .append(needsNewline ? TokenType.NEWLINE.toCode() : "")
                 .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
                 .toString();
       }
@@ -868,7 +863,7 @@ abstract class Expr implements Codifiable {
       }
 
       @Override
-        public boolean hasBreakPoint() {
+      public boolean hasBreakPoint() {
             return opener.hasBreakpoint;
         }
     }

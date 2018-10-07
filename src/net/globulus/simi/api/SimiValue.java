@@ -298,7 +298,10 @@ public abstract class SimiValue implements SimiProperty, Codifiable, Comparable<
 
         @Override
         public int compareTo(SimiValue o) {
-            throw new RuntimeException("Unable to compare objects by default, implement in subclass!");
+            if (!(o instanceof SimiValue.Object)) {
+                throw new RuntimeException("Unable to compare Object with " + o);
+            }
+            return value.compareTo(o.getObject());
         }
 
         @Override

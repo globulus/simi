@@ -25,7 +25,7 @@ class Smt:
                 lineParts = @_parseLine(line, i)
                 first = lineParts.first()
                 last = parts.last()
-                if first is String and last is String:
+                if first is String and last is String: # BP
                     parts.(parts.len() - 1) = last + first
                     parts.addAll(lineParts.slice(1))
                 end

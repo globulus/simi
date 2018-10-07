@@ -8,19 +8,19 @@ import net.globulus.simi.api.SimiValue;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
+class SimiClassImpl extends SimiObjectImpl implements SimiClass {
 
     final Type type;
-  final String name;
-  final List<SimiClassImpl> superclasses;
-  final Stmt.Class stmt;
+    final String name;
+    final List<SimiClassImpl> superclasses;
+    final Stmt.Class stmt;
 
-  final Map<OverloadableFunction, SimiFunction> methods;
+    final Map<OverloadableFunction, SimiFunction> methods;
 
-  static final SimiClassImpl CLASS = new SimiClassImpl(Type.REGULAR, Constants.CLASS_CLASS);
+    private static final SimiClassImpl CLASS = new SimiClassImpl(Type.REGULAR, Constants.CLASS_CLASS);
 
     private SimiClassImpl(Type type, String name) {
-       super(null, true, new LinkedHashMap<>());
+       super(null, true, new LinkedHashMap<>(), null);
        this.type = type;
        this.name = name;
        superclasses = null;
@@ -34,7 +34,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
                 Map<String, SimiProperty> constants,
                 Map<OverloadableFunction, SimiFunction> methods,
                 Stmt.Class stmt) {
-    super(CLASS, type != Type.OPEN, new LinkedHashMap<>(constants));
+    super(CLASS, type != Type.OPEN, new LinkedHashMap<>(constants), null);
     this.type = type;
     this.superclasses = superclasses;
     this.name = name;
@@ -118,7 +118,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
   @Override
   public SimiProperty init(BlockInterpreter interpreter, List<SimiProperty> arguments) {
-      SimiObjectImpl instance = new SimiObjectImpl.Dictionary(this, true, new LinkedHashMap<>());
+      SimiObjectImpl instance = SimiObjectImpl.instance(this, null);
       SimiMethod initializer = findMethod(instance, Constants.INIT, arguments.size());
       if (initializer == null) {
           initializer = findMethod(instance, Constants.PRIVATE + Constants.INIT, arguments.size());
@@ -235,7 +235,7 @@ class SimiClassImpl extends SimiObjectImpl.Dictionary implements SimiClass {
 
         public final List<SimiClassImpl> value;
 
-        public SuperClassesList(List<SimiClassImpl> value) {
+        SuperClassesList(List<SimiClassImpl> value) {
             this.value = value;
         }
 

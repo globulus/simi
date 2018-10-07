@@ -25,7 +25,7 @@ public class SimiMapper {
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             propMap.put(entry.getKey(), toSimiProperty(entry.getValue(), objectClass));
         }
-        return new SimiObjectImpl.Dictionary(objectClass, immutable, propMap);
+        return SimiObjectImpl.fromMap(objectClass, immutable, propMap);
     }
 
     public static SimiObject toObject(List<Object> list, boolean immutable) {
@@ -41,19 +41,11 @@ public class SimiMapper {
         for (Object item : list) {
             propList.add(toSimiProperty(item, objectClass));
         }
-        return new SimiObjectImpl.Array(objectClass, immutable, propList);
+        return SimiObjectImpl.fromArray(objectClass, immutable, propList);
     }
 
     public static Map<String, Object> fromObject(SimiObject object) {
-        if (((SimiObjectImpl) object).isArray()) {
-            throw new IllegalArgumentException("Expected a dictionary object!");
-        }
-        SimiObjectImpl.Dictionary dict;
-        if (object instanceof SimiObjectImpl.Dictionary) {
-            dict = (SimiObjectImpl.Dictionary) object;
-        } else {
-            dict = ((SimiObjectImpl.InitiallyEmpty) object).asDictionary();
-        }
+        SimiObjectImpl dict = (SimiObjectImpl) object;
         Map<String, Object> map = new HashMap<>(dict.fields.size());
         for (Map.Entry<String, SimiProperty> entry : dict.fields.entrySet()) {
             map.put(entry.getKey(), fromSimiValue(entry.getValue().getValue()));
@@ -62,16 +54,8 @@ public class SimiMapper {
     }
 
     public static List<Object> fromArray(SimiObject object) {
-        if (!((SimiObjectImpl) object).isArray()) {
-            throw new IllegalArgumentException("Expected an array object!");
-        }
-        SimiObjectImpl.Array array;
-        if (object instanceof SimiObjectImpl.Array) {
-            array = (SimiObjectImpl.Array) object;
-        } else {
-            array = ((SimiObjectImpl.InitiallyEmpty) object).asArray();
-        }
-        return array.fields.stream()
+        SimiObjectImpl array = (SimiObjectImpl) object;
+        return array.bag.stream()
                 .map(SimiProperty::getValue)
                 .map(SimiMapper::fromSimiValue)
                 .collect(Collectors.toList());

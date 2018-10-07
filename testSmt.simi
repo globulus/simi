@@ -3,6 +3,6 @@ import "./Stdlib/Smt.simi"
 
 value = 3
 template = File.readString("testSmt.html.smt")
-smt = Smt.parse(template)
+smt = Smt.compile(template)
 result = smt.run()
 print result

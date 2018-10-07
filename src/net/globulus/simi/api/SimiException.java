@@ -63,4 +63,9 @@ public final class SimiException extends RuntimeException implements SimiObject 
     public boolean hasBreakPoint() {
         return false;
     }
+
+    @Override
+    public int compareTo(SimiObject o) {
+        return clazz.compareTo(o);
+    }
 }

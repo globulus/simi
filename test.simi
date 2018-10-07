@@ -136,7 +136,7 @@ print ife1 is Function
 #    end
 #end)()
 
-Decorator.test()
+#Decorator.test()
 
 Net.go(def ():
     [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
@@ -619,4 +619,19 @@ def mariaDbTest():
         if ex: print ex.message
     end
 end
-mariaDbTest()
+#mariaDbTest()
+
+def compositeObjTest():
+    compositeObj = [a = 3, 2, b = 4, 3, c = 5, 4, 6]
+    print compositeObj
+    iv = ivic compositeObj
+    print gu iv
+    print (gu iv).matches(compositeObj)
+    print compositeObj.len()
+    print compositeObj.keys()
+    print compositeObj.values()
+    print compositeObj.reversed()
+    print compositeObj.reversed().sorted()
+    print compositeObj.where(def d: d is Number)
+end
+compositeObjTest()

@@ -725,19 +725,17 @@ class Parser {
   private Expr objectLiteral() {
       Token opener = previous();
       List<Expr> props = new ArrayList<>();
-      boolean dictionary = true;
       if (!check(RIGHT_BRACKET)) {
         matchAllNewlines();
-        dictionary = peekSequence(IDENTIFIER, EQUAL) || peekSequence(STRING, EQUAL);
         do {
           matchAllNewlines();
-          props.add(dictionary ? assignment() : or());
+          props.add(assignment());
           matchAllNewlines();
         } while (match(COMMA));
         matchAllNewlines();
       }
       consume(RIGHT_BRACKET, "Expect ']' at the end of object.");
-      return new Expr.ObjectLiteral(opener, props, dictionary);
+      return new Expr.ObjectLiteral(opener, props);
   }
 
   private void matchAllNewlines() {
@@ -922,7 +920,7 @@ class Parser {
       }
     } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
       Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
-      if (objectLiteral.isDictionary || objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
+      if (/*objectLiteral.isDictionary || */objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
         ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
       }
       List<Expr.Assign> assigns = new ArrayList<>();

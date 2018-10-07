@@ -967,54 +967,45 @@ class Interpreter implements
         boolean immutable = (expr.opener.type == TokenType.LEFT_BRACKET);
         SimiClassImpl objectClass = getObjectClass();
         SimiObjectImpl object;
-        if (expr.props.isEmpty()) {
-          object = SimiObjectImpl.empty(objectClass, immutable);
-        } else {
-          LinkedHashMap<String, SimiProperty> mapFields = new LinkedHashMap<>();
-          ArrayList<SimiProperty> arrayFields = new ArrayList<>();
-          int count = 0;
-          for (Expr propExpr : expr.props) {
-            String key;
-            Expr valueExpr;
-            if (expr.isDictionary) {
-              Expr.Assign assign = (Expr.Assign) propExpr;
-              key = assign.name.lexeme;
-              if (key == null) {
-                key = assign.name.literal.getString();
-              }
-              valueExpr = assign.value;
-            } else {
-              key = Constants.IMPLICIT + count;
-              valueExpr = propExpr;
+        LinkedHashMap<String, SimiProperty> mapFields = new LinkedHashMap<>();
+        ArrayList<SimiProperty> arrayFields = new ArrayList<>();
+        for (Expr propExpr : expr.props) {
+          String key;
+          Expr valueExpr;
+          if (propExpr instanceof Expr.Assign) {
+            Expr.Assign assign = (Expr.Assign) propExpr;
+            key = assign.name.lexeme;
+            if (key == null) {
+              key = assign.name.literal.getString();
             }
-            SimiProperty prop;
-            if (valueExpr instanceof Expr.Block) {
-              prop = new SimiValue.Callable(new BlockImpl((Expr.Block) valueExpr, environment), key, null);
-            } else {
-              prop = evaluate(valueExpr);
-            }
-            if (key.equals(TokenType.CLASS.toCode())
-                    && prop.getValue() instanceof SimiValue.Object
-                    && prop.getValue().getObject() instanceof SimiClassImpl) {
-              objectClass = (SimiClassImpl) prop.getValue().getObject();
-            } else {
-              if (expr.isDictionary) {
-                mapFields.put(key, prop);
-              } else {
-                arrayFields.add(prop);
-              }
-              count++;
-            }
-          }
-          if (expr.isDictionary) {
-            object = SimiObjectImpl.fromMap(objectClass, immutable, mapFields);
+            valueExpr = assign.value;
           } else {
-            object = SimiObjectImpl.fromArray(objectClass, immutable, arrayFields);
+            key = null;
+            valueExpr = propExpr;
           }
-          for (SimiValue value : object.values()) {
-            if (value instanceof SimiValue.Callable) {
-              ((SimiValue.Callable) value).bind(object);
+          SimiProperty prop;
+          if (valueExpr instanceof Expr.Block) {
+            prop = new SimiValue.Callable(new BlockImpl((Expr.Block) valueExpr, environment), key, null);
+          } else {
+            prop = evaluate(valueExpr);
+          }
+          if (key != null
+                  && key.equals(TokenType.CLASS.toCode())
+                  && prop.getValue() instanceof SimiValue.Object
+                  && prop.getValue().getObject() instanceof SimiClassImpl) {
+            objectClass = (SimiClassImpl) prop.getValue().getObject();
+          } else {
+            if (key != null) {
+              mapFields.put(key, prop);
+            } else {
+              arrayFields.add(prop);
             }
+          }
+        }
+        object = new SimiObjectImpl(objectClass, immutable, mapFields, arrayFields);
+        for (SimiValue value : object.values()) {
+          if (value instanceof SimiValue.Callable) {
+            ((SimiValue.Callable) value).bind(object);
           }
         }
         return new SimiValue.Object(object);
@@ -1098,7 +1089,7 @@ class Interpreter implements
     }
     if (a instanceof SimiValue.Object) {
       Token compareTo = new Token(TokenType.IDENTIFIER, Constants.COMPARE_TO, null, expr.operator.line, expr.operator.file);
-      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment).getValue(), compareTo, Arrays.asList(a, b)).getValue();
+      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment).getValue(), compareTo, Arrays.asList(b)).getValue();
     }
     return new SimiValue.Number(a.compareTo(b));
   }

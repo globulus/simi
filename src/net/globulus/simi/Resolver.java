@@ -319,7 +319,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     for (Expr prop : expr.props) {
-      Expr toResolve = expr.isDictionary ? ((Expr.Assign) prop).value : prop;
+      Expr toResolve = (prop instanceof Expr.Assign) ? ((Expr.Assign) prop).value : prop;
       resolve(toResolve);
     }
     return null;
