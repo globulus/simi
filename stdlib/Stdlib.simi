@@ -347,6 +347,7 @@ class Enum:
         end"
         clazz = gu guStr
 
+        clazz.values = $[]
         for key in obj:
             val = nil
             if isArray: val $= clazz(key, key)
@@ -358,11 +359,14 @@ class Enum:
                 val $= gu constructor
             end
             clazz.(key) = val
+            clazz.values.append(val)
         end
 
         for key in funs:
             clazz.(key) = funs.(key)
         end
+
+        clazz.iterate = :@values.iterate()
 
         return clazz
     end
