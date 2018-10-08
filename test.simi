@@ -633,5 +633,44 @@ def compositeObjTest():
     print compositeObj.reversed()
     print compositeObj.reversed().sorted()
     print compositeObj.where(def d: d is Number)
+    compositeObj.forEach(def v: print v)
+    print compositeObj.enumerate()
+    ruler = compositeObj.ruler()
+    print ruler
+    ruler.append(100)
+    print compositeObj
 end
 compositeObjTest()
+
+def arraySubclassTest():
+    class FixedSizeArray:
+        _MAX = 3
+
+        def append(item):
+            super.append(item)
+            @_trim()
+        end
+
+        def addAll(other):
+            super.addAll(other)
+            @_trim()
+        end
+
+        def _trim():
+            d = @len() - @_MAX
+            if d <= 0: return
+            for _ in d.times(): @0 = nil
+        end
+    end
+
+    arr = FixedSizeArray()
+    arr.append(1)
+    arr.append(2)
+    arr.append(3)
+    print arr
+    arr.append(4)
+    print arr
+    arr.append(5)
+    print arr
+end
+arraySubclassTest()

@@ -109,6 +109,18 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(self.zip(getObjectClass(interpreter)));
             }
         });
+        methods.put(new OverloadableFunction("ruler", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                return new SimiValue.Object(self.getLine());
+            }
+        });
         methods.put(new OverloadableFunction("append", 1), new SimiCallable() {
             @Override
             public int arity() {
@@ -494,7 +506,7 @@ class BaseClassesNativeImpl {
                 int stop = Math.toIntExact(arguments.get(2).getValue().getNumber().asLong());
                 if (self.isArray()) {
                     return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true,
-                        new ArrayList<>(self.bag.subList(start, stop))));
+                        new ArrayList<>(self.line.subList(start, stop))));
                 }
                 return null; // TODO implement for Dictionary
             }

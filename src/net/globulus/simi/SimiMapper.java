@@ -55,7 +55,7 @@ public class SimiMapper {
 
     public static List<Object> fromArray(SimiObject object) {
         SimiObjectImpl array = (SimiObjectImpl) object;
-        return array.bag.stream()
+        return array.line.stream()
                 .map(SimiProperty::getValue)
                 .map(SimiMapper::fromSimiValue)
                 .collect(Collectors.toList());

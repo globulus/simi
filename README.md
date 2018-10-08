@@ -41,7 +41,7 @@ What Šimi offers:
       - [Functions](#functions)
         * [Closure vs. environment invocation](#closure-vs-environment-invocation)
       - [Objects](#objects)
-        * [Objects vs Arrays](#objects-vs-arrays)
+        * [Dictionaries and Arrays - the Siamese Twins](#dictionaries-and-arrays-the-siamese-twins)
       - [Value conversions](#value-conversions)
     + [Classes](#classes)
       - [Using classes as modules](#using-classes-as-modules)
@@ -353,7 +353,7 @@ Environment invocations should seldom be used and can be viewed as an advanced f
 
 
 #### Objects
-Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above. **Nils are not permitted as object values, and associating a nil with a key will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:
+Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is pair of a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above, and an indexed array, which also can contain any Šimi value. **Nils are not permitted as object values, and associating a nil with a key or index will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:
 1. Class instances
 2. Structs
 3. Arrays/Lists
@@ -398,10 +398,14 @@ basicArithmetic = [
     add = def (a, b): return a + b
     subtract = def (a, b): return a - b
 ]
-```
-Object literals are enclosed in brackets (\[ ]), with mutable object having a $ before the brackets ($\[ ]). An empty mutable object can become either an array, based on the first operation that's done to it - if it's an add/push or addAll(array), it will become an array, otherwise it's considered to be a dictionary.
 
-Getting and setting values is done via the dot operator (.). For arrays, the supplied key must be a number, whereas for objects with keys it can either be an identifier, a string or a number.
+# You can also have composite objects, that contain both associated
+# and indexed values
+compositeObject = [a = 1, 2, b = 3, 4, c = 5, 6]
+```
+Object literals are enclosed in brackets (\[ ]), with mutable object having a $ before the brackets ($\[ ]).
+
+Getting and setting values is done via the dot operator (.). For editing the array part, the supplied key must be a number, whereas for the dictionary part it can either be an identifier, a string or a number.
 ```ruby
 object = $[a = 2, b = 3]
 a = object.a # Gets value for key a
@@ -432,8 +436,52 @@ print b # 4
 print d # 5
 ```
 
-##### Objects vs Arrays
-Šimi Arrays are Objects, insofar as they inherit the Object class, and are exposed via the SimiObject interface in the API. That being said, you cannot really mix arrays and keyed objects together, i.e you can't invoke an addAll method on an array with an object parameter, and vice-versa. The reasons for that are twofold, the first being that such operations don't really make sense and their outcome would need to be based on a contract, which would unnecessarily complicate the language. The second reason is performance - if arrays and keyed objects were implemented the same way in the interpreter, the execution time of list operations such as insertion would be much worse.
+##### Dictionaries and Arrays - the Siamese Twins
+Šimi's composite objects feature may confuse people coming from other languages, where dictionaries/maps/hashes and arrays/lists are separate entities. To reiterate, every Šimi object always has **both a dictionary and an array**. Admittedly, the instances where you need to use both part simultaneously are rare, so it's not necessary to deeply understand its inner workings and edge cases that arise because of this approach.
+
+Here's a quick example that showcases a composite object in action:
+```ruby
+# You can freely mix associated and unassociated values
+compositeObj = [a = 3, 2, b = 4, 3, c = 5, 4, 6]
+print compositeObj
+# Prints
+#[
+#	immutable: true
+#	class: Object;
+#	a = 3
+#	b = 4
+#	c = 5
+#	0 = 2
+#	1 = 3
+#	2 = 4
+#	3 = 6
+#]
+
+# Composite object literals are (de)serializable
+print (gu ivic compositeObj).matches(compositeObj) # true
+
+print compositeObj.len() # Prints total number of elements = 7
+print compositeObj.keys() # Keys are [a, b, c]
+print compositeObj.values() # Values are [3, 4, 5, 2, 3, 4, 6]
+print compositeObj.reversed() # Reverses both the array and dictionary separately
+print compositeObj.sorted() # Sorts both parts separately
+
+# forEach uses an iterator and as such works either with dictionary
+# or array part, depending on which one is present (dictionary has
+# higher precedence. The same is true for other higher-order functions.
+compositeObj.forEach(def v: print v)
+
+# Enumerates ALL the values - dictionary first, and then array, and as
+# such can be used to iterate through entire composite object.
+print compositeObj.enumerate()
+
+# Ruler is a copy of the object's array part. Modifying the ruler modifies
+# the object as well.
+ruler = compositeObj.ruler()
+print ruler
+ruler.append(100)
+print compositeObj
+```
 
 #### Value conversions
 * Numbers can be converted to Strings via the toString() method.
@@ -570,6 +618,28 @@ Car = Car.builder()\
     .model("CX-7")\
     .year(2009)\
     .build()
+```
+* The fact that Šimi has composite objects allows for so-called *array subclasses*:
+```ruby
+class FixedSizeArray:
+    _MAX = 3
+
+    def append(item):
+        super.append(item)
+        @_trim()
+    end
+
+    def addAll(other):
+        super.addAll(other)
+        @_trim()
+    end
+
+    def _trim():
+        d = @len() - @_MAX
+        if d <= 0: return
+        for _ in d.times(): @0 = nil
+    end
+end
 ```
 
 #### Using classes as modules

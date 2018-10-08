@@ -10,16 +10,16 @@ class SimiObjectImpl implements SimiObject {
     final SimiClassImpl clazz;
     final boolean immutable;
     final LinkedHashMap<String, SimiProperty> fields;
-    final ArrayList<SimiProperty> bag;
+    final ArrayList<SimiProperty> line;
 
   SimiObjectImpl(SimiClassImpl clazz,
                  boolean immutable,
                  LinkedHashMap<String, SimiProperty> fields,
-                 ArrayList<SimiProperty> bag) {
+                 ArrayList<SimiProperty> line) {
     this.clazz = clazz;
     this.immutable = immutable;
     this.fields = (fields != null) ? fields : new LinkedHashMap<>();
-    this.bag = (bag != null) ? bag : new ArrayList<>();
+    this.line = (line != null) ? line : new ArrayList<>();
   }
 
   static SimiObjectImpl instance(SimiClassImpl clazz, LinkedHashMap<String, SimiProperty> props) {
@@ -43,8 +43,8 @@ class SimiObjectImpl implements SimiObject {
       return new SimiObjectImpl(clazz, immutable, props, null);
   }
 
-    static SimiObjectImpl fromArray(SimiClassImpl clazz, boolean immutable, ArrayList<? extends SimiProperty> bag) {
-        return new SimiObjectImpl(clazz, immutable, null, new ArrayList<>(bag));
+    static SimiObjectImpl fromArray(SimiClassImpl clazz, boolean immutable, ArrayList<? extends SimiProperty> line) {
+        return new SimiObjectImpl(clazz, immutable, null, new ArrayList<>(line));
     }
 
   SimiProperty get(Token name, Integer arity, Environment environment) {
@@ -56,8 +56,8 @@ class SimiObjectImpl implements SimiObject {
 
       try {
           int index = Integer.parseInt(key);
-          if (index < bag.size()) {
-              return bind(key, bag.get(index)); // If bag isn't empty, get a numerical index from bag
+          if (index < line.size()) {
+              return bind(key, line.get(index)); // If line isn't empty, get a numerical index from line
           }
 
           String implicitKey = Constants.IMPLICIT + index;
@@ -143,9 +143,9 @@ class SimiObjectImpl implements SimiObject {
       try {
           int index = Integer.parseInt(key);
           if (prop == null) {
-              bag.remove(index);
+              line.remove(index);
           } else {
-              bag.set(index, prop);
+              line.set(index, prop);
           }
       } catch (NumberFormatException ignored) {
           if (prop == null) {
@@ -182,17 +182,17 @@ class SimiObjectImpl implements SimiObject {
   void clear(Environment environment) {
       checkMutability(Token.self(), environment);
       fields.clear();
-      bag.clear();
+      line.clear();
   }
 
     boolean matches(SimiObjectImpl other, List<String> fieldsToMatch) {
-      if (isArray() && other.isArray()) { // We compare bags only if both objects are pure arrays
+      if (isArray() && other.isArray()) { // We compare lines only if both objects are pure arrays
           int length = length();
           if (other.length() != length) {
               return false;
           }
           for (int i = 0; i < length; i++) {
-              if (!valuesMatch(bag.get(i), other.bag.get(i))) {
+              if (!valuesMatch(line.get(i), other.line.get(i))) {
                   return false;
               }
           }
@@ -212,11 +212,11 @@ class SimiObjectImpl implements SimiObject {
 
     boolean contains(SimiValue object) {
         return (object instanceof SimiValue.String && fields.keySet().contains(object.getString()))
-                || bag.contains(object);
+                || line.contains(object);
     }
 
-    SimiObjectImpl getBag() {
-        return new SimiObjectImpl(clazz, immutable, null, bag);
+    SimiObjectImpl getLine() {
+        return new SimiObjectImpl(clazz, immutable, null, line);
     }
 
     boolean isArray() {
@@ -224,7 +224,7 @@ class SimiObjectImpl implements SimiObject {
     }
 
     int length() {
-      return fields.size() + bag.size();
+      return fields.size() + line.size();
     }
 
     private void checkMutability(Token name, SimiEnvironment environment) {
@@ -246,7 +246,7 @@ class SimiObjectImpl implements SimiObject {
 
     public ArrayList<SimiValue> values() {
         Collection<SimiProperty> values = new ArrayList<>(fields.values());
-        values.addAll(bag);
+        values.addAll(line);
         return values.stream().filter(Objects::nonNull).map(SimiProperty::getValue).collect(Collectors.toCollection(ArrayList::new));
     }
 
@@ -255,19 +255,14 @@ class SimiObjectImpl implements SimiObject {
     }
 
     ArrayList<SimiProperty> getEnumeratedValues(SimiClassImpl objectClass) {
-        ArrayList<SimiProperty> values;
-        if (isArray()) {
-            int size = bag.size();
-            values = new ArrayList<>(size);
-            for (int i = 0; i < size; i++) {
-                values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.Number(i), bag.get(i).getValue())));
-            }
-        } else {
-            values = new ArrayList<>(fields.size());
-            for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
-                values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
-                        new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
-            }
+        ArrayList<SimiProperty> values = new ArrayList<>(length());
+        for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
+            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
+                    new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
+        }
+        int lineSize = line.size();
+        for (int i = 0; i < lineSize; i++) {
+            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.Number(i), line.get(i).getValue())));
         }
         return values;
     }
@@ -283,7 +278,7 @@ class SimiObjectImpl implements SimiObject {
 
     SimiValue indexOf(SimiValue value) {
       if (isArray()) {
-          int index = bag.indexOf(value);
+          int index = line.indexOf(value);
           if (index == -1) {
               return null;
           }
@@ -305,13 +300,13 @@ class SimiObjectImpl implements SimiObject {
             Map.Entry<String, SimiProperty> entry = iter.previous();
             reversedFields.put(entry.getKey(), entry.getValue());
         }
-        ArrayList<SimiProperty> reversedArray = new ArrayList<>(bag);
+        ArrayList<SimiProperty> reversedArray = new ArrayList<>(line);
         Collections.reverse(reversedArray);
         return new SimiObjectImpl(clazz, immutable, reversedFields, reversedArray);
     }
 
     Iterator<?> iterate() {
-      return isArray() ? bag.iterator() : keys().iterator();
+      return isArray() ? line.iterator() : keys().iterator();
     }
 
     SimiObjectImpl sorted(Comparator<? super Map.Entry<String, SimiProperty>> comparator) {
@@ -320,12 +315,12 @@ class SimiObjectImpl implements SimiObject {
         fields.entrySet().stream()
                 .sorted(fieldComp)
                 .forEach(e -> sortedFields.put(e.getKey(), e.getValue()));
-        Comparator<? super SimiProperty> bagComp = (comparator != null)
+        Comparator<? super SimiProperty> lineComp = (comparator != null)
                 ? (o1, o2) -> comparator.compare(new AbstractMap.SimpleEntry<>(Constants.IMPLICIT, o1), new AbstractMap.SimpleEntry<>(Constants.IMPLICIT, o2))
                 : Comparator.comparing(SimiProperty::getValue);
-        ArrayList<SimiProperty> sortedBag = new ArrayList<>(bag);
-        sortedBag.sort(bagComp);
-        return new SimiObjectImpl(clazz, immutable, sortedFields, sortedBag);
+        ArrayList<SimiProperty> sortedLine = new ArrayList<>(line);
+        sortedLine.sort(lineComp);
+        return new SimiObjectImpl(clazz, immutable, sortedFields, sortedLine);
     }
 
     private boolean valuesMatch(SimiValue a, SimiValue b) {
@@ -352,7 +347,7 @@ class SimiObjectImpl implements SimiObject {
 
   void append(SimiProperty elem, SimiEnvironment environment) {
       checkMutability(Token.self(), environment);
-      bag.add(elem);
+      line.add(elem);
   }
 
   void addAll(SimiObjectImpl other, SimiEnvironment environment) {
@@ -362,7 +357,7 @@ class SimiObjectImpl implements SimiObject {
               fields.put(entry.getKey(), entry.getValue());
           }
       }
-      bag.addAll(other.bag);
+      line.addAll(other.line);
   }
 
   @Override
@@ -393,8 +388,8 @@ class SimiObjectImpl implements SimiObject {
         for (String key : fields.keySet()) {
             sb.append("\t").append(key).append(" = ").append(fields.get(key)).append("\n");
         }
-        for (int i = 0; i < bag.size(); i++) {
-            sb.append("\t").append(i).append(" = ").append(bag.get(i)).append("\n");
+        for (int i = 0; i < line.size(); i++) {
+            sb.append("\t").append(i).append(" = ").append(line.get(i)).append("\n");
         }
       return sb.toString();
     }
@@ -442,11 +437,11 @@ class SimiObjectImpl implements SimiObject {
             SimiProperty value = entry.getValue();
             fieldsClone.put(entry.getKey(), (value != null) ? value.clone(mutable) : null);
         }
-        ArrayList<SimiProperty> bagClone = new ArrayList<>();
-        for (SimiProperty field : bag) {
-            bagClone.add(field.clone(mutable));
+        ArrayList<SimiProperty> lineClone = new ArrayList<>();
+        for (SimiProperty field : line) {
+            lineClone.add(field.clone(mutable));
         }
-        return new SimiObjectImpl(clazz, mutable, fieldsClone, bagClone);
+        return new SimiObjectImpl(clazz, mutable, fieldsClone, lineClone);
     }
 
     @Override
@@ -468,8 +463,8 @@ class SimiObjectImpl implements SimiObject {
                         )
                         .collect(Collectors.joining(TokenType.COMMA.toCode() + TokenType.NEWLINE.toCode()))
                 )
-                .append((fields.isEmpty() || bag.isEmpty()) ? "" : TokenType.COMMA.toCode())
-                .append(bag.stream()
+                .append((fields.isEmpty() || line.isEmpty()) ? "" : TokenType.COMMA.toCode())
+                .append(line.stream()
                         .map(i -> i.getValue().toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
                 )
@@ -512,9 +507,9 @@ class SimiObjectImpl implements SimiObject {
                 return keyComp;
             }
         }
-        int len = Math.min(bag.size(), other.bag.size());
+        int len = Math.min(line.size(), other.line.size());
         for (int i = 0; i < len; i++) {
-            int valComp = bag.get(i).getValue().compareTo(other.bag.get(i).getValue());
+            int valComp = line.get(i).getValue().compareTo(other.line.get(i).getValue());
             if (valComp != 0) {
                 return valComp;
             }
