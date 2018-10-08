@@ -41,7 +41,7 @@ What Šimi offers:
       - [Functions](#functions)
         * [Closure vs. environment invocation](#closure-vs-environment-invocation)
       - [Objects](#objects)
-        * [Dictionaries and Arrays - the Siamese Twins](#dictionaries-and-arrays-the-siamese-twins)
+        * [Dictionaries and Arrays - the Siamese Twins](#dictionaries-and-arrays---the-siamese-twins)
       - [Value conversions](#value-conversions)
     + [Classes](#classes)
       - [Using classes as modules](#using-classes-as-modules)
