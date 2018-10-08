@@ -119,7 +119,7 @@ class Json:
             return str.substring($start, $curr).toNumber()
         end
 
-        tokens = Object.array()
+        tokens = $[]
         while not isAtEnd():
             $start = $curr
             c = advance()
@@ -169,7 +169,7 @@ class Json:
 
         parseArray = def opener:
             if opener != @_TOKENS.arrayStart: return nil
-            arr = Object.array()
+            arr = $[]
             while hasNext():
                 $token = nextToken()
                 if $token == @_TOKENS.arrayEnd: return arr

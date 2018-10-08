@@ -194,7 +194,7 @@ class Parser:
 
     def parse():
         @current = 0
-        stmts = $Object.array()
+        stmts = $$[]
         while not @_isAtEnd():
             if @_match(TokenType.IMPORT):
                 @_advance()
@@ -233,8 +233,8 @@ class Parser:
             $superclasses = @_params("class", false).map(def p: ExprVar(p))
         end
         @_consume(TokenType.COLON, "Expected ':' before class body.")
-        constants = $Object.array()
-        methods = $Object.array()
+        constants = $$[]
+        methods = $$[]
         while not @_check(TokenType.END) and not @_isAtEnd():
             if @_match(TokenType.NEWLINE): continue
             if @_match(TokenType.STRING):
@@ -275,7 +275,7 @@ class Parser:
         condition = @_expression()
         thenBranch = @_block("if", true)
         $elseBranch = nil
-        elsifs = $Object.array()
+        elsifs = $$[]
         while @_match([TokenType.ELSIF, NEWLINE]):
             if @_previous().type == TokenType.ELSIF: elsifs.append(StmtElsif(@_expression(), @_block("elsif", true)))
         end
@@ -357,7 +357,7 @@ class Parser:
         if $declaration == nil: $declaration = @_previous()
         params = @_params(kind, lambda)
         @_consume(TokenType.COLON, "Expect a ':' at the start of block!")
-        statements = $Object.array()
+        statements = $$[]
 #        print "consuming block " + kind+" " +@_peek()
         if @_match(TokenType.NEWLINE):
 #            print "kind is " + kind
@@ -380,7 +380,7 @@ class Parser:
     end
 
     def _params(kind, lambda):
-        params = $Object.array()
+        params = $$[]
         if not @_check(TokenType.LEFT_PAREN):
             if lambda and not @_check(TokenType.COLON): params.append(@_consumeParam())
         end else:
@@ -543,7 +543,7 @@ class Parser:
 
     def _finishCall(callee):
 #        print "finish call expr " + @_peek()
-        args = $Object.array()
+        args = $$[]
         if not @_check(TokenType.RIGHT_PAREN):
             args.append(@_getCallParam())
             while @_match(TokenType.COMMA): args.append(@_getCallParam())
@@ -601,7 +601,7 @@ class Parser:
 
     def _objectLiteral():
         opener = @_previous()
-        props = $Object.array()
+        props = $$[]
         $dictionary = true
         if not @_check(TokenType.RIGHT_BRACKET):
             @_matchAllNewlines()

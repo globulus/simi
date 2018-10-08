@@ -153,8 +153,8 @@ class Interpreter:
         @_globals = Environment()
         @_environment = @_globals
 #        @_locals = $[]
-        @_loopBlocks = $Object.array()
-        @_raisedExceptions = $Object.array()
+        @_loopBlocks = $$[]
+        @_raisedExceptions = $$[]
         @_yieldedStmts = $[]
     end
 

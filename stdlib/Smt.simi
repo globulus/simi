@@ -9,7 +9,7 @@ class Smt:
 
     def compile(template):
         smt = Smt()
-        parts = Object.array()
+        parts = $[]
         lines = template.split("\n")
         skip = 0
         for [i, line] in lines.enumerate():
@@ -25,7 +25,7 @@ class Smt:
                 lineParts = @_parseLine(line, i)
                 first = lineParts.first()
                 last = parts.last()
-                if first is String and last is String: # BP
+                if first is String and last is String:
                     parts.(parts.len() - 1) = last + first
                     parts.addAll(lineParts.slice(1))
                 end
@@ -72,12 +72,12 @@ class Smt:
         end
         body.add("return \(var).build()
         end)")
-        return [part = gu body.build(), skip = skip] # B
+        return [part = gu body.build(), skip = skip]
     end
 
     def _parseLine(line, idx):
         i = 0
-        arr = Object.array()
+        arr = $[]
         while true:
             j = line.indexOf(@_EXPR_START, i)
             if j:

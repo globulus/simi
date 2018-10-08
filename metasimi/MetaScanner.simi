@@ -134,7 +134,7 @@ class Scanner:
     def init(source):
         @source = source
         @sourceLen = source.length()
-        @tokens = $Object.array()
+        @tokens = $$[]
         @start = 0
         @current = 0
         @line = 1

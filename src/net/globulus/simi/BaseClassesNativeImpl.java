@@ -456,17 +456,6 @@ class BaseClassesNativeImpl {
                 return objectValue;
             }
         });
-        methods.put(new OverloadableFunction("array", 0), new SimiCallable() {
-            @Override
-            public int arity() {
-                return 0;
-            }
-
-            @Override
-            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
-                return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), false, new ArrayList<>()));
-            }
-        });
         methods.put(new OverloadableFunction("array", 1), new SimiCallable() {
             @Override
             public int arity() {

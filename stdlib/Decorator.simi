@@ -5,7 +5,7 @@ Decorator = [
 
     go = def (f):
         lines = (ivic f).split("\n")
-        newLines = Object.array()
+        newLines = $[]
         decorators = nil
         skip = -1
         for e in lines.enumerate():
@@ -114,13 +114,13 @@ Decorator = [
                 fname = farg.name
 #                print "In flooper: " + fname
                 if fname not in fcache:
-                    workerLines = Object.array()
+                    workerLines = $[]
                     workerLines.append(farg.anonymousDeclaration().replacing("(", "(looper, "))
                     temp = 0
                     for line in farg.body():
                         trimmedLine = line.trim()
                         if fname in trimmedLine:
-                            parts = Object.array()
+                            parts = $[]
                             currentLine = trimmedLine
                             while fname in currentLine:
                                 index = currentLine.indexOf(fname)

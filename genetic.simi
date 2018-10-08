@@ -19,7 +19,7 @@ class Knight:
         @loc = loc
         @move = move
         @lastDist = nil
-        @trace = Object.array()
+        @trace = $[]
     end
 
     def mutate():
@@ -52,7 +52,7 @@ class Knight:
 end
 
 maxKnights = 5
-knights = Object.array()
+knights = $[]
 for _ in maxKnights.times():
     knights.push(Knight(Field(0, 0), :pass))
 end

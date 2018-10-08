@@ -101,8 +101,8 @@ class_ Orm(Closeable):
     def createTable(clazz):
         tableName = @_checkAndGetTableName(clazz)
         primaryKey = nil
-        columns = Object.array()
-        tableDataColumns = Object.array()
+        columns = $[]
+        tableDataColumns = $[]
         for field in clazz:
             value = clazz.(field)
             column = @_extractAnnot(value, Orm.Column)

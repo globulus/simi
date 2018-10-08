@@ -12,9 +12,9 @@ class DocScanner:
         @len = source.length()
         @meat = $String.builder()
         @ret = $String.builder()
-        @params = $Object.array()
-        @throws = $Object.array()
-        @sees = $Object.array()
+        @params = $$[]
+        @throws = $$[]
+        @sees = $$[]
     end
 
     def parse():
