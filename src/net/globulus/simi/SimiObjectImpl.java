@@ -447,13 +447,14 @@ class SimiObjectImpl implements SimiObject {
     @Override
     public String toCode(int indentationLevel, boolean ignoreFirst) {
         String indentation = Codifiable.getIndentation(indentationLevel + 1);
+        boolean isArray = isArray();
         return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
                 .append(immutable ? TokenType.LEFT_BRACKET.toCode() : TokenType.DOLLAR_LEFT_BRACKET.toCode())
-                .append(TokenType.NEWLINE.toCode())
-                .append(clazz != null
-                        ? indentation
+                .append(isArray ? "" : TokenType.NEWLINE.toCode())
+                .append((clazz != null && !clazz.name.equals(Constants.CLASS_OBJECT))
+                        ? (indentation
                         + "\"class\" = gu \"" + clazz.name + "\"" + (fields.isEmpty() ? "" : TokenType.COMMA.toCode())
-                        + TokenType.NEWLINE.toCode()
+                        + TokenType.NEWLINE.toCode())
                         : ""
                 )
                 .append(fields.entrySet().stream()
@@ -468,7 +469,7 @@ class SimiObjectImpl implements SimiObject {
                         .map(i -> i.getValue().toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
                 )
-                .append(TokenType.NEWLINE.toCode(indentationLevel, false))
+                .append(isArray ? "" : TokenType.NEWLINE.toCode(indentationLevel, false))
                 .append(TokenType.RIGHT_BRACKET.toCode(indentationLevel, false))
                 .append(TokenType.NEWLINE.toCode())
                 .toString();
