@@ -1,6 +1,6 @@
 <html>
     <body>
-        Value is: <b><%= value %></b> (should be 3)
+        Value is: <b><%= value %></b> (should be 3) <%# This is a comment %>
         <ul>
             %%for i in 5.times():
                 <li>Loop value is <%= i %>%_

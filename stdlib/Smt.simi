@@ -1,6 +1,8 @@
 class Smt:
     _STMT = "%%"
-    _EXPR_START = "<%="
+    _TAG_START = "<%"
+    _EXPR = "="
+    _COMMENT = "#"
     _END = "%>"
     _SKIP = "%_"
 
@@ -78,14 +80,18 @@ class Smt:
     def _parseLine(line, idx):
         i = 0
         arr = $[]
+        tagStartLen = @_TAG_START.len()
         while true:
-            j = line.indexOf(@_EXPR_START, i)
+            j = line.indexOf(@_TAG_START, i)
             if j:
                 arr.append(@_checkSkipTrim(line.substring(i, j)))
                 k = line.indexOf(@_END, j)
                 if not k: Smt.FormatException("Expected \(@_END) at line \(idx): \(line)").raise()
-                body = "(:" + line.substring(j + @_EXPR_START.len(), k) + ")"
-                arr.append(gu body)
+                type = line.(j + tagStartLen)
+                if type == @_EXPR:
+                    body = "(:" + line.substring(j + tagStartLen + 1, k) + ")"
+                    arr.append(gu body)
+                end
                 i $= k + @_END.len()
             end
             else: # No expressions left in the string
