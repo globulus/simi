@@ -31,7 +31,7 @@ public class SimiGson {
     @SimiJavaMethod
     public static SimiProperty parseAsync(SimiObject self, BlockInterpreter interpreter, SimiProperty jsonString, SimiProperty callback) {
         new Thread(() -> {
-            callback.getValue().getCallable().call(interpreter, Collections.singletonList(parse(self, interpreter, jsonString)), false);
+            callback.getValue().getCallable().call(interpreter, null, Collections.singletonList(parse(self, interpreter, jsonString)), false);
         }).start();
         return null;
     }

@@ -135,8 +135,18 @@ public class MariaDb {
         }
 
         @Override
+        public String getFileName() {
+            return null;
+        }
+
+        @Override
         public boolean hasBreakPoint() {
             return false;
+        }
+
+        @Override
+        public int compareTo(SimiObject o) {
+            return 0;
         }
     }
 }

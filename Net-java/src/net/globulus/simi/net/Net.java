@@ -36,7 +36,7 @@ public class Net {
                 props.put("body", new SimiValue.String(EntityUtils.toString(response.getEntity())));
                 client.close();
                 SimiValue simiResponse = new SimiValue.Object(interpreter.newObject(true, props));
-                callback.getValue().getCallable().call(interpreter, Collections.singletonList(simiResponse), false);
+                callback.getValue().getCallable().call(interpreter, null, Collections.singletonList(simiResponse), false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -70,7 +70,7 @@ public class Net {
                 props.put("body", new SimiValue.String(EntityUtils.toString(response.getEntity())));
                 client.close();
                 SimiValue simiResponse = new SimiValue.Object(interpreter.newObject(true, props));
-                callback.getValue().getCallable().call(interpreter, Collections.singletonList(simiResponse), false);
+                callback.getValue().getCallable().call(interpreter, null, Collections.singletonList(simiResponse), false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -104,7 +104,7 @@ public class Net {
                 props.put("body", new SimiValue.String(EntityUtils.toString(response.getEntity())));
                 client.close();
                 SimiValue simiResponse = new SimiValue.Object(interpreter.newObject(true, props));
-                callback.getValue().getCallable().call(interpreter, Collections.singletonList(simiResponse), false);
+                callback.getValue().getCallable().call(interpreter, null, Collections.singletonList(simiResponse), false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -132,7 +132,7 @@ public class Net {
                 props.put("body", new SimiValue.String(EntityUtils.toString(response.getEntity())));
                 client.close();
                 SimiValue simiResponse = new SimiValue.Object(interpreter.newObject(true, props));
-                callback.getValue().getCallable().call(interpreter, Collections.singletonList(simiResponse), false);
+                callback.getValue().getCallable().call(interpreter, null, Collections.singletonList(simiResponse), false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
