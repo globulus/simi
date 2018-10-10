@@ -175,7 +175,12 @@ abstract class Expr implements Codifiable {
               List<Stmt> otherStmts = new ArrayList<>(size - i + 1);
               otherStmts.add(assignment);
               otherStmts.addAll(statements.subList(i + 1, size));
-              Expr.Call call = new Expr.Call(expr.value.callee, expr.value.paren, new ArrayList<>(expr.value.arguments));
+              Expr callee = expr.value.callee;
+              if (callee instanceof Expr.Get) {
+                Expr.Get get = (Expr.Get) callee;
+                callee = new Expr.Get(get.origin, get.object, get.name, get.arity + 1);
+              }
+              Expr.Call call = new Expr.Call(callee, expr.value.paren, new ArrayList<>(expr.value.arguments));
               call.arguments.add(new Expr.Block(
                       new Token(TokenType.DEF, null, null, expr.assign.line, expr.assign.file),
                       Collections.singletonList(response),

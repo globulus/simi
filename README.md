@@ -1377,6 +1377,8 @@ As the program runs and encounters a breakpoint, it will pause and print out:
 2. environment for the first frame, not including the global environment.
 
 When a breakpoint triggers, you can type in the following commands to use the debugger:
+* *c* - prints the call stack.
+* *l* - prints the line stack (lines executed prior to reaching the current line).
 * *i \[index]* - prints the environment for the frame at given index.
 * *e \[expr]* - evaluates the provided expression in the current environment and prints out the result.
 * *r* - removes the current breakpoint. You cannot alter breakpoints at runtime as they are gathered from comments during the scanning phase, but you can choose to ignore some in your current debugging session by using the *r* command.
