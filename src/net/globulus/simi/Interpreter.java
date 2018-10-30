@@ -94,7 +94,9 @@ class Interpreter implements
         if (raisedExceptions.isEmpty()) {
           result = execute(statement);
         } else {
-          throw raisedExceptions.peek();
+          SimiException e = raisedExceptions.peek();
+          debugger.triggerException(statement, e);
+          throw e;
         }
       }
     } catch (RuntimeError error) {
@@ -131,10 +133,8 @@ class Interpreter implements
 //    if (index < statements.size() - 2) {
 //      after = new Codifiable[] { statements.get(index + 1), statements.get(index + 2) };
 //    }
-    debugger.pushLine(new Debugger.Frame(environment.deepClone(), stmt, before, after));
-    if (stmt.hasBreakPoint()) {
-        debugger.triggerBreakpoint(stmt);
-    }
+    debugger.pushLine(new Debugger.Frame(environment.deepClone(), environment, stmt, before, after));
+    debugger.triggerBreakpoint(stmt);
   }
 
   void resolve(Expr expr, int depth) {
@@ -645,7 +645,7 @@ class Interpreter implements
   @Override
   public SimiProperty visitCallExpr(Expr.Call expr) {
     if (debugger != null) {
-      debugger.pushCall(new Debugger.Frame(environment.deepClone(), expr, null, null));
+      debugger.pushCall(new Debugger.Frame(environment.deepClone(), environment, expr, null, null));
     }
     SimiProperty callee = evaluate(expr.callee);
     SimiProperty result = call(callee, expr.arguments, expr.paren);
@@ -1214,6 +1214,8 @@ class Interpreter implements
     raisedExceptions.push(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
   }
 
+  // Debugger.Evaluator
+
     @Override
     public String eval(String input, Environment environment) {
         Environment currentEnv = this.environment;
@@ -1231,7 +1233,9 @@ class Interpreter implements
         return globals;
     }
 
-    @FunctionalInterface
+  // /Debugger.Evaluator
+
+  @FunctionalInterface
   private interface ClassImporter {
     void importValue(String key, SimiProperty prop);
   }
