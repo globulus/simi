@@ -163,17 +163,15 @@ public class ActiveSimi {
 
     private static final ErrorWatcher WATCHER = new ErrorWatcher() {
         @Override
-        public void report(int line, String where, String message) {
-            System.err.println(
-                    "[line " + line + "] Error" + where + ": " + message);
+        public void report(String file, int line, String where, String message) {
+            System.err.println("[\"" + file + "\" line " + line + "] Error" + where + ": " + message);
             hadError = true;
         }
 
         @Override
         public void runtimeError(RuntimeError error) {
-
             System.err.println(error.getMessage() +
-                    "\n[" + error.token.file + " line " + error.token.line + "]");
+                    "\n[\"" + error.token.file + "\" line " + error.token.line + "]");
             hadRuntimeError = true;
         }
     };

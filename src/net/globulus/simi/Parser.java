@@ -921,7 +921,7 @@ class Parser {
     } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
       Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
       if (/*objectLiteral.isDictionary || */objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
-        ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
+        ErrorHub.sharedInstance().error(equals.file, equals.line, "Invalid object decomposition syntax.");
       }
       List<Expr.Assign> assigns = new ArrayList<>();
       List<Stmt.Annotation> annotations = (parser != null) ? parser.getAnnotations() : null;

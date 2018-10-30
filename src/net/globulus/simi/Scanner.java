@@ -224,7 +224,7 @@ class Scanner {
         } else if (isAlpha(c)) {
           identifier();
         } else {
-        ErrorHub.sharedInstance().error(line, "Unexpected character.");
+        ErrorHub.sharedInstance().error(fileName, line, "Unexpected character.");
         }
         break;
     }
@@ -271,7 +271,7 @@ class Scanner {
         advance();
         advance();
       } else {
-        ErrorHub.sharedInstance().error(line, "Expected a digit or + or - after E!");
+        ErrorHub.sharedInstance().error(fileName, line, "Expected a digit or + or - after E!");
       }
       while (isDigitOrUnderscore(peek())) advance();
     }
@@ -309,7 +309,7 @@ class Scanner {
 
     // Unterminated string.
     if (isAtEnd()) {
-      ErrorHub.sharedInstance().error(line, "Unterminated string.");
+      ErrorHub.sharedInstance().error(fileName, line, "Unterminated string.");
       return;
     }
 
@@ -322,8 +322,11 @@ class Scanner {
   }
 
   private String escapedString(int start, int stop) {
+    String BACKSLASH_BACKSLASH_N_REPLACEMENT = "\\\\r";
     return source.substring(start, stop)
+            .replace("\\\\n", BACKSLASH_BACKSLASH_N_REPLACEMENT)
             .replace("\\n", "\n")
+            .replace(BACKSLASH_BACKSLASH_N_REPLACEMENT, "\\n")
             .replace("\\t", "\t")
             .replace("\\\"", "\"");
   }

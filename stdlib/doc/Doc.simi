@@ -1,0 +1,39 @@
+import "./stdlib/File.simi"
+import "./stdlib/Smt.simi"
+
+class Doc:
+    _DOC_START = "##"
+
+    def run(path):
+        smt = Smt.compile(File.readString("./stdlib/doc/DocTemplate.html"))
+        files = ife(path.isDirectory(), :File.listAll(path, "simi", true), :[File(path)])
+        for file in files:
+            [title, summary] = @_analyze(file)
+            writer = WriteStream(file.changingExtension(to = "html"))
+            content = smt.run$()
+            writer.write(content)
+            rescue ex:
+                if ex: print ex.message
+                writer.close()
+            end
+        end
+    end
+
+    def _analyze(file):
+        title = file.fileNameWithoutExtension()
+        summary = nil
+        buffer = nil
+        for line in File.readLines(file.path):
+            trimmed = line.trim()
+            if trimmed.startsWith(@_DOC_START):
+                if not buffer: buffer $= $[]
+                buffer.append(trimmed.substring(@_DOC_START.len()))
+            end
+            elsif trimmed.startsWith("class") and buffer:
+                summary $= buffer
+                buffer $= nil
+            end
+        end
+        return [title = title, summary = summary]
+    end
+end

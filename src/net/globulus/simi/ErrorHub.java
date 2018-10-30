@@ -15,21 +15,21 @@ class ErrorHub {
         return instance;
     }
 
-    void error(int line, String message) {
-        report(line, "", message);
+    void error(String file, int line, String message) {
+        report(file, line, "", message);
     }
 
     void error(Token token, String message) {
         if (token.type == TokenType.EOF) {
-            report(token.line, " at end", message);
+            report(token.file, token.line, " at end", message);
         } else {
-            report(token.line, " at '" + token.lexeme + "'", message);
+            report(token.file, token.line, " at '" + token.lexeme + "'", message);
         }
     }
 
-    void report(int line, String where, String message) {
+    void report(String file, int line, String where, String message) {
         for (ErrorWatcher watcher : watchers) {
-            watcher.report(line, where, message);
+            watcher.report(file, line, where, message);
         }
     }
 

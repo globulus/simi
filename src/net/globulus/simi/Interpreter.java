@@ -629,8 +629,13 @@ class Interpreter implements
         checkNumberOperands(expr.operator, left, right);
         return new SimiValue.Number(left.getNumber().asLong() / right.getNumber().asLong());
       case STAR:
-        checkNumberOperands(expr.operator, left, right);
+        if (left instanceof SimiValue.Number && right instanceof SimiValue.Number) {
           return left.getNumber().multiply(right.getNumber());
+        } else if (left instanceof SimiValue.String && right instanceof SimiValue.Number && right.getNumber().isInteger()) {
+          return new SimiValue.String(String.join("", Collections.nCopies(Math.toIntExact(right.getNumber().asLong()), left.getString())));
+        } else {
+          throw new RuntimeError(expr.operator, "\"*\" operands must be either numbers or a string and an integer!");
+        }
         case MOD:
             checkNumberOperands(expr.operator, left, right);
             return left.getNumber().mod(right.getNumber());
@@ -841,7 +846,7 @@ class Interpreter implements
         } else if (stmt instanceof Stmt.Expression) {
             return evaluate(((Stmt.Expression) stmt).expression);
         } else {
-            ErrorHub.sharedInstance().error(0, "Invalid GU expression!");
+            ErrorHub.sharedInstance().error(FILE_RUNTIME,0, "Invalid GU expression!");
             return null;
         }
     }

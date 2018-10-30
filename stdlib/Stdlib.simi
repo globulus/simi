@@ -136,6 +136,7 @@ class$ Object:
        end
    end
    def slice(start): return @slice(start, @len())
+   def randomItem(): return @(Number.randomInt(@len()))
 end
 
 class_ Function:
@@ -156,10 +157,18 @@ end
 class IllegalArgumentException(Exception):
 end
 
+class AbstractMethodException(Exception):
+    def init(method, sender): @init("\(method) is abstract in \(sender.('class'))!")
+end
+
 def ife(condition, ifval, elseval):
     if condition: return ifval()
     else: return elseval()
 end
+
+Io = [
+    read = def (): native
+]
 
 class Iterator:
     def next(): pass
@@ -231,6 +240,8 @@ class$ Number:
     def bitShl(num): native
     def bitShr(num): native
     def bitUshr(num): native
+
+    def char(): native
 end
 
 class$ String:
@@ -249,6 +260,7 @@ class$ String:
    def trim(): native
    def isAlpha(): native
    def isDigit(): native
+   def unicode(): native
 
    def iterate(): native
    def has(obj): native

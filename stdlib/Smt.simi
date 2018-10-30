@@ -63,7 +63,7 @@ class Smt:
             else:
                 for part in @_parseLine(line, i):
                     partVal = nil
-                    if part is String: partVal $= "\"\(part)\""
+                    if part is String: partVal $= "\"\(part.replacing('"', ' \\"'))\""
                     else:
                         funcBody = ivic part
                         partVal $= "(\(funcBody.substring(0, funcBody.len() - 1)))()"

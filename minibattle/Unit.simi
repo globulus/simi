@@ -1,0 +1,9 @@
+import "./minibattle/Common.simi"
+
+class Unit(BoardPiece):
+    def canBePlayedOn(terrain): return true
+end
+
+class EmptyUnit(Unit):
+   def render(): return "X"
+end

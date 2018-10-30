@@ -1,0 +1,35 @@
+import "./minibattle/Utils.simi"
+import "./minibattle/Terrain.simi"
+import "./minibattle/Unit.simi"
+
+class Board(Renderable):
+    SIZE = [w = 16, h = 16]
+
+    def init():
+         @board = Object.array(@SIZE.h, @_Row())
+         cols = @SIZE.w
+         @_rowIndexWidth = Math.round(Math.floor(Math.log10(cols))) + 1
+         # Add spaces in front to pad for row indices, then add column letters
+         @_header = " " * (@_rowIndexWidth + 2)\
+            + String.from(Object.arrayWithIterator(cols.times()).map(def n: ("A".unicode() + n).char()), "  ")\
+            + "\n"
+    end
+
+    def render():
+        s = String.builder().add(@_header)
+        for [i, row] in @board.enumerate(): s.add(("%\(@_rowIndexWidth)d  %s\n").format([i + 1, row.render()]))
+        return s.build()
+    end
+
+    def itemAt():
+
+    end
+
+    class _Row(Renderable):
+        def init():
+            for _ in Board.SIZE.w.times(): @append([terrain = Terrain.values.randomItem()])
+        end
+
+        def render(): return String.from(@ruler().map(def i: "%-2s".format([(i.unit ?? i.terrain).render()])), " ")
+    end
+end

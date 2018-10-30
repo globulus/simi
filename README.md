@@ -229,10 +229,10 @@ end
 ```
 
 ##### Boxed numbers and strings
-Boxed numbers and strings are objects with two fields, a class being Number of String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
+Boxed numbers and strings are objects with two fields, a class being Number or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
 # Implementation of times() method from Number class
-def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
+def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
 ```
 
 #### Functions
@@ -587,6 +587,7 @@ end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
+
 ```ruby
 class Private:
     def init():
@@ -1135,7 +1136,7 @@ You may also expose *global* methods, i.e methods that aren't linked to a class 
 
 ### Annotations
 
-Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals and precede a declaration:
+Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals or constructor invocations and precede a declaration:
 ```ruby
 class Api:
     ![method = "GET", endpoint = "/user"]
@@ -1471,7 +1472,7 @@ Smt is heavily used with [Šimi servers](https://github.com/globulus/simi-sync/t
 
 Files located in [stdlib/sql](stdlib/sql/) serve as an interface for connecting to relational databases. Currently, [MariaDB](https://mariadb.com/) is used to illustrate how to natively connect to a DB and map its result into Šimi Db and ResultSet classes.
 
-The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows. To start, annotate a class with **Orm.Table**. Then, use **Orm.Column** annotation on its fields to declare the table colums. Names, nullability and data types can be inferred, or stated explicitly. **Orm.PrimaryKey** annotation is used in addition to Orm.Column to denote the primary key column. To boot your Orm instance, invoke the *createTable* method with all the table classes you wish to support, and it will sert everything up for you. From there on, you can perform selection, insert, update and delete by using fluent syntax that works with the annotated classes instead of plain objects.
+The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows. To start, annotate a class with **Orm.Table**. Then, use **Orm.Column** annotation on its fields to declare the table colums. Names, nullability and data types can be inferred, or stated explicitly. **Orm.PrimaryKey** annotation is used in addition to Orm.Column to denote the primary key column. To boot your Orm instance, invoke the *createTable* method with all the table classes you wish to support, and it will sert everything up for you. From there on, you can perform selection, insertion, update and deletion by using fluent syntax that works with the annotated classes instead of plain objects.
 
 Check out ŠimiSync's [DbHelper](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/db/DbHelper.simi) and [BeerController](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/controllers/BeerController.simi) classes to see the Orm action on a Šimi backend!
 

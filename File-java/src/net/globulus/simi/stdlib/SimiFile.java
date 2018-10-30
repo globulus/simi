@@ -75,6 +75,12 @@ public class SimiFile {
         }
     }
 
+    @SimiJavaMethod
+    public static SimiProperty isDirectory(SimiObject self, BlockInterpreter interpreter) {
+        String path = self.get("path", interpreter.getEnvironment()).getValue().getString();
+        return new SimiValue.Number(Files.isDirectory(Paths.get(path)));
+    }
+
     private static SimiValue pathToSimiFile(SimiClass clazz, BlockInterpreter interpreter, Path path) {
         LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
         props.put("path", new SimiValue.String(path.toString()));

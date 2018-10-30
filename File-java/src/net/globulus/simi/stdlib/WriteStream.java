@@ -15,7 +15,10 @@ public class WriteStream {
         String path = file.getValue().getObject().get("path", interpreter.getEnvironment()).getValue().getString();
         try {
             File f = new File(path);
-            f.getParentFile().mkdirs();
+            File parentFile = f.getParentFile();
+            if (parentFile != null) {
+                parentFile.mkdirs();
+            }
             f.createNewFile();
             BufferedWriter writer = new BufferedWriter(new FileWriter(f));
             Wrapper wrapper = new Wrapper(writer);

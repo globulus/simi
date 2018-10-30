@@ -1,0 +1,31 @@
+class Renderable:
+    def render(): AbstractMethodException(self(def), self).raise()
+end
+
+class BoardPiece(Renderable):
+end
+
+def parseCoordinates(input):
+    parseLetter = def letter:
+        code = letter.unicode()
+        aCode = "a".unicode()
+        return ife(code >= aCode, :code - aCode, :code - "A".unicode())
+    end
+    parseRest = def start:
+        len = 1
+        if start + 1 < input.len() and input.(start + 1).isDigit(): len $= 2
+        return [val = input.substring(start, start + len).toNumber(), len = len]
+    end
+    c = 0
+    r = 0
+    if input.0.isAlpha():
+        c $= parseLetter(input.0)
+        r $= parseRest(1).val
+    end else:
+        [val, len] = parseRest(0)
+        r $= val
+        c $= parseLetter(input.(len))
+    end
+    return [c = c, r = r]
+end
+
