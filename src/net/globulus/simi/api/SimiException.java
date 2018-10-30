@@ -4,6 +4,8 @@ import java.util.List;
 
 public final class SimiException extends RuntimeException implements SimiObject {
 
+    private static final String MESSAGE = "message";
+
     private final SimiClass clazz;
 
     public SimiException(SimiClass clazz, String message) {
@@ -18,7 +20,7 @@ public final class SimiException extends RuntimeException implements SimiObject 
 
     @Override
     public SimiProperty get(String key, SimiEnvironment environment) {
-        if (key.equals("message")) {
+        if (key.equals(MESSAGE)) {
             return new SimiValue.String(getMessage());
         }
         return null;

@@ -1373,16 +1373,22 @@ a = 5
 b = 6 # BP (this will trigger a breakpoint)
 c = 7
 ```
-As the program runs and encounters a breakpoint, it will pause and print out:
+As the program runs and encounters a breakpoint or a fatal exception (where your program would normally crash), it will pause and print out:
 1. a stack trace 20 frames deep,
 2. environment for the first frame, not including the global environment.
 
-When a breakpoint triggers, you can type in the following commands to use the debugger:
+When a breakpoint or a crash triggers, you can type in the following commands to use the debugger:
 * *c* - prints the call stack.
 * *l* - prints the line stack (lines executed prior to reaching the current line).
 * *i \[index]* - prints the environment for the frame at given index.
 * *e \[expr]* - evaluates the provided expression in the current environment and prints out the result.
+* *w \[name]* - adds variable in the current environment to Watch.
+* *n* - step into - trigger breakpoint at next line.
+* *v* - step over - trigger breakpoint at next line skipping calls.
+* *a* - adds current line at breakpoint for this debugger session. To be used in conjuction with "step into" and "step over".
 * *r* - removes the current breakpoint. You cannot alter breakpoints at runtime as they are gathered from comments during the scanning phase, but you can choose to ignore some in your current debugging session by using the *r* command.
+* *o* - toggles debugging on/off. Breakpoints and exceptions will not trigger if debugging is off.
+* *h* - prints help.
 * *g* - prints out global environment.
 
 Typing in anything else (or a newline) will resume the execution of the program.
