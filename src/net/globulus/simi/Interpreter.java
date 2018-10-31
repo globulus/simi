@@ -95,7 +95,7 @@ class Interpreter implements
           result = execute(statement);
         } else {
           SimiException e = raisedExceptions.peek();
-          debugger.triggerException(statement, e);
+          debugger.triggerException(statement, e, true);
           throw e;
         }
       }
@@ -194,6 +194,9 @@ class Interpreter implements
   @Override
   public void raiseException(SimiException e) {
     raisedExceptions.push(e);
+    if (debugger != null) {
+      debugger.triggerException(null, e, false);
+    }
   }
 
   @Override
@@ -1211,7 +1214,7 @@ class Interpreter implements
 
   private void raiseNilReferenceException(Token token) {
     String message = "Nil reference found at " + token.file + " line " + token.line + ": " + token.toString();
-    raisedExceptions.push(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
+    raiseException(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
   }
 
   // Debugger.Evaluator
