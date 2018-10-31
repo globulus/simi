@@ -1387,7 +1387,8 @@ When a breakpoint or a crash triggers, you can type in the following commands to
 * *v* - step over - trigger breakpoint at next line skipping calls.
 * *a* - adds current line at breakpoint for this debugger session. To be used in conjuction with "step into" and "step over".
 * *r* - removes the current breakpoint. You cannot alter breakpoints at runtime as they are gathered from comments during the scanning phase, but you can choose to ignore some in your current debugging session by using the *r* command.
-* *o* - toggles debugging on/off. Breakpoints and exceptions will not trigger if debugging is off.
+* *x* - toggles catching all exceptions on/off (default off). Normally, the debugger will only trigger if a fatal exception is encountered, but can be configured to catch all exceptions so that you can inspect the environment capture more thoroughly.
+* *o* - toggles debugging on/off (default on). Breakpoints and exceptions will not trigger if debugging is off.
 * *h* - prints help.
 * *g* - prints out global environment.
 

@@ -21,7 +21,8 @@ final class Debugger {
             "v: Step over - trigger breakpoint at next line skipping calls\n" +
             "a: Add current line as breakpoint for this debugger session\n" +
             "r: Remove current breakpoint for this debugger session\n" +
-            "o: Toggles debugging on/off\n" +
+            "x: Toggles catching all exceptions on/off (default off)\n" +
+            "o: Toggles debugging on/off (default on)\n" +
             "h: Print help\n" +
             "g: Prints global environment\n" +
             "anything else: continue with program execution\n";
@@ -34,6 +35,7 @@ final class Debugger {
     private Set<Stmt> ignoredBreakpoints;
     private Set<Stmt> addedBreakpoints;
     private Map<String, Environment> watch;
+    private boolean allExceptions;
     private boolean debuggingOff;
     private boolean firstHelp;
 
@@ -53,6 +55,7 @@ final class Debugger {
         ignoredBreakpoints = new HashSet<>();
         addedBreakpoints = new HashSet<>();
         watch = new HashMap<>();
+        allExceptions = false;
         debuggingOff = false;
         firstHelp = true;
         stepState = StepState.NONE;
@@ -112,13 +115,13 @@ final class Debugger {
         scanInput();
     }
 
-    void triggerException(Stmt stmt, SimiException e) {
-        if (debuggingOff) {
+    void triggerException(Stmt stmt, SimiException e, boolean fatal) {
+        if (debuggingOff || !(allExceptions || fatal)) {
             return;
         }
         currentBreakpoint = stmt;
         currentStack = callStack;
-        System.out.println("***** FATAL EXCEPTION *****\n");
+        System.out.println("***** " + (fatal ? "FATAL " : "") + "EXCEPTION *****\n");
         System.out.println(e.getMessage() + "\n");
         print(0, true);
         scanInput();
@@ -206,16 +209,28 @@ final class Debugger {
                 return;
             case 'a': {
                 if (currentBreakpoint != null) {
-                    addedBreakpoints.add(currentBreakpoint);
+                    if (ignoredBreakpoints.contains(currentBreakpoint)) {
+                        ignoredBreakpoints.remove(currentBreakpoint);
+                    } else {
+                        addedBreakpoints.add(currentBreakpoint);
+                    }
                 }
                 System.out.println("Breakpoint added.");
             } break;
             case 'r': {
                 if (currentBreakpoint != null) {
-                    ignoredBreakpoints.add(currentBreakpoint);
+                    if (addedBreakpoints.contains(currentBreakpoint)) {
+                        addedBreakpoints.remove(currentBreakpoint);
+                    } else {
+                        ignoredBreakpoints.add(currentBreakpoint);
+                    }
                     currentBreakpoint = null;
                 }
                 System.out.println("Breakpoint removed.");
+            } break;
+            case 'x': { // Toggle catching all exceptions
+                allExceptions = !allExceptions;
+                System.out.println("All exceptions will be caught: " + allExceptions);
             } break;
             case 'o': { // Toggle debugging on/off
                 debuggingOff = !debuggingOff;
