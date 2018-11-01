@@ -17,6 +17,6 @@ class FixedSizeArray:
     def _trim():
         d = @len() - @limit
         if d <= 0: return
-        for _ in d.times(): @0 = nil # BP
+        for _ in d.times(): @0 = nil
     end
 end

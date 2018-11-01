@@ -14,7 +14,7 @@ class Smt:
         parts = $[]
         lines = template.split("\n")
         skip = 0
-        for [i, line] in lines.enumerate():
+        for [i, line] in lines.zip():
             if i < skip: continue
             trimmed = line.trim()
             if trimmed.startsWith(@_STMT):
@@ -46,7 +46,7 @@ class Smt:
         ")
         endCount = 1
         skip = nil
-        for [i, line] in lines.slice(idx + 1).enumerate():
+        for [i, line] in lines.slice(idx + 1).zip():
             tl = line.trim()
             if tl == @_STMT + "end":
                 body.add("\nend\n")

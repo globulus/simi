@@ -3,9 +3,36 @@ import "./Stdlib/Gson.simi"
 import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
+import "./Stdlib/Test.simi"
 import "./SimiSync/SimiSyncModels.simi"
 import "./Stdlib/sql/Mariadb.simi"
 import "./minibattle/Board.simi"
+
+import Test
+class TestCase:
+    !Before()
+    def before: print "before"
+
+    !After()
+    def after: print "after"
+
+    !Case()
+    def testEq:
+        Assert.equals(5, 5, "Should pass")
+    end
+
+    !Case()
+    def testEqFail:
+        Assert.equals(5, 4, "Should fail")
+    end
+
+    !Case()
+    def testInterpreterFail:
+        c = "b" - "a"
+        Assert.equals(5, 4, "Shouldn't happen")
+    end
+end
+print Reporter.report(Test.test([TestCase]))
 
 
 print pow(2, 3)
@@ -164,24 +191,24 @@ print ife1 is Function
 
 #Decorator.test()
 
-Net.go(def ():
-    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
-    print "Got response"
-    print code
-    print body
-end)
+#Net.go(def ():
+#    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
+#    print "Got response"
+#    print code
+#    print body
+#end)
 
-asyncf = Async.go(def ():
-    a = 5
-    b = 6
-    c = await* Gson.parseAsync('{a1:2}')
-    print "async c is " + c
-    d = 5
-    e = 7
-    f = await* Gson.parseAsync('{a2:3}')
-    print "async f is " + f
-    g = 10
-end)
+#asyncf = Async.go(def ():
+#    a = 5
+#    b = 6
+#    c = await* Gson.parseAsync('{a1:2}')
+#    print "async c is " + c
+#    d = 5
+#    e = 7
+#    f = await* Gson.parseAsync('{a2:3}')
+#    print "async f is " + f
+#    g = 10
+#end)
 #asyncf()
 
 def fib(n):
@@ -640,7 +667,7 @@ def compositeObjTest():
     print compositeObj.reversed().sorted()
     print compositeObj.where(def d: d is Number)
     compositeObj.forEach(def v: print v)
-    print compositeObj.enumerate()
+    print compositeObj.zip()
     ruler = compositeObj.ruler()
     print ruler
     ruler.append(100)
@@ -681,7 +708,11 @@ def arraySubclassTest():
 end
 arraySubclassTest()
 
+print Board.zip()
+
 print Board().render()
-inpt = Io.read()
-print inpt
-print parseCoordinates(inpt)
+#inpt = Io.read()
+#print inpt
+#print parseCell(inpt)
+
+print "kraj"

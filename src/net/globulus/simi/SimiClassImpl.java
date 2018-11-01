@@ -184,7 +184,9 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
         ArrayList<SimiProperty> values = getEnumeratedValues(objectClass);
         for (Map.Entry<OverloadableFunction, SimiFunction> entry : methods.entrySet()) {
             values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
-                    new SimiValue.String(entry.getKey().name), new SimiValue.Callable(entry.getValue(), entry.getKey().name, this))));
+                    new SimiValue.String(entry.getKey().name),
+                    new SimiPropertyImpl(new SimiValue.Callable(entry.getValue(), entry.getKey().name, this), entry.getValue().annotations)
+            )));
         }
         return SimiObjectImpl.fromArray(objectClass, true, values);
     }

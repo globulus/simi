@@ -29,6 +29,9 @@ final class Constants {
     public static final String CLASS_EXCEPTION = "Exception";
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
 
+    public static final String EXCEPTION_SCANNER = "ScannerException";
+    public static final String EXCEPTION_PARSER = "ParserException";
+    public static final String EXCEPTION_INTERPRETER = "InterpreterException";
     public static final String EXCEPTION_NUMBER_FORMAT = "NumberFormatException";
     public static final String EXCEPTION_NIL_REFERENCE = "NilReferenceException";
     public static final String EXCEPTION_TYPE_MISMATCH = "TypeMismatchException";

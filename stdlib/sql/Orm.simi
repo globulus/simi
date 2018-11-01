@@ -196,7 +196,7 @@ class_ Orm(Closeable):
         if not tableData: IllegalArgumentException("Cannot \(op) object of type: \(clazz)!").raise()
         columns = tableData.columns.map(def c: c.name)
         values = columns.map(def c: @_valueToSqlString(obj.(c)))
-        joined = columns.enumerate().map(def e: "\(e.value)=\(values.(e.key))")
+        joined = columns.zip().map(def e: "\(e.value)=\(values.(e.key))")
         return [
             name = tableData.name,
             columns = columns,

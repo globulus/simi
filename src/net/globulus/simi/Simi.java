@@ -71,13 +71,15 @@ public class Simi {
     System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
     time = System.currentTimeMillis();
     System.out.print("Parsing...");
+
+    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager), debugger);
+    ErrorHub.sharedInstance().setInterpreter(interpreter);
+
     Parser parser = new Parser(tokens, debugger);
     List<Stmt> statements = parser.parse();
 
     // Stop if there was a syntax error.
     if (hadError) return;
-
-    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager), debugger);
 
     Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);

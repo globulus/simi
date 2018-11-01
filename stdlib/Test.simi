@@ -1,0 +1,84 @@
+class Test:
+    class Before:
+    end
+
+    class After:
+    end
+
+    class Case:
+    end
+
+    class AssertionException(Exception):
+    end
+
+    def test(classes):
+        results = $[]
+        for clazz in classes:
+            before = nil
+            after = nil
+            cases = $[]
+            for [key, val] in clazz.zip():
+                if val is not Function: continue
+                annots = !!val
+                if @_hasAnnot(annots, Test.Before): before $= key
+                elsif @_hasAnnot(annots, Test.After): after $= key
+                elsif @_hasAnnot(annots, Test.Case): cases.append(key)
+            end
+            caseResults = $[]
+            for case in cases:
+                instance = clazz()
+                if before: instance.(before)()
+                instance.(case)()
+                if after: instance.(after)()
+                rescue ex: caseResults.(case) = ex ?? true
+            end
+            results.(clazz.className()) = caseResults
+        end
+        return results
+    end
+
+    def _hasAnnot(annots, annotClass): return annots.where(def a: a is annotClass).isntEmpty()
+
+    class Reporter:
+        def report(results):
+            totalCases = 0
+            totalPass = 0
+            text = String.builder()
+            for name in results:
+                 classReport = @_reportClass(name, results.(name))
+                 totalCases += classReport.cases
+                 totalPass += classReport.passes
+                 text.add(classReport.text)
+            end
+            return "Total: \(totalPass) / \(totalCases) (\(@_percentString(totalCases, totalPass)))\n\n" + text.build()
+        end
+
+        def _reportClass(name, classResults):
+            text = String.builder().add(name)
+            cases = classResults.len()
+            passes = 0
+            breakdown = String.builder()
+            for func in classResults:
+                breakdown.add(func).add(": ")
+                res = classResults.(func)
+                if res is Exception: breakdown.add(res.message)
+                else:
+                    passes += 1
+                    breakdown.add("PASS")
+                end
+                breakdown.add("\n")
+            end
+            text.add(" \(passes) / \(cases) (\(@_percentString(cases, passes)))\n").add(breakdown.build()).add("\n")
+            return [cases = cases, passes = passes, text = text.build()]
+        end
+
+        def _percentString(cases, passes): return "%.1f%%".format([passes * 100 / cases])
+    end
+end
+
+Assert = [
+    equals = def (a, b, m):
+        if a != b: @_raiseException("Equals", m, [a, b])
+    end,
+    _raiseException = def(method, msg, params): Test.AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
+]

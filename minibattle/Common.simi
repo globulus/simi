@@ -5,7 +5,11 @@ end
 class BoardPiece(Renderable):
 end
 
-def parseCoordinates(input):
+class Cell:
+    def init(r, c): pass
+end
+
+def parseCell(input):
     parseLetter = def letter:
         code = letter.unicode()
         aCode = "a".unicode()
@@ -26,6 +30,5 @@ def parseCoordinates(input):
         r $= val
         c $= parseLetter(input.(len))
     end
-    return [c = c, r = r]
+    return Cell(r, c)
 end
-

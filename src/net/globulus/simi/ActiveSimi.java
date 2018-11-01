@@ -93,6 +93,7 @@ public class ActiveSimi {
             nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
 
             interpreter = new Interpreter(nativeModulesManagers.values(), debugger);
+            ErrorHub.sharedInstance().setInterpreter(interpreter);
         } else {
             for (NativeModulesManager manager : interpreter.nativeModulesManagers) {
                 if (manager instanceof JavaNativeModulesManager) {

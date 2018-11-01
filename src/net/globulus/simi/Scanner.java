@@ -224,7 +224,7 @@ class Scanner {
         } else if (isAlpha(c)) {
           identifier();
         } else {
-        ErrorHub.sharedInstance().error(fileName, line, "Unexpected character.");
+        error("Unexpected character.");
         }
         break;
     }
@@ -271,7 +271,7 @@ class Scanner {
         advance();
         advance();
       } else {
-        ErrorHub.sharedInstance().error(fileName, line, "Expected a digit or + or - after E!");
+        error("Expected a digit or + or - after E!");
       }
       while (isDigitOrUnderscore(peek())) advance();
     }
@@ -309,7 +309,7 @@ class Scanner {
 
     // Unterminated string.
     if (isAtEnd()) {
-      ErrorHub.sharedInstance().error(fileName, line, "Unterminated string.");
+      error("Unterminated string.");
       return;
     }
 
@@ -409,5 +409,9 @@ class Scanner {
   private void addToken(TokenType type, SimiValue literal) {
     String text = source.substring(start, current);
     tokens.add(new Token(type, text, literal, line, fileName));
+  }
+  
+  private void error(String message) {
+    ErrorHub.sharedInstance().error(Constants.EXCEPTION_SCANNER, fileName, line, message);
   }
 }

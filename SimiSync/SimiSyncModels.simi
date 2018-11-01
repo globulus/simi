@@ -42,7 +42,7 @@ class_ SimiSyncModels:
                 if not modelClassAnnot : continue
                 className = modelClassAnnot.clientName ?? ClassCode(modelClass).name
                 classComposer = ClassComposer(className)
-                for e in modelClass.enumerate():
+                for e in modelClass.zip():
                     key = e.key
                     value = modelClass.(key)
                     if value is Function:

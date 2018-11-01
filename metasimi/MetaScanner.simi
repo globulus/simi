@@ -75,7 +75,7 @@ TokenType = [
 
   EOF = 65,
 
-  keyFor = def(value): return @enumerate().find(def e: e.value == value).key
+  keyFor = def(value): return @zip().find(def e: e.value == value).key
 ]
 
 Keywords = [
@@ -247,7 +247,7 @@ class Scanner:
     end
 
     def _keywordString(type):
-        match = Keywords.enumerate().find(def e: e.value == type)
+        match = Keywords.zip().find(def e: e.value == type)
         return ?match.key
     end
 

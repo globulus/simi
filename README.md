@@ -473,7 +473,7 @@ compositeObj.forEach(def v: print v)
 
 # Enumerates ALL the values - dictionary first, and then array, and as
 # such can be used to iterate through entire composite object.
-print compositeObj.enumerate()
+print compositeObj.zip()
 
 # Ruler is a copy of the object's array part. Modifying the ruler modifies
 # the object as well.
@@ -862,7 +862,7 @@ object = [a = 1, b = "str", c = Pen(color = "blue")]
 # Iterating over keyed objects over its keys
 for key in object: print key # Prints a, b, c
 # Object decomposition syntax can be used with for loop as well
-for [key, value] in object.enumerate(): print key + " = " + value # Prints a = 1, b = str, etc.
+for [key, value] in object.zip(): print key + " = " + value # Prints a = 1, b = str, etc.
 ```
 If the expression can't evaluate to an iterator or an iterable, an exception will be thrown.
 
@@ -874,7 +874,7 @@ The contract for these two interfaces is very simple:
 Virtually everything in Šimi is iterable:
 1. The Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
 2. The String class exposes a native iterator which goes over the characters of the string.
-3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native enumerate() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
+3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native zip() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
 4. Classes may choose to implement their own iterators, as can be seen in the Stdlib Range class.
 
 #### break and continue

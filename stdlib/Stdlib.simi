@@ -5,9 +5,9 @@ class$ Object:
     def keys(): native
     def values(): native
     def methods(): native
-    def enumerate(): native
     def zip(): native
     def ruler(): native
+    def className(): native
 
     def iterate(): native
     def has(obj): native
@@ -131,7 +131,7 @@ class$ Object:
         end
    end
    def removeIf(predicate):
-       for item in self.enumerate():
+       for item in self.zip():
            if predicate(item): @(item.key) = nil
        end
    end
@@ -146,6 +146,15 @@ class Exception:
     def init(message): pass
 
     def raise(): native
+end
+
+class ScannerException(Exception):
+end
+
+class ParserException(Exception):
+end
+
+class InterpreterException(Exception):
 end
 
 class NumberFormatException(Exception):

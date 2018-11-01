@@ -86,18 +86,6 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(interpreter), true, self.values()));
             }
         });
-        methods.put(new OverloadableFunction("enumerate", 0), new SimiCallable() {
-            @Override
-            public int arity() {
-                return 0;
-            }
-
-            @Override
-            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
-                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                return new SimiValue.Object(self.enumerate(getObjectClass(interpreter)));
-            }
-        });
         methods.put(new OverloadableFunction("zip", 0), new SimiCallable() {
             @Override
             public int arity() {
@@ -107,7 +95,7 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                return new SimiValue.Object(self.zip(getObjectClass(interpreter)));
+                return new SimiValue.Object(self.enumerate(getObjectClass(interpreter)));
             }
         });
         methods.put(new OverloadableFunction("ruler", 0), new SimiCallable() {
@@ -120,6 +108,29 @@ class BaseClassesNativeImpl {
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
                 return new SimiValue.Object(self.getLine());
+            }
+        });
+        methods.put(new OverloadableFunction("className", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
+                SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                String name;
+                if (self instanceof SimiClassImpl) {
+                    name = ((SimiClassImpl) self).name;
+                } else {
+                    SimiClassImpl clazz = self.clazz;
+                    if (clazz == null) {
+                        return null;
+                    } else {
+                        name = clazz.name;
+                    }
+                }
+                return new SimiValue.String(name);
             }
         });
         methods.put(new OverloadableFunction("append", 1), new SimiCallable() {
