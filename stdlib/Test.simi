@@ -8,9 +8,6 @@ class Test:
     class Case:
     end
 
-    class AssertionException(Exception):
-    end
-
     class Mock:
         def init(args):
             @code = "(def ():\n" + String.from(args.zip().map(def (k, v): k + " $= " + ivic v), "\n") + "end)"
@@ -100,6 +97,9 @@ class Test:
     end
 end
 
+class AssertionException(Exception):
+end
+
 Assert = [
     equals = def (a, b, m):
         if a != b: @_raiseException("Equals", m, [a, b])
@@ -119,5 +119,5 @@ Assert = [
     isntNil = def (o, m):
         if o == nil: @_raiseException("Is Not Nil", m, nil)
     end,
-    _raiseException = def(method, msg, params): Test.AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
+    _raiseException = def(method, msg, params): AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
 ]

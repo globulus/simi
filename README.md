@@ -82,6 +82,7 @@ What Šimi offers:
         - [Stdlib](#stdlib)
         - [File](#file)
         - [Net](#net)
+        - [Test](#test)
         - [SMT](#smt)
         - [SQL and ORM](#sql-and-orm)
         - [CodeBlocks](#codeblocks)
@@ -1416,6 +1417,91 @@ The [Simi Net module](stdlib/Net.simi) is meant to provide easy access to basic 
 All methods (get, post, put, and delete) take a request object as a parameter, which should contain a url, headers, and an optional body. All methods take a single callback, so they're well-suited for usage with [async yield](#async-programming-with-yield-expressions)).
 
 Check out [SimiSync-generated Client Tasks code](https://github.com/globulus/simi-sync/tree/master/web#client-tasks) to see the Net module in action!
+
+#### Test
+
+The [Simi Test module](stdlib/Test.simi) module provides capability to write unit tests with mocks. Write a test class, annotate its methods as test cases, add mocks where necessary, and invoke the *Test.test()* method on classes you wish to test. *Test.Report* is a convenience class that translates the test results object into a textual summary.
+
+The Test class contains several annotations that are used to set the test suite up:
+* *Before* - method with this annotation will be invoked before every test case.
+* *After* - method with this annotation will be invoked after every test case.
+* *Case* - denotes a test case method that will be invoked and its success or failure reported.
+* *Mock* - allows for mocking fields that are used in test cases. Takes a single parameter, an object whose key/value pairs denote which fields to replace with mocked values. Mocked values can be objects, classes, methods, or anything else that matches the signature of the field being mocked. Mocking can be used on *both* the test class as well any of its methods - class mocks are executed with every test case (and are valid for Before and After methods), whereas method mocks are only valid for the annotated method (Case, Before or After).
+
+Each test case is carried out in a separate environment, invoked on a fresh instance of the test class. The test class will be instantiated using a *parameterless constructor*, so if you need to perform any initialization, do it in there. Also, all the invoked methods (mocks, before, after, and cases) are invoked with [environment invocation]((#closure-vs-environment-invocation)), so you may want to use this invocation inside test cases as well in order to make sure mocks will work.
+
+Tests should generally be used in conjunction with the *Assert* singleton, which provides several methods for asserting conditions, and each raises a descriptive *AssertionException* when failing.
+
+Here is a simple example that contains two test classes, and prints their report:
+```ruby
+import Test
+class TestCase:
+    !Before()
+    def before: print "before"
+
+    !After()
+    def after: print "after"
+
+    !Case()
+    def testEq:
+        Assert.equals(5, 5, "Should pass")
+    end
+
+    !Case()
+    def testEqFail:
+        Assert.equals(5, 4, "Should fail")
+    end
+
+    !Case()
+    def testInterpreterFail:
+        c = "b" - "a"
+        Assert.equals(5, 4, "Shouldn't happen")
+    end
+end
+
+!Mock([Net = [post = def (args, callback): callback("posted")]])
+class TestMock:
+    !Case()
+    def testPost():
+        result = yield Net.post([])
+        Assert.equals(result, "posted", "Should be good")
+    end
+
+    !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
+    !Case()
+    def testPostAndFile():
+        result = yield Net.post([])
+        Assert.isTrue(result == "posted", "Should be good")
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Also good")
+    end
+
+    !Case()
+    def failWithoutFileMock():
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
+    end
+end
+print Reporter.report(Test.test([TestCase, TestMock]))
+
+# Output is:
+#
+# before
+# after
+# before
+# before
+# Total: 3 / 6 (50.0%)
+#
+# TestMock 2 / 3 (66.7%)
+# testPost: PASS
+# testPostAndFile: PASS
+# failWithoutFileMock: Assertion failed at "Equals": "Will fail, File not mocked", params: [10, "mock reading"]
+#
+# TestCase 1 / 3 (33.3%)
+# testEqFail: Assertion failed at "Equals": "Should fail", params: [5, 4]
+# testEq: PASS
+# testInterpreterFail: ["Simi" line 715] Error at '-': Operands must be numbers.
+```
 
 #### SMT
 
