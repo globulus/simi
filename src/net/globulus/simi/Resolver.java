@@ -199,11 +199,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitAnnotationsExpr(Expr.Annotations expr) {
-    return null;
-  }
-
-  @Override
   public Void visitAssignExpr(Expr.Assign expr) {
     if (!declare(expr.name,true, expr.operator.type == TokenType.DOLLAR_EQUAL)) {
       ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, expr.name, "Constant with this name already declared in this scope.");

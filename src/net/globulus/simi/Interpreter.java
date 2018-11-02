@@ -533,52 +533,37 @@ class Interpreter implements
   }
 
     @Override
-    public SimiValue visitAnnotationsExpr(Expr.Annotations expr) {
-        SimiProperty object = environment.tryGet(expr.tokens.get(0).lexeme);
-          for (int i = 1; i < expr.tokens.size(); i++) {
-            object = object.getValue().getObject().get(expr.tokens.get(i).lexeme, environment);
-        }
-        if (object == null || object.getAnnotations() == null) {
-            return null;
-        }
-        ArrayList<SimiValue> annotations = object.getAnnotations().stream()
-                .map(SimiValue.Object::new)
-                .collect(Collectors.toCollection(ArrayList::new));
-        return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(), true, annotations));
-    }
-
-    @Override
-  public SimiProperty visitAssignExpr(Expr.Assign expr) {
-    if (expr.value instanceof Expr.Block) {
-      return visitFunctionStmt(new Stmt.Function(expr.name, (Expr.Block) expr.value, null));
-    }
-    applyAnnotations(expr);
-    SimiProperty prop = evaluate(expr.value);
-    SimiValue value;
-    if (prop == null || prop instanceof TempNull || prop.getValue() instanceof TempNull) {
-      value = null;
-    } else if (prop instanceof SimiValue.String || prop instanceof SimiValue.Number) {
-      value = prop.getValue().copy();
-    } else {
-      value = prop.getValue();
-    }
-    List<SimiObject> assignAnnotations = getAnnotations(expr);
-    if (assignAnnotations == null && prop != null && prop.getAnnotations() != null) {
-      assignAnnotations = prop.getAnnotations();
-    }
-    SimiProperty newProp = new SimiPropertyImpl(value, assignAnnotations);
-    if (expr.operator.type == TokenType.DOLLAR_EQUAL) { // Mutating assignment
-      Integer distance = locals.get(expr);
-      if (distance != null) {
-        environment.assignAt(distance, expr.name, newProp, true);
-      } else {
-        globals.assign(expr.name, newProp, true);
+    public SimiProperty visitAssignExpr(Expr.Assign expr) {
+      if (expr.value instanceof Expr.Block) {
+        return visitFunctionStmt(new Stmt.Function(expr.name, (Expr.Block) expr.value, null));
       }
-    } else {
-      environment.assignAt(0, expr.name, newProp);
+      applyAnnotations(expr);
+      SimiProperty prop = evaluate(expr.value);
+      SimiValue value;
+      if (prop == null || prop instanceof TempNull || prop.getValue() instanceof TempNull) {
+        value = null;
+      } else if (prop instanceof SimiValue.String || prop instanceof SimiValue.Number) {
+        value = prop.getValue().copy();
+      } else {
+        value = prop.getValue();
+      }
+      List<SimiObject> assignAnnotations = getAnnotations(expr);
+      if (assignAnnotations == null && prop != null && prop.getAnnotations() != null) {
+        assignAnnotations = prop.getAnnotations();
+      }
+      SimiProperty newProp = new SimiPropertyImpl(value, assignAnnotations);
+      if (expr.operator.type == TokenType.DOLLAR_EQUAL) { // Mutating assignment
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+          environment.assignAt(distance, expr.name, newProp, true);
+        } else {
+          globals.assign(expr.name, newProp, true);
+        }
+      } else {
+        environment.assignAt(0, expr.name, newProp);
+      }
+      return newProp;
     }
-    return newProp;
-  }
 
   @Override
   public SimiProperty visitBinaryExpr(Expr.Binary expr) {
@@ -995,6 +980,15 @@ class Interpreter implements
         }
       case QUESTION:
         return (right == null) ? TempNull.INSTANCE : right;
+      case BANG_BANG: {
+        if (rightProp == null || rightProp.getAnnotations() == null) {
+          return null;
+        }
+        ArrayList<SimiValue> annotations = rightProp.getAnnotations().stream()
+                .map(SimiValue.Object::new)
+                .collect(Collectors.toCollection(ArrayList::new));
+        return new SimiValue.Object(SimiObjectImpl.fromArray(getObjectClass(), true, annotations));
+      }
     }
     // Unreachable.
     return null;

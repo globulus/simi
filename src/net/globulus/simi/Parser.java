@@ -579,7 +579,7 @@ class Parser {
   }
 
   private Expr unary() {
-    if (match(NOT, MINUS)) {
+    if (match(NOT, MINUS, BANG_BANG)) {
       Token operator = previous();
       Expr right = unary();
       return new Expr.Unary(operator, right);
@@ -589,17 +589,6 @@ class Parser {
     }
     if (match(IVIC)) {
       return new Expr.Ivic(unary());
-    }
-    if (match(BANG_BANG)) {
-      List<Token> tokens = new ArrayList<>();
-      while (match(IDENTIFIER)) {
-        tokens.add(previous());
-        match(DOT);
-      }
-      if (tokens.isEmpty()) {
-        error(peek(), "Annotations operator needs params!");
-      }
-      return new Expr.Annotations(tokens);
     }
     return call();
   }

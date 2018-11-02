@@ -774,6 +774,9 @@ b = ?obj.property # NilReferenceException is raised
 #### @ - self referencing
 The @ operator maps exactly to *self.*, i.e @tank is identical to writing self.tank. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.*s).
 
+### !! - get annotations
+The !! operator retrieves the list of annotations associated with a field. For more details on usage, check out [Šimi annotations](#annotations).
+
 #### Bitwise operations
 
 All bitwise operations (and, or, xor, unary complement, shift left, shift right, unsigned shift right) are implemented as methods on the Number class:
