@@ -11,26 +11,50 @@ class Test:
     class AssertionException(Exception):
     end
 
+    class Mock:
+        def init(args):
+            @code = "(def ():\n" + String.from(args.zip().map(def (k, v): k + " $= " + ivic v), "\n") + "end)"
+        end
+    end
+
     def test(classes):
         results = $[]
         for clazz in classes:
             before = nil
             after = nil
             cases = $[]
+            mocks = $[]
+            classMock = gu (!!clazz).where(def a: a is Test.Mock).first().code
             for [key, val] in clazz.zip():
                 if val is not Function: continue
                 annots = !!val
                 if @_hasAnnot(annots, Test.Before): before $= key
                 elsif @_hasAnnot(annots, Test.After): after $= key
                 elsif @_hasAnnot(annots, Test.Case): cases.append(key)
+
+                mock = gu annots.where(def a: a is Test.Mock).first().code
+                if mock: mocks.(key) = mock
             end
             caseResults = $[]
             for case in cases:
-                instance = clazz()
-                if before: instance.(before)()
-                instance.(case)()
-                if after: instance.(after)()
-                rescue ex: caseResults.(case) = ex ?? true
+                (def ():
+                    instance = clazz()
+                    classMock$()
+
+                    if before:
+                        mocks.(before)$()
+                        instance.(before)$()
+                    end
+
+                    mocks.(case)$()
+                    instance.(case)$()
+
+                    if after:
+                        mock.(after)$()
+                        instance.(after)$()
+                    end
+                    rescue ex: caseResults.(case) = ex ?? true
+                end)()
             end
             results.(clazz.className()) = caseResults
         end
@@ -79,6 +103,21 @@ end
 Assert = [
     equals = def (a, b, m):
         if a != b: @_raiseException("Equals", m, [a, b])
+    end,
+    matches = def (a, b, m):
+        if not a.matches(b): @_raiseException("Matches", m, [a, b])
+    end,
+    isTrue = def (c, m):
+        if not c: @_raiseException("Is true", m, nil)
+    end,
+    isFalse = def (c, m):
+        if c: @_raiseException("Is false", m, nil)
+    end,
+    isNil = def (o, m):
+        if o != nil: @_raiseException("Is Nil", m, nil)
+    end,
+    isntNil = def (o, m):
+        if o == nil: @_raiseException("Is Not Nil", m, nil)
     end,
     _raiseException = def(method, msg, params): Test.AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
 ]

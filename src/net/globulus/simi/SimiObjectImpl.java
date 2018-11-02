@@ -442,7 +442,7 @@ class SimiObjectImpl implements SimiObject {
         }
         ArrayList<SimiProperty> lineClone = new ArrayList<>();
         for (SimiProperty field : line) {
-            lineClone.add(field.clone(mutable));
+            lineClone.add((field != null) ? field.clone(mutable) : null);
         }
         return new SimiObjectImpl(clazz, mutable, fieldsClone, lineClone);
     }
@@ -469,7 +469,7 @@ class SimiObjectImpl implements SimiObject {
                 )
                 .append((fields.isEmpty() || line.isEmpty()) ? "" : TokenType.COMMA.toCode())
                 .append(line.stream()
-                        .map(i -> i.getValue().toCode(indentationLevel + 1, false))
+                        .map(i -> (i == null) ? "nil" : i.getValue().toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
                 )
                 .append(isArray ? "" : TokenType.NEWLINE.toCode(indentationLevel, false))

@@ -8,32 +8,6 @@ import "./SimiSync/SimiSyncModels.simi"
 import "./Stdlib/sql/Mariadb.simi"
 import "./minibattle/Board.simi"
 
-import Test
-class TestCase:
-    !Before()
-    def before: print "before"
-
-    !After()
-    def after: print "after"
-
-    !Case()
-    def testEq:
-        Assert.equals(5, 5, "Should pass")
-    end
-
-    !Case()
-    def testEqFail:
-        Assert.equals(5, 4, "Should fail")
-    end
-
-    !Case()
-    def testInterpreterFail:
-        c = "b" - "a"
-        Assert.equals(5, 4, "Shouldn't happen")
-    end
-end
-print Reporter.report(Test.test([TestCase]))
-
 
 print pow(2, 3)
 
@@ -714,5 +688,57 @@ print Board().render()
 #inpt = Io.read()
 #print inpt
 #print parseCell(inpt)
+
+
+
+import Test
+class TestCase:
+    !Before()
+    def before: print "before"
+
+    !After()
+    def after: print "after"
+
+    !Case()
+    def testEq:
+        Assert.equals(5, 5, "Should pass")
+    end
+
+    !Case()
+    def testEqFail:
+        Assert.equals(5, 4, "Should fail")
+    end
+
+    !Case()
+    def testInterpreterFail:
+        c = "b" - "a"
+        Assert.equals(5, 4, "Shouldn't happen")
+    end
+end
+
+!Mock([Net = [post = def (args, callback): callback("posted")]])
+class TestMock:
+    !Case()
+    def testPost():
+        result = yield Net.post([])
+        Assert.equals(result, "posted", "Should be good")
+    end
+
+    !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
+    !Case()
+    def testPostAndFile():
+        result = yield Net.post([])
+        Assert.isTrue(result == "posted", "Should be good")
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Also good")
+    end
+
+    !Case()
+    def failWithoutFileMock():
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
+    end
+end
+print Reporter.report(Test.test([TestCase, TestMock]))
 
 print "kraj"

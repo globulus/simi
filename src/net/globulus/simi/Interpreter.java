@@ -803,6 +803,9 @@ class Interpreter implements
   public SimiProperty visitGetExpr(Expr.Get expr) {
     SimiProperty object = evaluate(expr.object);
     Token name = evaluateGetSetName(expr.origin, expr.name);
+    if (name == null) {
+      return null;
+    }
     if (object instanceof TempNull) {
       raiseNilReferenceException(expr.origin);
       return TempNull.INSTANCE;
@@ -853,7 +856,11 @@ class Interpreter implements
 
   @Override
   public SimiProperty visitGuExpr(Expr.Gu expr) {
-    String string = evaluate(expr.expr).getValue().getString();
+    SimiProperty prop = evaluate(expr.expr);
+    if (prop == null) {
+      return null;
+    }
+    String string = prop.getValue().getString();
     Scanner scanner = new Scanner(FILE_RUNTIME, string + "\n", null);
     Parser parser = new Parser(scanner.scanTokens(true), null);
     for (Stmt stmt : parser.parse()) {
@@ -864,7 +871,9 @@ class Interpreter implements
         } else if (stmt instanceof Stmt.Expression) {
             return evaluate(((Stmt.Expression) stmt).expression);
         } else {
-            ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, FILE_RUNTIME,0, "Invalid GU expression!");
+            ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, FILE_RUNTIME,0,
+                    "Invalid GU expression!\n" + expr.toCode(0, true)
+                            + "\nevaluates to: " + string);
             return null;
         }
     }
