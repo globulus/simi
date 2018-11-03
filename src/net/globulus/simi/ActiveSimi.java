@@ -1,5 +1,6 @@
 package net.globulus.simi;
 
+import com.sun.istack.internal.NotNull;
 import net.globulus.simi.api.SimiProperty;
 
 import java.net.URL;
@@ -24,9 +25,9 @@ public class ActiveSimi {
 
     private ActiveSimi() { }
 
-    public static void setDebugMode(boolean debug) {
+    public static void setDebugMode(boolean debug, @NotNull Debugger.DebuggerInterface debuggerInterface) {
         if (debug) {
-            debugger = new Debugger();
+            debugger = new Debugger(debuggerInterface);
         } else {
             debugger = null;
         }

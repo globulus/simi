@@ -16,7 +16,7 @@ public class Simi {
   private static final String FILE_SIMI = "Simi";
 
   private static Interpreter interpreter;
-  private static Debugger debugger = new Debugger();
+  private static Debugger debugger = new Debugger(new Debugger.ConsoleInterface());
   static boolean hadError = false;
   static boolean hadRuntimeError = false;
 
