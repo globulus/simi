@@ -6,6 +6,7 @@ import net.globulus.simi.api.SimiProperty;
 
 import java.util.*;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
 
 public final class Debugger {
 
@@ -183,16 +184,11 @@ public final class Debugger {
         if (syncInput != null) {
             parseInput(syncInput);
         } else {
-            synchronized (debuggerInterface.getLock()) {
-                try {
-                    debuggerInterface.getLock().wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    String asyncInput = debuggerInterface.read(); // Async input
-                    parseInput(asyncInput);
-                }
-                String asyncInput = debuggerInterface.read(); // Async input
+            try {
+                String asyncInput = debuggerInterface.getQueue().take();
                 parseInput(asyncInput);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -381,7 +377,7 @@ public final class Debugger {
         void print(String s);
         void println(String s);
         String read();
-        Object getLock();
+        BlockingQueue<String> getQueue();
         void resume();
     }
     
@@ -409,8 +405,8 @@ public final class Debugger {
         }
 
         @Override
-        public Object getLock() {
-            return null; // Console interface is sync
+        public BlockingQueue<String> getQueue() {
+            return null;
         }
 
         @Override
