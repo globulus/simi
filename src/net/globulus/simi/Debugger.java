@@ -26,7 +26,8 @@ public final class Debugger {
             "o: Toggles debugging on/off (default on)\n" +
             "h: Print help\n" +
             "g: Prints global environment\n" +
-            "anything else: continue with program execution\n";
+            "anything else: continue with program execution\n" +
+            "\n";
 
     private enum DebuggerState {
         OUTPUT, INPUT
@@ -36,6 +37,7 @@ public final class Debugger {
     private FrameStack lineStack;
     private FrameStack callStack;
     private DebuggerInterface debuggerInterface;
+    private StringBuilder output;
     private Evaluator evaluator;
     private Frame focusFrame;
     private Set<Stmt> ignoredBreakpoints;
@@ -59,6 +61,7 @@ public final class Debugger {
         lineStack = new FrameStack();
         callStack = new FrameStack();
         this.debuggerInterface = debuggerInterface;
+        output = new StringBuilder();
         ignoredBreakpoints = new HashSet<>();
         addedBreakpoints = new HashSet<>();
         watch = new HashMap<>();
@@ -117,7 +120,7 @@ public final class Debugger {
         }
         currentBreakpoint = stmt;
         currentStack = callStack;
-        debuggerInterface.print("***** BREAKPOINT *****\n");
+        output.append("***** BREAKPOINT *****\n\n");
         print(0, true);
         scanInput();
     }
@@ -128,15 +131,15 @@ public final class Debugger {
         }
         currentBreakpoint = stmt;
         currentStack = callStack;
-        debuggerInterface.println("***** " + (fatal ? "FATAL " : "") + "EXCEPTION *****\n");
-        debuggerInterface.println(e.getMessage() + "\n");
+        output.append("***** ").append(fatal ? "FATAL " : "").append("EXCEPTION *****\n\n")
+                .append(e.getMessage()).append("\n\n");
         print(0, true);
         scanInput();
     }
 
     private void print(int frameIndex, boolean printLine) {
         List<Frame> frames = currentStack.toList();
-        debuggerInterface.println("============================");
+        output.append("============================\n");
         if (printLine && currentStack != lineStack) {
             focusFrame = lineStack.toList().get(frameIndex);
         } else {
@@ -144,28 +147,28 @@ public final class Debugger {
         }
         if (focusFrame.before != null) {
             for (Codifiable codifiable : focusFrame.before) {
-                debuggerInterface.println(codifiable.toCode(0, true));
+                output.append(codifiable.toCode(0, true)).append("\n");
             }
         }
-        focusFrame.print(null, debuggerInterface);
+        focusFrame.print(null, output);
         if (focusFrame.after != null) {
             for (Codifiable codifiable : focusFrame.after) {
-                debuggerInterface.println(codifiable.toCode(0, true));
+                output.append(codifiable.toCode(0, true)).append("\n");
             }
         }
-        debuggerInterface.println("============================");
+        output.append("============================\n");
         for (int i = 0; i < frames.size(); i++) {
             Frame frame = frames.get(i);
-            frame.print(i, debuggerInterface);
+            frame.print(i, output);
         }
-        debuggerInterface.println("\n#### ENVIRONMENT ####\n");
-        debuggerInterface.println(focusFrame.environment.toStringWithoutValuesOrGlobal());
+        output.append("\n#### ENVIRONMENT ####\n\n");
+        output.append(focusFrame.environment.toStringWithoutValuesOrGlobal()).append("\n");
         if (!watch.isEmpty()) {
-            debuggerInterface.println("\n#### WATCH ####\n");
+            output.append("\n#### WATCH ####\n\n");
             for (Map.Entry<String, Environment> watched : watch.entrySet()) {
                 String name = watched.getKey();
                 SimiProperty value = watched.getValue().tryGet(name);
-                debuggerInterface.println(name + " = " + ((value != null) ? value.toString() : "nil"));
+                output.append(name).append(" = ").append((value != null) ? value.toString() : "nil").append("\n");
             }
         }
         if (firstHelp) {
@@ -175,10 +178,11 @@ public final class Debugger {
     }
 
     private void printHelp() {
-        debuggerInterface.println(HELP);
+        output.append(HELP);
     }
 
     private void scanInput() {
+        flush();
         state = DebuggerState.INPUT;
         String syncInput = debuggerInterface.read(); // Try sync input
         if (syncInput != null) {
@@ -221,21 +225,23 @@ public final class Debugger {
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
-                debuggerInterface.println(evaluator.eval(input.substring(2), focusFrame.environment));
+                output.append(evaluator.eval(input.substring(2), focusFrame.environment)).append("\n");
             }
             break;
             case 'w': {
                 String name = input.substring(2);
                 watch.put(name, focusFrame.sourceEnvironment);
-                debuggerInterface.println("Added to watch: " + name);
+                output.append("Added to watch: ").append(name).append("\n");
             }
             break;
             case 'n':
                 stepState = StepState.STEP_INTO;
+                flush();
                 return;
             case 'v':
                 stepState = StepState.STEP_OVER;
                 stepOverDepth = 0;
+                flush();
                 return;
             case 'a': {
                 if (currentBreakpoint != null) {
@@ -245,7 +251,7 @@ public final class Debugger {
                         addedBreakpoints.add(currentBreakpoint);
                     }
                 }
-                debuggerInterface.println("Breakpoint added.");
+                output.append("Breakpoint added.").append("\n");
             }
             break;
             case 'r': {
@@ -257,17 +263,17 @@ public final class Debugger {
                     }
                     currentBreakpoint = null;
                 }
-                debuggerInterface.println("Breakpoint removed.");
+                output.append("Breakpoint removed.").append("\n");
             }
             break;
             case 'x': { // Toggle catching all exceptions
                 allExceptions = !allExceptions;
-                debuggerInterface.println("All exceptions will be caught: " + allExceptions);
+                output.append("All exceptions will be caught: ").append(allExceptions).append("\n");
             }
             break;
             case 'o': { // Toggle debugging on/off
                 debuggingOff = !debuggingOff;
-                debuggerInterface.println("Debugging turned off: " + debuggingOff);
+                output.append("Debugging turned off: ").append(debuggingOff).append("\n");
             }
             break;
             case 'h': { // Print help
@@ -278,7 +284,7 @@ public final class Debugger {
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
-                debuggerInterface.println(evaluator.getGlobalEnvironment().toString());
+                output.append(evaluator.getGlobalEnvironment().toString()).append("\n");
             }
             break;
             default:
@@ -286,6 +292,11 @@ public final class Debugger {
                 return;
         }
         scanInput();
+    }
+
+    private void flush() {
+        debuggerInterface.flush(output.toString());
+        output = new StringBuilder();
     }
 
     static class Frame {
@@ -308,12 +319,12 @@ public final class Debugger {
             this.after = after;
         }
 
-        void print(Integer index, DebuggerInterface debuggerInterface) {
+        void print(Integer index, StringBuilder output) {
             if (index != null) {
-                debuggerInterface.print("[" + index + "] ");
+                output.append("[").append(index).append("] ");
             }
-            debuggerInterface.print("\"" + line.getFileName() + "\" line " + line.getLineNumber() + ": ");
-            debuggerInterface.println(line.toCode(0, true));
+            output.append("\"").append(line.getFileName()).append("\" line ").append(line.getLineNumber()).append(": ");
+            output.append(line.toCode(0, true)).append("\n");
         }
     }
 
@@ -374,8 +385,7 @@ public final class Debugger {
     }
     
     public interface DebuggerInterface {
-        void print(String s);
-        void println(String s);
+        void flush(String s);
         String read();
         BlockingQueue<String> getQueue();
         void resume();
@@ -390,12 +400,7 @@ public final class Debugger {
         }
 
         @Override
-        public void print(String s) {
-            System.out.print(s);
-        }
-
-        @Override
-        public void println(String s) {
+        public void flush(String s) {
             System.out.println(s);
         }
 
