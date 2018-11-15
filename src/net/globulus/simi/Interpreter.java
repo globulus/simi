@@ -861,8 +861,8 @@ class Interpreter implements
       return null;
     }
     String string = prop.getValue().getString();
-    Scanner scanner = new Scanner(FILE_RUNTIME, string + "\n", null);
-    Parser parser = new Parser(scanner.scanTokens(true), null);
+    Scanner scanner = new Scanner(FILE_RUNTIME, string + "\n", debugger);
+    Parser parser = new Parser(scanner.scanTokens(true), debugger);
     for (Stmt stmt : parser.parse()) {
         if (stmt instanceof Stmt.Annotation) {
             visitAnnotationStmt((Stmt.Annotation) stmt);
