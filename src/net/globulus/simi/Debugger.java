@@ -137,6 +137,10 @@ public final class Debugger {
         scanInput();
     }
 
+    DebuggerInterface getInterface() {
+        return debuggerInterface;
+    }
+
     private void print(int frameIndex, boolean printLine) {
         List<Frame> frames = currentStack.toList();
         output.append("============================\n");
