@@ -183,7 +183,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   public Void visitYieldStmt(Stmt.Yield stmt) {
     if (stmt.value != null) {
       if (currentFunction == FunctionType.INITIALIZER) {
-        ErrorHub.sharedInstance().error(stmt.keyword, "Cannot yield a value from an initializer.");
+        ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, stmt.keyword, "Cannot yield a value from an initializer.");
       }
       resolve(stmt.value);
     }
@@ -199,14 +199,9 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitAnnotationsExpr(Expr.Annotations expr) {
-    return null;
-  }
-
-  @Override
   public Void visitAssignExpr(Expr.Assign expr) {
     if (!declare(expr.name,true, expr.operator.type == TokenType.DOLLAR_EQUAL)) {
-      ErrorHub.sharedInstance().error(expr.name, "Constant with this name already declared in this scope.");
+      ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, expr.name, "Constant with this name already declared in this scope.");
     }
     resolve(expr.value);
     resolveLocal(expr, expr.name);
@@ -308,7 +303,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   public Void visitVariableExpr(Expr.Variable expr) {
     if (!scopes.isEmpty() &&
         scopes.peek().get(expr.name.lexeme) == Boolean.FALSE) {
-      ErrorHub.sharedInstance().error(expr.name,
+      ErrorHub.sharedInstance().error(Constants.EXCEPTION_INTERPRETER, expr.name,
           "Cannot read local variable in its own initializer.");
     }
 

@@ -1,0 +1,11 @@
+import "./Stdlib/File.simi"
+import "./Stdlib/Gson.simi"
+#import "json.simi"
+
+issues = Gson.parse(File.readString("/Users/gordanglavas/Downloads/sonar-report.json"))\
+            .issues.where(def i: i.rule not in ["squid:S2068"])
+critCount = issues.where(def i: i.severity == "CRITICAL").len()
+for blocker in issues.where(def i: i.severity == "BLOCKER"):
+    print blocker
+end
+print"Crit count: " + critCount

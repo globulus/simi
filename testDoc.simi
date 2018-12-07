@@ -1,0 +1,12 @@
+import "./stdlib/doc/Doc.simi"
+
+## This is a *summary*.
+## Some points:
+## + first bullet
+## + second bullet
+## **bold** text
+class Test:
+
+end
+
+Doc.run("testDoc.simi")

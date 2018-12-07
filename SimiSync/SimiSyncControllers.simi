@@ -22,7 +22,7 @@ class_ SimiSyncControllers:
                 # Read and interpret the content of the file
                 controllerCode = File.readString(file.path)
                 controllerClass = gu @removeImports(controllerCode)
-                for e in controllerClass.enumerate().where(def e: e.value is Function):
+                for e in controllerClass.zip().where(def e: e.value is Function):
                     value = controllerClass.(e.key)
                     route = @extractAnnot(value, SimiSyncControllers.Route)
                     if not route: continue

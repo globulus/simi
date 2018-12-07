@@ -16,7 +16,7 @@ public class Simi {
   private static final String FILE_SIMI = "Simi";
 
   private static Interpreter interpreter;
-  private static Debugger debugger = new Debugger();
+  private static Debugger debugger = new Debugger(new Debugger.ConsoleInterface());
   static boolean hadError = false;
   static boolean hadRuntimeError = false;
 
@@ -71,13 +71,15 @@ public class Simi {
     System.out.println(" " + (System.currentTimeMillis() - time) + " ms");
     time = System.currentTimeMillis();
     System.out.print("Parsing...");
+
+    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager), debugger);
+    ErrorHub.sharedInstance().setInterpreter(interpreter);
+
     Parser parser = new Parser(tokens, debugger);
     List<Stmt> statements = parser.parse();
 
     // Stop if there was a syntax error.
     if (hadError) return;
-
-    interpreter = new Interpreter(Collections.singletonList(nativeModulesManager), debugger);
 
     Resolver resolver = new Resolver(interpreter);
     resolver.resolve(statements);
@@ -125,9 +127,8 @@ public class Simi {
 
   private static final ErrorWatcher WATCHER = new ErrorWatcher() {
     @Override
-    public void report(int line, String where, String message) {
-      System.err.println(
-              "[line " + line + "] Error" + where + ": " + message);
+    public void report(String file, int line, String where, String message) {
+      System.err.println("[\"" + file + "\" line " + line + "] Error" + where + ": " + message);
       hadError = true;
     }
 
@@ -135,7 +136,7 @@ public class Simi {
     public void runtimeError(RuntimeError error) {
 
       System.err.println(error.getMessage() +
-              "\n[" + error.token.file + " line " + error.token.line + "]");
+              "\n[\"" + error.token.file + "\" line " + error.token.line + "]");
       hadRuntimeError = true;
     }
   };

@@ -1,0 +1,24 @@
+<html>
+<head>
+    <title>SimiDoc for testDoc</title>
+    <script src="https://cdn.rawgit.com/showdownjs/showdown/1.8.7/dist/showdown.min.js"></script>
+    <script>
+            convert = function() {
+                var converter = new showdown.Converter();
+                converter.setOption('simpleLineBreaks', false);
+                var summaryDiv = document.getElementById('summary')
+                summaryDiv.innerHTML = ""
+                    summaryDiv.innerHTML += converter.makeHtml( " This is a *summary*. ")
+                    summaryDiv.innerHTML += converter.makeHtml( " Some points: ")
+                    summaryDiv.innerHTML += converter.makeHtml( " + first bullet ")
+                    summaryDiv.innerHTML += converter.makeHtml( " + second bullet ")
+                    summaryDiv.innerHTML += converter.makeHtml( " **bold** text ")
+
+            }
+        </script>
+    </head>
+    <body onload="convert();">
+        <h1>Summary</h1>
+        <div id="summary">Summary</div>
+    </body>
+</html>

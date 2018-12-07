@@ -82,6 +82,7 @@ What Šimi offers:
         - [Stdlib](#stdlib)
         - [File](#file)
         - [Net](#net)
+        - [Test](#test)
         - [SMT](#smt)
         - [SQL and ORM](#sql-and-orm)
         - [CodeBlocks](#codeblocks)
@@ -229,10 +230,10 @@ end
 ```
 
 ##### Boxed numbers and strings
-Boxed numbers and strings are objects with two fields, a class being Number of String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
+Boxed numbers and strings are objects with two fields, a class being Number or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
 # Implementation of times() method from Number class
-def times(): return ife(@_ < 0, Range(@_, 0), Range(0, @_)).iterate()
+def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
 ```
 
 #### Functions
@@ -473,7 +474,7 @@ compositeObj.forEach(def v: print v)
 
 # Enumerates ALL the values - dictionary first, and then array, and as
 # such can be used to iterate through entire composite object.
-print compositeObj.enumerate()
+print compositeObj.zip()
 
 # Ruler is a copy of the object's array part. Modifying the ruler modifies
 # the object as well.
@@ -587,6 +588,7 @@ end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
+
 ```ruby
 class Private:
     def init():
@@ -773,6 +775,9 @@ b = ?obj.property # NilReferenceException is raised
 #### @ - self referencing
 The @ operator maps exactly to *self.*, i.e @tank is identical to writing self.tank. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.*s).
 
+### !! - get annotations
+The !! operator retrieves the list of annotations associated with a field. For more details on usage, check out [Šimi annotations](#annotations).
+
 #### Bitwise operations
 
 All bitwise operations (and, or, xor, unary complement, shift left, shift right, unsigned shift right) are implemented as methods on the Number class:
@@ -861,7 +866,7 @@ object = [a = 1, b = "str", c = Pen(color = "blue")]
 # Iterating over keyed objects over its keys
 for key in object: print key # Prints a, b, c
 # Object decomposition syntax can be used with for loop as well
-for [key, value] in object.enumerate(): print key + " = " + value # Prints a = 1, b = str, etc.
+for [key, value] in object.zip(): print key + " = " + value # Prints a = 1, b = str, etc.
 ```
 If the expression can't evaluate to an iterator or an iterable, an exception will be thrown.
 
@@ -873,7 +878,7 @@ The contract for these two interfaces is very simple:
 Virtually everything in Šimi is iterable:
 1. The Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
 2. The String class exposes a native iterator which goes over the characters of the string.
-3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native enumerate() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
+3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native zip() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
 4. Classes may choose to implement their own iterators, as can be seen in the Stdlib Range class.
 
 #### break and continue
@@ -1135,7 +1140,7 @@ You may also expose *global* methods, i.e methods that aren't linked to a class 
 
 ### Annotations
 
-Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals and precede a declaration:
+Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals or constructor invocations and precede a declaration:
 ```ruby
 class Api:
     ![method = "GET", endpoint = "/user"]
@@ -1393,6 +1398,13 @@ When a breakpoint or a crash triggers, you can type in the following commands to
 
 Typing in anything else (or a newline) will resume the execution of the program.
 
+
+#### Visual debugging
+
+Šimi Debugger's interface is decoupled from its functionality, allowing your to create a visual debugger on any platform supporting Šimi. At its most basic level, debugger interface allows for sync and async exchange of textual commands and responses between the debugger and visual interface. On top of this, *ActiveSimi* can expose the debugger watcher that allows for querying of specific debugger data structures, allowing for different debugger components (environment, watches, breakpoints) to be rendered in separate UI views.
+
+ŠimiSync's [web part uses a browser interface for debugging a Šimi server](https://github.com/globulus/simi-sync/blob/master/web/src/main/java/net/globulus/simisync/BrowserInterface.java), while [Android](https://github.com/globulus/simi-sync/tree/master/android/AndroidDebugger/src/main/java/net/globulus/simi/android/debugger) and [iOS](https://github.com/globulus/simi-ios/tree/master/SimiLib/iOSSimi/iOSSimi) use mobile screens that show up once debugger triggers a breakpoint or an exception.
+
 ### Basic modules
 
 Šimi's Stdlib comes built in with a number of modules that can be used to accomplish various tasks. Below is a quick outline of most of them:
@@ -1412,6 +1424,91 @@ The [Simi Net module](stdlib/Net.simi) is meant to provide easy access to basic 
 All methods (get, post, put, and delete) take a request object as a parameter, which should contain a url, headers, and an optional body. All methods take a single callback, so they're well-suited for usage with [async yield](#async-programming-with-yield-expressions)).
 
 Check out [SimiSync-generated Client Tasks code](https://github.com/globulus/simi-sync/tree/master/web#client-tasks) to see the Net module in action!
+
+#### Test
+
+The [Simi Test module](stdlib/Test.simi) module provides capability to write unit tests with mocks. Write a test class, annotate its methods as test cases, add mocks where necessary, and invoke the *Test.test()* method on classes you wish to test. *Test.Report* is a convenience class that translates the test results object into a textual summary.
+
+The Test class contains several annotations that are used to set the test suite up:
+* *Before* - method with this annotation will be invoked before every test case.
+* *After* - method with this annotation will be invoked after every test case.
+* *Case* - denotes a test case method that will be invoked and its success or failure reported.
+* *Mock* - allows for mocking fields that are used in test cases. Takes a single parameter, an object whose key/value pairs denote which fields to replace with mocked values. Mocked values can be objects, classes, methods, or anything else that matches the signature of the field being mocked. Mocking can be used on *both* the test class as well any of its methods - class mocks are executed with every test case (and are valid for Before and After methods), whereas method mocks are only valid for the annotated method (Case, Before or After).
+
+Each test case is carried out in a separate environment, invoked on a fresh instance of the test class. The test class will be instantiated using a *parameterless constructor*, so if you need to perform any initialization, do it in there. Also, all the invoked methods (mocks, before, after, and cases) are invoked with [environment invocation]((#closure-vs-environment-invocation)), so you may want to use this invocation inside test cases as well in order to make sure mocks will work.
+
+Tests should generally be used in conjunction with the *Assert* singleton, which provides several methods for asserting conditions, and each raises a descriptive *AssertionException* when failing.
+
+Here is a simple example that contains two test classes, and prints their report:
+```ruby
+import Test
+class TestCase:
+    !Before()
+    def before: print "before"
+
+    !After()
+    def after: print "after"
+
+    !Case()
+    def testEq:
+        Assert.equals(5, 5, "Should pass")
+    end
+
+    !Case()
+    def testEqFail:
+        Assert.equals(5, 4, "Should fail")
+    end
+
+    !Case()
+    def testInterpreterFail:
+        c = "b" - "a"
+        Assert.equals(5, 4, "Shouldn't happen")
+    end
+end
+
+!Mock([Net = [post = def (args, callback): callback("posted")]])
+class TestMock:
+    !Case()
+    def testPost():
+        result = yield Net.post([])
+        Assert.equals(result, "posted", "Should be good")
+    end
+
+    !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
+    !Case()
+    def testPostAndFile():
+        result = yield Net.post([])
+        Assert.isTrue(result == "posted", "Should be good")
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Also good")
+    end
+
+    !Case()
+    def failWithoutFileMock():
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
+    end
+end
+print Reporter.report(Test.test([TestCase, TestMock]))
+
+# Output is:
+#
+# before
+# after
+# before
+# before
+# Total: 3 / 6 (50.0%)
+#
+# TestMock 2 / 3 (66.7%)
+# testPost: PASS
+# testPostAndFile: PASS
+# failWithoutFileMock: Assertion failed at "Equals": "Will fail, File not mocked", params: [10, "mock reading"]
+#
+# TestCase 1 / 3 (33.3%)
+# testEqFail: Assertion failed at "Equals": "Should fail", params: [5, 4]
+# testEq: PASS
+# testInterpreterFail: ["Simi" line 715] Error at '-': Operands must be numbers.
+```
 
 #### SMT
 
@@ -1478,7 +1575,7 @@ Smt is heavily used with [Šimi servers](https://github.com/globulus/simi-sync/t
 
 Files located in [stdlib/sql](stdlib/sql/) serve as an interface for connecting to relational databases. Currently, [MariaDB](https://mariadb.com/) is used to illustrate how to natively connect to a DB and map its result into Šimi Db and ResultSet classes.
 
-The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows. To start, annotate a class with **Orm.Table**. Then, use **Orm.Column** annotation on its fields to declare the table colums. Names, nullability and data types can be inferred, or stated explicitly. **Orm.PrimaryKey** annotation is used in addition to Orm.Column to denote the primary key column. To boot your Orm instance, invoke the *createTable* method with all the table classes you wish to support, and it will sert everything up for you. From there on, you can perform selection, insert, update and delete by using fluent syntax that works with the annotated classes instead of plain objects.
+The [Orm](stdlib/sql/Orm.simi) exposes Object-Relational Mapping that can be used to easily map Šimi objects into DB table rows. To start, annotate a class with **Orm.Table**. Then, use **Orm.Column** annotation on its fields to declare the table colums. Names, nullability and data types can be inferred, or stated explicitly. **Orm.PrimaryKey** annotation is used in addition to Orm.Column to denote the primary key column. To boot your Orm instance, invoke the *createTable* method with all the table classes you wish to support, and it will sert everything up for you. From there on, you can perform selection, insertion, update and deletion by using fluent syntax that works with the annotated classes instead of plain objects.
 
 Check out ŠimiSync's [DbHelper](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/db/DbHelper.simi) and [BeerController](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/controllers/BeerController.simi) classes to see the Orm action on a Šimi backend!
 

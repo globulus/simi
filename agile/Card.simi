@@ -1,0 +1,15 @@
+class Card(Renderable):
+    def play(): AbstractMethodException(self(def), self).raise()
+end
+
+class Project(Card):
+    def init(tasks): pass
+end
+
+class Person(Card):
+    def init(attack, health): pass
+end
+
+class Dev(Person):
+
+end

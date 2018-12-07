@@ -118,6 +118,9 @@ class SimiObjectImpl implements SimiObject {
   }
 
   void set(Token name, SimiProperty prop, Environment environment) {
+      if (name == null) {
+          return;
+      }
       checkMutability(name, environment);
       String key = name.lexeme;
       if (key.equals(Constants.PRIVATE) && clazz != null
@@ -258,11 +261,11 @@ class SimiObjectImpl implements SimiObject {
         ArrayList<SimiProperty> values = new ArrayList<>(length());
         for (Map.Entry<String, SimiProperty> entry : fields.entrySet()) {
             values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass,
-                    new SimiValue.String(entry.getKey()), entry.getValue().getValue())));
+                    new SimiValue.String(entry.getKey()), entry.getValue())));
         }
         int lineSize = line.size();
         for (int i = 0; i < lineSize; i++) {
-            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.Number(i), line.get(i).getValue())));
+            values.add(new SimiValue.Object(SimiObjectImpl.decomposedPair(objectClass, new SimiValue.Number(i), line.get(i))));
         }
         return values;
     }
@@ -439,7 +442,7 @@ class SimiObjectImpl implements SimiObject {
         }
         ArrayList<SimiProperty> lineClone = new ArrayList<>();
         for (SimiProperty field : line) {
-            lineClone.add(field.clone(mutable));
+            lineClone.add((field != null) ? field.clone(mutable) : null);
         }
         return new SimiObjectImpl(clazz, mutable, fieldsClone, lineClone);
     }
@@ -466,7 +469,7 @@ class SimiObjectImpl implements SimiObject {
                 )
                 .append((fields.isEmpty() || line.isEmpty()) ? "" : TokenType.COMMA.toCode())
                 .append(line.stream()
-                        .map(i -> i.getValue().toCode(indentationLevel + 1, false))
+                        .map(i -> (i == null) ? "nil" : i.getValue().toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining(TokenType.COMMA.toCode() + " "))
                 )
                 .append(isArray ? "" : TokenType.NEWLINE.toCode(indentationLevel, false))

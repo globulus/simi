@@ -1,0 +1,123 @@
+class Test:
+    class Before:
+    end
+
+    class After:
+    end
+
+    class Case:
+    end
+
+    class Mock:
+        def init(args):
+            @code = "(def ():\n" + String.from(args.zip().map(def (k, v): k + " $= " + ivic v), "\n") + "end)"
+        end
+    end
+
+    def test(classes):
+        results = $[]
+        for clazz in classes:
+            before = nil
+            after = nil
+            cases = $[]
+            mocks = $[]
+            classMock = gu (!!clazz).where(def a: a is Test.Mock).first().code
+            for [key, val] in clazz.zip():
+                if val is not Function: continue
+                annots = !!val
+                if @_hasAnnot(annots, Test.Before): before $= key
+                elsif @_hasAnnot(annots, Test.After): after $= key
+                elsif @_hasAnnot(annots, Test.Case): cases.append(key)
+
+                mock = gu annots.where(def a: a is Test.Mock).first().code
+                if mock: mocks.(key) = mock
+            end
+            caseResults = $[]
+            for case in cases:
+                (def ():
+                    instance = clazz()
+                    classMock$()
+
+                    if before:
+                        mocks.(before)$()
+                        instance.(before)$()
+                    end
+
+                    mocks.(case)$()
+                    instance.(case)$()
+
+                    if after:
+                        mock.(after)$()
+                        instance.(after)$()
+                    end
+                    rescue ex: caseResults.(case) = ex ?? true
+                end)()
+            end
+            results.(clazz.className()) = caseResults
+        end
+        return results
+    end
+
+    def _hasAnnot(annots, annotClass): return annots.where(def a: a is annotClass).isntEmpty()
+
+    class Reporter:
+        def report(results):
+            totalCases = 0
+            totalPass = 0
+            text = String.builder()
+            for name in results:
+                 classReport = @_reportClass(name, results.(name))
+                 totalCases += classReport.cases
+                 totalPass += classReport.passes
+                 text.add(classReport.text)
+            end
+            return "Total: \(totalPass) / \(totalCases) (\(@_percentString(totalCases, totalPass)))\n\n" + text.build()
+        end
+
+        def _reportClass(name, classResults):
+            text = String.builder().add(name)
+            cases = classResults.len()
+            passes = 0
+            breakdown = String.builder()
+            for func in classResults:
+                breakdown.add(func).add(": ")
+                res = classResults.(func)
+                if res is Exception: breakdown.add(res.message)
+                else:
+                    passes += 1
+                    breakdown.add("PASS")
+                end
+                breakdown.add("\n")
+            end
+            text.add(" \(passes) / \(cases) (\(@_percentString(cases, passes)))\n").add(breakdown.build()).add("\n")
+            return [cases = cases, passes = passes, text = text.build()]
+        end
+
+        def _percentString(cases, passes): return "%.1f%%".format([passes * 100 / cases])
+    end
+end
+
+class AssertionException(Exception):
+end
+
+Assert = [
+    equals = def (a, b, m):
+        if a != b: @_raiseException("Equals", m, [a, b])
+    end,
+    matches = def (a, b, m):
+        if not a.matches(b): @_raiseException("Matches", m, [a, b])
+    end,
+    isTrue = def (c, m):
+        if not c: @_raiseException("Is true", m, nil)
+    end,
+    isFalse = def (c, m):
+        if c: @_raiseException("Is false", m, nil)
+    end,
+    isNil = def (o, m):
+        if o != nil: @_raiseException("Is Nil", m, nil)
+    end,
+    isntNil = def (o, m):
+        if o == nil: @_raiseException("Is Not Nil", m, nil)
+    end,
+    _raiseException = def(method, msg, params): AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
+]

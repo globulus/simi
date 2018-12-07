@@ -1,0 +1,3 @@
+class Renderable:
+    def render(): AbstractMethodException(self(def), self).raise()
+end

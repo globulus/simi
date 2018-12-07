@@ -6,8 +6,10 @@ import net.globulus.simi.api.SimiProperty;
 
 import java.util.*;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
-final class Debugger {
+public final class Debugger {
 
     static final String BREAKPOINT_LEXEME = "BP";
 
@@ -25,11 +27,18 @@ final class Debugger {
             "o: Toggles debugging on/off (default on)\n" +
             "h: Print help\n" +
             "g: Prints global environment\n" +
-            "anything else: continue with program execution\n";
+            "anything else: continue with program execution\n" +
+            "\n";
+
+    private enum DebuggerState {
+        OUTPUT, INPUT
+    }
+    private DebuggerState state;
 
     private FrameStack lineStack;
     private FrameStack callStack;
-    private Scanner scanner;
+    private DebuggerInterface debuggerInterface;
+    private StringBuilder output;
     private Evaluator evaluator;
     private Frame focusFrame;
     private Set<Stmt> ignoredBreakpoints;
@@ -48,10 +57,14 @@ final class Debugger {
     private StepState stepState;
     private int stepOverDepth;
 
-    Debugger() {
+    private DebuggerWatcher watcher;
+
+    Debugger(DebuggerInterface debuggerInterface) {
+        state = DebuggerState.OUTPUT;
         lineStack = new FrameStack();
         callStack = new FrameStack();
-        scanner = new Scanner(System.in);
+        this.debuggerInterface = debuggerInterface;
+        output = new StringBuilder();
         ignoredBreakpoints = new HashSet<>();
         addedBreakpoints = new HashSet<>();
         watch = new HashMap<>();
@@ -59,6 +72,7 @@ final class Debugger {
         debuggingOff = false;
         firstHelp = true;
         stepState = StepState.NONE;
+        watcher = new Watcher();
     }
 
     void setEvaluator(Evaluator evaluator) {
@@ -110,7 +124,7 @@ final class Debugger {
         }
         currentBreakpoint = stmt;
         currentStack = callStack;
-        System.out.println("***** BREAKPOINT *****\n");
+        output.append("***** BREAKPOINT *****\n\n");
         print(0, true);
         scanInput();
     }
@@ -119,17 +133,40 @@ final class Debugger {
         if (debuggingOff || !(allExceptions || fatal)) {
             return;
         }
+        if (stmt.hasBreakPoint()) {
+            if (ignoredBreakpoints.contains(stmt)) {
+                return;
+            }
+        } else if (!addedBreakpoints.contains(stmt)) {
+            switch (stepState) {
+                case NONE:
+                case STEP_OVER_SUSPENDED:
+                    return;
+                case STEP_INTO:
+                case STEP_OVER:
+                    stepState = StepState.NONE;
+                    break;
+            }
+        }
         currentBreakpoint = stmt;
         currentStack = callStack;
-        System.out.println("***** " + (fatal ? "FATAL " : "") + "EXCEPTION *****\n");
-        System.out.println(e.getMessage() + "\n");
+        output.append("***** ").append(fatal ? "FATAL " : "").append("EXCEPTION *****\n\n")
+                .append(e.getMessage()).append("\n\n");
         print(0, true);
         scanInput();
     }
 
+    DebuggerInterface getInterface() {
+        return debuggerInterface;
+    }
+
+    DebuggerWatcher getWatcher() {
+        return watcher;
+    }
+
     private void print(int frameIndex, boolean printLine) {
         List<Frame> frames = currentStack.toList();
-        System.out.println("============================");
+        output.append("============================\n");
         if (printLine && currentStack != lineStack) {
             focusFrame = lineStack.toList().get(frameIndex);
         } else {
@@ -137,28 +174,26 @@ final class Debugger {
         }
         if (focusFrame.before != null) {
             for (Codifiable codifiable : focusFrame.before) {
-                System.out.println(codifiable.toCode(0, true));
+                output.append(codifiable.toCode(0, true)).append("\n");
             }
         }
-        focusFrame.print(null);
+        focusFrame.print(null, output);
         if (focusFrame.after != null) {
             for (Codifiable codifiable : focusFrame.after) {
-                System.out.println(codifiable.toCode(0, true));
+                output.append(codifiable.toCode(0, true)).append("\n");
             }
         }
-        System.out.println("============================");
+        output.append("============================\n");
         for (int i = 0; i < frames.size(); i++) {
             Frame frame = frames.get(i);
-            frame.print(i);
+            frame.print(i, output);
         }
-        System.out.println("\n#### ENVIRONMENT ####\n");
-        System.out.println(focusFrame.environment.toStringWithoutValuesOrGlobal());
+        output.append("\n#### ENVIRONMENT ####\n\n");
+        output.append(focusFrame.environment.toStringWithoutValuesOrGlobal()).append("\n");
         if (!watch.isEmpty()) {
-            System.out.println("\n#### WATCH ####\n");
-            for (Map.Entry<String, Environment> watched : watch.entrySet()) {
-                String name = watched.getKey();
-                SimiProperty value = watched.getValue().tryGet(name);
-                System.out.println(name + " = " + ((value != null) ? value.toString() : "nil"));
+            output.append("\n#### WATCH ####\n\n");
+            for (Map.Entry<String, String> watched : watcher.getWatch().entrySet()) {
+                output.append(watched.getKey()).append(" = ").append(watched.getValue()).append("\n");
             }
         }
         if (firstHelp) {
@@ -168,11 +203,30 @@ final class Debugger {
     }
 
     private void printHelp() {
-        System.out.println(HELP);
+        output.append(HELP);
     }
 
     private void scanInput() {
-        String input = scanner.nextLine();
+        flush();
+        state = DebuggerState.INPUT;
+        String syncInput = debuggerInterface.read(); // Try sync input
+        if (syncInput != null) {
+            parseInput(syncInput);
+        } else {
+            try {
+                String asyncInput = debuggerInterface.getInputQueue().take();
+                parseInput(asyncInput);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void parseInput(String input) {
+        if (state == DebuggerState.OUTPUT) { // Don't parse async inputs debugger unless state is INPUT
+            return;
+        }
+        state = DebuggerState.OUTPUT;
         if (input.isEmpty()) {
             return;
         }
@@ -180,32 +234,39 @@ final class Debugger {
             case 'c': { // Print call stack
                 currentStack = callStack;
                 print(0, true);
-            } break;
+            }
+            break;
             case 'l': { // Print line stack
                 currentStack = lineStack;
                 print(0, true);
-            } break;
+            }
+            break;
             case 'i': { // Inspect environment at stack index
                 int index = Integer.parseInt(input.substring(2));
                 print(index, false);
-            } break;
+            }
+            break;
             case 'e': { // Evaluate expression
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
-                System.out.println(evaluator.eval(input.substring(2), focusFrame.environment));
-            } break;
+                output.append(evaluator.eval(input.substring(2), focusFrame.environment)).append("\n");
+            }
+            break;
             case 'w': {
                 String name = input.substring(2);
                 watch.put(name, focusFrame.sourceEnvironment);
-                System.out.println("Added to watch: " + name);
-            } break;
+                output.append("Added to watch: ").append(name).append("\n");
+            }
+            break;
             case 'n':
                 stepState = StepState.STEP_INTO;
+                flush();
                 return;
             case 'v':
                 stepState = StepState.STEP_OVER;
                 stepOverDepth = 0;
+                flush();
                 return;
             case 'a': {
                 if (currentBreakpoint != null) {
@@ -215,8 +276,9 @@ final class Debugger {
                         addedBreakpoints.add(currentBreakpoint);
                     }
                 }
-                System.out.println("Breakpoint added.");
-            } break;
+                output.append("Breakpoint added.").append("\n");
+            }
+            break;
             case 'r': {
                 if (currentBreakpoint != null) {
                     if (addedBreakpoints.contains(currentBreakpoint)) {
@@ -226,32 +288,49 @@ final class Debugger {
                     }
                     currentBreakpoint = null;
                 }
-                System.out.println("Breakpoint removed.");
-            } break;
+                output.append("Breakpoint removed.").append("\n");
+            }
+            break;
             case 'x': { // Toggle catching all exceptions
                 allExceptions = !allExceptions;
-                System.out.println("All exceptions will be caught: " + allExceptions);
-            } break;
+                output.append("All exceptions will be caught: ").append(allExceptions).append("\n");
+            }
+            break;
             case 'o': { // Toggle debugging on/off
                 debuggingOff = !debuggingOff;
-                System.out.println("Debugging turned off: " + debuggingOff);
-            } break;
+                output.append("Debugging turned off: ").append(debuggingOff).append("\n");
+            }
+            break;
             case 'h': { // Print help
                 printHelp();
-            } break;
+            }
+            break;
             case 'g': { // Print global environment
                 if (evaluator == null) {
                     throw new IllegalStateException("Evaluator not set!");
                 }
-                System.out.println(evaluator.getGlobalEnvironment().toString());
-            } break;
+                output.append(evaluator.getGlobalEnvironment().toString()).append("\n");
+            }
+            break;
             default:
+                debuggerInterface.resume();
                 return;
         }
         scanInput();
     }
 
-    static class Frame {
+    private void flush() {
+        debuggerInterface.flush(output.toString());
+        output = new StringBuilder();
+    }
+
+    public interface FrameDump {
+        String getLine();
+        String getZippedEnvironment();
+        Map<String, String> getFullEnvironment();
+    }
+
+    static class Frame implements FrameDump {
 
         final Environment environment;
         final Environment sourceEnvironment;
@@ -271,12 +350,27 @@ final class Debugger {
             this.after = after;
         }
 
-        void print(Integer index) {
+        void print(Integer index, StringBuilder output) {
             if (index != null) {
-                System.out.print("[" + index + "] ");
+                output.append("[").append(index).append("] ");
             }
-            System.out.print("\"" + line.getFileName() + "\" line " + line.getLineNumber() + ": ");
-            System.out.println(line.toCode(0, true));
+            output.append("\"").append(line.getFileName()).append("\" line ").append(line.getLineNumber()).append(": ");
+            output.append(line.toCode(0, true)).append("\n");
+        }
+
+        @Override
+        public String getLine() {
+            return line.toCode(0, true);
+        }
+
+        @Override
+        public String getZippedEnvironment() {
+            return environment.toStringWithoutValuesOrGlobal();
+        }
+
+        @Override
+        public Map<String, String> getFullEnvironment() {
+            return environment.dumpValues();
         }
     }
 
@@ -333,6 +427,93 @@ final class Debugger {
 
     interface Evaluator {
         String eval(String input, Environment environment);
+
         Environment getGlobalEnvironment();
+    }
+
+    public interface DebuggerInterface {
+        void flush(String s);
+
+        String read();
+
+        BlockingQueue<String> getInputQueue();
+
+        void resume();
+    }
+
+    public static class ConsoleInterface implements DebuggerInterface {
+
+        private Scanner scanner;
+
+        public ConsoleInterface() {
+            scanner = new Scanner(System.in);
+        }
+
+        @Override
+        public void flush(String s) {
+            System.out.println(s);
+        }
+
+        @Override
+        public String read() {
+            return scanner.nextLine();
+        }
+
+        @Override
+        public BlockingQueue<String> getInputQueue() {
+            return null;
+        }
+
+        @Override
+        public void resume() {
+            // Nothing to do in a sync interface
+        }
+    }
+
+    public interface DebuggerWatcher {
+        List<? extends FrameDump> getLineStack();
+
+        List<? extends FrameDump> getCallStack();
+
+        FrameDump getFocusFrame();
+
+        Map<String, String> getWatch();
+
+        Map<String, String> getGlobalEnvironment();
+    }
+
+    private class Watcher implements DebuggerWatcher {
+
+        @Override
+        public List<? extends FrameDump> getLineStack() {
+            return lineStack.toList();
+        }
+
+        @Override
+        public List<? extends Frame> getCallStack() {
+            return callStack.toList();
+        }
+
+        @Override
+        public FrameDump getFocusFrame() {
+            return focusFrame;
+        }
+
+        @Override
+        public Map<String, String> getWatch() {
+            return watch.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> {
+                                SimiProperty value = e.getValue().tryGet(e.getKey());
+                                return (value != null) ? value.toString() : "nil";
+                            }
+                    ));
+        }
+
+        @Override
+        public Map<String, String> getGlobalEnvironment() {
+            return evaluator.getGlobalEnvironment().dumpValues();
+        }
     }
 }

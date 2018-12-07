@@ -1,0 +1,4 @@
+# Each tasks consists of story points
+class Task:
+
+end

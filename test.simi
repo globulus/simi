@@ -3,8 +3,35 @@ import "./Stdlib/Gson.simi"
 import "./Stdlib/Net.simi"
 import "./Stdlib/Async.simi"
 import "./Stdlib/Decorator.simi"
+import "./Stdlib/Test.simi"
 import "./SimiSync/SimiSyncModels.simi"
 import "./Stdlib/sql/Mariadb.simi"
+import "./minibattle/Board.simi"
+
+
+print pow(2, 3)
+
+def testYieldExpr():
+    asyncFunc = def (a, callback):
+        if a % 2: callback(10)
+        else: callback(20)
+    end
+
+    test = def ():
+        res = yield Net.post([url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]])
+        print "RES IS " + res
+#        print ivic self(def)
+        print "Before yield expr test"
+        a = yield asyncFunc(5)
+        print "10 == " + a
+        b = yield asyncFunc(10)
+        print "20 == " + b
+        print "After all"
+    end
+    test()
+    print ivic test
+end
+testYieldExpr()
 
 def closureTest():
    a = 5
@@ -138,24 +165,24 @@ print ife1 is Function
 
 #Decorator.test()
 
-Net.go(def ():
-    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
-    print "Got response"
-    print code
-    print body
-end)
+#Net.go(def ():
+#    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
+#    print "Got response"
+#    print code
+#    print body
+#end)
 
-asyncf = Async.go(def ():
-    a = 5
-    b = 6
-    c = await* Gson.parseAsync('{a1:2}')
-    print "async c is " + c
-    d = 5
-    e = 7
-    f = await* Gson.parseAsync('{a2:3}')
-    print "async f is " + f
-    g = 10
-end)
+#asyncf = Async.go(def ():
+#    a = 5
+#    b = 6
+#    c = await* Gson.parseAsync('{a1:2}')
+#    print "async c is " + c
+#    d = 5
+#    e = 7
+#    f = await* Gson.parseAsync('{a2:3}')
+#    print "async f is " + f
+#    g = 10
+#end)
 #asyncf()
 
 def fib(n):
@@ -539,26 +566,6 @@ aa = 3
 aa //= 5
 print aa
 
-def testYieldExpr():
-    asyncFunc = def (a, callback):
-        if a % 2: callback(10)
-        else: callback(20)
-    end
-
-    test = def ():
-#        print ivic self(def)
-        print "Before yield expr test"
-        a = yield asyncFunc(5)
-        print "10 == " + a
-        b = yield asyncFunc(10)
-        print "20 == " + b
-        print "After all"
-    end
-    test()
-    print ivic test
-end
-testYieldExpr()
-
 def testArgDecomp():
     print ivic self(def)
     f0 = :print "f0"
@@ -634,7 +641,7 @@ def compositeObjTest():
     print compositeObj.reversed().sorted()
     print compositeObj.where(def d: d is Number)
     compositeObj.forEach(def v: print v)
-    print compositeObj.enumerate()
+    print compositeObj.zip()
     ruler = compositeObj.ruler()
     print ruler
     ruler.append(100)
@@ -674,3 +681,64 @@ def arraySubclassTest():
     print arr
 end
 arraySubclassTest()
+
+print Board.zip()
+
+print Board().render()
+#inpt = Io.read()
+#print inpt
+#print parseCell(inpt)
+
+
+
+import Test
+class TestCase:
+    !Before()
+    def before: print "before"
+
+    !After()
+    def after: print "after"
+
+    !Case()
+    def testEq:
+        Assert.equals(5, 5, "Should pass")
+    end
+
+    !Case()
+    def testEqFail:
+        Assert.equals(5, 4, "Should fail")
+    end
+
+    !Case()
+    def testInterpreterFail:
+        c = "b" - "a"
+        Assert.equals(5, 4, "Shouldn't happen")
+    end
+end
+
+!Mock([Net = [post = def (args, callback): callback("posted")]])
+class TestMock:
+    !Case()
+    def testPost():
+        result = yield Net.post([])
+        Assert.equals(result, "posted", "Should be good")
+    end
+
+    !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
+    !Case()
+    def testPostAndFile():
+        result = yield Net.post([])
+        Assert.isTrue(result == "posted", "Should be good")
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Also good")
+    end
+
+    !Case()
+    def failWithoutFileMock():
+        fileString = File.readString()
+        Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
+    end
+end
+print Reporter.report(Test.test([TestCase, TestMock]))
+
+print "kraj"

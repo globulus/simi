@@ -1,0 +1,121 @@
+#A = [1000000000, 999999999, 999999998, 999999997, 999999996, 999999995, 999999994, 999999993, 999999992, 999999991, 999999990, 999999989, 999999988, 999999987, 999999986, 999999985, 999999984, 999999983, 999999982, 999999981, 999999980, 999999979, 999999978, 999999977, 999999976, 999999975, 999999974, 999999973, 999999972, 999999971, 999999970, 999999969, 999999968, 999999967, 999999966, 999999965, 999999964, 999999963, 999999962, 999999961, 999999960, 999999959, 999999958, 999999957, 999999956, 999999955, 999999954, 999999953, 999999952, 999999951, 999999950, 999999949, 999999948, 999999947, 999999946, 999999945, 999999944, 999999943, 999999942, 999999941, 999999940, 999999939, 999999938, 999999937, 999999936, 999999935, 999999934, 999999933, 999999932, 999999931, 999999930, 999999929, 999999928, 999999927, 999999926, 999999925, 999999924, 999999923, 999999922, 999999921, 999999920, 999999919, 999999918, 999999917, 999999916, 999999915, 999999914, 999999913, 999999912, 999999911, 999999910, 999999909, 999999908, 999999907, 999999906, 999999905, 999999904, 999999903, 999999902, 999999901]
+
+import "./Stdlib/File.simi"
+
+def load(case):
+    file = File("/Users/gordanglavas/Downloads/rotor_input" + case)
+    reader = ReadStream(file)
+    size = reader.readLine().split(' ').map(def s: s.toNumber())
+    n = size.0
+    m = size.1
+    board = Object.array(n)
+    for i in Range(0, n):
+        line = reader.readLine()
+        board.append(line)
+    end
+    rescue ex:
+        if ex:
+            print ex.message
+            return nil
+        end
+    end
+    reader.close()
+    return [n = n, m = m, board = board]
+end
+
+def solve(input):
+    $top = 0
+    $left = 0
+    $bottom = 0
+    $right = 0
+    $good = true
+
+    $currentK = 1
+    nmo = input.n - 1
+    mmo = input.m - 1
+    board = input.board
+
+    for cr in Range(1, nmo):
+        for cc in Range(1, mmo):
+            maxK = Math.min(cr, Math.min(cc, Math.min(nmo - cr, mmo - cc))) * 2 + 1
+            if maxK <= $currentK: continue
+            $top = cr - 1
+            $left = cc - 1
+            $bottom = cr + 1
+            $right = cc + 1
+
+            $good = true
+            for k in Range(3, maxK + 1, 2):
+                for r in Range(0, k):
+                    if board.($top + r).($left) != board.($bottom - r).($right):
+                        $good = false
+                        break
+                    end
+                end
+                if not $good: break
+
+                for c in Range(1, k - 1):
+                    if board.($top).($left + c) != board.($bottom).($right - c):
+                        $good = false
+                        break
+                    end
+                end
+
+                if $good:
+                    $currentK = Math.max($currentK, k)
+                    $top = $top - 1
+                    $left = $left - 1
+                    $bottom = $bottom + 1
+                    $right = $right + 1
+                end
+                else: break
+            end
+        end
+    end
+
+    lastK = $currentK
+    $currentK = $currentK - 1
+    for cr in Range(1, board.n):
+        for cc in Range(1, board.m):
+            maxK = Math.min(cr, Math.min(cc, Math.min(board.n - cr, board.m - cc))) * 2
+            if maxK <= $currentK: continue
+            $top = cr - 1
+            $left = cc - 1
+            $bottom = cr
+            $right = cc
+
+            $good = true
+            for k in Range(2, maxK + 1, 2):
+                for r in Range(0, k):
+                    if board.($top + r).($left) != board.($bottom - r).($right):
+                        $good = false
+                        break
+                    end
+                end
+                if not $good: break
+
+                for c in Range(1, k - 1):
+                    if board.($top).($left + c) != board.($bottom).($right - c):
+                        $good = false
+                        break
+                    end
+                end
+
+                if $good:
+                    $currentK = Math.max($currentK, k)
+                    $top = $top - 1
+                    $left = $left - 1
+                    $bottom = $bottom + 1
+                    $right = $right + 1
+                end
+                else: break
+            end
+        end
+    end
+
+    return Math.max($currentK, lastK)
+end
+
+for case in Range(6, 7):
+    print solve(load(case))
+end

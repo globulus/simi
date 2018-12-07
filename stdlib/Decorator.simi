@@ -8,7 +8,7 @@ Decorator = [
         newLines = $[]
         decorators = nil
         skip = -1
-        for e in lines.enumerate():
+        for e in lines.zip():
             [i, line] = e
             trimmedLine = line.trim()
             if trimmedLine.startsWith(@KEYWORD):

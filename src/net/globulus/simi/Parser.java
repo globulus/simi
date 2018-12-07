@@ -135,7 +135,7 @@ class Parser {
     } else if (peek().type == IDENTIFIER) {
       expr = call();
     } else {
-      ErrorHub.sharedInstance().error(peek(), "Annotation expect either an object literal or a constructor invocation!");
+      error(peek(), "Annotation expect either an object literal or a constructor invocation!");
     }
     checkStatementEnd(false);
     return new Stmt.Annotation(expr);
@@ -321,7 +321,7 @@ class Parser {
     Token keyword = previous();
     Expr.Block block = block("rescue", true);
     if (block.params.size() != 1) {
-      ErrorHub.sharedInstance().error(keyword, "Rescue block expects exactly 1 parameter!");
+      error(keyword, "Rescue block expects exactly 1 parameter!");
     }
     return new Stmt.Rescue(keyword, block);
   }
@@ -499,7 +499,7 @@ class Parser {
         if (call instanceof Expr.Call) {
           return new Expr.Yield(expr, equals, keyword, (Expr.Call) call);
         } else {
-          ErrorHub.sharedInstance().error(keyword, "yield expressions must involve a call!");
+          error(keyword, "yield expressions must involve a call!");
         }
       }
       Expr value = assignment();
@@ -579,7 +579,7 @@ class Parser {
   }
 
   private Expr unary() {
-    if (match(NOT, MINUS)) {
+    if (match(NOT, MINUS, BANG_BANG)) {
       Token operator = previous();
       Expr right = unary();
       return new Expr.Unary(operator, right);
@@ -589,17 +589,6 @@ class Parser {
     }
     if (match(IVIC)) {
       return new Expr.Ivic(unary());
-    }
-    if (match(BANG_BANG)) {
-      List<Token> tokens = new ArrayList<>();
-      while (match(IDENTIFIER)) {
-        tokens.add(previous());
-        match(DOT);
-      }
-      if (tokens.isEmpty()) {
-        ErrorHub.sharedInstance().error(peek(), "Annotations operator needs params!");
-      }
-      return new Expr.Annotations(tokens);
     }
     return call();
   }
@@ -837,8 +826,8 @@ class Parser {
     return new Token(type, assignOp.lexeme, null, assignOp.line, assignOp.file);
   }
 
-  private ParseError error(Token token, String message) {
-    ErrorHub.sharedInstance().error(token, message);
+  private static ParseError error(Token token, String message) {
+    ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message);
     return new ParseError();
   }
 
@@ -916,12 +905,12 @@ class Parser {
         Expr.Get get = (Expr.Get) expr;
         return new Expr.Set(get.origin, get.object, get.name, value);
       } else {
-        ErrorHub.sharedInstance().error(equals, "Cannot use compound assignment operators with setters!");
+        error(equals, "Cannot use compound assignment operators with setters!");
       }
     } else if (expr instanceof Expr.ObjectLiteral) { // Object decomposition
       Expr.ObjectLiteral objectLiteral = (Expr.ObjectLiteral) expr;
       if (/*objectLiteral.isDictionary || */objectLiteral.opener.type == DOLLAR_LEFT_BRACKET) {
-        ErrorHub.sharedInstance().error(equals.line, "Invalid object decomposition syntax.");
+        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, equals.file, equals.line, "Invalid object decomposition syntax.");
       }
       List<Expr.Assign> assigns = new ArrayList<>();
       List<Stmt.Annotation> annotations = (parser != null) ? parser.getAnnotations() : null;
@@ -935,7 +924,7 @@ class Parser {
       }
       return new Expr.ObjectDecomp(assigns);
     }
-    ErrorHub.sharedInstance().error(equals, "Invalid assignment target.");
+    error(equals, "Invalid assignment target.");
     return null;
   }
 

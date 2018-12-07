@@ -1,5 +1,6 @@
 package net.globulus.simi;
 
+import com.sun.istack.internal.NotNull;
 import net.globulus.simi.api.SimiProperty;
 
 import java.net.URL;
@@ -24,12 +25,20 @@ public class ActiveSimi {
 
     private ActiveSimi() { }
 
-    public static void setDebugMode(boolean debug) {
+    public static void setDebugMode(boolean debug, @NotNull Debugger.DebuggerInterface debuggerInterface) {
         if (debug) {
-            debugger = new Debugger();
+            debugger = new Debugger(debuggerInterface);
         } else {
             debugger = null;
         }
+    }
+
+    public static Debugger.DebuggerInterface getDebuggerInterface() {
+        return (debugger != null) ? debugger.getInterface() : null;
+    }
+
+    public static Debugger.DebuggerWatcher getDebuggerWatcher() {
+        return (debugger != null) ? debugger.getWatcher() : null;
     }
 
     public static void load(String... files) {
@@ -93,6 +102,7 @@ public class ActiveSimi {
             nativeModulesManagers.put("framework", new CocoaNativeModulesManager());
 
             interpreter = new Interpreter(nativeModulesManagers.values(), debugger);
+            ErrorHub.sharedInstance().setInterpreter(interpreter);
         } else {
             for (NativeModulesManager manager : interpreter.nativeModulesManagers) {
                 if (manager instanceof JavaNativeModulesManager) {
@@ -163,17 +173,15 @@ public class ActiveSimi {
 
     private static final ErrorWatcher WATCHER = new ErrorWatcher() {
         @Override
-        public void report(int line, String where, String message) {
-            System.err.println(
-                    "[line " + line + "] Error" + where + ": " + message);
+        public void report(String file, int line, String where, String message) {
+            System.err.println("[\"" + file + "\" line " + line + "] Error" + where + ": " + message);
             hadError = true;
         }
 
         @Override
         public void runtimeError(RuntimeError error) {
-
             System.err.println(error.getMessage() +
-                    "\n[" + error.token.file + " line " + error.token.line + "]");
+                    "\n[\"" + error.token.file + "\" line " + error.token.line + "]");
             hadRuntimeError = true;
         }
     };
