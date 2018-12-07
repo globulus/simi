@@ -7,6 +7,7 @@ import net.globulus.simi.api.SimiProperty;
 import java.util.*;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
 public final class Debugger {
 
@@ -56,6 +57,8 @@ public final class Debugger {
     private StepState stepState;
     private int stepOverDepth;
 
+    private DebuggerWatcher watcher;
+
     Debugger(DebuggerInterface debuggerInterface) {
         state = DebuggerState.OUTPUT;
         lineStack = new FrameStack();
@@ -69,6 +72,7 @@ public final class Debugger {
         debuggingOff = false;
         firstHelp = true;
         stepState = StepState.NONE;
+        watcher = new Watcher();
     }
 
     void setEvaluator(Evaluator evaluator) {
@@ -141,6 +145,10 @@ public final class Debugger {
         return debuggerInterface;
     }
 
+    DebuggerWatcher getWatcher() {
+        return watcher;
+    }
+
     private void print(int frameIndex, boolean printLine) {
         List<Frame> frames = currentStack.toList();
         output.append("============================\n");
@@ -169,10 +177,8 @@ public final class Debugger {
         output.append(focusFrame.environment.toStringWithoutValuesOrGlobal()).append("\n");
         if (!watch.isEmpty()) {
             output.append("\n#### WATCH ####\n\n");
-            for (Map.Entry<String, Environment> watched : watch.entrySet()) {
-                String name = watched.getKey();
-                SimiProperty value = watched.getValue().tryGet(name);
-                output.append(name).append(" = ").append((value != null) ? value.toString() : "nil").append("\n");
+            for (Map.Entry<String, String> watched : watcher.getWatch().entrySet()) {
+                output.append(watched.getKey()).append(" = ").append(watched.getValue()).append("\n");
             }
         }
         if (firstHelp) {
@@ -193,7 +199,7 @@ public final class Debugger {
             parseInput(syncInput);
         } else {
             try {
-                String asyncInput = debuggerInterface.getQueue().take();
+                String asyncInput = debuggerInterface.getInputQueue().take();
                 parseInput(asyncInput);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -303,7 +309,13 @@ public final class Debugger {
         output = new StringBuilder();
     }
 
-    static class Frame {
+    public interface FrameDump {
+        String getLine();
+        String getZippedEnvironment();
+        Map<String, String> getFullEnvironment();
+    }
+
+    static class Frame implements FrameDump {
 
         final Environment environment;
         final Environment sourceEnvironment;
@@ -329,6 +341,21 @@ public final class Debugger {
             }
             output.append("\"").append(line.getFileName()).append("\" line ").append(line.getLineNumber()).append(": ");
             output.append(line.toCode(0, true)).append("\n");
+        }
+
+        @Override
+        public String getLine() {
+            return line.toCode(0, true);
+        }
+
+        @Override
+        public String getZippedEnvironment() {
+            return environment.toStringWithoutValuesOrGlobal();
+        }
+
+        @Override
+        public Map<String, String> getFullEnvironment() {
+            return environment.dumpValues();
         }
     }
 
@@ -385,13 +412,17 @@ public final class Debugger {
 
     interface Evaluator {
         String eval(String input, Environment environment);
+
         Environment getGlobalEnvironment();
     }
     
     public interface DebuggerInterface {
         void flush(String s);
+
         String read();
-        BlockingQueue<String> getQueue();
+
+        BlockingQueue<String> getInputQueue();
+
         void resume();
     }
     
@@ -414,13 +445,60 @@ public final class Debugger {
         }
 
         @Override
-        public BlockingQueue<String> getQueue() {
+        public BlockingQueue<String> getInputQueue() {
             return null;
         }
 
         @Override
         public void resume() {
             // Nothing to do in a sync interface
+        }
+    }
+
+    public interface DebuggerWatcher {
+        List<? extends FrameDump> getLineStack();
+
+        List<? extends FrameDump> getCallStack();
+
+        FrameDump getFocusFrame();
+
+        Map<String, String> getWatch();
+
+        Map<String, String> getGlobalEnvironment();
+    }
+
+    private class Watcher implements DebuggerWatcher {
+
+        @Override
+        public List<? extends FrameDump> getLineStack() {
+            return lineStack.toList();
+        }
+
+        @Override
+        public List<? extends Frame> getCallStack() {
+            return callStack.toList();
+        }
+
+        @Override
+        public FrameDump getFocusFrame() {
+            return focusFrame;
+        }
+
+        @Override
+        public Map<String, String> getWatch() {
+            return watch.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> {
+                                SimiProperty value = e.getValue().tryGet(e.getKey());
+                                return (value != null) ? value.toString() : "nil";
+                            }
+                    ));
+        }
+
+        @Override
+        public Map<String, String> getGlobalEnvironment() {
+            return evaluator.getGlobalEnvironment().dumpValues();
         }
     }
 }

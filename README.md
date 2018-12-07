@@ -1398,6 +1398,13 @@ When a breakpoint or a crash triggers, you can type in the following commands to
 
 Typing in anything else (or a newline) will resume the execution of the program.
 
+
+#### Visual debugging
+
+Šimi Debugger's interface is decoupled from its functionality, allowing your to create a visual debugger on any platform supporting Šimi. At its most basic level, debugger interface allows for sync and async exchange of textual commands and responses between the debugger and visual interface. On top of this, *ActiveSimi* can expose the debugger watcher that allows for querying of specific debugger data structures, allowing for different debugger components (environment, watches, breakpoints) to be rendered in separate UI views.
+
+ŠimiSync's [web part uses a browser interface for debugging a Šimi server](https://github.com/globulus/simi-sync/blob/master/web/src/main/java/net/globulus/simisync/BrowserInterface.java), while [Android](https://github.com/globulus/simi-sync/tree/master/android/AndroidDebugger/src/main/java/net/globulus/simi/android/debugger) and [iOS](https://github.com/globulus/simi-ios/tree/master/SimiLib/iOSSimi/iOSSimi) use mobile screens that show up once debugger triggers a breakpoint or an exception.
+
 ### Basic modules
 
 Šimi's Stdlib comes built in with a number of modules that can be used to accomplish various tasks. Below is a quick outline of most of them:

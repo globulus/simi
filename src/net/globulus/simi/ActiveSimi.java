@@ -37,6 +37,10 @@ public class ActiveSimi {
         return (debugger != null) ? debugger.getInterface() : null;
     }
 
+    public static Debugger.DebuggerWatcher getDebuggerWatcher() {
+        return (debugger != null) ? debugger.getWatcher() : null;
+    }
+
     public static void load(String... files) {
         ErrorHub.sharedInstance().removeWatcher(WATCHER);
         ErrorHub.sharedInstance().addWatcher(WATCHER);

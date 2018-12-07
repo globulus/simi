@@ -6,6 +6,7 @@ import net.globulus.simi.api.SimiValue;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 class Environment implements SimiEnvironment {
 
@@ -120,6 +121,14 @@ class Environment implements SimiEnvironment {
       result += " -> " + enclosing.toStringWithoutValuesOrGlobal();
     }
     return result;
+  }
+
+  Map<String, String> dumpValues() {
+    return props.entrySet().stream()
+            .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    e -> (e.getValue() != null) ? e.getValue().toString() : "nil"
+            ));
   }
 
   BlockImpl getOrAssignBlock(Stmt.BlockStmt stmt,
