@@ -78,6 +78,7 @@ What Šimi offers:
     + [Metaprogramming and (de)serialization - *gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic)
     + [Debugger](#debugger)
         - [Breakpoints](#breakpoints)
+        - [Visual debugging](#visual-debugging)
     + [Basic modules](#basic-modules)
         - [Stdlib](#stdlib)
         - [File](#file)
@@ -469,15 +470,15 @@ print compositeObj.sorted() # Sorts both parts separately
 
 # forEach uses an iterator and as such works either with dictionary
 # or array part, depending on which one is present (dictionary has
-# higher precedence. The same is true for other higher-order functions.
+# higher precedence). The same is true for other higher-order functions.
 compositeObj.forEach(def v: print v)
 
 # Enumerates ALL the values - dictionary first, and then array, and as
 # such can be used to iterate through entire composite object.
 print compositeObj.zip()
 
-# Ruler is a copy of the object's array part. Modifying the ruler modifies
-# the object as well.
+# Ruler is a shallow copy of the object's array part. Modifying the
+# rules modifies the object as well.
 ruler = compositeObj.ruler()
 print ruler
 ruler.append(100)

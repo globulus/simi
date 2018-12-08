@@ -23,6 +23,7 @@ class BaseClassesNativeImpl {
         classes.put(Constants.CLASS_NUMBER, getNumberClass());
         classes.put(Constants.CLASS_EXCEPTION, getExceptionClass());
         classes.put(Constants.CLASS_GLOBALS, getGlobalsClass());
+        classes.put(Constants.CLASS_DEBUGGER, getDebuggerClass());
     }
 
     private SimiNativeClass getObjectClass() {
@@ -1167,6 +1168,90 @@ class BaseClassesNativeImpl {
             }
         });
         return new SimiNativeClass(Constants.CLASS_GLOBALS, methods);
+    }
+
+    private SimiNativeClass getDebuggerClass() {
+        Map<OverloadableFunction, SimiCallable> methods = new HashMap<>();
+        methods.put(new OverloadableFunction("watcher", 0), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
+                Debugger.DebuggerWatcher watcher = ActiveSimi.getDebuggerWatcher();
+                if (watcher == null) {
+                    return null;
+                }
+                LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
+                props.put("lineStack", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
+                        SimiClassImpl clazz = getObjectClass(interpreter);
+                        ArrayList<SimiProperty> line = watcher.getLineStack().stream()
+                                .map(d -> new SimiValue.Object(d.toSimiObject(clazz)))
+                                .collect(Collectors.toCollection(ArrayList::new));
+                        return new SimiValue.Object(new SimiObjectImpl(clazz, true, null, line));
+                    }
+                }, null, null));
+                props.put("callStack", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
+                        SimiClassImpl clazz = getObjectClass(interpreter);
+                        ArrayList<SimiProperty> line = watcher.getCallStack().stream()
+                                .map(d -> new SimiValue.Object(d.toSimiObject(clazz)))
+                                .collect(Collectors.toCollection(ArrayList::new));
+                        return new SimiValue.Object(new SimiObjectImpl(clazz, true, null, line));
+                    }
+                }, null, null));
+                props.put("focusFrame", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
+                        return new SimiValue.Object(watcher.getFocusFrame().toSimiObject(getObjectClass(interpreter)));
+                    }
+                }, null, null));
+                props.put("watch", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
+                        return new SimiValue.Object(SimiMapper.toObject(watcher.getWatch(), true));
+                    }
+                }, null, null));
+                props.put("globalEnvironment", new SimiValue.Callable(new SimiCallable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
+                        return new SimiValue.Object(SimiMapper.toObject(watcher.getGlobalEnvironment(), true));
+                    }
+                }, null, null));
+                return new SimiValue.Object(new SimiObjectImpl(getObjectClass(interpreter), true, props, null));
+            }
+        });
+        return new SimiNativeClass(Constants.CLASS_DEBUGGER, methods);
     }
 
     private SimiClassImpl getObjectClass(BlockInterpreter interpreter) {

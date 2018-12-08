@@ -12,31 +12,31 @@ public class SimiMapper {
 
     private SimiMapper() { }
 
-    public static SimiObject toObject(Map<String, Object> map, boolean immutable) {
+    public static SimiObject toObject(Map<String, ? extends Object> map, boolean immutable) {
        return toObject(map, immutable, ActiveSimi.getObjectClass());
     }
 
-    public static SimiObject toObject(Map<String, Object> map, boolean immutable, BlockInterpreter interpreter) {
+    public static SimiObject toObject(Map<String, ? extends Object> map, boolean immutable, BlockInterpreter interpreter) {
         return toObject(map, immutable, getObjectClass(interpreter));
     }
 
-    private static SimiObject toObject(Map<String, Object> map, boolean immutable, SimiClassImpl objectClass) {
+    private static SimiObject toObject(Map<String, ? extends Object> map, boolean immutable, SimiClassImpl objectClass) {
         LinkedHashMap<String, SimiProperty> propMap = new LinkedHashMap<>(map.size());
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
+        for (Map.Entry<String, ? extends Object> entry : map.entrySet()) {
             propMap.put(entry.getKey(), toSimiProperty(entry.getValue(), objectClass));
         }
         return SimiObjectImpl.fromMap(objectClass, immutable, propMap);
     }
 
-    public static SimiObject toObject(List<Object> list, boolean immutable) {
+    public static SimiObject toObject(List<? extends Object> list, boolean immutable) {
         return toObject(list, immutable, ActiveSimi.getObjectClass());
     }
 
-    public static SimiObject toObject(List<Object> list, boolean immutable, BlockInterpreter interpreter) {
+    public static SimiObject toObject(List<? extends Object> list, boolean immutable, BlockInterpreter interpreter) {
         return toObject(list, immutable, getObjectClass(interpreter));
     }
 
-    private static SimiObject toObject(List<Object> list, boolean immutable, SimiClassImpl objectClass) {
+    private static SimiObject toObject(List<? extends Object> list, boolean immutable, SimiClassImpl objectClass) {
         ArrayList<SimiProperty> propList = new ArrayList<>(list.size());
         for (Object item : list) {
             propList.add(toSimiProperty(item, objectClass));
@@ -89,7 +89,7 @@ public class SimiMapper {
         } else if (value instanceof Map) {
             return new SimiValue.Object(toObject((Map<String, Object>) value, true, objectClass));
         } else if (value instanceof List) {
-            return new SimiValue.Object(toObject((List<Object>) value, true, objectClass));
+            return new SimiValue.Object(toObject((List<?>) value, true, objectClass));
         } else if (value instanceof SimiProperty) {
             return (SimiProperty) value;
         } else {

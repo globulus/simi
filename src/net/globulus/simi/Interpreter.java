@@ -1188,7 +1188,8 @@ class Interpreter implements
             || className.equals(Constants.CLASS_NUMBER)
             || className.equals(Constants.CLASS_STRING)
             || className.equals(Constants.CLASS_FUNCTION)
-            || className.equals(Constants.CLASS_EXCEPTION);
+            || className.equals(Constants.CLASS_EXCEPTION)
+            || className.equals(Constants.CLASS_DEBUGGER);
   }
 
   private SimiClassImpl getObjectClass() {
