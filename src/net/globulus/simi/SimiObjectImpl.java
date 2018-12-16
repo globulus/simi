@@ -47,7 +47,11 @@ class SimiObjectImpl implements SimiObject {
         return new SimiObjectImpl(clazz, immutable, null, new ArrayList<>(line));
     }
 
-  SimiProperty get(Token name, Integer arity, Environment environment) {
+    SimiProperty get(Token name, Integer arity, Environment environment) {
+      return get(name, arity, environment, true);
+    }
+
+  SimiProperty get(Token name, Integer arity, Environment environment, boolean forbidPrivate) {
       String key = name.lexeme;
 
       if (key.equals("class")) { // class is a special key available to all objects
@@ -76,21 +80,20 @@ class SimiObjectImpl implements SimiObject {
           }
       } catch (NumberFormatException ignored) { }
 
-      if (key.startsWith(Constants.PRIVATE)) {
-          SimiObject self = environment.get(Token.self()).getObject();
-          if (self != this && self != clazz) {
-              throw new RuntimeError(name, "Trying to access a private property!");
-          }
-      }
-
       if (fields.containsKey(key)) {
+          if (key.startsWith(Constants.PRIVATE)) {
+              SimiObject self = environment.get(Token.self()).getObject();
+              if (forbidPrivate && self != this && self != clazz) {
+                  throw new RuntimeError(name, "Trying to access a private property!");
+              }
+          }
           return bind(key, fields.get(key));
       }
 
-      return getFromClass(name, arity);
+      return getFromClass(name, arity, environment, forbidPrivate);
   }
 
-  private SimiProperty getFromClass(Token name, Integer arity) {
+  private SimiProperty getFromClass(Token name, Integer arity, Environment environment, boolean forbidPrivate) {
       String key = name.lexeme;
       if (clazz != null) {
           if (clazz.fields.containsKey(key)) {
@@ -100,10 +103,8 @@ class SimiObjectImpl implements SimiObject {
           if (method != null) {
               return new SimiPropertyImpl(new SimiValue.Callable(method, key, this), method.function.annotations);
           }
+          return clazz.get(name, arity, environment, forbidPrivate);
       }
-//      if (clazz != null) {
-//          return clazz.get(name, arity, environment);
-//      }
       return null;
   }
 
@@ -407,7 +408,7 @@ class SimiObjectImpl implements SimiObject {
         if (key.equals("class")) {
             return new SimiValue.Object(clazz);
         }
-        return get(Token.nativeCall(key), null, (Environment) environment);
+        return get(Token.nativeCall(key), null, (Environment) environment, true);
     }
 
     @Override

@@ -43,8 +43,8 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
   }
 
     @Override
-    SimiProperty get(Token name, Integer arity, Environment environment) {
-        SimiProperty prop = super.get(name, arity, environment);
+    SimiProperty get(Token name, Integer arity, Environment environment, boolean forbidPrivate) {
+        SimiProperty prop = super.get(name, arity, environment, forbidPrivate);
         if (prop != null) {
             return prop;
         }
@@ -52,9 +52,9 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
         if (method != null) {
             return new SimiPropertyImpl(new SimiValue.Callable(method, name.lexeme, this), method.function.annotations);
         }
-        if (superclasses != null && !name.lexeme.startsWith(Constants.PRIVATE)) {
+        if (superclasses != null) {
             for (SimiClassImpl superclass : superclasses) {
-                SimiProperty superclassProp = superclass.get(name, arity, environment);
+                SimiProperty superclassProp = superclass.get(name, arity, environment, false);
                 if (superclassProp != null) {
                     return superclassProp;
                 }
@@ -80,7 +80,7 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass {
             }
         }
 
-    if (superclasses != null && !name.startsWith(Constants.PRIVATE)) {
+    if (superclasses != null) {
         for (SimiClassImpl superclass : superclasses) {
             SimiMethod method  = superclass.findMethod(instance, name, arity);
             if (method != null) {
