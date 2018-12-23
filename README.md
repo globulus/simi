@@ -1521,9 +1521,10 @@ Consider the following SMT text file that represents HTML code interspersed with
 ```html
 <html>
     <body>
-        Value is: <b><%= value %></b> (should be 3)
+        <%! docWideVal = 5 %>
+        Value is: <b><%= value %></b> (should be 3) <%# This is a comment %>
         <ul>
-            %%for i in 5.times():
+            %%for i in docWideVal.times():
                 <li>Loop value is <%= i %>%_
                 %%if i % 2:
                     %_ odd%_
@@ -1536,10 +1537,12 @@ Consider the following SMT text file that represents HTML code interspersed with
         </ul>
     <body>
 </html>
+
 ```
 Here are the rules for injecting Šimi code into any text:
 * To insert a textual result of a Šimi expression, use **<%= EXPRESSION %>**.
 * To insert a discardable comment anywhere in the text, use **<%# COMMENT %>**.
+* Declare a document-wide variable using **<%! VAR_NAME = EXPRESSION %>**
 * **%%** denotes that this line contains a Šimi statement, such  as a loop or a branching. The entire line is considered to be the statement, and no text can appear in it. Every statement must have an accompanying **%%end**, meaning that one-line bodies are not allowed. The body of the statement can be anything - more statements, text, or expression injections.
 * **%_** denotes that whitespace should be ommited - when placed at the start of a line, it'll ignore the whitespace before it. When at the end of a line, it will not insert a newline (normally, newlines are rendered as found in the template).
 
