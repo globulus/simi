@@ -1412,11 +1412,57 @@ Typing in anything else (or a newline) will resume the execution of the program.
 
 #### Stdlib
 
-TBA
+The [Stdlib file](stdlib/Stdlib.simi) is a core module that is inseparable from the Šimi interpreter. It defines basic Šimi classes and functionality in the Šimi language, and bridges some of their functionality to native interpreter classes and methods. On JVM systems, a small portion of the file is backed by a native JAR *Stdlib-java*.
+
+*Stdlib* contains the following core classes:
+* Object - defines Objects and all of their methods.
+* Function - defines Functions but doesn't contain any methods.
+* Number - defines the Number type and associated methods.
+* String - defines the String type and associated methods.
+* Exception - all Šimi errors and exceptions are wrapped in this class. Stdlib also defines a number of common exception types, namely:
+    + ScannerException - raised during scanning/lexing phase of interpreting Šimi code.
+    + ParserException - raised during parsing of scanned tokens phase of interpreting Šimi code.
+    + InterpreterException - raised by the interpreter itself as encounters an error during interpreting.
+    + NumberFormatException - raised, amongst other things, when a String cannot be converted using *toNumber()* method.
+    + NilReferenceException - raised when a *nil* is encountered when [nil checking operator](#---nil-check) is used.
+    + IllegalArgumentException - can be raised while checking params of a method.
+    + AbstractMethodException - can be put into bodies of methods that are meant to be overriden.
+    + TypeMismatchException - raised when checked params are used and don't match.
+* Iterator - defines iterable behavior.
+* Closable - defines closable behavior.
+* Range - commonly used class that defines a range of numbers.
+* Enum - see [enums](#enums).
+* Date - simple timestamp wrapper backed by a native class.
+* Debugger - allows for native static fetching of *DebuggerWatcher* instance, allowing for debugging info to be read from Šimi code. See [Šimi Sync web browser interface's SMT template file for usage](https://github.com/globulus/simi-sync/blob/master/web/src/main/resources/static/simi_debug.html).
+
+Stdlib also contains the *ife* method and *Math* object.
 
 #### File
 
-TBA
+The [Simi File module](stdlib/File.simi) provides an OS-agnostic interface for working with files. The main class, *File*, is at its most basic level a wrapper around a String denoting a path to a certain file, and provides a number of instance methods that manipulate the file name, as well as a single native method, *isDirectory*. The class also contains a number of static native methods.
+
+Files can be created, written and read using native classes *ReadStream* and *WriteStream*. Both of these classes are closable and should be released manually after usage to avoid leaks. Generally, all file operations should be backed by a *rescue* block as they may throw *IoException*.
+
+Here is a simple code that demonstrates reading and writing of files:
+```ruby
+def testFile():
+    file = File("README.md")
+    reader = ReadStream(file)
+    while true:
+        line = reader.readLine()
+        if line: print line
+        else: break
+    end
+    writer = WriteStream(File("writetest.txt"))
+    writer.write("string")
+    writer.newLine()
+    writer.write("new string")
+    rescue ex:
+    end
+    reader.close()
+    writer.close()
+end
+```
 
 #### Net
 
