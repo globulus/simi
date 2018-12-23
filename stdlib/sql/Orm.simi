@@ -28,10 +28,9 @@ class_ Orm(Closeable):
     class_ PrimaryKey:
     end
 
-    class Db:
+    class Db(Closeable):
         def open(props): pass
         def execute(sql): pass
-        def close(): pass
     end
 
     class _TableData:

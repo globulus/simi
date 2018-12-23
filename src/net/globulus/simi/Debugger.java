@@ -1,8 +1,6 @@
 package net.globulus.simi;
 
-import net.globulus.simi.api.Codifiable;
-import net.globulus.simi.api.SimiException;
-import net.globulus.simi.api.SimiProperty;
+import net.globulus.simi.api.*;
 
 import java.util.*;
 import java.util.Scanner;
@@ -328,6 +326,7 @@ public final class Debugger {
         String getLine();
         String getZippedEnvironment();
         Map<String, String> getFullEnvironment();
+        SimiObject toSimiObject(SimiClassImpl objectClass);
     }
 
     static class Frame implements FrameDump {
@@ -371,6 +370,15 @@ public final class Debugger {
         @Override
         public Map<String, String> getFullEnvironment() {
             return environment.dumpValues();
+        }
+
+        @Override
+        public SimiObject toSimiObject(SimiClassImpl objectClass) {
+            LinkedHashMap<String, SimiProperty> props = new LinkedHashMap<>();
+            props.put("line", new SimiValue.String(getLine()));
+            props.put("zippedEnvironment", new SimiValue.String(getZippedEnvironment()));
+            props.put("fullEnvironment", new SimiValue.Object(SimiMapper.toObject(getFullEnvironment(), true)));
+            return new SimiObjectImpl(objectClass, true, props, null);
         }
     }
 

@@ -1,8 +1,9 @@
 <html>
     <body>
+        <%! docWideVal = 5 %>
         Value is: <b><%= value %></b> (should be 3) <%# This is a comment %>
         <ul>
-            %%for i in 5.times():
+            %%for i in docWideVal.times():
                 <li>Loop value is <%= i %>%_
                 %%if i % 2:
                     %_ odd%_

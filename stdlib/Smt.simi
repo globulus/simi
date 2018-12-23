@@ -2,12 +2,16 @@ class Smt:
     _STMT = "%%"
     _TAG_START = "<%"
     _EXPR = "="
+    _SET = "!"
     _COMMENT = "#"
     _END = "%>"
     _SKIP = "%_"
 
     class FormatException(Exception):
     end
+
+    _sets = $[]
+    _exprPartCodes = $[]
 
     def compile(template):
         smt = Smt()
@@ -42,10 +46,10 @@ class Smt:
         var = "__var" + clock()
         body = String.builder().add("(def ():
             \(var) = String.builder()
-            \(trimmed.substring(@_STMT.len()))
+            \(@_replaceSets(trimmed.substring(@_STMT.len())))
         ")
         endCount = 1
-        skip = nil
+        skip = 0
         for [i, line] in lines.slice(idx + 1).zip():
             tl = line.trim()
             if tl == @_STMT + "end":
@@ -57,24 +61,19 @@ class Smt:
                 end
             end
             elsif tl.startsWith(@_STMT):
-                body.add(tl.substring(@_STMT.len())).add("\n")
+                body.add(@_replaceSets(tl.substring(@_STMT.len()))).add("\n")
                 endCount += 1
             end
             else:
                 for part in @_parseLine(line, i):
-                    partVal = nil
-                    if part is String: partVal $= "\"\(part.replacing('"', ' \\"'))\""
-                    else:
-                        funcBody = ivic part
-                        partVal $= "(\(funcBody.substring(0, funcBody.len() - 1)))()"
-                    end
-                    body.add(var).add(".add(").add(partVal).add(")\n")
+                    body.add(var).add(".add(")\
+                        .add(ife(part is String, :"\"\(part)\"", :"\(part.code)$()"))\
+                        .add(")\n")
                 end
             end
         end
-        body.add("return \(var).build()
-        end)")
-        return [part = gu body.build(), skip = skip]
+        body.add("return \(var).build()\nend)")
+        return [part = [code = body.build()], skip = skip]
     end
 
     def _parseLine(line, idx):
@@ -88,9 +87,16 @@ class Smt:
                 k = line.indexOf(@_END, j)
                 if not k: Smt.FormatException("Expected \(@_END) at line \(idx): \(line)").raise()
                 type = line.(j + tagStartLen)
-                if type == @_EXPR:
-                    body = "(:" + line.substring(j + tagStartLen + 1, k) + ")"
-                    arr.append(gu body)
+                body = line.substring(j + tagStartLen + 1, k)
+                when type:
+                    @_EXPR: arr.append([code = "(:\(@_replaceSets(body)))"])
+                    @_SET:
+                        equals = body.indexOf("=")
+                        if not equals: Smt.FormatException("Expected '=' in a SET tag at line \(idx): \(line)").raise()
+                        var = body.substring(0, equals).trim()
+                        val = gu ("(:\(body.substring(equals + 1).trim()))") # B
+                        @_sets.(var) = val
+                    end
                 end
                 i $= k + @_END.len()
             end
@@ -111,10 +117,16 @@ class Smt:
         return str
     end
 
+    def _replaceSets(body):
+        replaced = body
+        for set in @_sets: replaced $= replaced.replacing(set, "@\(set)")
+        return replaced
+    end
+
     def _runPart(part):
         when part:
             is String: return part
-            is Function: return part$()
+            is Object: return (gu part.code)$()
             else: return part.toString()
         end
     end
@@ -122,6 +134,7 @@ class Smt:
     def _setParts(v): pass
 
     def run():
+        for [var, val] in @_sets.zip(): @(var) = val$()
         str = String.builder()
         for part in @parts:
             partValue = @_runPart$(part)

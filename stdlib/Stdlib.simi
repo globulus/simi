@@ -392,6 +392,10 @@ class Enum:
     end
 end
 
+class_ Debugger:
+    def watcher(): native
+end
+
 Meta = [
     go = def (mutators, f):
         mutated = f
