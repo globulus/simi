@@ -11,7 +11,7 @@ class Board(Renderable):
          @_rowIndexWidth = Math.round(Math.floor(Math.log10(cols))) + 1
          # Add spaces in front to pad for row indices, then add column letters
          @_header = " " * (@_rowIndexWidth + 2)\
-            + String.from(Object.arrayWithIterator(cols.times()).map(def n: ("A".unicode() + n).char()), "  ")\
+            + String.from(Object.iterating(cols.times()).map(def n: ("A".unicode() + n).char()), "  ")\
             + "\n"
     end
 

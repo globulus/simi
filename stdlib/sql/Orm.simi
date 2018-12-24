@@ -51,7 +51,9 @@ class_ Orm(Closeable):
 
         def resultSet(): return @orm.executeRaw(@_toSql())
         def iterator():
-            return [results = @resultSet(),
+            return [
+                    "class" = Iterator,
+                    results = @resultSet(),
                     tableData = @tableData(),
                      next = def ():
                         if @results.next():
@@ -65,7 +67,7 @@ class_ Orm(Closeable):
                     close = :@results.close()
             ]
         end
-        def array(): return Object.arrayWithIterator(@iterator())
+        def array(): return Object.iterating(@iterator())
         def first():
             it = @iterator()
             res = it.next()
@@ -144,7 +146,7 @@ class_ Orm(Closeable):
         return query.where(where).limit(1).first()
     end
 
-    def createOrUpdate(obj is Object):
+    def upsert(obj is Object):
         data = @_prepareForOp(obj, "create or update")
         sql = "INSERT INTO \(data.name) (\(String.from(data.columns, ', ')))
                VALUES (\(String.from(data.values, ', ')))

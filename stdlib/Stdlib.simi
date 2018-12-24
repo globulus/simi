@@ -35,9 +35,12 @@ class$ Object:
 
     def array(capacity): native
     def array(capacity, fillValue): native
-    def arrayWithIterator(iterator):
+    def iterating(iterator):
         buffer = $[]
-        for item in iterator: buffer.append(item)
+        for [k, v] in iterator:
+            if v: buffer.(k) = v
+            else: buffer.append(k)
+        end
         return buffer
     end
     def slice(start, stop): native
