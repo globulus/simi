@@ -25,8 +25,7 @@ class_ Orm(Closeable):
         def init(name is String, dataType is DataType, notNull is Number): pass
     end
 
-    class_ PrimaryKey:
-    end
+    class_ PrimaryKey
 
     class Db(Closeable):
         def open(props): pass

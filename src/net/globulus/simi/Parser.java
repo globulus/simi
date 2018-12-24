@@ -91,20 +91,19 @@ class Parser {
       consume(RIGHT_PAREN, "Expect ')' after superclasses.");
     }
 
-    consume(COLON, "Expect ':' before class body.");
-
     List<Expr.Assign> constants = new ArrayList<>();
     List<Expr> mixins = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
-    while (!check(END) && !isAtEnd()) {
+    if (match(COLON)) {
+      while (!check(END) && !isAtEnd()) {
         if (match(NEWLINE)) {
           continue;
         }
         if (match(DEF)) {
-            methods.add(function(METHOD));
+          methods.add(function(METHOD));
         } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
-            innerClasses.add(classDeclaration());
+          innerClasses.add(classDeclaration());
         } else if (match(IMPORT)) {
           Expr expr = call();
           if (expr instanceof Expr.Get || expr instanceof Expr.Variable) {
@@ -113,16 +112,18 @@ class Parser {
             error(previous(), "Expected a get or variable expr after mixin import.");
           }
         } else if (match(BANG)) {
-            annotations.add(annotation());
+          annotations.add(annotation());
         } else {
-            Expr expr = assignment();
-            if (expr instanceof Expr.Assign) {
-              constants.add((Expr.Assign) expr);
-            }
+          Expr expr = assignment();
+          if (expr instanceof Expr.Assign) {
+            constants.add((Expr.Assign) expr);
+          }
         }
+      }
+      consume(END, "Expect 'end' after class body.");
+    } else {
+      consume(NEWLINE, "Expected newline after empty class declaration.");
     }
-
-    consume(END, "Expect 'end' after class body.");
 
     return new Stmt.Class(opener, name, superclasses, mixins, constants, innerClasses, methods, getAnnotations());
   }

@@ -1,12 +1,9 @@
 class Test:
-    class Before:
-    end
+    class Before
 
-    class After:
-    end
+    class After
 
-    class Case:
-    end
+    class Case
 
     class Mock:
         def init(args):
@@ -97,8 +94,7 @@ class Test:
     end
 end
 
-class AssertionException(Exception):
-end
+class AssertionException(Exception)
 
 Assert = [
     equals = def (a, b, m):

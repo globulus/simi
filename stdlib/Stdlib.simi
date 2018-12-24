@@ -37,10 +37,7 @@ class$ Object:
     def array(capacity, fillValue): native
     def iterating(iterator):
         buffer = $[]
-        for [k, v] in iterator:
-            if v: buffer.(k) = v
-            else: buffer.append(k)
-        end
+        for item in iterator: buffer.append(item)
         return buffer
     end
     def slice(start, stop): native
