@@ -578,10 +578,10 @@ end
 testArgDecomp()
 
 class Button:
-    def setTitle(title): @title = title
-    def setBackgroundColor(color): @color = color
-    def setOnClickListener(listener): @listener = listener
-    def performClick(): @listener(self)
+    def setTitle(title): pass
+    def setBackgroundColor(color): pass
+    def setOnClickListener(listener): pass
+    def performClick(): @onClickListener(self)
 end
 
 button = Button()\
@@ -740,5 +740,16 @@ class TestMock:
     end
 end
 print Reporter.report(Test.test([TestCase, TestMock]))
+
+def explicitReturn(): return 5
+print explicitReturn()
+def implicitReturn(): 5
+print implicitReturn()
+def implicitReturnSelf():
+    if 5 < 4: 5 + 5
+end
+print implicitReturnSelf()
+print [5].isEmpty()
+print [5].isntEmpty()
 
 print "kraj"

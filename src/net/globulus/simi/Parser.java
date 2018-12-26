@@ -378,6 +378,17 @@ class Parser {
     if (statements == null) {
         statements = block.statements;
     }
+    // Add implicit return for functions containing just a single expression in their body
+    if (statements.size() == 1) {
+      Stmt stmt = statements.get(0);
+      if (stmt instanceof Stmt.Expression) {
+        Expr expr = ((Stmt.Expression) stmt).expression;
+        if (Expr.hasImplicitReturn(expr)) {
+          Token mockReturn = new Token(RETURN, null, null, expr.getLineNumber(), expr.getFileName());
+          statements.set(0, new Stmt.Return(mockReturn, expr));
+        }
+      }
+    }
     addParamChecks(declaration, block.params, statements);
     block = new Expr.Block(declaration, block.params, statements, true);
     return new Stmt.Function(name, block, annotations);

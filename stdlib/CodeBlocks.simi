@@ -33,7 +33,7 @@ class_ CodeBlocks:
             return s
         end
 
-        def getClass(): return gu @getString()
+        def getClass(): gu @getString()
     end
 
     class_ FunctionComposer:
@@ -58,7 +58,7 @@ class_ CodeBlocks:
             return s
         end
 
-        def getFunction(): return gu @getString()
+        def getFunction(): gu @getString()
 
         def _setBody(v): pass
     end
@@ -102,14 +102,14 @@ class_ CodeBlocks:
             @_computeArity()
         end
 
-        def declaration(): return @lines.(@annotCount)
-        def anonymousDeclaration(): return @declaration().replacing(@name, "")
+        def declaration(): @lines.(@annotCount)
+        def anonymousDeclaration(): @declaration().replacing(@name, "")
         def parametersWithoutParentheses():
             trimmed = @declaration().trim()
             return trimmed.substring(trimmed.indexOf('(') + 1, trimmed.lastIndexOf(')'))
         end
-        def parameters(): return @parametersWithoutParentheses().split(", ")
-        def body(): return @lines.slice(@annotCount + 1, @lines.len() - 1)
+        def parameters(): @parametersWithoutParentheses().split(", ")
+        def body(): @lines.slice(@annotCount + 1, @lines.len() - 1)
 
         def isDefLine(line): return line.startsWith(@_BASIC_DEF) or @_ANON_DEF in line
 

@@ -43,9 +43,9 @@ class$ Object:
     def slice(start, stop): native
     def builder(): native
 
-    def length(): return @len()
-    def isEmpty(): return @len() == 0
-    def isntEmpty(): return not @isEmpty()
+    def length(): @len()
+    def isEmpty(): @len() == 0
+    def isntEmpty(): not @isEmpty()
     def first():
         if @isEmpty(): return nil
         else: return @0
@@ -121,7 +121,7 @@ class$ Object:
         end
         return val
    end
-   def reduceRight(initialValue, reducer): return @reversed().reduce(initiaValue, reducer)
+   def reduceRight(initialValue, reducer): @reversed().reduce(initiaValue, reducer)
    def shift():
         if @isEmpty(): return nil
         else:
@@ -135,12 +135,11 @@ class$ Object:
            if predicate(item): @(item.key) = nil
        end
    end
-   def slice(start): return @slice(start, @len())
-   def randomItem(): return @(Number.randomInt(@len()))
+   def slice(start): @slice(start, @len())
+   def randomItem(): @(Number.randomInt(@len()))
 end
 
-class_ Function:
-end
+class_ Function
 
 class Exception:
     def init(message): pass
@@ -148,23 +147,17 @@ class Exception:
     def raise(): native
 end
 
-class ScannerException(Exception):
-end
+class ScannerException(Exception)
 
-class ParserException(Exception):
-end
+class ParserException(Exception)
 
-class InterpreterException(Exception):
-end
+class InterpreterException(Exception)
 
-class NumberFormatException(Exception):
-end
+class NumberFormatException(Exception)
 
-class NilReferenceException(Exception):
-end
+class NilReferenceException(Exception)
 
-class IllegalArgumentException(Exception):
-end
+class IllegalArgumentException(Exception)
 
 class AbstractMethodException(Exception):
     def init(method, sender): @init("\(method) is abstract in \(sender.('class'))!")
@@ -229,9 +222,9 @@ end
 class$ Number:
     def isInteger(): native
 
-    def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
-    def to(limit): return Range(@_, limit)
-    def downto(limit): return Range(limit, @_)
+    def times(): ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
+    def to(limit): Range(@_, limit)
+    def downto(limit): Range(limit, @_)
 
     def randomInt(max): native
 
@@ -279,7 +272,7 @@ class$ String:
 
    def builder(): native
 
-    def sum(a, b): return a + b
+    def sum(a, b): a + b
     def from(array, separator):
         first = true
         f = def (a, b):
@@ -291,13 +284,13 @@ class$ String:
        return array.reduce("", f)
     end
 
-    def length(): return @len()
-    def indexOf(str): return @indexOf(str, 0)
-    def lastIndexOf(str): return @lastIndexOf(str, @len() - 1)
-    def removing(start): return @slice(start, @len())
-    def substring(start): return @substring(start, @len())
-    def isEmpty(): return @len() == 0
-    def isntEmpty(): return not @isEmpty()
+    def length(): @len()
+    def indexOf(str): @indexOf(str, 0)
+    def lastIndexOf(str): @lastIndexOf(str, @len() - 1)
+    def removing(start): @slice(start, @len())
+    def substring(start): @substring(start, @len())
+    def isEmpty(): @len() == 0
+    def isntEmpty(): not @isEmpty()
 end
 
 class TypeMismatchException(Exception):
@@ -322,7 +315,7 @@ Math = [
     log = def (a): native,
     log10 = def (a): native,
     log1p = def (a): native,
-    logn = def (a, b): return @log(a) / @log(b),
+    logn = def (a, b): @log(a) / @log(b),
     round = def (a): native,
     signum = def (a): native,
     sin = def (a): native,
@@ -346,7 +339,7 @@ class Date:
 end
 
 class Enum:
-    def of(obj): return @of(obj, nil)
+    def of(obj): @of(obj, nil)
 
     def of(obj, funs):
        if not obj or obj.isEmpty(): return nil

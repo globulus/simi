@@ -55,7 +55,7 @@ class Test:
         return results
     end
 
-    def _hasAnnot(annots, annotClass): return annots.where(def a: a is annotClass).isntEmpty()
+    def _hasAnnot(annots, annotClass): annots.where(def a: a is annotClass).isntEmpty()
 
     class Reporter:
         def report(results):

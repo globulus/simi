@@ -323,16 +323,25 @@ def f(a, b, c):
     print "something"
 end
 ```
-Functions that don't explicity [return or yield](#return-and-yield) have an implicit **return self**. This allows for chanining calls to methods that don't return a value.
+Functions that don't explicity [return or yield](#return-and-yield) have an **implicit return**:
+ * Single-line functions whose only line is an expression return the **value of that expression**, *with the exception of setter functions*:
+ ```ruby
+ def wrapNameAndSurname(name, surname): "Name: \(name), Surname: \(surname") # Implicit return of string
+ def isntEmpty(): not @isEmpty() # Implicit return of an expression
+
+ def setValue(value): pass # Setters don't fall in this category
+ def setter(value): @val = value # Setters don't fall in this category
+ ```
+ * Multi-line functions, setters and single-line functions containing statements implicity **return self**. This allows for chanining calls to methods that don't return a value and/or perform an object setup.
 ```ruby
 class Button:
-    def setTitle(title): @title = title
-    def setBackgroundColor(color): @color = color
-    def setOnClickListener(listener): @listener = listener
-    def performClick(): @listener(self)
+    def setTitle(title): pass # Setters have implicit return self
+    def setBackgroundColor(color): pass
+    def setOnClickListener(listener): pass
+    def performClick(): @onClickListener(self) # Implicit return of function call
 end
 
-button = Button()\ # implicit return self
+button = Button()\ # Implicit return self from init
     .setTitle("Click me")\
     .setBackgroundColor(Color.WHITE)\
     .setOnClickListener(def sender: print sender.title)
