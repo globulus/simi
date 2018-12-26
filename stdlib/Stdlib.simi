@@ -201,9 +201,7 @@ class Range:
 
     def init(start, stop, step): pass
 
-    def iterate():
-        return RangeIterator(self)
-    end
+    def iterate(): RangeIterator(self)
 
     def has(val):
         if @start < @stop: return val >= @start and val < @stop
@@ -232,8 +230,8 @@ class$ Number:
    def compareTo(other): native
    def toString(): native
 
-    def sum(a, b): return a + b
-    def product(a, b): return a * b
+    def sum(a, b): a + b
+    def product(a, b): a * b
 
     def bitAnd(num): native
     def bitOr(num): native
