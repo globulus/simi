@@ -883,4 +883,14 @@ abstract class Expr implements Codifiable {
           return keyword.hasBreakpoint;
       }
   }
+
+  static boolean hasImplicitReturn(Expr expr) {
+    if (expr instanceof Expr.Literal) {
+      return !(((Literal) expr).value instanceof Native); // native methods don't have implicit return wrapping
+    }
+    if (expr instanceof Set) {
+      return !(((Set) expr).object instanceof Expr.Self); // setter methods don't have implicit return wrapping
+    }
+    return true;
+  }
 }

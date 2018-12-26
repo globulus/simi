@@ -25,8 +25,7 @@ class_ Orm(Closeable):
         def init(name is String, dataType is DataType, notNull is Number): pass
     end
 
-    class_ PrimaryKey:
-    end
+    class_ PrimaryKey
 
     class Db(Closeable):
         def open(props): pass
@@ -49,9 +48,11 @@ class_ Orm(Closeable):
         def orderBy(orderBy is Object): @_orderBy = orderBy
         def limit(limit is Number): @_limit = limit
 
-        def resultSet(): return @orm.executeRaw(@_toSql())
+        def resultSet(): @orm.executeRaw(@_toSql())
         def iterator():
-            return [results = @resultSet(),
+            return [
+                    "class" = Iterator,
+                    results = @resultSet(),
                     tableData = @tableData(),
                      next = def ():
                         if @results.next():
@@ -65,7 +66,7 @@ class_ Orm(Closeable):
                     close = :@results.close()
             ]
         end
-        def array(): return Object.arrayWithIterator(@iterator())
+        def array(): Object.iterating(@iterator())
         def first():
             it = @iterator()
             res = it.next()
@@ -95,7 +96,7 @@ class_ Orm(Closeable):
     end
     def close(): @db.close()
 
-    def executeRaw(sql is String): return @db.execute(sql)
+    def executeRaw(sql is String): @db.execute(sql)
 
     def createTable(clazz):
         tableName = @_checkAndGetTableName(clazz)
@@ -134,9 +135,9 @@ class_ Orm(Closeable):
         return @executeRaw(sql)
     end
 
-    def query(clazz): return @_query(clazz, "*")
-    def query(clazz, columns): return @_query(clazz, columns)
-    def _query(clazz, param): return @_Query(self, @_tableData.(clazz.toString()), param)
+    def query(clazz): @_query(clazz, "*")
+    def query(clazz, columns): @_query(clazz, columns)
+    def _query(clazz, param): @_Query(self, @_tableData.(clazz.toString()), param)
 
     def queryForId(clazz, id):
         query = @query(clazz)
@@ -144,7 +145,7 @@ class_ Orm(Closeable):
         return query.where(where).limit(1).first()
     end
 
-    def createOrUpdate(obj is Object):
+    def upsert(obj is Object):
         data = @_prepareForOp(obj, "create or update")
         sql = "INSERT INTO \(data.name) (\(String.from(data.columns, ', ')))
                VALUES (\(String.from(data.values, ', ')))
@@ -165,7 +166,7 @@ class_ Orm(Closeable):
         return @executeRaw(sql)
     end
 
-    def _extractAnnot(field, annotClass): return (!!field).where(def a: a is annotClass).first()
+    def _extractAnnot(field, annotClass): (!!field).where(def a: a is annotClass).first()
 
     def _checkAndGetTableName(clazz):
         classStr = clazz.toString()
@@ -204,7 +205,7 @@ class_ Orm(Closeable):
         ]
     end
 
-    def _whereForId(tableData, id): return "(\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
+    def _whereForId(tableData, id): "(\(tableData.primaryKey)=\(@_valueToSqlString(id)))"
 
     def _valueToSqlString(value):
         when value:

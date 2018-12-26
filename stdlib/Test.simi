@@ -1,12 +1,9 @@
 class Test:
-    class Before:
-    end
+    class Before
 
-    class After:
-    end
+    class After
 
-    class Case:
-    end
+    class Case
 
     class Mock:
         def init(args):
@@ -58,7 +55,7 @@ class Test:
         return results
     end
 
-    def _hasAnnot(annots, annotClass): return annots.where(def a: a is annotClass).isntEmpty()
+    def _hasAnnot(annots, annotClass): annots.where(def a: a is annotClass).isntEmpty()
 
     class Reporter:
         def report(results):
@@ -97,8 +94,7 @@ class Test:
     end
 end
 
-class AssertionException(Exception):
-end
+class AssertionException(Exception)
 
 Assert = [
     equals = def (a, b, m):

@@ -578,10 +578,10 @@ end
 testArgDecomp()
 
 class Button:
-    def setTitle(title): @title = title
-    def setBackgroundColor(color): @color = color
-    def setOnClickListener(listener): @listener = listener
-    def performClick(): @listener(self)
+    def setTitle(title): pass
+    def setBackgroundColor(color): pass
+    def setOnClickListener(listener): pass
+    def performClick(): @onClickListener(self)
 end
 
 button = Button()\
@@ -611,13 +611,13 @@ def mariaDbTest():
 #    sql = "CREATE TABLE IF NOT EXISTS REGISTRATION (id INTEGER not NULL, first VARCHAR(255), last VARCHAR(255), age INTEGER, PRIMARY KEY ( id ))"
 #    db.execute(sql)
 #    results = db.execute("SELECT * FROM REGISTRATION")
-    results = orm.query(OrmTesting).queryForArray()
+    results = orm.query(OrmTesting).iterator()
     print results
     while results.next():
         print "results.next()"
         print results.getString("first")
     end
-    orm.createOrUpdate(OrmTesting(2, "Test2"))
+    orm.upsert(OrmTesting(2, "Test2"))
 #    orm.delete(OrmTesting(2, "Test2"))
 #    orm.deleteForId(OrmTesting, 2)
     print orm.queryForId(OrmTesting, 2)
@@ -740,5 +740,16 @@ class TestMock:
     end
 end
 print Reporter.report(Test.test([TestCase, TestMock]))
+
+def explicitReturn(): return 5
+print explicitReturn()
+def implicitReturn(): 5
+print implicitReturn()
+def implicitReturnSelf():
+    if 5 < 4: 5 + 5
+end
+print implicitReturnSelf()
+print [5].isEmpty()
+print [5].isntEmpty()
 
 print "kraj"

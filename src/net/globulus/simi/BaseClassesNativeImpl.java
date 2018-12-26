@@ -1078,7 +1078,11 @@ class BaseClassesNativeImpl {
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                String message = self.get("message", interpreter.getEnvironment()).getValue().getString();
+                String message = null;
+                SimiProperty messageProp = self.get("message", interpreter.getEnvironment());
+                if (messageProp != null) {
+                    message = messageProp.getValue().getString();
+                }
                 interpreter.raiseException(new SimiException(self.clazz, message));
                 return null;
             }

@@ -28,11 +28,11 @@ class File:
     def readString(path): native
     def listAll(path, filter, recursive): native
 
-    def fileName(): return @path.substring((@path.lastIndexOf('/') ?? -1) + 1)
+    def fileName(): @path.substring((@path.lastIndexOf('/') ?? -1) + 1)
     def fileNameWithoutExtension():
         fn = @fileName()
         return fn.substring(0, fn.indexOf('.'))
     end
-    def extension(): return @path.substring(@path.lastIndexOf('.') + 1)
-    def changingExtension(to): return File(@path.substring(0, @path.lastIndexOf('.') + 1) + to)
+    def extension(): @path.substring(@path.lastIndexOf('.') + 1)
+    def changingExtension(to): File(@path.substring(0, @path.lastIndexOf('.') + 1) + to)
 end
