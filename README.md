@@ -1,7 +1,7 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
-You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web)
+You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web).
 
 What Šimi offers:
 * Modern, powerful and expressive syntax.
@@ -325,6 +325,7 @@ end
 ```
 Functions that don't explicity [return or yield](#return-and-yield) have an **implicit return**:
  * Single-line functions whose only line is an expression return the **value of that expression**, *with the exception of setter functions*:
+
  ```ruby
  def wrapNameAndSurname(name, surname): "Name: \(name), Surname: \(surname") # Implicit return of string
  def isntEmpty(): not @isEmpty() # Implicit return of an expression
@@ -332,7 +333,9 @@ Functions that don't explicity [return or yield](#return-and-yield) have an **im
  def setValue(value): pass # Setters don't fall in this category
  def setter(value): @val = value # Setters don't fall in this category
  ```
+
  * Multi-line functions, setters and single-line functions containing statements implicity **return self**. This allows for chanining calls to methods that don't return a value and/or perform an object setup.
+
 ```ruby
 class Button:
     def setTitle(title): pass # Setters have implicit return self
@@ -552,7 +555,7 @@ class OtherCar(Car, Range): # This combination makes no sense :D
    end
 end
 ```
-* Classes themselves are objects, with "class" set to a void object named "Class".
+* Classes themselves are objects, with "class" set to a void object named "Class". You can check if an Object is a class by using **VAR is Class**, even though Class itself normally evaluates to *nil*.
 * From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
 * Instance vars and methods are mutable by default from within the class, and don't require usage of the $= operator.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
