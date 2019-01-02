@@ -22,9 +22,7 @@ class_ SimiSyncModels:
     class_ Method:
     end
 
-    class_ ModelParser():
-        import SimiSyncCommons.Parser
-
+    class_ ModelParser(in SimiSyncCommons.Parser):
         def parse(version):
             import CodeBlocks
             # By convention, all model files should live in a directory named "models" and its subdirectories

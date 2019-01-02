@@ -54,7 +54,7 @@ class_ Orm(Closeable):
                     "class" = Iterator,
                     results = @resultSet(),
                     tableData = @tableData(),
-                     next = def ():
+                     next = def:
                         if @results.next():
                             values = @tableData.columns.map(def c: "\(c.fieldName)(@results.\(c.dataType.value)(\"\(c.name)\"))")
                             guStr = "\(@tableData.name).builder().\(String.from(values, '.')).build()"

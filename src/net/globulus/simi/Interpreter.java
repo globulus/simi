@@ -1144,11 +1144,22 @@ class Interpreter implements
 
   private boolean isInstance(SimiValue a, SimiValue b, Expr.Binary expr) {
     SimiObject right = SimiObjectImpl.getOrConvertObject(b, this);
+
+    // is Function
     if (a instanceof SimiValue.Callable
             && right instanceof SimiClassImpl
             && ((SimiClassImpl) right).name.equals(Constants.CLASS_FUNCTION)) {
       return true;
     }
+
+    // is Class
+    if (a instanceof SimiValue.Object
+            && a.getObject() instanceof SimiClassImpl
+            && expr.right instanceof Expr.Variable
+            && ((Expr.Variable) expr.right).name.lexeme.equals(Constants.CLASS_CLASS)) {
+        return true;
+    }
+
     SimiObject left = SimiObjectImpl.getOrConvertObject(a, this);
     if (left == null || right == null) {
       return false;
@@ -1247,7 +1258,7 @@ class Interpreter implements
       }
     SimiObject object = SimiObjectImpl.getOrConvertObject(value.getValue(), this);
     if (!(object instanceof SimiClassImpl)) {
-      runtimeError(keyword, "Import statement must be followed by an identifier that resolves to a class!");
+      runtimeError(keyword, "Import or mixin statement must be followed by an identifier that resolves to a class!");
       return null;
     }
     SimiClassImpl clazz = (SimiClassImpl) object;

@@ -1,7 +1,7 @@
 # Šimi - an awesome programming language
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
-You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web)
+You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web).
 
 What Šimi offers:
 * Modern, powerful and expressive syntax.
@@ -13,7 +13,6 @@ What Šimi offers:
 * Run natively on any Cocoa machine ([iOS or Mac OS X](https://github.com/globulus/simi-ios)).
 * [Debugger included.](#debugger)
 * Free to use and modify!
-
 
 ### Quickstart
 
@@ -67,7 +66,7 @@ What Šimi offers:
       - [Iterators and iterables](#iterators-and-iterables)
       - [break and continue](#break-and-continue)
       - [return and yield](#return-and-yield)
-      - [Asnyc programming with yield expressions](#async-programming-with-yield-expressions)
+      - [Async programming with yield expressions](#async-programming-with-yield-expressions)
     + [Exception handling](#exception-handling)
       - [Exceptions](#exceptions)
       - [The *rescue* block](#the-rescue-block)
@@ -90,6 +89,7 @@ What Šimi offers:
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
+    + [Keyword glossary](#keyword-glossary)
 
 ### Basic syntax
 
@@ -99,6 +99,8 @@ What Šimi offers:
 and break class continue def else elsif end false for gu if import
 in is native nil or pass print rescue return self super true while yield
 ```
+
+Check out the [keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
 
 #### Comments
 ```ruby
@@ -267,7 +269,7 @@ filteredArray = [1, 2, 3, 4, 5].where(def i: i > 2)
 # You can think of this syntax as storing uninterpreter Šimi code that
 # can be invoked later on. This pattern is heavily used with lazy loading
 # and the ife function.
-storedExpression = :2+2 # Parses into: def (): return 2 + 2
+storedExpression = :2+2 # Parses into: def: return 2 + 2
 ```
 Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
@@ -325,6 +327,7 @@ end
 ```
 Functions that don't explicity [return or yield](#return-and-yield) have an **implicit return**:
  * Single-line functions whose only line is an expression return the **value of that expression**, *with the exception of setter functions*:
+
  ```ruby
  def wrapNameAndSurname(name, surname): "Name: \(name), Surname: \(surname") # Implicit return of string
  def isntEmpty(): not @isEmpty() # Implicit return of an expression
@@ -332,7 +335,9 @@ Functions that don't explicity [return or yield](#return-and-yield) have an **im
  def setValue(value): pass # Setters don't fall in this category
  def setter(value): @val = value # Setters don't fall in this category
  ```
+
  * Multi-line functions, setters and single-line functions containing statements implicity **return self**. This allows for chanining calls to methods that don't return a value and/or perform an object setup.
+
 ```ruby
 class Button:
     def setTitle(title): pass # Setters have implicit return self
@@ -503,10 +508,8 @@ print compositeObj
 ### Classes
 Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
 ```ruby
-class Car(Vehicle):
+class Car(Vehicle, in ClassToMixin):
     wheels = 4
-
-    import ClassToMixin
 
     def init(brand, model, year): pass
 
@@ -529,6 +532,7 @@ Here's a quick rundown of classes:
     2. Check the leftmost superclass for that method name.
     3. Recursively check that superclass' lefmost superclass, all the way up.
 
+* Using the *in* keyword before a class name in superclasses list will include the provided class instead of inheriting it, thus creating a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * All classes except base classes (Object, String, Number, Function, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
 * You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses (Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
 ```ruby
@@ -552,7 +556,7 @@ class OtherCar(Car, Range): # This combination makes no sense :D
    end
 end
 ```
-* Classes themselves are objects, with "class" set to a void object named "Class".
+* Classes themselves are objects, with "class" set to a void object named "Class". You can check if an Object is a class by using **VAR is Class**, even though Class itself normally evaluates to *nil*.
 * From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
 * Instance vars and methods are mutable by default from within the class, and don't require usage of the $= operator.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
@@ -614,11 +618,10 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
-* Using the *import* keyword followed by a class name will create a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
-Number.double = def (): @_ * 2
+Number.double = def: @_ * 2
 a = 3
 b = a.double() # b == 6
 ```
@@ -844,13 +847,13 @@ def ife(condition, ifval, elseval):
     else: return elseval()
 end
 ```
-In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
+In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def: ...), and then those params will be evaluated only when they're used in the said function:
 ```ruby
 step = ife(min < max, 1, -1) # Works with non-function values
 
 # The following example uses functions to lazily compute only the value
 # which needs to be returned. Notice ":SOMETHING" syntax, which is shorthand for
-# def (): return SOMETHING
+# def: return SOMETHING
 step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
 ```
 
@@ -953,7 +956,7 @@ def testYieldExpr():
         else: callback(20)
     end
 
-    test = def ():
+    test = def:
         print "Before yield expr test"
         a = yield asyncFunc(5)
         # After the asyncFunc callback is invoked, its value will
@@ -1049,7 +1052,7 @@ If the object you passed has non-object keyes, the resulting enum will retain th
 
 Lastly, the *Enum.of()* can take a second parameter, a key-value object containing functions that will be associated with the resulting enum class:
 ```ruby
-Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = :self == Veggies.POTATO])
 potato = Veggies.POTATO
 print "Is potato round: " + potato.isRound() # true
 print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
@@ -1249,7 +1252,7 @@ class DbLib:
     end
 end
 
-(def ():
+(def:
     db = DbLib([Model, User, Appointment])
     print db.sql
 end)()
@@ -1642,7 +1645,7 @@ Check out ŠimiSync's [DbHelper](https://github.com/globulus/simi-sync/blob/mast
 
 The [CodeBlocks](stdlib/CodeBlocks.simi) module is meant for easy (de)composition of Šimi code in order to manipulate it and facilitate its usage with [*gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic). Currently it holds the following classes:
 * **ClassCode** - converts a Class into code, allowing you to extract its name and body.
-* **ClassComposer** - allows for easy, fluent composition of a Class, starting with a name, and then adding fields, methods, or other code (e.g imports for mixins). You can extract the code with *getString* or the class with *getClass*.
+* **ClassComposer** - allows for easy, fluent composition of a Class, starting with a name, and then adding fields, methods, or other code. You can extract the code with *getString* or the class with *getClass*.
 * **FunctionComposer** - allows for Function composition, starting either from name and params, or another base function. Allows for adding line functions, and extracting the code with *getString* or function itself with *getFunction*.
 * **FunctionCode** - converts a Function into code, allowing you to extract its name, parameters, arity, declaration, anonymous declaration, and body.
 
@@ -1661,3 +1664,61 @@ You can use Šimi in your iOS app. Check out [our other project](https://github.
 Here's a list of features that might make it into the language at some point in the future:
 1. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
 **This is currently supported via the [Decorator class](stdlib/Decorator.simi).**
+
+### Keyword glossary
+
+Below is a glossary that lists all the Šimi keyword and their uses. It can be used as a quick reference when reading Šimi code without having to study the entire documentation:
+* *and* - used as a [logical operator](#logical).
+* *break* - immediately [terminates the loop](#break-and-continue) inside which it is nested. Try to break outside of a loop throws an *InterpreterException*.
+* *class, class$, class_* - defines [a (regular, open or final) class](#classes).
+    + To get a value's class, use "class" (string) instead of the keyword: obj.("class")
+* *continue* - proceeds to the [next iteration of the loop](#break-and-continue) inside which it is nested. Try to continue outside of a loop throws an *InterpreterException*.
+* *def* - defines [a function](#functions). Function declaration is very consistent in Šimi, and all functions, regardless of their purpose (regular functions, lambdas, methods, constructors) are always prefixed by *def*.
+    + A parameterless, single-line lambda can be written with just the colon: length = :@len()
+* *else* - used as the default clause in [if-elsif-else](#if-elsif-else) and [when](#when) statements.
+* *elsif* - defines an alternative clause in an [if-elsif-else](#if-elsif-else) statement.
+    + The misspelling is intentional.
+* *end* - ends a block of code, and a such terminates all multi-line statements (class, function, branching, loops, etc).
+* *false* - the [false value](#truth), equivalent to a Number with value 0.
+* *for* - defines [a for loop](#for-in-loop), which is used to iterate over [iterators and iterables](#iterators-and-iterables).
+* *gu* - unary operator that [evaluates the String supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi code to be executed at runtime.
+* *if* - defines [an if statement](#if-elsif-else).
+* *in*
+    + Shorthand for method *has*. [Default behaviour](#in-and-not-in) includes checking presence of substrings, and keys or values in objects.
+        - Can be used in [when statements](#when).
+    + As a part of [for loop syntax](#for-in-loop).
+    * [Defining mixins](#classes).
+* *import*
+    * Imports [external code dependencies](#importing-code).
+    * Static import of Class fields when it is [used as a module](#using-classes-as-modules).
+* *is*
+    + Checks if the left-hand argument [is an instance](#is-and-is-not) of a right-hand argument, which must be a Class.
+        - Can be used in [when statements](#when).
+    + Used in static type checking of [function parameters](#functions).
+* *ivic* - unary operator that [returns the Šimi code of a value supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi programs to codify themselves at runtime.
+* *nil* - the special "absence of value" [value](#values).
+    + All Šimi fields are nullable, and calling a nil, or inoking getters or setters on it, will result in a nil.
+* *native* - denotes that a [function is implemented natively](#functions), i.e in a language other than Šimi (Java for JVM systems and Objective-C or Swift for iOS/OSX).
+* *not*
+    + As a [unary operator](#logical), logically inverts a value.
+    + Is used in [is not](#is-and-is-not) and [not in](#in-and-not-in) operators for improved legibility.
+* *or* - used as a [logical operator](#logical).
+    + Has special meaning in [when statements](#when).
+* *pass*
+    + Denotes an [empty statement](#pass) in single-line blocks that don't do anything. As such, it is completely equivalent to a block where a colon is followed by an *end* in a new line.
+    + The developer passes the responsibility of generating some code to the parser or interpreter:
+        - Constructors with a single pass will [autoset their params to instance vars](#classes).
+        - Setter methods with a single pass will [generate setter code based on method name](#classes).
+* *print* - invokes the *toString* method on the supplied value and prints the resulting String to Stdout.
+    + May be removed in the future should this functionality be moved to the *Io* object in *Stdlib*.
+* *rescue* - defines [a rescue block](#the-rescue-block), the centerpiece of Šimi [exception handling](#exception-handling).
+* *return* - immediately [returns from the current function](#return-and-yield). It may or may not return a value.
+* *self* - references the [object in which the current environment](#classes) is running. Is null if code is being executed in functions not bound to an object.
+    + Special *self(def)* construct references the function being exectued.
+* *super* - references the [superclass of the object](#classes) in which the current environment is running. Since Šimi allows multiple inheritance, you can specify which superclass to reference via *super(SuperClassName)* construct.
+* *true* - the [true value](#truth), equivalent to a Number with value 1.
+* *when* - defines [a when statement](#when).
+* *while* - defines [a while loop](#while-loop).
+* *yield*
+    * Used as a statement, it returns from the current function, but remembers where it left off, so subsequent invocations of the same function will resume after the yield. [See examples for more details.](#return-and-yield)
+    * Used as an expression, it allows for flatter code by [hiding callback invocations of async functions](#async-programming-with-yield-expressions).
