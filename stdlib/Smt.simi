@@ -44,7 +44,7 @@ class Smt:
 
     def _parseStmt(trimmed, idx, lines):
         var = "__var" + clock()
-        body = String.builder().add("(def ():
+        body = String.builder().add("(def:
             \(var) = String.builder()
             \(@_replaceSets(trimmed.substring(@_STMT.len())))
         ")

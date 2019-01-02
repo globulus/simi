@@ -5,7 +5,7 @@ Terrain = Enum.of(["PLAINS" = [speed = 0, bonus = 0],
                    "SWAMP" = [speed = -1, bonus = -1],
                    "WATER" = [speed = 0, bonus = 0]
                   ],\
-                 [render = def ():
+                 [render = def:
                     when self:
                         Terrain.PLAINS: return "."
                         Terrain.FOREST: return "|"

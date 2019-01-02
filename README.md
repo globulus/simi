@@ -14,7 +14,6 @@ What Šimi offers:
 * [Debugger included.](#debugger)
 * Free to use and modify!
 
-
 ### Quickstart
 
 1. At the very least, download [Šimi JAR](simi.jar). Downloading [the shell script](simi.sh) makes running even easier.
@@ -67,7 +66,7 @@ What Šimi offers:
       - [Iterators and iterables](#iterators-and-iterables)
       - [break and continue](#break-and-continue)
       - [return and yield](#return-and-yield)
-      - [Asnyc programming with yield expressions](#async-programming-with-yield-expressions)
+      - [Async programming with yield expressions](#async-programming-with-yield-expressions)
     + [Exception handling](#exception-handling)
       - [Exceptions](#exceptions)
       - [The *rescue* block](#the-rescue-block)
@@ -90,6 +89,7 @@ What Šimi offers:
     + [Android integration](#android-integration)
     + [iOS integration](#ios-integration)
     + [To-Dos](#to-dos)
+    + [Keyword glossary](#keyword-glossary)
 
 ### Basic syntax
 
@@ -99,6 +99,8 @@ What Šimi offers:
 and break class continue def else elsif end false for gu if import
 in is native nil or pass print rescue return self super true while yield
 ```
+
+Check out the [keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
 
 #### Comments
 ```ruby
@@ -267,7 +269,7 @@ filteredArray = [1, 2, 3, 4, 5].where(def i: i > 2)
 # You can think of this syntax as storing uninterpreter Šimi code that
 # can be invoked later on. This pattern is heavily used with lazy loading
 # and the ife function.
-storedExpression = :2+2 # Parses into: def (): return 2 + 2
+storedExpression = :2+2 # Parses into: def: return 2 + 2
 ```
 Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
@@ -621,7 +623,7 @@ print private._method() # Error
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
-Number.double = def (): @_ * 2
+Number.double = def: @_ * 2
 a = 3
 b = a.double() # b == 6
 ```
@@ -847,13 +849,13 @@ def ife(condition, ifval, elseval):
     else: return elseval()
 end
 ```
-In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def (): ...), and then those params will be evaluated only when they're used in the said function:
+In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def: ...), and then those params will be evaluated only when they're used in the said function:
 ```ruby
 step = ife(min < max, 1, -1) # Works with non-function values
 
 # The following example uses functions to lazily compute only the value
 # which needs to be returned. Notice ":SOMETHING" syntax, which is shorthand for
-# def (): return SOMETHING
+# def: return SOMETHING
 step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
 ```
 
@@ -956,7 +958,7 @@ def testYieldExpr():
         else: callback(20)
     end
 
-    test = def ():
+    test = def:
         print "Before yield expr test"
         a = yield asyncFunc(5)
         # After the asyncFunc callback is invoked, its value will
@@ -1052,7 +1054,7 @@ If the object you passed has non-object keyes, the resulting enum will retain th
 
 Lastly, the *Enum.of()* can take a second parameter, a key-value object containing functions that will be associated with the resulting enum class:
 ```ruby
-Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = :self == Veggies.POTATO])
 potato = Veggies.POTATO
 print "Is potato round: " + potato.isRound() # true
 print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
@@ -1252,7 +1254,7 @@ class DbLib:
     end
 end
 
-(def ():
+(def:
     db = DbLib([Model, User, Appointment])
     print db.sql
 end)()
@@ -1664,3 +1666,61 @@ You can use Šimi in your iOS app. Check out [our other project](https://github.
 Here's a list of features that might make it into the language at some point in the future:
 1. **Decorator annotations**: if an annotation supplied to a function is a function, the annotation function would be executed as a wrapper for the annotated function whenever the latter is invoked. This would allow for some and concise code, e.g when coding a networking API, in which you'd decorate your functions with networking library wrappers, which would then be invoked whenever your functions are. I unsure about this one as it would make the annotation part of function definition, and the resulting confusion might prove to be a large drawback.
 **This is currently supported via the [Decorator class](stdlib/Decorator.simi).**
+
+### Keyword glossary
+
+Below is a glossary that lists all the Šimi keyword and their uses. It can be used as a quick reference when reading Šimi code without having to study the entire documentation:
+* *and* - used as a [logical operator](#logical).
+* *break* - immediately [terminates the loop](#break-and-continue) inside which it is nested. Try to break outside of a loop throws an *InterpreterException*.
+* *class, *class$, class_* - defines [a (regular, open or final) class](#classes).
+    + To get a value's class, use "class" (string) instead of the keyword: obj.("class")
+* *continue* - proceeds to the [next iteration of the loop](#break-and-continue) inside which it is nested. Try to continue outside of a loop throws an *InterpreterException*.
+* *def* - defines [a function](#functions). Function declaration is very consistent in Šimi, and all functions, regardless of their purpose (regular functions, lambdas, methods, constructors) are always prefixed by *def*.
+    + A parameterless, single-line lambda can be written with just the colon: length = :@len()
+* *else* - used as the default clause in [if-elsif-else](#if-elsif-else) and [when](#when) statements.
+* *elsif* - defines an alternative clause in an [if-elsif-else](#if-elsif-else) statement.
+    + The misspelling is intentional.
+* *end* - ends a block of code, and a such terminates all multi-line statements (class, function, branching, loops, etc).
+* *false* - the [false value](#truth), equivalent to a Number with value 0.
+* *for* - defines [a for loop](#for-in-loop), which is used to iterate over [iterators and iterables](#iterators-and-iterables).
+* *gu* - unary operator that [evaluates the String supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi code to be executed at runtime.
+* *if* - defines [an if statement](#if-elsif-else).
+* *in*
+    + Shorthand for method *has*. [Default behaviour](#in-and-not-in) includes checking presence of substrings, and keys or values in objects.
+        - Can be used in [when statements](#when).
+    + As a part of [for loop syntax](#for-in-loop).
+* *import*
+    * Imports [external code dependencies](#importing-code).
+    * [Creates a mixin](#classes) of the class being defines and the imported class.
+    * Static import of Class fields when it is [used as a module](#using-classes-as-modules).
+* *is*
+    + Checks if the left-hand argument [is an instance](#is-and-is-not) of a right-hand argument, which must be a Class.
+        - Can be used in [when statements](#when).
+    + Used in static type checking of [function parameters](#functions).
+* *ivic* - unary operator that [returns the Šimi code of a value supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi programs to codify themselves at runtime.
+* *nil* - the special "absence of value" [value](#values).
+    + All Šimi fields are nullable, and calling a nil, or inoking getters or setters on it, will result in a nil.
+* *native* - denotes that a [function is implemented natively](#functions), i.e in a language other than Šimi (Java for JVM systems and Objective-C or Swift for iOS/OSX).
+* *not*
+    + As a [unary operator](#logical), logically inverts a value.
+    + Is used in [is not](#is-and-is-not) and [not in](#in-and-not-in) operators for improved legibility.
+* *or* - used as a [logical operator](#logical).
+    + Has special meaning in [when statements](#when).
+* *pass*
+    + Denotes an [empty statement](#pass) in single-line blocks that don't do anything. As such, it is completely equivalent to a block where a colon is followed by an *end* in a new line.
+    + The developer passes the responsibility of generating some code to the parser or interpreter:
+        - Constructors with a single pass will [autoset their params to instance vars](#classes).
+        - Setter methods with a single pass will [generate setter code based on method name](#classes).
+* *print* - invokes the *toString* method on the supplied value and prints the resulting String to Stdout.
+    + May be removed in the future should this functionality be moved to the *Io* object in *Stdlib*.
+* *rescue* - defines [a rescue block](#the-rescue-block), the centerpiece of Šimi [exception handling](#exception-handling).
+* *return* - immediately [returns from the current function](#return-and-yield). It may or may not return a value.
+* *self* - references the [object in which the current environment](#classes) is running. Is null if code is being executed in functions not bound to an object.
+    + Special *self(def)* construct references the function being exectued.
+* *super* - references the [superclass of the object](#classes) in which the current environment is running. Since Šimi allows multiple inheritance, you can specify which superclass to reference via *super(SuperClassName)* construct.
+* *true* - the [true value](#truth), equivalent to a Number with value 1.
+* *when* - defines [a when statement](#when).
+* *while* - defines [a while loop](#while-loop).
+* *yield*
+    * Used as a statement, it returns from the current function, but remembers where it left off, so subsequent invocations of the same function will resume after the yield. [See examples for more details.](#return-and-yield)
+    * Used as an expression, it allows for flatter code by [hiding callback invocations of async functions](#async-programming-with-yield-expressions).

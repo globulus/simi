@@ -169,7 +169,7 @@ def ife(condition, ifval, elseval):
 end
 
 Io = [
-    read = def (): native
+    read = def: native
 ]
 
 class Iterator:

@@ -17,7 +17,7 @@ def testYieldExpr():
         else: callback(20)
     end
 
-    test = def ():
+    test = def:
         res = yield Net.post([url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]])
         print "RES IS " + res
 #        print ivic self(def)
@@ -35,19 +35,19 @@ testYieldExpr()
 
 def closureTest():
    a = 5
-   (def ():
+   (def:
     print a + " == 5"
     a = 6
     print a + " == 6"
    end)()
    print a + " == 5"
-   (def ():
+   (def:
     print a + " == 5"
     a $= 3
     print a + " == 3"
    end)()
    print a + " == 3"
-   (def ():
+   (def:
     print a + " == 3"
     a $= 4
     print a + " == 4"
@@ -93,7 +93,7 @@ clck = clock()
 print clck is Function
 print ife1 is Function
 
-#Decorator.go(def ():
+#Decorator.go(def:
 #
 #    def fib(n):
 ##        print "first time in fib"
@@ -107,7 +107,7 @@ print ife1 is Function
 #            b = loop()
 #            return a + b
 #        end
-#        loop = def ():
+#        loop = def:
 #           while true:
 ##            print cache
 #            key = arg.toString()
@@ -165,14 +165,14 @@ print ife1 is Function
 
 #Decorator.test()
 
-#Net.go(def ():
+#Net.go(def:
 #    [code, body] = post* [url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]]
 #    print "Got response"
 #    print code
 #    print body
 #end)
 
-#asyncf = Async.go(def ():
+#asyncf = Async.go(def:
 #    a = 5
 #    b = 6
 #    c = await* Gson.parseAsync('{a1:2}')
@@ -211,7 +211,7 @@ apple = Fruit.APPLE
 print "Apple is fruit: " + (apple is Fruit)
 print "Apple == Apple: " + (apple == Fruit.APPLE)
 print "Apple == Banana: " + (apple == Fruit.BANANA)
-Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = def (): return self == Veggies.POTATO])
+Veggies = Enum.of(["POTATO", "CUCUMBER"], [isRound = :self == Veggies.POTATO])
 potato = Veggies.POTATO
 print "Apple is Veggie: " + (apple is Veggies)
 print "Apple size: " + apple.size

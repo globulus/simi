@@ -50,8 +50,8 @@ Decorator = [
 
     _tempName = :"temp" + clock().toString().substring(5),
 
-    test = def ():
-        @go(def ():
+    test = def:
+        @go(def:
             def timed(f):
                 wrapper = def args:
                     t1 = clock()
@@ -109,7 +109,7 @@ Decorator = [
             farg $= CodeBlocks.FunctionCode(f)
             return flooper()
         end
-        flooper = def ():
+        flooper = def:
             while true:
                 fname = farg.name
 #                print "In flooper: " + fname
@@ -164,7 +164,7 @@ Decorator = [
                         cache = $[]
                         arg = 0
                         worker = workerCache.(fname)
-                        looper = def ():
+                        looper = def:
                            while true:
                             key = arg.toString()
                             if key not in cache: cache.(key) = worker([looper].joined(arg))

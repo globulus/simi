@@ -81,7 +81,7 @@ class DbLib:
     end
 end
 
-(def ():
+(def:
     db = DbLib([Model, User, Appointment])
     print db.sql
 end)()

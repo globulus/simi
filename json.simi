@@ -66,11 +66,11 @@ class Json:
             $curr = $curr + 1
             return true
         end
-        peek = def ():
+        peek = def:
             if isAtEnd(): return '\0'
             return str.($curr)
         end
-        peekNext = def ():
+        peekNext = def:
             if $curr + 1 >= len: return '\0'
             return str.($curr + 1)
         end
@@ -78,13 +78,13 @@ class Json:
         isDigit = def c: c.isDigit()
         isAlphaNumeric = def c: isAlpha(c) or isDigit(c)
         isStringDelim = def c: c == '"' or c == "'"
-        isAtEnd = def (): $curr >= len
-        advance = def ():
+        isAtEnd = def: $curr >= len
+        advance = def:
             $curr = $curr + 1
             return str.($curr - 1)
         end
         error = def message: MalformedJsonException(message).raise()
-        string = def ():
+        string = def:
            $escaping = false
            $escapedCount = 0
            while not isAtEnd():
@@ -106,11 +106,11 @@ class Json:
             $curr = $curr - $escapedCount
             return str.substring($start + 1, $curr - 1)
         end
-        identifier = def ():
+        identifier = def:
             while isAlphaNumeric(peek()): advance()
             return str.substring($start, $curr)
         end
-        number = def ():
+        number = def:
             while isDigit(peek()): advance()
             if peek() == "." and isDigit(peekNext()):
                 advance()
@@ -137,8 +137,8 @@ class Json:
         numTokens = tokens.len()
         if numTokens < 2: return nil
 
-        hasNext = def (): return $curr < numTokens
-        nextToken = def ():
+        hasNext = def: return $curr < numTokens
+        nextToken = def:
             $curr = $curr + 1
             return tokens.($curr)
         end
