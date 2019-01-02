@@ -15,9 +15,14 @@ class_ CodeBlocks:
     class_ ClassComposer:
         def init(name): @init(name, "")
 
-        def init(name, type):
+        def init(name, type): @init(name, type, nil, nil)
+
+        def init(name, type, superclasses, mixins):
             @name = name
-            @body = String.builder().add("class").add(type).add(" ").add(name).add(":\n")
+            @body = String.builder().add("class").add(type).add(" ").add(name)
+            params = (superclasses ?? []).joined(mixins.map(def m: "in \(m)") ?? [])
+            if params.isntEmpty(): @body.add("(").add(String.from(params, ", ")).add(")")
+            body.add(":\n")
         end
 
         def field(key, value): @body.add(key).add(" = ").add(ivic value).add("\n")

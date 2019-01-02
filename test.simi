@@ -544,9 +544,7 @@ print ModuleClassA
 print ModuleClassB
 print ModuleClassA.matches(ModuleClass.ModuleClassA)
 
-class MixinTest:
-    import ModuleClass.ModuleClassB
-end
+class MixinTest(in ModuleClass.ModuleClassB)
 print "Mixin test: " + MixinTest().methodA(4)
 
 class Router:

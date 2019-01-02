@@ -80,19 +80,23 @@ class Parser {
     Token opener = previous();
     Token name = consume(IDENTIFIER, "Expect class name.");
 
+    List<Expr> mixins = new ArrayList<>();
     List<Expr> superclasses = null;
     if (match(LEFT_PAREN)) {
       if (!check(RIGHT_PAREN)) {
         superclasses = new ArrayList<>();
         do {
-          superclasses.add(call());
+          if (match(IN)) {
+            mixins.add(call());
+          } else {
+            superclasses.add(call());
+          }
         } while (match(COMMA));
       }
       consume(RIGHT_PAREN, "Expect ')' after superclasses.");
     }
 
     List<Expr.Assign> constants = new ArrayList<>();
-    List<Expr> mixins = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     if (match(COLON)) {
@@ -104,13 +108,6 @@ class Parser {
           methods.add(function(METHOD));
         } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
           innerClasses.add(classDeclaration());
-        } else if (match(IMPORT)) {
-          Expr expr = call();
-          if (expr instanceof Expr.Get || expr instanceof Expr.Variable) {
-            mixins.add(expr);
-          } else {
-            error(previous(), "Expected a get or variable expr after mixin import.");
-          }
         } else if (match(BANG)) {
           annotations.add(annotation());
         } else {

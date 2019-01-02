@@ -1258,7 +1258,7 @@ class Interpreter implements
       }
     SimiObject object = SimiObjectImpl.getOrConvertObject(value.getValue(), this);
     if (!(object instanceof SimiClassImpl)) {
-      runtimeError(keyword, "Import statement must be followed by an identifier that resolves to a class!");
+      runtimeError(keyword, "Import or mixin statement must be followed by an identifier that resolves to a class!");
       return null;
     }
     SimiClassImpl clazz = (SimiClassImpl) object;

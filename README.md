@@ -508,10 +508,8 @@ print compositeObj
 ### Classes
 Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
 ```ruby
-class Car(Vehicle):
+class Car(Vehicle, in ClassToMixin):
     wheels = 4
-
-    import ClassToMixin
 
     def init(brand, model, year): pass
 
@@ -534,6 +532,7 @@ Here's a quick rundown of classes:
     2. Check the leftmost superclass for that method name.
     3. Recursively check that superclass' lefmost superclass, all the way up.
 
+* Using the *in* keyword before a class name in superclasses list will include the provided class instead of inheriting it, thus creating a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * All classes except base classes (Object, String, Number, Function, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
 * You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses (Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
 ```ruby
@@ -619,7 +618,6 @@ private = Private()
 print private._privateField # Error
 print private._method() # Error
 ```
-* Using the *import* keyword followed by a class name will create a mixin by copying all the public, non-init fields and methods from the supplied class into the target class.
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
@@ -1647,7 +1645,7 @@ Check out ŠimiSync's [DbHelper](https://github.com/globulus/simi-sync/blob/mast
 
 The [CodeBlocks](stdlib/CodeBlocks.simi) module is meant for easy (de)composition of Šimi code in order to manipulate it and facilitate its usage with [*gu* and *ivic*](#metaprogramming-and-deserialization---gu-and-ivic). Currently it holds the following classes:
 * **ClassCode** - converts a Class into code, allowing you to extract its name and body.
-* **ClassComposer** - allows for easy, fluent composition of a Class, starting with a name, and then adding fields, methods, or other code (e.g imports for mixins). You can extract the code with *getString* or the class with *getClass*.
+* **ClassComposer** - allows for easy, fluent composition of a Class, starting with a name, and then adding fields, methods, or other code. You can extract the code with *getString* or the class with *getClass*.
 * **FunctionComposer** - allows for Function composition, starting either from name and params, or another base function. Allows for adding line functions, and extracting the code with *getString* or function itself with *getFunction*.
 * **FunctionCode** - converts a Function into code, allowing you to extract its name, parameters, arity, declaration, anonymous declaration, and body.
 
@@ -1672,7 +1670,7 @@ Here's a list of features that might make it into the language at some point in 
 Below is a glossary that lists all the Šimi keyword and their uses. It can be used as a quick reference when reading Šimi code without having to study the entire documentation:
 * *and* - used as a [logical operator](#logical).
 * *break* - immediately [terminates the loop](#break-and-continue) inside which it is nested. Try to break outside of a loop throws an *InterpreterException*.
-* *class, *class$, class_* - defines [a (regular, open or final) class](#classes).
+* *class, class$, class_* - defines [a (regular, open or final) class](#classes).
     + To get a value's class, use "class" (string) instead of the keyword: obj.("class")
 * *continue* - proceeds to the [next iteration of the loop](#break-and-continue) inside which it is nested. Try to continue outside of a loop throws an *InterpreterException*.
 * *def* - defines [a function](#functions). Function declaration is very consistent in Šimi, and all functions, regardless of their purpose (regular functions, lambdas, methods, constructors) are always prefixed by *def*.
@@ -1689,9 +1687,9 @@ Below is a glossary that lists all the Šimi keyword and their uses. It can be u
     + Shorthand for method *has*. [Default behaviour](#in-and-not-in) includes checking presence of substrings, and keys or values in objects.
         - Can be used in [when statements](#when).
     + As a part of [for loop syntax](#for-in-loop).
+    * [Defining mixins](#classes).
 * *import*
     * Imports [external code dependencies](#importing-code).
-    * [Creates a mixin](#classes) of the class being defines and the imported class.
     * Static import of Class fields when it is [used as a module](#using-classes-as-modules).
 * *is*
     + Checks if the left-hand argument [is an instance](#is-and-is-not) of a right-hand argument, which must be a Class.
