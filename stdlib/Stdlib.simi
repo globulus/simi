@@ -137,6 +137,42 @@ class$ Object:
    end
    def slice(start): @slice(start, @len())
    def randomItem(): @(Number.randomInt(@len()))
+
+
+   # Evaluates a function with self passed as param and returns its result. Can generally be used to map self
+   # to something else, or to perform a nil check (as the function won't be called on a nil value).
+   def let(f): return f(self)
+
+   # Allows for quick init of object while returning self.
+   def apply(f):
+       f(self)
+       return self
+   end
+
+   # Used to add extra steps in chains, as the passed function is invoked with self, while self itself is returned
+   # and not mutated.
+   def also(f):
+       f$()
+       return self
+   end
+
+   # Evaluates the associated block as if all the non-keyword lines refer to self
+   # and as such is useful as a cleaner (but a lot slower) alternative to apply().
+   def with(block):
+       import CodeBlocks
+       body = FunctionCode(block).body().map(def l:
+            tl = l.trim()
+            for keyword in CodeBlocks.KEYWORDS:
+                if tl.startsWith(keyword): return l
+            end
+            return "@" + tl
+        end)
+       fc = FunctionComposer(nil, nil)
+       fc.lines(body)
+       mutatedBlock = gu fc.getString()
+       mutatedBlock$()
+       return self
+   end
 end
 
 class_ Function
@@ -272,6 +308,7 @@ class$ String:
 
     def sum(a, b): a + b
     def from(array, separator):
+        if not array: return ""
         first = true
         f = def (a, b):
             s = ""

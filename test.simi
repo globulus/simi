@@ -750,4 +750,32 @@ print implicitReturnSelf()
 print [5].isEmpty()
 print [5].isntEmpty()
 
+
+def testLetApplyAlsoWith:
+    print "let test"
+    printf = def x: print x
+    [12].let(printf)
+    nil.let(printf) # not printed
+
+    print "apply test"
+    class Person:
+        def setName(v): pass
+        def setAge(v): pass
+    end
+    print Person().apply(def x:
+        x.setName("name")
+        x.setAge(12)
+    end)
+
+    print "also test"
+    print [1, 2, 3, 4, 5].also(:print self).map(def i: i * 2)
+
+    print "with test"
+    print Person().with(def:
+        setName("with name")
+        setAge(22)
+    end)
+end
+testLetApplyAlsoWith()
+
 print "kraj"
