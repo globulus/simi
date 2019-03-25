@@ -285,7 +285,7 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(((SimiObjectImpl) arguments.get(0).getValue().getObject()).isArray());
             }
         });
-        methods.put(new OverloadableFunction("class", 0), new SimiCallable() {
+        methods.put(new OverloadableFunction("classObject", 0), new SimiCallable() {
             @Override
             public int arity() {
                 return 0;

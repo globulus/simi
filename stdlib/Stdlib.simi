@@ -5,9 +5,9 @@ class$ Object:
     def keys(): native
     def values(): native
     def methods(): native
-    def zip(): native
-    def ruler(): native
-    def className(): native
+    def zip(): native # Returns array of (key, value) tuples for this object
+    def ruler(): native # Accesses internal array associated with every object
+    def className(): native # Name of this object's class
 
     def iterate(): native
     def has(obj): native

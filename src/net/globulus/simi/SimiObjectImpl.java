@@ -174,6 +174,19 @@ class SimiObjectImpl implements SimiObject {
       return false;
   }
 
+    private boolean isSupertype(SimiClassImpl clazz) {
+        if (clazz.name.equals(this.clazz.name)) {
+            return true;
+        }
+        if (clazz.superclasses != null) {
+            for (SimiClassImpl superclass : clazz.superclasses) {
+                if (superclass.name.equals(this.clazz.name)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
   boolean isNumber() {
       return clazz.name.equals(Constants.CLASS_NUMBER);
@@ -232,11 +245,22 @@ class SimiObjectImpl implements SimiObject {
     }
 
     private void checkMutability(Token name, SimiEnvironment environment) {
+        boolean invalidMutation = false;
         if (this.immutable) {
-           SimiValue self = ((Environment) environment).get(Token.self());
-              if (self != null && self.getObject() != this) {
-                throw new RuntimeError(name, "Trying to alter an immutable object!");
+            SimiValue self = ((Environment) environment).get(Token.self());
+              if (self != null) {
+                  SimiObject selfObj = self.getObject();
+                  if (this != selfObj) {
+                      if (selfObj instanceof SimiClassImpl) {
+                          invalidMutation = !isSupertype((SimiClassImpl) selfObj);
+                      } else {
+                          invalidMutation = true;
+                      }
+                  }
             }
+        }
+        if (invalidMutation) {
+            throw new RuntimeError(name, "Trying to alter an immutable object!");
         }
     }
 

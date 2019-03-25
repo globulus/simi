@@ -74,6 +74,7 @@ typeCheckTest(1, "", 3, Range(1, 2))
 dejt = Date()
 print dejt
 print dejt.("class")
+print dejt.classObject()
 
 clck = clock()
  def ife1():
@@ -777,5 +778,23 @@ def testLetApplyAlsoWith:
     end)
 end
 testLetApplyAlsoWith()
+
+def testStaticMethod:
+    class Person
+   class Cara
+
+   class Audi(Cara):
+      def staticMethod:
+         audiInstance = Audi()
+         audiInstance.weight = 1800 # Works, self is Audi class
+         carInstance = Cara()
+         carInstance.weight = 1500 # Works, self is Audi class which is subclass of Car
+         personInstance = Person()
+         personInstance.weight = 80 # Error, self is Audi class which isn't subclass of Person
+      end
+   end
+   Audi.staticMethod()
+end
+testStaticMethod()
 
 print "kraj"

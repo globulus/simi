@@ -55,7 +55,7 @@ class_ CodeBlocks:
             @_anonymous = anonymous
             composer = FunctionComposer()
             fc = CodeBlocks.FunctionCode(f)
-            composer._setBody(String.builder().add(ife(anonymous, :fc.anonymousDeclaration(), :fc.declaration())).add("\n"))
+            composer.body = String.builder().add(ife(anonymous, :fc.anonymousDeclaration(), :fc.declaration())).add("\n")
             for line in fc.body(): composer.line(line)
             return composer
         end
@@ -72,8 +72,6 @@ class_ CodeBlocks:
         end
 
         def getFunction(): gu @getString()
-
-        def _setBody(v): pass
     end
 
     class_ FunctionCode:

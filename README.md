@@ -601,6 +601,23 @@ class Person:
 end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
+    + Do note that instance objects **are mutable** within static methods of their class or its subclasses. Consider the following example:
+   ```ruby
+   class Person
+   class Car
+
+   class Audi(Car):
+      def staticMethod:
+         audiInstance = Audi()
+         car.weight = 1800 # Works, self is Audi class
+         carInstance = Car()
+         car.weight = 1500 # Works, self is Audi class which is subclass of Car
+         personInstance = Person()
+         person.weight = 80 # Error, self is Audi class which isn't subclass of Person
+      end
+   end
+
+   ```
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
 
 ```ruby
