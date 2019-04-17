@@ -451,9 +451,9 @@ end
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .where(:_0 <= 5)\
+    .map(:_0 * 2)\
+    .sorted(:_1 <> _0)
 print arr
 
 print Math.pow(2, 3)
@@ -751,6 +751,12 @@ print implicitReturnSelf()
 print [5].isEmpty()
 print [5].isntEmpty()
 
+def testImplicitParams:
+    print "Testing implicit params"
+    print [1, 2, 3, 4].where(:_0 > 2)
+    print [1, 2, 3, 4].sorted(:_1 <> _0)
+end
+testImplicitParams()
 
 def testLetApplyAlsoWith:
     print "let test"
@@ -771,11 +777,11 @@ def testLetApplyAlsoWith:
     print "also test"
     print [1, 2, 3, 4, 5].also(:print self).map(def i: i * 2)
 
-    print "with test"
-    print Person().with(def:
-        setName("with name")
-        setAge(22)
-    end)
+#    print "with test"
+#    print Person().with(def:
+#        setName("with name")
+#        setAge(22)
+#    end)
 end
 testLetApplyAlsoWith()
 

@@ -82,6 +82,7 @@ class$ Object:
         if item != nil: return item.key
         else: return nil
     end
+    def count(predicate): @where(predicate).len()
     def forEach(function):
         for item in self: function(item)
         return self
@@ -158,21 +159,21 @@ class$ Object:
 
    # Evaluates the associated block as if all the non-keyword lines refer to self
    # and as such is useful as a cleaner (but a lot slower) alternative to apply().
-   def with(block):
-       import CodeBlocks
-       body = FunctionCode(block).body().map(def l:
-            tl = l.trim()
-            for keyword in CodeBlocks.KEYWORDS:
-                if tl.startsWith(keyword): return l
-            end
-            return "@" + tl
-        end)
-       fc = FunctionComposer(nil, nil)
-       fc.lines(body)
-       mutatedBlock = gu fc.getString()
-       mutatedBlock$()
-       return self
-   end
+#   def with(block):
+#       import CodeBlocks
+#       body = FunctionCode(block).body().map(def l:
+#            tl = l.trim()
+#            for keyword in CodeBlocks.KEYWORDS:
+#                if tl.startsWith(keyword): return l
+#            end
+#            return "@" + tl
+#        end)
+#       fc = FunctionComposer(nil, nil)
+#       fc.lines(body)
+#       mutatedBlock = gu fc.getString()
+#       mutatedBlock$()
+#       return self
+#   end
 end
 
 class_ Function

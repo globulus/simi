@@ -2,10 +2,8 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.SimiValue;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static net.globulus.simi.TokenType.*;
 
@@ -409,7 +407,7 @@ class Parser {
     }
     List<Expr> params = params(kind, lambda);
     consume(COLON, "Expected a ':' at the start of block!");
-    List<Stmt> blockStmts = getBlockStatements(declaration, kind);
+    List<Stmt> blockStmts = parseBlockStatements(declaration, kind).statements;
     List<Stmt> statements;
     if (prependedStmts != null) {
       statements = prependedStmts;
@@ -424,8 +422,16 @@ class Parser {
             kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
   }
 
-  private List<Stmt> getBlockStatements(Token declaration, String kind) {
+  private Expr shorthandBlock(Token token) {
+    Token declaration = new Token(DEF, null, null, token.line, token.file);
+    BlockParsingResult result = parseBlockStatements(declaration, LAMBDA);
+    return new Expr.Block(declaration, result.implicitParams, result.statements, true);
+  }
+
+
+  private BlockParsingResult parseBlockStatements(Token declaration, String kind) {
     List<Stmt> statements = new ArrayList<>();
+    List<Expr> implicitParams = null;
     if (match(NEWLINE)) {
       while (!check(END) && !isAtEnd()) {
         if (match(NEWLINE, PASS)) {
@@ -436,12 +442,16 @@ class Parser {
       consume(END, "Expect 'end' after block.");
     } else {
       Stmt stmt = statement(true);
+      implicitParams = detectImplicitParams(stmt);
+      if (!implicitParams.isEmpty()) {
+        int a = 5;
+      }
       if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
         stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), ((Stmt.Expression) stmt).expression);
       }
       statements.add(stmt);
     }
-    return statements;
+    return new BlockParsingResult(statements, implicitParams);
   }
 
   private List<Expr> params(String kind, boolean lambda) {
@@ -495,6 +505,20 @@ class Parser {
       }
     }
     return count;
+  }
+
+  private List<Expr> detectImplicitParams(Stmt stmt) {
+    Set<String> params = new TreeSet<>();
+    String code = stmt.toCode(0, false);
+    int index = -1;
+    while ((index = code.indexOf('_', index + 1)) != -1) {
+      int lastIndex;
+      for (lastIndex = index + 1; Character.isDigit(code.charAt(lastIndex)); lastIndex++);
+      if (lastIndex - index > 1) {
+        params.add(code.substring(index, lastIndex));
+      }
+    }
+    return params.stream().map(s -> new Expr.Variable(Token.named(s))).collect(Collectors.toList());
   }
 
   private Expr assignment() {
@@ -699,8 +723,7 @@ class Parser {
     }
 
     if (match(COLON)) {
-      Token declaration = new Token(DEF, null, null, previous().line, previous().file);
-      return new Expr.Block(declaration, new ArrayList<>(), getBlockStatements(declaration, LAMBDA), true);
+      return shorthandBlock(previous());
     }
 
     if (match(IDENTIFIER)) {
@@ -943,5 +966,16 @@ class Parser {
     }
     Expr.Binary typeCheck = (Expr.Binary) param;
     return (Expr.Variable) typeCheck.left;
+  }
+
+  private static class BlockParsingResult {
+
+    final List<Stmt> statements;
+    final List<Expr> implicitParams;
+
+    private BlockParsingResult(List<Stmt> statements, List<Expr> implicitParams) {
+      this.statements = statements;
+      this.implicitParams = implicitParams;
+    }
   }
 }
