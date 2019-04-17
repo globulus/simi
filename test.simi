@@ -74,6 +74,7 @@ typeCheckTest(1, "", 3, Range(1, 2))
 dejt = Date()
 print dejt
 print dejt.("class")
+print dejt.classObject()
 
 clck = clock()
  def ife1():
@@ -450,9 +451,9 @@ end
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .where(:_0 <= 5)\
+    .map(:_0 * 2)\
+    .sorted(:_1 <> _0)
 print arr
 
 print Math.pow(2, 3)
@@ -749,5 +750,60 @@ end
 print implicitReturnSelf()
 print [5].isEmpty()
 print [5].isntEmpty()
+
+def testImplicitParams:
+    print "Testing implicit params"
+    print [1, 2, 3, 4].where(:_0 > 2)
+    print [1, 2, 3, 4].sorted(:_1 <> _0)
+end
+testImplicitParams()
+
+def testSemicolonNewline:;a = 2;b = 3;c = 5;print "Semicolon newline: " + (a + b + c);end
+testSemicolonNewline()
+
+def testLetApplyAlsoWith:
+    print "let test"
+    printf = def x: print x
+    [12].let(printf)
+    nil.let(printf) # not printed
+
+    print "apply test"
+    class Person:
+        def setName(v): pass
+        def setAge(v): pass
+    end
+    print Person().apply(def x:
+        x.setName("name")
+        x.setAge(12)
+    end)
+
+    print "also test"
+    print [1, 2, 3, 4, 5].also(:print self).map(def i: i * 2)
+
+#    print "with test"
+#    print Person().with(def:
+#        setName("with name")
+#        setAge(22)
+#    end)
+end
+testLetApplyAlsoWith()
+
+def testStaticMethod:
+    class Person
+   class Cara
+
+   class Audi(Cara):
+      def staticMethod:
+         audiInstance = Audi()
+         audiInstance.weight = 1800 # Works, self is Audi class
+         carInstance = Cara()
+         carInstance.weight = 1500 # Works, self is Audi class which is subclass of Car
+         personInstance = Person()
+         personInstance.weight = 80 # Error, self is Audi class which isn't subclass of Person
+      end
+   end
+   Audi.staticMethod()
+end
+testStaticMethod()
 
 print "kraj"

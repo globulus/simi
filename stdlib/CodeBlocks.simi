@@ -1,5 +1,9 @@
 class_ CodeBlocks:
 
+    KEYWORDS = [
+        "print"
+    ] # TBC
+
     class InvalidBlockException(Exception):
     end
 
@@ -43,29 +47,31 @@ class_ CodeBlocks:
 
     class_ FunctionComposer:
         def init(name is String, params is Object):
-            @body = String.builder().add("def ").add(name).add("(").add(String.from(params, ", ")).add("):\n")
+            @_anonymous = name == nil
+            @body = String.builder().add("def ").add(name ?? "").add("(").add(String.from(params, ", ")).add("):\n")
         end
 
         def fromFunc(f is Function, anonymous is Number):
+            @_anonymous = anonymous
             composer = FunctionComposer()
             fc = CodeBlocks.FunctionCode(f)
-            composer._setBody(String.builder().add(ife(anonymous, :fc.anonymousDeclaration(), :fc.declaration())).add("\n"))
+            composer.body = String.builder().add(ife(anonymous, :fc.anonymousDeclaration(), :fc.declaration())).add("\n")
             for line in fc.body(): composer.line(line)
             return composer
         end
 
         def line(line is String): @body.add("   ").add(line).add("\n")
 
+        def lines(lines is Object): lines.forEach(def l: @line(l))
+
         def getString():
             @body.add("end")
             s = @body.build()
             @body = nil
-            return s
+            return ife(@_anonymous, "(\(s))", s) # gu mandates that anon functions be enclosed in parentheses
         end
 
         def getFunction(): gu @getString()
-
-        def _setBody(v): pass
     end
 
     class_ FunctionCode:

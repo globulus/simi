@@ -38,6 +38,8 @@ What Šimi offers:
       - [Strings](#strings)
         * [Boxed numbers and strings](#boxed-numbers-and-strings)
       - [Functions](#functions)
+        * [Implicit return](#implicit-return)
+        * [Implicit parameters](#implicit-parameters)
         * [Closure vs. environment invocation](#closure-vs-environment-invocation)
       - [Objects](#objects)
         * [Dictionaries and Arrays - the Siamese Twins](#dictionaries-and-arrays---the-siamese-twins)
@@ -270,6 +272,9 @@ filteredArray = [1, 2, 3, 4, 5].where(def i: i > 2)
 # can be invoked later on. This pattern is heavily used with lazy loading
 # and the ife function.
 storedExpression = :2+2 # Parses into: def: return 2 + 2
+
+# You can use the shorthand syntax with implicit params as well
+filteredArray = [1, 2, 3, 4, 5].where(:_0 > 2)
 ```
 Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
@@ -325,6 +330,9 @@ def f(a, b, c):
     print "something"
 end
 ```
+
+##### Implicit return
+
 Functions that don't explicity [return or yield](#return-and-yield) have an **implicit return**:
  * Single-line functions whose only line is an expression return the **value of that expression**, *with the exception of setter functions*:
 
@@ -354,6 +362,40 @@ button = Button()\ # Implicit return self from init
 button.performClick()
 ```
 It also forces the programmer to explicity use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
+
+##### Implicit parameters
+
+While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *$* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
+
+```ruby
+sumThree = :_1 + _0 + _2
+```
+
+internally translates to:
+
+```ruby
+sumThree = def (_0, _1, _2): return _1 + _0 + _2
+```
+
+This syntax nicely abbreviates often-used lambdas that programmers are familiar with, such as those passed to 2nd-order functions of the *Object* class. Consider the array transformation example from earlier on:
+
+```ruby
+arr = [1, 2, 3]\
+    .where(def i: i <= 5)\
+    .map(def i: i * 2)\
+    .sorted(def (l, r): -(l <> r))
+```
+
+abbreviated by using implicit params:
+
+```ruby
+arr = [1, 2, 3]\
+    .where(:_0 <= 5)\
+    .map(:_0 * 2)\
+    .sorted(:_1 <> _0)
+```
+
+Of course, the implicit params syntax can be used with any shorthand lambda, but improvements to conciseness shouldn't be made at the expense of readability.
 
 ##### Closure vs. environment invocation
 
@@ -601,6 +643,23 @@ class Person:
 end
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
+    + Do note that instance objects **are mutable** within static methods of their class or its subclasses. Consider the following example:
+   ```ruby
+   class Person
+   class Car
+
+   class Audi(Car):
+      def staticMethod:
+         audiInstance = Audi()
+         car.weight = 1800 # Works, self is Audi class
+         carInstance = Car()
+         car.weight = 1500 # Works, self is Audi class which is subclass of Car
+         personInstance = Person()
+         person.weight = 80 # Error, self is Audi class which isn't subclass of Person
+      end
+   end
+
+   ```
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
 
 ```ruby

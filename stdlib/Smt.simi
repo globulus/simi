@@ -38,7 +38,7 @@ class Smt:
                 else: parts.addAll(lineParts)
             end
         end
-        smt._setParts(parts)
+        smt.parts = parts
         return smt
     end
 
@@ -130,8 +130,6 @@ class Smt:
             else: return part.toString()
         end
     end
-
-    def _setParts(v): pass
 
     def run():
         for [var, val] in @_sets.zip(): @(var) = val$()
