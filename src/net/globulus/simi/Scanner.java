@@ -216,6 +216,9 @@ class Scanner {
         line++;
         addToken(TokenType.NEWLINE);
       } break;
+      case ';':
+        addToken(TokenType.NEWLINE);
+        break;
       default:
        if (isStringDelim(c)) {
         string(c);

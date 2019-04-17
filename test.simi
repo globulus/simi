@@ -758,6 +758,9 @@ def testImplicitParams:
 end
 testImplicitParams()
 
+def testSemicolonNewline:;a = 2;b = 3;c = 5;print "Semicolon newline: " + (a + b + c);end
+testSemicolonNewline()
+
 def testLetApplyAlsoWith:
     print "let test"
     printf = def x: print x
