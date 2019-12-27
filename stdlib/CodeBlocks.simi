@@ -26,7 +26,7 @@ class_ CodeBlocks:
             @body = String.builder().add("class").add(type).add(" ").add(name)
             params = (superclasses ?? []).joined(mixins.map(def m: "in \(m)") ?? [])
             if params.isntEmpty(): @body.add("(").add(String.from(params, ", ")).add(")")
-            body.add(":\n")
+            @body.add(":\n")
         end
 
         def field(key, value): @body.add(key).add(" = ").add(ivic value).add("\n")

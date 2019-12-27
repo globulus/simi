@@ -16,6 +16,8 @@ class BaseClassesNativeImpl {
 
     private Map<String, SimiNativeClass> classes;
 
+    private Scanner stdinScanner = new Scanner(System.in);
+
     BaseClassesNativeImpl() {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
@@ -1166,8 +1168,10 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
-                try (Scanner scanner = new Scanner(System.in)) {
-                    return new SimiValue.String(scanner.nextLine());
+                if (stdinScanner.hasNextLine()) {
+                    return new SimiValue.String(stdinScanner.nextLine());
+                } else {
+                    return null;
                 }
             }
         });

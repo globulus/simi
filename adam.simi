@@ -1,0 +1,417 @@
+import "./stdlib/File.simi"
+
+
+### SCANNER
+
+TokenType = Enum.of([
+    "LEFT_PAREN" = 0,
+    "RIGHT_PAREN" = 1,
+    "LEFT_BRACKET" = 2,
+    "RIGHT_BRACKET" = 3,
+    "LEFT_BRACE" = 4,
+    "RIGHT_BRACE" = 5,
+    "COMMA" = 7,
+    "DOT" = 8,
+    "NEWLINE" = 20,
+    "ID" = 30,
+    "STRING" = 31,
+    "NUMBER" = 32,
+    "EOF" = 65
+])
+
+class Token:
+    def init(type, lexeme, literal, line): pass
+    def toString(): "[\(@type.key), \(@lexeme), \(@literal), @\(@line)]"
+end
+
+class ScanException(Exception):
+    def init(line, message):
+        super.init("Scan exception @\(line ?? -1): \(message).")
+    end
+end
+
+class Scanner:
+
+    _NON_ID_CHARS = '()[]{},."'
+    _WHITESPACE_CHARS = " \t\n"
+
+    def init(source):
+        @source = source
+        @sourceLen = source.length()
+        @tokens = $[]
+        @start = 0
+        @current = 0
+        @line = 1
+    end
+
+    def scanTokens(addEof):
+        while not @_isAtEnd():
+            @start = @current
+            @_scanToken()
+        end
+        if addEof: @tokens.append(Token(TokenType.EOF, "", nil, @line))
+        return @tokens #
+    end
+
+    def _scanToken():
+        c = @_advance()
+        when c:
+            "(": @_addToken(TokenType.LEFT_PAREN)
+            ")": @_addToken(TokenType.RIGHT_PAREN)
+            "[": @_addToken(TokenType.LEFT_BRACKET)
+            "]": @_addToken(TokenType.RIGHT_BRACKET)
+            "{": @_addToken(TokenType.LEFT_BRACE)
+            "}": @_addToken(TokenType.RIGHT_BRACE)
+            ",": @_addToken(TokenType.COMMA)
+            ".": @_addToken(TokenType.DOT)
+            "/": # Single line comments
+                if @_match("/"):
+                    while @_peek() != '\n' and not @_isAtEnd(): @_advance()
+                end
+            end
+            "\n":
+                @line = @line + 1
+                @_addToken(TokenType.NEWLINE)
+            end
+            else:
+                if @_isWhiteSpace(c): pass
+                elsif @_isStringDelim(c): @_string(c)
+                elsif @_isDigit(c): @_number()
+                else: @_identifier()
+            end
+        end
+    end
+
+    def _identifier():
+        while @_isValidId(@_peek()): @_advance()
+        text = @source.substring(@start, @current)
+        @_addToken(TokenType.ID, text)
+    end
+
+    def _number():
+        while @_isDigit(@_peek()): @_advance()
+        if @_peek()== "." and @_isDigit(@_peekNext()):
+            @_advance()
+            while @_isDigit(@_peek()): @_advance()
+        end
+        @_addToken(TokenType.NUMBER, @source.substring(@start, @current).toNumber())
+    end
+
+    def _string(opener):
+        while @_peek() != opener and not @_isAtEnd():
+            if @_peek()== "\n": @line = @line + 1
+            @_advance()
+        end
+        if @_isAtEnd():
+            @_error(@line, "Unterminated string")
+            return
+        end
+        @_advance()
+        value = @_escapedString(@start + 1, @current - 1)
+        @_addToken(TokenType.STRING, value)
+    end
+
+    def _escapedString(start, stop):
+        return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
+    end
+
+    def _match(expected):
+        if @_isAtEnd(): return false
+        if @_peek() != expected: return false
+        @current = @current + 1
+        return true
+    end
+
+    def _peek():
+        if @_isAtEnd(): return '\0'
+        return @source.(@current)
+    end
+
+    def _peekNext():
+        if @current + 1 >= @sourceLen: return '\0'
+        return @source.(@current + 1)
+    end
+
+    def _isAlpha(c): c.isAlpha() or c == "_" or c == "$"
+
+    def _isDigit(c): c.isDigit()
+
+    def _isValidId(c): not @_isWhiteSpace(c) and c not in @_NON_ID_CHARS
+
+    def _isStringDelim(c): c == '"'
+
+    def _isWhiteSpace(c): c in @_WHITESPACE_CHARS
+
+    def _isAtEnd(): return @current >= @sourceLen
+
+    def _advance():
+        @current = @current + 1
+        return @source.(@current - 1)
+    end
+
+    def _addToken(type): @_addToken(type, nil)
+
+    def _addToken(type, literal):
+        text = @source.substring(@start, @current)
+        @tokens.append(Token(type, text, literal, @line))
+    end
+
+    def _error(line, str): ScanException(line, str).raise()
+end
+
+### PARSER
+
+class CodePiece:
+    def toCode(): pass
+end
+
+class Value(CodePiece):
+    def eval(): pass
+end
+
+class Num(Value):
+    def init(value is Number): pass
+    def eval(): @value
+    def toCode(): @value.toString()
+end
+
+class Str(Value):
+    def init(value is String): pass
+    def eval(): @value
+    def toCode(): '"' + @value + '"'
+    def toString(): @toCode()
+end
+
+class Symbol(Value):
+    def init(value is String): pass
+    def eval(): @value
+    def toCode(): @value
+    def toString(): @toCode()
+end
+
+class Type(Value):
+    def init(sig is String): pass
+    def eval(): @sig
+    def toCode(): @sig
+    def toString(): @toCode()
+end
+
+class Property(CodePiece):
+    def init(type is Type, symbol is Symbol, value is Value): pass
+    def toCode():
+        sb = String.builder()
+        if @type: sb.add(@type.toCode()).add(" ")
+        if @symbol: sb.add(@symbol.toCode()).add(" ")
+        if @value: sb.add(@value.toCode())
+        return sb.build()
+    end
+    def toString(): @toCode()
+end
+
+class List(Value):
+    def init(args is Object):
+        if not args.every(:_0 is Property): IllegalArgumentException("List args must be of type Property!").raise()
+        @args = args
+    end
+
+    EMPTY = List([])
+
+    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ",") + "]"
+    def toString(): @toCode()
+end
+
+class Block(Value):
+    def init(list is List, body is Object): pass
+
+    def eval(): pass # TODO
+    def toCode():
+        sb = String.builder()
+        sb.add("{").add(@list.toCode()).add("\n")
+        sb.add(String.from(@body.map(:_0.toCode()), "\n"))
+        sb.add("}\n")
+        return sb.build()
+    end
+    def toString(): @toCode()
+end
+
+class Call: # The sole expression in Adam is a block invocation with args
+    def init(operator is Object, args is List): pass
+end
+
+class ParseException(Exception):
+    def init(token, message):
+        super.init("Parse exception @\(token): \(message).")
+    end
+end
+
+class Parser:
+    def init(tokens): pass
+
+    def parse():
+        @current = 0
+        exprs = $[]
+        while not @_isAtEnd():
+            exprs.push(@_expression(true))
+        end
+        return exprs
+    end
+
+    def _expression(requiresNewline):
+        @_matchAllNewlines()
+        op = nil
+        args = List.EMPTY
+        if @_match(TokenType.STRING): op $= Str(@_previous().literal)
+        elsif @_match(TokenType.NUMBER): op $= Num(@_previous().literal)
+        else:
+            op $= @_idOrBlock()
+            if @_match(TokenType.LEFT_PAREN): args $= @_list(true)
+        end
+        if requiresNewline: @_consume(TokenType.NEWLINE, "Expected a newline after an expression")
+        return ife(args, :Call(op, args), op)
+    end
+
+    def _idOrBlock():
+        if @_match(TokenType.LEFT_BRACE): return @_block()
+        if @_match(TokenType.ID): return Symbol(@_previous().literal)
+        @_error(@_peek(), "Expected a block or an ID!")
+    end
+
+    def _block():
+        list = nil
+        body = $[]
+        if @_match(TokenType.LEFT_BRACKET): list $= @_list(false)
+        else: list $= List.EMPTY
+        while true:
+            @_matchAllNewlines()
+            if @_match(TokenType.RIGHT_BRACE): break
+            body.push(@_expression(false))
+        end
+        return Block(list, body)
+    end
+
+    def _list(isCall):
+#        @_consume(TokenType.LEFT_BRACKET, "Expected [ for list start")
+        args = $[]
+        terminator = ife(isCall, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET)
+        while true:
+            @_matchAllNewlines()
+            args.push(@_property(isCall, terminator))
+            if @_match(terminator): break # end of arg list
+            print args
+            @_consume(TokenType.COMMA, "Expected , between list arguments")
+        end
+        return List(args)
+    end
+
+    def _property(isCall, terminator): # Type name[ default]
+        type = nil
+        name = nil
+        value = nil
+        if isCall:
+           value $= @_expression(false)
+           if @_nextTokenIsValue(terminator):
+                name $= value
+                value $= @_expression(false)
+           end
+        end
+        else:
+           type $= @_type()
+           name $= @_consume(TokenType.ID, "Expected an ID for arg name")
+           print type + name
+           if @_nextTokenIsValue(terminator): value $= @_expression(false) # has default value
+        end
+        return Property(type, @_tokenToSymbol(name), @_tokenToSymbol(value))
+    end
+
+    def _nextTokenIsValue(terminator):
+        type = @_peek().type
+        return type != TokenType.COMMA and type != terminator
+    end
+
+    def _type(): # Either an ID or a block definition
+        sig = nil
+        if @_match(TokenType.ID):
+            sig $= @_previous().literal
+            if @_match(TokenType.DOT): sig $= @_blockDef(sig + ".")
+        end
+        else: sig $= @_blockDef("")
+        return Type(sig)
+    end
+
+    def _blockDef(startingSig):
+        @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
+        sig = startingSig + "{"
+        if @_match(TokenType.LEFT_BRACKET):
+            args = @_list(false)
+            sig += args.toCode()
+        end
+        sig += @_consume(TokenType.ID, "Expected ID for return type").literal
+        @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
+        sig += "}"
+        return sig
+    end
+
+     def _matchAllNewlines:
+        while @_match(TokenType.NEWLINE): pass
+     end
+
+     def _match(types):
+         if types is Object:
+             for type in types:
+                 if @_matchOne(type): return true
+             end
+             return false
+         end
+         return @_matchOne(types)
+     end
+
+     def _matchOne(type):
+         if @_check(type):
+             @_advance()
+             return true
+         end
+         return false
+     end
+
+     def _consume(type, message):
+         if @_check(type): return @_advance()
+         @_error(@_peek(), message)
+     end
+
+     def _check(type):
+         if @_isAtEnd(): return false
+         return @_peek().type == type
+     end
+
+     def _advance():
+         if not @_isAtEnd(): @current = @current + 1
+         return @_previous()
+     end
+
+     def _isAtEnd(): return @_peek().type == TokenType.EOF
+
+     def _peek(): return @tokens.(@current)
+
+     def _peekSequence(types):
+         if @current + types.length() >= @tokens.length(): return false
+         for i in types.length().times():
+             if (@tokens.(@current + i)).type != types.(i): return false
+         end
+         return true
+     end
+
+     def _previous(): return @tokens.(@current - 1)
+
+     def _tokenToSymbol(token): ife(token is Token, :Symbol(token.literal), token)
+
+     def _error(token, message): ParseException(token, message).raise()
+end
+
+### MAIN SCRIPT
+
+source = File.readString("adamtest.adam")
+scanner = Scanner(source)
+tokens = scanner.scanTokens(true)
+parser = Parser(tokens)
+exprs = parser.parse()
+print exprs

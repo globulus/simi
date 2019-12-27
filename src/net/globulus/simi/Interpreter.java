@@ -1204,7 +1204,12 @@ class Interpreter implements
   }
 
   private SimiClassImpl getObjectClass() {
-    return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getValue().getObject();
+    SimiProperty classObj = globals.tryGet(Constants.CLASS_OBJECT);
+    if (classObj != null) {
+      return (SimiClassImpl) classObj.getValue().getObject();
+    } else {
+      return null;
+    }
   }
 
   private void putBlock(Stmt.BlockStmt stmt, BlockImpl block) {

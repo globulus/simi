@@ -1,0 +1,7 @@
+go(a, 5)
+go(c, +(b, d))
+go(e, class(Enum, {
+    go(override(b), 5)
+    go(engine, "V6 TDI")
+}))
+go(c, {[Str s, Num b 5, {[Num l, Num r]Str} toString]})
