@@ -166,33 +166,44 @@ class CodePiece:
 end
 
 class Value(CodePiece):
-    def eval(): pass
+    def eval(args): pass
 end
 
 class Num(Value):
     def init(value is Number): pass
-    def eval(): @value
+    def eval(args): @value
     def toCode(): @value.toString()
 end
 
 class Str(Value):
     def init(value is String): pass
-    def eval(): @value
+    def eval(args): @value
     def toCode(): '"' + @value + '"'
     def toString(): @toCode()
 end
 
 class Symbol(Value):
     def init(value is String): pass
-    def eval(): @value
+    def eval(args): @value
     def toCode(): @value
     def toString(): @toCode()
 end
 
 class Type(Value):
-    def init(sig is String): pass
-    def eval(): @sig
-    def toCode(): @sig
+    def init(receiver is Symbol, args is List, value is Symbol): pass
+    def eval(args):
+        sb = String.builder()
+        if @receiver: sb.add(@receiver.toCode()).add(".")
+        if @receiver == nil and @args == nil and @value != nil: sb.add(@value.toCode())
+        else:
+            sb.add("{")
+            if @args: sb.add(@args.toCode())
+            if @value: sb.add(@value.toCode())
+            sb.add("}")
+        end
+        return sb.build()
+    end
+    def toCode(): @eval(nil)
     def toString(): @toCode()
 end
 
@@ -216,6 +227,7 @@ class List(Value):
 
     EMPTY = List([])
 
+    def eval(args): @args
     def toCode(): "[" + String.from(@args.map(:_0.toCode()), ",") + "]"
     def toString(): @toCode()
 end
@@ -223,19 +235,35 @@ end
 class Block(Value):
     def init(list is List, body is Object): pass
 
-    def eval(): pass # TODO
+    def eval(args): pass # TODO
     def toCode():
+        addNewlines = @body.isntEmpty()
         sb = String.builder()
-        sb.add("{").add(@list.toCode()).add("\n")
+        sb.add("{")
+        if @list: sb.add(@list.toCode())
+        if addNewlines: sb.add("\n")
         sb.add(String.from(@body.map(:_0.toCode()), "\n"))
-        sb.add("}\n")
+        sb.add("}")
+        if addNewlines: sb.add("\n")
         return sb.build()
     end
     def toString(): @toCode()
 end
 
-class Call: # The sole expression in Adam is a block invocation with args
-    def init(operator is Object, args is List): pass
+class Call(Value): # The sole expression in Adam is a block invocation with args
+    def init(op is Value, args is List): pass
+
+    def eval(args): @op.eval(args)
+    def toCode():
+        sb = String.builder()
+        sb.add(@op.toCode())
+        if @args:
+            argsCode = @args.toCode()
+            sb.add("(").add(argsCode.substring(1, argsCode.len() - 1)).add(")")
+        end
+        return sb.build()
+    end
+    def toString(): @toCode()
 end
 
 class ParseException(Exception):
@@ -272,7 +300,7 @@ class Parser:
 
     def _idOrBlock():
         if @_match(TokenType.LEFT_BRACE): return @_block()
-        if @_match(TokenType.ID): return Symbol(@_previous().literal)
+        if @_match(TokenType.ID): return @_tokenToSymbol(@_previous())
         @_error(@_peek(), "Expected a block or an ID!")
     end
 
@@ -290,14 +318,12 @@ class Parser:
     end
 
     def _list(isCall):
-#        @_consume(TokenType.LEFT_BRACKET, "Expected [ for list start")
         args = $[]
         terminator = ife(isCall, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET)
         while true:
             @_matchAllNewlines()
             args.push(@_property(isCall, terminator))
             if @_match(terminator): break # end of arg list
-            print args
             @_consume(TokenType.COMMA, "Expected , between list arguments")
         end
         return List(args)
@@ -317,10 +343,9 @@ class Parser:
         else:
            type $= @_type()
            name $= @_consume(TokenType.ID, "Expected an ID for arg name")
-           print type + name
            if @_nextTokenIsValue(terminator): value $= @_expression(false) # has default value
         end
-        return Property(type, @_tokenToSymbol(name), @_tokenToSymbol(value))
+        return Property(type, @_tokenToSymbol(name), value)
     end
 
     def _nextTokenIsValue(terminator):
@@ -329,26 +354,22 @@ class Parser:
     end
 
     def _type(): # Either an ID or a block definition
-        sig = nil
         if @_match(TokenType.ID):
-            sig $= @_previous().literal
-            if @_match(TokenType.DOT): sig $= @_blockDef(sig + ".")
+            id = @_previous()
+            if @_match(TokenType.DOT): return @_blockDef(id)
+            else: return Type(nil, nil, @_tokenToSymbol(id))
         end
-        else: sig $= @_blockDef("")
-        return Type(sig)
+        else: return @_blockDef(nil)
     end
 
-    def _blockDef(startingSig):
+    def _blockDef(receiver):
         @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
-        sig = startingSig + "{"
-        if @_match(TokenType.LEFT_BRACKET):
-            args = @_list(false)
-            sig += args.toCode()
-        end
-        sig += @_consume(TokenType.ID, "Expected ID for return type").literal
+        args = nil
+        value = nil
+        if @_match(TokenType.LEFT_BRACKET): args $= @_list(false)
+        if @_peek().type == TokenType.ID: value $= @_advance()
         @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
-        sig += "}"
-        return sig
+        return Type(@_tokenToSymbol(receiver), args, @_tokenToSymbol(value))
     end
 
      def _matchAllNewlines:
