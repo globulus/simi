@@ -4,19 +4,19 @@ import "./stdlib/File.simi"
 ### SCANNER
 
 TokenType = Enum.of([
-    "LEFT_PAREN" = 0,
-    "RIGHT_PAREN" = 1,
-    "LEFT_BRACKET" = 2,
-    "RIGHT_BRACKET" = 3,
-    "LEFT_BRACE" = 4,
-    "RIGHT_BRACE" = 5,
-    "COMMA" = 7,
-    "DOT" = 8,
-    "NEWLINE" = 20,
-    "ID" = 30,
-    "STRING" = 31,
-    "NUMBER" = 32,
-    "EOF" = 65
+    "LEFT_PAREN",
+    "RIGHT_PAREN",
+    "LEFT_BRACKET",
+    "RIGHT_BRACKET",
+    "LEFT_BRACE",
+    "RIGHT_BRACE",
+    "COMMA",
+    "DOT",
+    "NEWLINE",
+    "ID",
+    "STRING",
+    "NUMBER",
+    "EOF"
 ])
 
 class Token:
@@ -190,7 +190,13 @@ class Symbol(Value):
 end
 
 class Type(Value):
-    def init(receiver is Symbol, args is List, value is Symbol): pass
+    def init(receiver is Symbol, args is List, value is Type): pass
+    def init(value):
+        if value == nil or (value is not Symbol and value is not List):
+            IllegalArgumentException("Type return value must be a symbol or a list!").raise()
+        end
+        @value = value
+    end
     def eval(args):
         sb = String.builder()
         if @receiver: sb.add(@receiver.toCode()).add(".")
@@ -205,6 +211,27 @@ class Type(Value):
     end
     def toCode(): @eval(nil)
     def toString(): @toCode()
+
+    def isTypeOf(value): # Checks if provided value is of this type
+        when value:
+            is Num: return @value == Num
+            is Str: return @value == Str
+            is Symbol: return @value == Symbol
+            is Type: pass # TODO what to do here?
+            is List:
+                # TODO
+            end
+            is Block:
+               # TODO
+            end
+            else: IllegalArgumentException("Unable to infer type of value \(value)").raise()
+        end
+    end
+end
+
+class Vararg(Type):
+    def init(type): pass
+    def eval(args): @type.eval(args) + "..."
 end
 
 class Property(CodePiece):
@@ -212,7 +239,8 @@ class Property(CodePiece):
     def toCode():
         sb = String.builder()
         if @type: sb.add(@type.toCode()).add(" ")
-        if @symbol: sb.add(@symbol.toCode()).add(" ")
+        if @symbol: sb.add(@symbol.toCode())
+        if @symbol and @value: sb.add(" ")
         if @value: sb.add(@value.toCode())
         return sb.build()
     end
@@ -222,27 +250,49 @@ end
 class List(Value):
     def init(args is Object):
         if not args.every(:_0 is Property): IllegalArgumentException("List args must be of type Property!").raise()
+        varargIndex = args.findIndex(:_0.type is Vararg)
+        if varargIndex != nil and varargIndex != args.len() - 1: IllegalArgumentException("Vararg argument must be the last one in the list!").raise()
+        @vararg = varargIndex != nil
         @args = args
     end
 
     EMPTY = List([])
 
     def eval(args): @args
-    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ",") + "]"
+    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ", ") + "]"
     def toString(): @toCode()
+
+    def matchesTypes(other):
+        checklist = $[] # Checklist holds values as we go. All the properties must have a value at the end of the run.
+        for arg in @args: checklist.(arg) = arg.value # Init the checklist
+        for otherArg in other.args: # Go through all the provided args
+            if otherArg.symbol: # Provided arg has a named argument
+                arg = args.where(:_0.symbol == otherArg.symbol)
+                if arg.type != # TODO
+            end
+        end
+    end
 end
 
 class Block(Value):
-    def init(list is List, body is Object): pass
+    def init(args is List, body is Object):
+        @args = args
+        @body = body
+        @env = $[]
+        @closure = nil
+        @lastLine = nil
+        @lastClosure = nil
+    end
 
     def eval(args): pass # TODO
     def toCode():
         addNewlines = @body.isntEmpty()
         sb = String.builder()
         sb.add("{")
-        if @list: sb.add(@list.toCode())
+        if @args: sb.add(@args.toCode())
         if addNewlines: sb.add("\n")
         sb.add(String.from(@body.map(:_0.toCode()), "\n"))
+        if addNewlines: sb.add("\n")
         sb.add("}")
         if addNewlines: sb.add("\n")
         return sb.build()
@@ -277,12 +327,18 @@ class Parser:
 
     def parse():
         @current = 0
+        @typeTable = $[]
+        @symbolTable = $[]
         exprs = $[]
         while not @_isAtEnd():
             exprs.push(@_expression(true))
         end
         return exprs
     end
+
+    # Call syntax sugar rules:
+    # 1. unary prefix operator - -a instead of -(a), doSomething withThis instead of doSomething(withThis)
+    # 2. binary infix operator with receiver - a + b instead of a.+(b), this does that instead of this.does(that)
 
     def _expression(requiresNewline):
         @_matchAllNewlines()
@@ -345,7 +401,8 @@ class Parser:
            name $= @_consume(TokenType.ID, "Expected an ID for arg name")
            if @_nextTokenIsValue(terminator): value $= @_expression(false) # has default value
         end
-        return Property(type, @_tokenToSymbol(name), value)
+        nameSymbol = @_tokenToSymbol(name)
+        return Property(type, nameSymbol, value)
     end
 
     def _nextTokenIsValue(terminator):
@@ -354,12 +411,28 @@ class Parser:
     end
 
     def _type(): # Either an ID or a block definition
+        type = nil
         if @_match(TokenType.ID):
             id = @_previous()
-            if @_match(TokenType.DOT): return @_blockDef(id)
-            else: return Type(nil, nil, @_tokenToSymbol(id))
+            if @_match(TokenType.DOT):
+                if @_peekSequence([TokenType.DOT, TokenType.DOT]):
+                    @_advance()
+                    @_advance()
+                    type $= Vararg(Type(@_tokenToSymbol(id)))
+                end
+                else: type $= @_blockDef(id)
+            end
+            else: type $= Type(@_tokenToSymbol(id))
         end
-        else: return @_blockDef(nil)
+        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(false))
+        else: type $= @_blockDef(nil)
+        typeKey = type.toString()
+        cachedValue = @typeTable.(typeKey)
+        if cachedValue: return cachedValue
+        else:
+            @typeTable.(typeKey) = type
+            return type
+        end
     end
 
     def _blockDef(receiver):
@@ -367,12 +440,12 @@ class Parser:
         args = nil
         value = nil
         if @_match(TokenType.LEFT_BRACKET): args $= @_list(false)
-        if @_peek().type == TokenType.ID: value $= @_advance()
+        if @_peek().type != TokenType.RIGHT_BRACE: value $= @_type()
         @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
         return Type(@_tokenToSymbol(receiver), args, @_tokenToSymbol(value))
     end
 
-     def _matchAllNewlines:
+     def _matchAllNewlines():
         while @_match(TokenType.NEWLINE): pass
      end
 
@@ -423,9 +496,31 @@ class Parser:
 
      def _previous(): return @tokens.(@current - 1)
 
-     def _tokenToSymbol(token): ife(token is Token, :Symbol(token.literal), token)
+     def _tokenToSymbol(token):
+        if token is not Token: return nil
+        symbol $= Symbol(token.literal)
+        symbolKey = symbol.toString()
+        cachedValue = @symbolTable.(symbolKey)
+        if cachedValue: return cachedValue
+        else:
+            @symbolTable.(symbolKey) = symbol
+            return symbol
+        end
+    end
 
      def _error(token, message): ParseException(token, message).raise()
+end
+
+class Interpreter:
+    def init(exprs): pass
+
+    def interpret():
+
+    end
+
+    class NativeBlock(Block):
+
+    end
 end
 
 ### MAIN SCRIPT
@@ -436,3 +531,7 @@ tokens = scanner.scanTokens(true)
 parser = Parser(tokens)
 exprs = parser.parse()
 print exprs
+print parser.typeTable
+print parser.symbolTable
+interpreter = Interpreter(exprs)
+interpreter.interpret()
