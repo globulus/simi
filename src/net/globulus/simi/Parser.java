@@ -909,7 +909,7 @@ class Parser {
                   paren, Collections.emptyList())
           ));
           stmts.add(0, new Stmt.If(
-                  new Stmt.Elsif(new Expr.Binary(
+                  new Stmt.Elsif(new Expr.Logical(
                             new Expr.Binary(paramName, new Token(BANG_EQUAL, null, null, declaration.line, declaration.file), new Expr.Literal(null)),
                             new Token(AND, null, null, declaration.line, declaration.file),
                             new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line, declaration.file), paramType)),

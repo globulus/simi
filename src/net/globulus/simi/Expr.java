@@ -578,7 +578,7 @@ abstract class Expr implements Codifiable {
               .append(" ")
               .append(operator.type.toCode())
               .append(" ")
-              .append(left.toCode(0, false))
+              .append(right.toCode(0, false))
               .toString();
     }
 
