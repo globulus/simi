@@ -64,11 +64,6 @@ class Scanner:
             "}": @_addToken(TokenType.RIGHT_BRACE)
             ",": @_addToken(TokenType.COMMA)
             ".": @_addToken(TokenType.DOT)
-            "/": # Single line comments
-                if @_match("/"):
-                    while @_peek() != '\n' and not @_isAtEnd(): @_advance()
-                end
-            end
             "\n":
                 @line = @line + 1
                 @_addToken(TokenType.NEWLINE)
@@ -77,7 +72,15 @@ class Scanner:
                 if @_isWhiteSpace(c): pass
                 elsif @_isStringDelim(c): @_string(c)
                 elsif @_isDigit(c): @_number()
-                else: @_identifier()
+                else:
+                    if c == "/": # Single line comments
+                        if @_match("/"):
+                            while @_peek() != '\n' and not @_isAtEnd(): @_advance()
+                            return
+                        end
+                    end
+                    @_identifier()
+                end
             end
         end
     end
@@ -107,8 +110,8 @@ class Scanner:
             return
         end
         @_advance()
-        value = @_escapedString(@start + 1, @current - 1)
-        @_addToken(TokenType.STRING, value)
+        val = @_escapedString(@start + 1, @current - 1)
+        @_addToken(TokenType.STRING, val)
     end
 
     def _escapedString(start, stop):
@@ -170,41 +173,41 @@ class Value(CodePiece):
 end
 
 class Num(Value):
-    def init(value is Number): pass
-    def eval(args): @value
-    def toCode(): @value.toString()
+    def init(val is Number): pass
+    def eval(args): @val
+    def toCode(): @val.toString()
 end
 
 class Str(Value):
-    def init(value is String): pass
-    def eval(args): @value
-    def toCode(): '"' + @value + '"'
+    def init(val is String): pass
+    def eval(args): @val
+    def toCode(): '"' + @val + '"'
     def toString(): @toCode()
 end
 
 class Symbol(Value):
-    def init(value is String): pass
-    def eval(args): @value
-    def toCode(): @value
+    def init(val is String): pass
+    def eval(args): @val
+    def toCode(): @val
     def toString(): @toCode()
 end
 
 class Type(Value):
-    def init(receiver is Symbol, args is List, value is Type): pass
-    def init(value):
-        if value == nil or (value is not Symbol and value is not List):
-            IllegalArgumentException("Type return value must be a symbol or a list!").raise()
+    def init(rec is Symbol, args is List, val is Type): pass
+    def init(val):
+        if val == nil or (val is not Symbol and val is not List):
+            IllegalArgumentException("Type return val must be a symbol or a list!").raise()
         end
-        @value = value
+        @val = val
     end
     def eval(args):
         sb = String.builder()
-        if @receiver: sb.add(@receiver.toCode()).add(".")
-        if @receiver == nil and @args == nil and @value != nil: sb.add(@value.toCode())
+        if @rec: sb.add(@rec.toCode()).add(".")
+        if @rec == nil and @args == nil and @val != nil: sb.add(@val.toCode())
         else:
             sb.add("{")
             if @args: sb.add(@args.toCode())
-            if @value: sb.add(@value.toCode())
+            if @val: sb.add(@val.toCode())
             sb.add("}")
         end
         return sb.build()
@@ -212,19 +215,17 @@ class Type(Value):
     def toCode(): @eval(nil)
     def toString(): @toCode()
 
-    def isTypeOf(value): # Checks if provided value is of this type
-        when value:
-            is Num: return @value == Num
-            is Str: return @value == Str
-            is Symbol: return @value == Symbol
-            is Type: pass # TODO what to do here?
-            is List:
-                # TODO
-            end
+    def isTypeOf(val): # Checks if provided val is of this type
+        when val:
+            is Num: return @val == Num
+            is Str: return @val == Str
+            is Symbol: return @val == Symbol
+            is Type: return self == val
+            is List: return @val.matches(val)
             is Block:
                # TODO
             end
-            else: IllegalArgumentException("Unable to infer type of value \(value)").raise()
+            else: IllegalArgumentException("Unable to infer type of val \(val)").raise()
         end
     end
 end
@@ -235,17 +236,19 @@ class Vararg(Type):
 end
 
 class Property(CodePiece):
-    def init(type is Type, symbol is Symbol, value is Value): pass
+    def init(type is Type, symbol is Symbol, val is Value): pass
     def toCode():
         sb = String.builder()
         if @type: sb.add(@type.toCode()).add(" ")
         if @symbol: sb.add(@symbol.toCode())
-        if @symbol and @value: sb.add(" ")
-        if @value: sb.add(@value.toCode())
+        if @symbol and @val: sb.add(" ")
+        if @val: sb.add(@val.toCode())
         return sb.build()
     end
     def toString(): @toCode()
 end
+
+class ListMismatchException(Exception)
 
 class List(Value):
     def init(args is Object):
@@ -263,14 +266,44 @@ class List(Value):
     def toString(): @toCode()
 
     def matchesTypes(other):
-        checklist = $[] # Checklist holds values as we go. All the properties must have a value at the end of the run.
-        for arg in @args: checklist.(arg) = arg.value # Init the checklist
+        checklist = $[] # Checklist holds vals as we go. All the properties must have a val at the end of the run.
+        for arg in @args: checklist.(arg) = arg.val # Init the checklist
         for otherArg in other.args: # Go through all the provided args
             if otherArg.symbol: # Provided arg has a named argument
                 arg = args.where(:_0.symbol == otherArg.symbol)
-                if arg.type != # TODO
+                if not arg.type.isTypeOf(otherArg.val): ListMismatchException("Types don't match").raise()
+                checklist.(arg) = otherArg.val # If types match, copy the provided val
             end
         end
+        if args.last() is Vararg:
+
+        end
+        else:
+
+        end
+    end
+end
+
+class UnassignedSymbolException(Exception):
+    def init(symbol): super.init("Unable to find value for symbol: \(symbol.toCode())!")
+end
+
+class Environment:
+    def init(parent is Environment):
+        @parent = parent
+        @depth = ife(parent, :parent.depth + 1, 0)
+        @_props = $[]
+    end
+
+    def set(prop is Property): @_props.(prop.symbol) = prop
+    def get(key is Symbol):
+        env = self
+        while env:
+            value = @_props.(key)
+            if value: return value
+            else: env $= env.parent
+        end
+        UnassignedSymbolException().raise()
     end
 end
 
@@ -278,16 +311,13 @@ class Block(Value):
     def init(args is List, body is Object):
         @args = args
         @body = body
-        @env = $[]
-        @closure = nil
-        @lastLine = nil
-        @lastClosure = nil
     end
 
     def eval(args): pass # TODO
     def toCode():
         addNewlines = @body.isntEmpty()
         sb = String.builder()
+        if @rec: sb.add(@rec.toCode()).add(".")
         sb.add("{")
         if @args: sb.add(@args.toCode())
         if addNewlines: sb.add("\n")
@@ -301,11 +331,12 @@ class Block(Value):
 end
 
 class Call(Value): # The sole expression in Adam is a block invocation with args
-    def init(op is Value, args is List): pass
+    def init(rec is Value, op is Value, args is List): pass
 
     def eval(args): @op.eval(args)
     def toCode():
         sb = String.builder()
+        if @rec: sb.add(@rec.toCode()).add(".")
         sb.add(@op.toCode())
         if @args:
             argsCode = @args.toCode()
@@ -314,6 +345,14 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         return sb.build()
     end
     def toString(): @toCode()
+
+    def isPrimitive(): not rec and not args # Primitive call is one that has no receiver nor args, meaning it's just a value
+    def toValue():
+        if @isPrimitive(): return @op
+        else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
+    end
+    def toProperty(): Property(nil, nil, @toValue())
+    def toList(): List([@toProperty()])
 end
 
 class ParseException(Exception):
@@ -329,29 +368,75 @@ class Parser:
         @current = 0
         @typeTable = $[]
         @symbolTable = $[]
+
         exprs = $[]
+        @_matchAllNewlines()
         while not @_isAtEnd():
-            exprs.push(@_expression(true))
+            line = @_expressionLine()
+            exprs.addAll(line) # B
+            @_matchAllNewlines()
         end
+        return exprs
+    end
+
+    # Purposely not using "statement" as expression line returns a value as well
+    # An expression line is a desugaring candidate - multiple exprs on a single line
+    # Raises an exception if desugaring doesn't work
+    def _expressionLine():
+        exprs = $[]
+        while not @_match(TokenType.NEWLINE):
+            exprs.push(@_expression(false))
+        end
+        # Desugaring phase
+
         return exprs
     end
 
     # Call syntax sugar rules:
     # 1. unary prefix operator - -a instead of -(a), doSomething withThis instead of doSomething(withThis)
-    # 2. binary infix operator with receiver - a + b instead of a.+(b), this does that instead of this.does(that)
+    # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
+    # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
 
     def _expression(requiresNewline):
-        @_matchAllNewlines()
+        rec = nil
         op = nil
         args = List.EMPTY
         if @_match(TokenType.STRING): op $= Str(@_previous().literal)
         elsif @_match(TokenType.NUMBER): op $= Num(@_previous().literal)
-        else:
-            op $= @_idOrBlock()
-            if @_match(TokenType.LEFT_PAREN): args $= @_list(true)
+        else: op $= @_idOrBlock()
+
+        # Automatically desugar assignment expressions to make building of Core easier
+        # Assignment has internally highest priority
+        if op is Symbol and @_peek().literal == "=":
+            rec $= op
+            op $= @_tokenToSymbol(@_advance())
+            args $= @_expression(true).toList()
+            return Call(rec, op, args)
         end
-        if requiresNewline: @_consume(TokenType.NEWLINE, "Expected a newline after an expression")
-        return ife(args, :Call(op, args), op)
+
+        if @_match(TokenType.DOT):
+            rec $= op
+            op $= @_tokenToSymbol(@_consume(TokenType.ID, "Expected ID for a receiver call"))
+        end
+        if @_match(TokenType.LEFT_PAREN): args $= @_list(true)
+        call = Call(rec, op, args)
+#        if requiresNewline:
+#            sameLineExprs = $[call]
+#            while not @_match(TokenType.NEWLINE):
+#                nextExpr = @_expression(false)
+#                sameLineExprs.push(nextExpr)
+#            end
+#            # Attempt desugaring
+#            i = 0
+#            while i < sameLineExprs.len():
+#                e1 = sameLineExprs.(i)
+#                sdfsdf
+#            end
+#
+#            @_consume(TokenType.NEWLINE, "Expected a newline after an expression")
+#
+#        end
+        return call
     end
 
     def _idOrBlock():
@@ -365,10 +450,15 @@ class Parser:
         body = $[]
         if @_match(TokenType.LEFT_BRACKET): list $= @_list(false)
         else: list $= List.EMPTY
-        while true:
-            @_matchAllNewlines()
-            if @_match(TokenType.RIGHT_BRACE): break
-            body.push(@_expression(false))
+        if @_match(TokenType.NEWLINE): # Multi line body
+            while not @_match(TokenType.RIGHT_BRACE):
+                body.addAll(@_expressionLine())
+                @_matchAllNewlines()
+            end
+        end
+        elsif not @_match(TokenType.RIGHT_BRACE):
+             body.push(@_expression(false))
+             @_consume(TokenType.RIGHT_BRACE, "Expected } at end of block")
         end
         return Block(list, body)
     end
@@ -388,21 +478,21 @@ class Parser:
     def _property(isCall, terminator): # Type name[ default]
         type = nil
         name = nil
-        value = nil
+        val = nil
         if isCall:
-           value $= @_expression(false)
+           val $= @_expression(false)
            if @_nextTokenIsValue(terminator):
-                name $= value
-                value $= @_expression(false)
+                name $= val
+                val $= @_expression(false)
            end
         end
         else:
            type $= @_type()
            name $= @_consume(TokenType.ID, "Expected an ID for arg name")
-           if @_nextTokenIsValue(terminator): value $= @_expression(false) # has default value
+           if @_nextTokenIsValue(terminator): val $= @_expression(false) # has default val
         end
         nameSymbol = @_tokenToSymbol(name)
-        return Property(type, nameSymbol, value)
+        return Property(type, nameSymbol, val)
     end
 
     def _nextTokenIsValue(terminator):
@@ -426,7 +516,7 @@ class Parser:
         end
         elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(false))
         else: type $= @_blockDef(nil)
-        typeKey = type.toString()
+        typeKey = "#" + type.toString()
         cachedValue = @typeTable.(typeKey)
         if cachedValue: return cachedValue
         else:
@@ -435,14 +525,14 @@ class Parser:
         end
     end
 
-    def _blockDef(receiver):
+    def _blockDef(rec):
         @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
         args = nil
-        value = nil
+        val = nil
         if @_match(TokenType.LEFT_BRACKET): args $= @_list(false)
-        if @_peek().type != TokenType.RIGHT_BRACE: value $= @_type()
+        if @_peek().type != TokenType.RIGHT_BRACE: val $= @_type()
         @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
-        return Type(@_tokenToSymbol(receiver), args, @_tokenToSymbol(value))
+        return Type(@_tokenToSymbol(rec), args, val)
     end
 
      def _matchAllNewlines():
@@ -499,7 +589,7 @@ class Parser:
      def _tokenToSymbol(token):
         if token is not Token: return nil
         symbol $= Symbol(token.literal)
-        symbolKey = symbol.toString()
+        symbolKey = "#" + symbol.toString()
         cachedValue = @symbolTable.(symbolKey)
         if cachedValue: return cachedValue
         else:
@@ -512,14 +602,16 @@ class Parser:
 end
 
 class Interpreter:
-    def init(exprs): pass
+    def init(exprs):
+        @exprs = exprs
+        @env = Environment(nil)
+    end
 
     def interpret():
 
     end
 
-    class NativeBlock(Block):
-
+    def _initRootEnv():
     end
 end
 
@@ -531,7 +623,7 @@ tokens = scanner.scanTokens(true)
 parser = Parser(tokens)
 exprs = parser.parse()
 print exprs
-print parser.typeTable
-print parser.symbolTable
+#print parser.typeTable
+#print parser.symbolTable
 interpreter = Interpreter(exprs)
 interpreter.interpret()
