@@ -235,8 +235,12 @@ class Vararg(Type):
     def eval(args): @type.eval(args) + "..."
 end
 
-class Property(CodePiece):
+class Property(Value):
     def init(type is Type, symbol is Symbol, val is Value): pass
+    def eval(args):
+        if not @val: UnsupportedOperationException("Unable to evaluate this property: \(self)").raise()
+        return @val.eval(args)
+    end
     def toCode():
         sb = String.builder()
         if @type: sb.add(@type.toCode()).add(" ")
@@ -264,6 +268,8 @@ class List(Value):
     def eval(args): @args
     def toCode(): "[" + String.from(@args.map(:_0.toCode()), ", ") + "]"
     def toString(): @toCode()
+
+    def type(): Type(self)
 
     def matchesTypes(other):
         checklist = $[] # Checklist holds vals as we go. All the properties must have a val at the end of the run.
@@ -328,16 +334,17 @@ class Block(Value):
         return sb.build()
     end
     def toString(): @toCode()
+    def type(): Type(nil, @args, @body.last().returnType())
 end
 
 class Call(Value): # The sole expression in Adam is a block invocation with args
-    def init(rec is Value, op is Value, args is List): pass
+    def init(rec is Property, op is Property, args is List): pass
 
-    def eval(args): @op.eval(args)
+    def eval(args): @op.eval(args) # TODO add receiver
     def toCode():
         sb = String.builder()
-        if @rec: sb.add(@rec.toCode()).add(".")
-        sb.add(@op.toCode())
+        if @rec: sb.add(@rec.val.toCode()).add(".")
+        sb.add(@op.val.toCode())
         if @args:
             argsCode = @args.toCode()
             sb.add("(").add(argsCode.substring(1, argsCode.len() - 1)).add(")")
@@ -353,6 +360,8 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
     end
     def toProperty(): Property(nil, nil, @toValue())
     def toList(): List([@toProperty()])
+
+    def returnType(): @op.type # Type of value that this call will return
 end
 
 class ParseException(Exception):
@@ -362,93 +371,93 @@ class ParseException(Exception):
 end
 
 class Parser:
+
+    ListType = Enum.of(["ARG", "CALL", "RAW"])
+
     def init(tokens): pass
 
     def parse():
         @current = 0
         @typeTable = $[]
+        @_addPrimitiveTypes()
         @symbolTable = $[]
 
         exprs = $[]
         @_matchAllNewlines()
         while not @_isAtEnd():
             line = @_expressionLine()
-            exprs.addAll(line) # B
+            exprs.addAll(line)
             @_matchAllNewlines()
         end
         return exprs
     end
 
+    def _addPrimitiveTypes():
+        @_numType = @_cacheType(Type(Symbol("Num")))
+        @_strType = @_cacheType(Type(Symbol("Str")))
+        @_symbolType = @_cacheType(Type(Symbol("Symbol")))
+    end
+
     # Purposely not using "statement" as expression line returns a value as well
     # An expression line is a desugaring candidate - multiple exprs on a single line
     # Raises an exception if desugaring doesn't work
-    def _expressionLine():
-        exprs = $[]
-        while not @_match(TokenType.NEWLINE):
-            exprs.push(@_expression(false))
-        end
-        # Desugaring phase
-
-        return exprs
-    end
-
     # Call syntax sugar rules:
     # 1. unary prefix operator - -a instead of -(a), doSomething withThis instead of doSomething(withThis)
     # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
     # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
+    def _expressionLine():
+        exprs = $[]
+        while not @_match(TokenType.NEWLINE): exprs.append(@_expression())
+        # Desugaring phase
+        # Find pairs of successive calls
+        i = 1
+        while i < exprs.len():
+            e1 = exprs.(i - 1)
+            e2 = exprs.(i)
+            # TODO
+            i += 2
+        end
+        return exprs
+    end
 
-    def _expression(requiresNewline):
+    def _expression():
         rec = nil
         op = nil
         args = List.EMPTY
-        if @_match(TokenType.STRING): op $= Str(@_previous().literal)
-        elsif @_match(TokenType.NUMBER): op $= Num(@_previous().literal)
-        else: op $= @_idOrBlock()
+        if @_match(TokenType.STRING): op $= Property(@_strType, nil, Str(@_previous().literal))
+        elsif @_match(TokenType.NUMBER): op $= Property(@_numType, nil, Num(@_previous().literal))
+        elsif @_match(TokenType.ID): op $= @_symbolToProperty(@_tokenToSymbol(@_previous()))
+        elsif @_match(TokenType.LEFT_BRACKET):
+            list = @_list(@ListType.RAW)
+            op $= Property(@_cacheType(list.type()), nil, list)
+        end
+        elsif @_match(TokenType.LEFT_BRACE):
+            block = @_block()
+            op $= Property(@_cacheType(block.type()), nil, block)
+        end
+        else: @_error(@_peek(), "Expected a value to start an expression!")
 
         # Automatically desugar assignment expressions to make building of Core easier
         # Assignment has internally highest priority
-        if op is Symbol and @_peek().literal == "=":
+        if op.type == @_symbolType and @_peek().literal == "=":
             rec $= op
-            op $= @_tokenToSymbol(@_advance())
-            args $= @_expression(true).toList()
+            op $= @_symbolToProperty(@_tokenToSymbol(@_advance()))
+            args $= @_expression().toList()
             return Call(rec, op, args)
         end
-
         if @_match(TokenType.DOT):
             rec $= op
-            op $= @_tokenToSymbol(@_consume(TokenType.ID, "Expected ID for a receiver call"))
+            op $= @_symbolToProperty(@_tokenToSymbol(@_consume(TokenType.ID, "Expected ID for a receiver call")))
         end
-        if @_match(TokenType.LEFT_PAREN): args $= @_list(true)
+        if @_match(TokenType.LEFT_PAREN): args $= @_list(@ListType.CALL)
         call = Call(rec, op, args)
-#        if requiresNewline:
-#            sameLineExprs = $[call]
-#            while not @_match(TokenType.NEWLINE):
-#                nextExpr = @_expression(false)
-#                sameLineExprs.push(nextExpr)
-#            end
-#            # Attempt desugaring
-#            i = 0
-#            while i < sameLineExprs.len():
-#                e1 = sameLineExprs.(i)
-#                sdfsdf
-#            end
-#
-#            @_consume(TokenType.NEWLINE, "Expected a newline after an expression")
-#
-#        end
         return call
-    end
-
-    def _idOrBlock():
-        if @_match(TokenType.LEFT_BRACE): return @_block()
-        if @_match(TokenType.ID): return @_tokenToSymbol(@_previous())
-        @_error(@_peek(), "Expected a block or an ID!")
     end
 
     def _block():
         list = nil
         body = $[]
-        if @_match(TokenType.LEFT_BRACKET): list $= @_list(false)
+        if @_match(TokenType.LEFT_BRACKET): list $= @_list(@ListType.ARG)
         else: list $= List.EMPTY
         if @_match(TokenType.NEWLINE): # Multi line body
             while not @_match(TokenType.RIGHT_BRACE):
@@ -457,39 +466,39 @@ class Parser:
             end
         end
         elsif not @_match(TokenType.RIGHT_BRACE):
-             body.push(@_expression(false))
+             body.append(@_expression())
              @_consume(TokenType.RIGHT_BRACE, "Expected } at end of block")
         end
         return Block(list, body)
     end
 
-    def _list(isCall):
+    def _list(type):
         args = $[]
-        terminator = ife(isCall, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET)
+        terminator = ife(type == @ListType.CALL, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET)
         while true:
             @_matchAllNewlines()
-            args.push(@_property(isCall, terminator))
+            args.append(@_property(type, terminator))
             if @_match(terminator): break # end of arg list
             @_consume(TokenType.COMMA, "Expected , between list arguments")
         end
         return List(args)
     end
 
-    def _property(isCall, terminator): # Type name[ default]
+    def _property(listType, terminator): # Type name[ default]
         type = nil
         name = nil
         val = nil
-        if isCall:
-           val $= @_expression(false)
+        if listType != @ListType.ARG:
+           val $= @_expression()
            if @_nextTokenIsValue(terminator):
                 name $= val
-                val $= @_expression(false)
+                val $= @_expression()
            end
         end
         else:
            type $= @_type()
-           name $= @_consume(TokenType.ID, "Expected an ID for arg name")
-           if @_nextTokenIsValue(terminator): val $= @_expression(false) # has default val
+           name $= @_consume(TokenType.ID, "Expected an ID for property name")
+           if @_nextTokenIsValue(terminator): val $= @_expression() # has default val
         end
         nameSymbol = @_tokenToSymbol(name)
         return Property(type, nameSymbol, val)
@@ -514,22 +523,16 @@ class Parser:
             end
             else: type $= Type(@_tokenToSymbol(id))
         end
-        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(false))
+        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(@ListType.ARG))
         else: type $= @_blockDef(nil)
-        typeKey = "#" + type.toString()
-        cachedValue = @typeTable.(typeKey)
-        if cachedValue: return cachedValue
-        else:
-            @typeTable.(typeKey) = type
-            return type
-        end
+        return @_cacheType(type)
     end
 
     def _blockDef(rec):
         @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
         args = nil
         val = nil
-        if @_match(TokenType.LEFT_BRACKET): args $= @_list(false)
+        if @_match(TokenType.LEFT_BRACKET): args $= @_list(@ListType.ARG)
         if @_peek().type != TokenType.RIGHT_BRACE: val $= @_type()
         @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
         return Type(@_tokenToSymbol(rec), args, val)
@@ -598,7 +601,19 @@ class Parser:
         end
     end
 
-     def _error(token, message): ParseException(token, message).raise()
+    def _symbolToProperty(symbol): Property(@_symbolType, nil, symbol)
+
+    def _cacheType(type):
+        typeKey = "#" + type.toString()
+        cachedValue = @typeTable.(typeKey)
+        if cachedValue: return cachedValue
+        else:
+            @typeTable.(typeKey) = type
+            return type
+        end
+    end
+
+    def _error(token, message): ParseException(token, message).raise()
 end
 
 class Interpreter:
@@ -623,6 +638,7 @@ tokens = scanner.scanTokens(true)
 parser = Parser(tokens)
 exprs = parser.parse()
 print exprs
+print "All exprs are calls: " + exprs.every(:_0 is Call).bool()
 #print parser.typeTable
 #print parser.symbolTable
 interpreter = Interpreter(exprs)

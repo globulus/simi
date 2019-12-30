@@ -1,6 +1,47 @@
 import "./stdlib/Stdlib-java.jar"
 
-class$ Object:
+class Actors:
+  # Evaluates a function with self passed as param and returns its result. Can generally be used to map self
+  # to something else, or to perform a nil check (as the function won't be called on a nil value).
+  def let(f): return f(self)
+
+  # Allows for quick init of object while returning self.
+  def apply(f):
+     f(self)
+     return self
+  end
+
+  # Used to add extra steps in chains, as the passed function is invoked with self, while self itself is returned
+  # and not mutated.
+  def also(f):
+      f$()
+      return self
+  end
+
+   # Evaluates the associated block as if all the non-keyword lines refer to self
+   # and as such is useful as a cleaner (but a lot slower) alternative to apply().
+#   def with(block):
+#       import CodeBlocks
+#       body = FunctionCode(block).body().map(def l:
+#            tl = l.trim()
+#            for keyword in CodeBlocks.KEYWORDS:
+#                if tl.startsWith(keyword): return l
+#            end
+#            return "@" + tl
+#        end)
+#       fc = FunctionComposer(nil, nil)
+#       fc.lines(body)
+#       mutatedBlock = gu fc.getString()
+#       mutatedBlock$()
+#       return self
+#   end
+end
+
+class Comparable:
+    def compareTo(other): native
+end
+
+class$ Object(in Actors, in Comparable):
     def len(): native
     def keys(): native
     def values(): native
@@ -12,7 +53,6 @@ class$ Object:
     def iterate(): native
     def has(obj): native
     def equals(other): native
-    def compareTo(other): native
     def toString(): native
     def matches(other): native
     def matches(other, fields): native
@@ -58,7 +98,7 @@ class$ Object:
     def push(elem): @append(elem)
     def every(predicate):
         for item in self:
-            if not condition(item): return false
+            if not predicate(item): return false
         end
         return true
     end
@@ -77,10 +117,10 @@ class$ Object:
         return nil
     end
     def findIndex(predicate):
-        if not @isArray(): return nil
-        item = @find(predicate)
-        if item != nil: return item.key
-        else: return nil
+        for [index, item] in @zip():
+            if predicate(item): return index
+        end
+        return nil
     end
     def count(predicate): @where(predicate).len()
     def forEach(function):
@@ -139,41 +179,10 @@ class$ Object:
    def slice(start): @slice(start, @len())
    def randomItem(): @(Number.randomInt(@len()))
 
-
-   # Evaluates a function with self passed as param and returns its result. Can generally be used to map self
-   # to something else, or to perform a nil check (as the function won't be called on a nil value).
-   def let(f): return f(self)
-
-   # Allows for quick init of object while returning self.
-   def apply(f):
-       f(self)
-       return self
-   end
-
-   # Used to add extra steps in chains, as the passed function is invoked with self, while self itself is returned
-   # and not mutated.
-   def also(f):
+   def use(f):
        f$()
-       return self
-   end
 
-   # Evaluates the associated block as if all the non-keyword lines refer to self
-   # and as such is useful as a cleaner (but a lot slower) alternative to apply().
-#   def with(block):
-#       import CodeBlocks
-#       body = FunctionCode(block).body().map(def l:
-#            tl = l.trim()
-#            for keyword in CodeBlocks.KEYWORDS:
-#                if tl.startsWith(keyword): return l
-#            end
-#            return "@" + tl
-#        end)
-#       fc = FunctionComposer(nil, nil)
-#       fc.lines(body)
-#       mutatedBlock = gu fc.getString()
-#       mutatedBlock$()
-#       return self
-#   end
+   end
 end
 
 class_ Function
@@ -196,6 +205,8 @@ class NilReferenceException(Exception)
 
 class IllegalArgumentException(Exception)
 
+class UnsupportedOperationException(Exception)
+
 class AbstractMethodException(Exception):
     def init(method, sender): @init("\(method) is abstract in \(sender.('class'))!")
 end
@@ -206,7 +217,18 @@ def ife(condition, ifval, elseval):
 end
 
 Io = [
-    read = def: native
+    read = def: native,
+    readNumber = :@read().toNumber(),
+    scanf = def (format is String):
+        line = @read()
+        tokens = String.builder()
+        index = -1
+        while (index $= format.indexOf('%', index + 1)) != nil: tokens.add(format.(index + 1))
+        tokens $= tokens.build()
+        print tokens
+    end,
+
+    printf = def (format is String, args): print format.format(args)
 ]
 
 class Iterator:
@@ -254,7 +276,7 @@ class Range:
     end
 end
 
-class$ Number:
+class$ Number(in Actors, in Comparable):
     def isInteger(): native
 
     def times(): ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
@@ -264,7 +286,6 @@ class$ Number:
     def randomInt(max): native
 
    def equals(other): native
-   def compareTo(other): native
    def toString(): native
 
     def sum(a, b): a + b
@@ -279,9 +300,11 @@ class$ Number:
     def bitUshr(num): native
 
     def char(): native
+
+    def bool(): ife(self, "true", "false")
 end
 
-class$ String:
+class$ String(in Actors, in Comparable):
    def len(): native
    def endsWith(suffix): native
    def format(args): native
@@ -302,7 +325,6 @@ class$ String:
    def iterate(): native
    def has(obj): native
    def equals(other): native
-   def compareTo(other): native
    def toNumber(): native
 
    def builder(): native
@@ -330,7 +352,7 @@ class$ String:
 end
 
 class TypeMismatchException(Exception):
-    def init(var, type): super.init("Expected: \(type) but got " + var.("class"))
+    def init(var, type): super.init("Type mismatch exception: expected \(type.className()) but got \(var.className())!")
 end
 
 Math = [
