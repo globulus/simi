@@ -1,17 +1,22 @@
-a = 5
-c = 6
-- a
-d = a + - d
-go(d) {
-    rez
+def Num [
+    {[Num arg]Num} =,
+    {[Num arg]Num} +
+]
+{[Num a, Num d, {[Num n]Num} -]
+    a = 5
+    - a
+    d = a + - d
+    go(d) {
+        rez
+    }
+    go(a, 5)
+    go(c, +(b, d))
+    go(e, class(Enum, {
+        go(override(b), 5)
+        go(engine, "V6 TDI")
+    }))
+    a.do(this)
+    [a, b, c].do(that)
+    "something".substring(1, 3)
+    go(c, {[Str s, Num b 5, {[Num l, Num r]Str} toString, [Num... nums] numList]})
 }
-go(a, 5)
-go(c, +(b, d))
-go(e, class(Enum, {
-    go(override(b), 5)
-    go(engine, "V6 TDI")
-}))
-a.do(this)
-[a, b, c].do(that)
-"something".substring(1, 3)
-go(c, {[Str s, Num b 5, {[Num l, Num r]Str} toString, [Num... nums] numList]})
