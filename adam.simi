@@ -215,6 +215,7 @@ class Type(Value):
     end
     def toCode(): @eval(nil)
     def toString(): @toCode()
+    def matches(other): @toString() == other.toString()
 
     def isTypeOf(val): # Checks if provided val is of this type
         when val:
@@ -265,9 +266,10 @@ class List(Value):
     end
 
     def eval(args): @args
-    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ", ") + "]"
+    def toCode(): "[" + String.from(@args.map(:_0.val.toCode()), ", ") + "]"
     def toString(): @toCode()
     def iterate(): @args.iterate()
+    def len(): @args.len()
 
     def type(): Type(self)
     def get(symbol is Symbol):
@@ -358,7 +360,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         if @isPrimitive(): return @op
         else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
     end
-    def toProperty(): Property(nil, nil, @toValue())
+    def toProperty(): Property(nil, nil, self)
     def toList(): List([@toProperty()])
 end
 
@@ -412,18 +414,103 @@ class Parser:
             @_checkTypedef(blockGuid)
             exprs.append(@_expression(blockGuid))
         end
-        for expr in exprs: print "Returns: " + @_returnTypeOfCall(blockGuid, expr)
+        print "Parsed on line " + exprs
         # Desugaring phase
         # Find pairs of successive calls
+        len = exprs.len()
+        if len == 1: return exprs
         i = 1
-        while i < exprs.len():
-            e1 = exprs.(i - 1)
+        desugared = $[]
+        while i < len:
+            e1 = ife(desugared.isEmpty(), :exprs.(i - 1), :desugared.last())
             e2 = exprs.(i)
-            # TODO
-            i += 2
+            unaryAttempt = @_desugarUnary(blockGuid, e1, e2)
+            if unaryAttempt:
+                desugared.append(unaryAttempt)
+                i += 2
+                continue
+            end
+            else:
+                e3 = ife(i + 1 < len, :exprs.(i + 1), nil)
+                if e3:
+                    binaryAttempt = @_desugarBinary(blockGuid, e1, e2, e3)
+                    if binaryAttempt:
+                        desugared.append(binaryAttempt)
+                        i += 3
+                        continue
+                    end
+                end
+            end
+            desugared.append(e1)
+            i += 1
         end
-        if exprs == nil: return []
-        return exprs
+        print "desu " + desugared
+        return desugared
+    end
+
+    def _desugarUnary(blockGuid, e1, e2):
+        print "Attempting unary desugar \(e1) \(e2)"
+        if e1.op.val is Symbol:
+            e2Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e2))
+            rescue ex:
+                if ex: print "Silenced unary exception: \(ex.message)"
+            end
+            if e2Type.val is not List:
+                print "E2 isn't a list but \(e2Type), bailing"
+                return nil
+            end
+            member = e2Type.val.get(e1.op.val)
+            if not member:
+                print "Member not found for \(e1.op.val), bailing"
+                return nil
+            end
+            memberType = member.type
+            if memberType is Block and memberType.args and memberType.args.isntEmpty():
+                print "Member is a non-primitive block: \(member), bailing"
+                return nil
+            end
+            print "Found primitive member \(member) on \(e2.op), returning desugar"
+            return Call(e2.op, e1.op, nil)
+        end
+        print "E1 isn't a symbol but \(e1.op), bailing"
+        return nil
+    end
+
+    def _desugarBinary(blockGuid, e1, e2, e3):
+        print "Attempting binary desugar \(e1) \(e2) \(e3)"
+        if e2.op.val is Symbol:
+            e1Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e1))
+            rescue ex:
+                if ex: print "Silenced unary exception: \(ex.message)"
+            end
+            if e1Type.val is not List:
+                print "E1 isn't a list but \(e1Type), bailing"
+                return nil
+            end
+            member = e1Type.val.get(e2.op.val)
+            if not member:
+                print "Member not found for \(e2.op.val), bailing"
+                return nil
+            end
+            memberType = member.type
+            if memberType.args.len() != 1:
+                print "Member is not a single arg block: \(member), bailing"
+                return nil
+            end
+            e3Type = @_returnTypeOfCall(blockGuid, e3)
+            rescue ex:
+                if ex: print "Silenced unary exception: \(ex.message)"
+            end
+            firstArgType = memberType.args.args.0.type
+            if not firstArgType.matches(e3Type): # FIXME e3Type is Symbol, firstArgType is Type
+                print "E3 type \(e3Type) doesn't match \(firstArgType), bailing"
+                return nil
+            end
+            print "Binary desugar found"
+            return Call(e1.op, e2.op, List([e3.op]))
+        end
+        print "E2 isn't a symbol but \(e2.op), bailing"
+        return nil
     end
 
     def _checkTypedef(blockGuid):
@@ -460,8 +547,10 @@ class Parser:
         if op.type.matches(@_symbolType) and @_peek().literal == "=":
             rec $= op
             op $= @_symbolToProperty(@_tokenToSymbol(@_advance()))
-            args $= @_expression(blockGuid).toList()
-            return Call(rec, op, args)
+            args $= @_expressionLine(blockGuid)
+            if args.len() != 1: @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
+            @current = @current - 1 # Backtrack so that we still have the NEWLINE in queue
+            return Call(rec, op, args.first().toList())
         end
         if @_match(TokenType.DOT):
             rec $= op
@@ -681,13 +770,8 @@ class Parser:
 #                opType $= @_typeOfBlock(blockGuid, call.op.val)
 #                if not opType.matches(@_symbolType): IllegalArgumentException("Op in receiver call must be a symbol!").raise()
 #            end
-            if recType.val is not List:
-                if recType.val is Symbol:
-                    recType $= @typeAliases.(@_implicitKey(recType.val.toString()))
-                    print "Rec type isn't obviously a list, checking aliases: \(recType)"
-                end
-                if recType.val is not List: IllegalArgumentException("Can't invoke receiver call on a non-list receiver: \(rec)").raise()
-            end
+            recType $= @_listOrListAlias(recType)
+            if recType.val is not List: IllegalArgumentException("Can't invoke receiver call on a non-list receiver: \(rec)").raise()
             callee = recType.val.get(call.op.val)
             type $= callee.type
         end
@@ -700,6 +784,12 @@ class Parser:
             else: type $= opType
         end
         return type.val
+    end
+
+    def _listOrListAlias(type):
+        if type.val is List: return type
+        valStr = ife(type.val is String, type.val, :type.val.toString())
+        return @typeAliases.(@_implicitKey(valStr))
     end
 
     def _implicitKey(str): "#" + str

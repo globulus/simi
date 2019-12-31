@@ -1,10 +1,12 @@
 def Num [
     {[Num arg]Num} =,
-    {[Num arg]Num} +
+    {[Num arg]Num} +,
+    {Num} -
 ]
-{[Num a, Num d, {[Num n]Num} -]
+{[Num a, Num b, Num c, Num d]
     a = 5
     - a
+    c = a + b
     d = a + - d
     go(d) {
         rez
