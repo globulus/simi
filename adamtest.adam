@@ -3,13 +3,13 @@ def Num [
     {[Num arg]Num} +,
     {Num} -
 ]
-{[Num a, Num b, Num c, Num d]
+{[Num a, Num b, Num c, Num d, {[Num a, {[Str arg]Num} block]} go]
     a = 5
     - a
     c = a + b
     d = a + - d
     go(d) {
-        rez
+        10
     }
     go(a, 5)
     go(c, +(b, d))
