@@ -266,7 +266,7 @@ class List(Value):
     end
 
     def eval(args): @args
-    def toCode(): "[" + String.from(@args.map(:_0.val.toCode()), ", ") + "]"
+    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ", ") + "]"
     def toString(): @toCode()
     def iterate(): @args.iterate()
     def len(): @args.len()
@@ -351,6 +351,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
             argsCode = @args.toCode()
             sb.add("(").add(argsCode.substring(1, argsCode.len() - 1)).add(")")
         end
+        elsif @rec: sb.add("()")
         return sb.build()
     end
     def toString(): @toCode()
@@ -360,8 +361,8 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         if @isPrimitive(): return @op
         else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
     end
-    def toProperty(): Property(nil, nil, self)
-    def toList(): List([@toProperty()])
+    def toProperty(type): Property(type, nil, self)
+    def toList(type): List([@toProperty(type)])
 end
 
 class ParseException(Exception):
@@ -416,35 +417,53 @@ class Parser:
         end
         print "Parsed on line " + exprs
         # Desugaring phase
-        # Find pairs of successive calls
+        exprs $= @_desugarUnaryPass(blockGuid, exprs)
+        exprs $= @_desugarBinaryPass(blockGuid, exprs)
+        print "desugared " + exprs
+        return exprs
+    end
+
+    def _desugarUnaryPass(blockGuid, exprs):
         len = exprs.len()
         if len == 1: return exprs
-        i = 1
         desugared = $[]
+        i = 1
         while i < len:
-            e1 = ife(desugared.isEmpty(), :exprs.(i - 1), :desugared.last())
+            e1 = exprs.(i - 1)
             e2 = exprs.(i)
             unaryAttempt = @_desugarUnary(blockGuid, e1, e2)
             if unaryAttempt:
                 desugared.append(unaryAttempt)
-                i += 2
-                continue
+                i += 1
             end
-            else:
-                e3 = ife(i + 1 < len, :exprs.(i + 1), nil)
-                if e3:
-                    binaryAttempt = @_desugarBinary(blockGuid, e1, e2, e3)
-                    if binaryAttempt:
-                        desugared.append(binaryAttempt)
-                        i += 3
-                        continue
-                    end
-                end
-            end
-            desugared.append(e1)
+            else: desugared.append(e1)
             i += 1
+            if i == len: desugared.append(e2)
         end
-        print "desu " + desugared
+        return desugared
+    end
+
+    def _desugarBinaryPass(blockGuid, exprs):
+        len = exprs.len()
+        if len < 3: return exprs
+        desugared = $[]
+        i = 2
+        while i < len:
+             e1 = exprs.(i - 2)
+             e2 = exprs.(i - 1)
+             e3 = exprs.(i)
+             binaryAttempt = @_desugarBinary(blockGuid, e1, e2, e3)
+             if binaryAttempt:
+                desugared.append(binaryAttempt)
+                i += 2
+             end
+             else: desugared.append(e1)
+             i += 1
+             if i == len:
+                desugared.append(e2)
+                desugared.append(e3)
+             end
+        end
         return desugared
     end
 
@@ -465,11 +484,12 @@ class Parser:
                 return nil
             end
             memberType = member.type
-            if memberType is Block and memberType.args and memberType.args.isntEmpty():
+            if memberType.args and memberType.args.isntEmpty():
                 print "Member is a non-primitive block: \(member), bailing"
                 return nil
             end
             print "Found primitive member \(member) on \(e2.op), returning desugar"
+            print e2Type
             return Call(e2.op, e1.op, nil)
         end
         print "E1 isn't a symbol but \(e1.op), bailing"
@@ -502,12 +522,12 @@ class Parser:
                 if ex: print "Silenced unary exception: \(ex.message)"
             end
             firstArgType = memberType.args.args.0.type
-            if not firstArgType.matches(e3Type): # FIXME e3Type is Symbol, firstArgType is Type
+            if not e3Type.matches(firstArgType):
                 print "E3 type \(e3Type) doesn't match \(firstArgType), bailing"
                 return nil
             end
             print "Binary desugar found"
-            return Call(e1.op, e2.op, List([e3.op]))
+            return Call(e1.toProperty(e1Type), e2.op, e3.toList(e3Type))
         end
         print "E2 isn't a symbol but \(e2.op), bailing"
         return nil
@@ -550,7 +570,7 @@ class Parser:
             args $= @_expressionLine(blockGuid)
             if args.len() != 1: @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
             @current = @current - 1 # Backtrack so that we still have the NEWLINE in queue
-            return Call(rec, op, args.first().toList())
+            return Call(rec, op, args.first().toList(nil))
         end
         if @_match(TokenType.DOT):
             rec $= op
@@ -569,7 +589,7 @@ class Parser:
 
         if @_match(TokenType.LEFT_BRACKET): list $= @_list(blockGuid, @ListType.ARG)
         else: list $= nil
-        for arg in list: @_putSymbolType(blockGuid, arg)
+        for arg in list: @_putSymbolType(blockGuid, arg.symbol, arg.type)
 
         if @_match(TokenType.NEWLINE): # Multi line body
             while not @_match(TokenType.RIGHT_BRACE):
@@ -727,18 +747,18 @@ class Parser:
         end
     end
 
-    def _putSymbolType(blockGuid is String, prop is Property):
-        key = @_implicitKey(prop.symbol.toString())
+    def _putSymbolType(blockGuid is String, symbol, type):
+        key = @_implicitKey(symbol.toString())
         symbolBlockTable = @symbolTypes.(key)
         if not symbolBlockTable:
             symbolBlockTable $= $[]
             @symbolTypes.(key) = symbolBlockTable
         end
-        symbolBlockTable.(blockGuid) = prop.type
-        print "Assigned type \(prop.type) to \(key)\" in \(blockGuid)"
+        symbolBlockTable.(blockGuid) = type
+        print "Assigned type \(type) to \(key) in \(blockGuid)"
     end
 
-    def _getSymbolType(blockGuid is String, symbol is Symbol):
+    def _getSymbolType(blockGuid is String, symbol):
         symbolKey = @_implicitKey(symbol.toString())
         table = @symbolTypes.(symbolKey)
         currentBlock = blockGuid
@@ -750,7 +770,7 @@ class Parser:
             end
             else: currentBlock $= @blockParents.(currentBlock) # Look up in parent environment
         end
-        IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
+        if symbol is not Call: IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
     end
 
     def _typeOfBlock(blockGuid, block is Block): Type(nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
@@ -758,6 +778,11 @@ class Parser:
     def _returnTypeOfCall(blockGuid, call is Call):
         print "Inferring return type of \(call.toCode())"
         type = nil
+#        type = @_getSymbolType(blockGuid, call)
+#        if type:
+#            print "Found memoized return value of \(type)"
+#            return type
+#        end
         if call.rec:
             recType = call.rec.type
             if recType.matches(@_symbolType):
@@ -783,13 +808,14 @@ class Parser:
             end
             else: type $= opType
         end
-        return type.val
+        returnType = Type(type.val)
+#        @_putSymbolType(blockGuid, call, returnType)
+        return returnType
     end
 
     def _listOrListAlias(type):
         if type.val is List: return type
-        valStr = ife(type.val is String, type.val, :type.val.toString())
-        return @typeAliases.(@_implicitKey(valStr))
+        return @typeAliases.(@_implicitKey(type.val.toString()))
     end
 
     def _implicitKey(str): "#" + str
