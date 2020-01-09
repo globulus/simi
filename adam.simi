@@ -10,6 +10,8 @@ TokenType = Enum.of([
     "RIGHT_BRACKET",
     "LEFT_BRACE",
     "RIGHT_BRACE",
+    "LESS_THAN",
+    "GREATER_THAN",
     "COMMA",
     "DOT",
     "NEWLINE",
@@ -42,6 +44,7 @@ class Scanner:
         @start = 0
         @current = 0
         @line = 1
+        @_lessThanCount = 0 # We keep track of < tokens to decide which ones are generics delimiters and which are IDs
     end
 
     def scanTokens(addEof):
@@ -50,7 +53,7 @@ class Scanner:
             @_scanToken()
         end
         if addEof: @tokens.append(Token(TokenType.EOF, "", nil, @line))
-        return @tokens #
+        return @tokens
     end
 
     def _scanToken():
@@ -88,7 +91,7 @@ class Scanner:
     def _identifier():
         while @_isValidId(@_peek()): @_advance()
         text = @source.substring(@start, @current)
-        @_addToken(TokenType.ID, text)
+        if not @_handleGenerics(text): @_addToken(TokenType.ID, text)
     end
 
     def _number():
@@ -116,6 +119,67 @@ class Scanner:
 
     def _escapedString(start, stop):
         return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
+    end
+
+    def _handleGenerics(text):
+        if text.endsWith(">") and text.len() > 1:
+            if text.startsWith("<"):
+                @_addToken(TokenType.LESS_THAN)
+                @_addToken(TokenType.ID, text.substring(1, text.len() - 1))
+                @_addToken(TokenType.GREATER_THAN)
+            end
+            else: @_gensListOrId(text)
+            return true
+        end
+        return false
+    end
+
+    def _gensListOrId(text): # Goes back to analyze if we had indeed a generics list
+        i = @tokens.len() - 1
+        foundGensList = false
+        while i >= 0:
+            token = @tokens.(i)
+            if token.type == TokenType.ID:
+                if @_tryLessThanSplit(token, i):
+                    foundGensList $= true
+                    break
+                end
+                else:
+                    i -= 1
+                    token $= @tokens.(i)
+                end
+            end
+            if token.type != TokenType.COMMA: break
+            i -= 1
+            token $= @tokens.(i)
+            if token.type != TokenType.ID: break
+            if @_tryLessThanSplit(token, i):
+                foundGensList $= true
+                break
+            end
+            i -= 1
+            token $= @tokens.(i)
+            if token.type == TokenType.COMMA: continue
+            if token.type != TokenType.ID: break
+            if @_tryLessThanSplit(token, i):
+                foundGensList $= true
+                break
+            end
+        end
+        if foundGensList:
+            @_addToken(TokenType.ID, text.substring(0, text.len() - 1))
+            @_addToken(TokenType.GREATER_THAN)
+        end
+        else: @_addToken(TokenType.ID, text)
+    end
+
+    def _tryLessThanSplit(token, i):
+        if token.literal.startsWith("<"):
+            @tokens.(i) = Token(TokenType.ID, nil, token.literal.substring(1), token.line)
+            @tokens.insertAt(i, Token(TokenType.LESS_THAN, nil, "<", token.line))
+            return true
+        end
+        return false
     end
 
     def _match(expected):
@@ -194,7 +258,7 @@ class Symbol(Value):
 end
 
 class Type(Value):
-    def init(rec is Symbol, args is List, val is Type): pass
+    def init(rec is Symbol, gens is List, args is List, val is Type): pass
     def init(val):
         if val == nil or (val is not Symbol and val is not List):
             IllegalArgumentException("Type return val must be a symbol or a list!").raise()
@@ -203,6 +267,7 @@ class Type(Value):
     end
     def eval(args):
         sb = String.builder()
+        if @gens: sb.add(@gens.toCode())
         if @rec: sb.add(@rec.toCode()).add(".")
         if @rec == nil and @args == nil and @val != nil: sb.add(@val.toCode())
         else:
@@ -257,16 +322,35 @@ end
 class ListMismatchException(Exception)
 
 class List(Value):
-    def init(args is Object):
+    Type = Enum.of(["ARG", "CALL", "RAW", "GENS"])
+
+    def init(type is List.Type, args is Object):
         if not args.every(:_0 is Property): IllegalArgumentException("List args must be of type Property!").raise()
         varargIndex = args.findIndex(:_0.type is Vararg)
         if varargIndex != nil and varargIndex != args.len() - 1: IllegalArgumentException("Vararg argument must be the last one in the list!").raise()
         @vararg = varargIndex != nil
         @args = args
+        @type = type
     end
 
     def eval(args): @args
-    def toCode(): "[" + String.from(@args.map(:_0.toCode()), ", ") + "]"
+    def toCode():
+        op = nil
+        en = nil
+        if @type == @Type.CALL:
+            op $= "("
+            en $= ")"
+        end
+        elsif @type == @Type.GENS:
+            op $= "<"
+            en $= ">"
+        end
+        else:
+            op $= "["
+            en $= "]"
+        end
+        return op + String.from(@args.map(:_0.toCode()), ", ") + en
+    end
     def toString(): @toCode()
     def iterate(): @args.iterate()
     def len(): @args.len()
@@ -363,7 +447,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
     end
     def toProperty(type): Property(type, nil, self)
-    def toList(type): List([@toProperty(type)])
+    def toList(type): List(List.Type.ARG, [@toProperty(type)])
 end
 
 class ParseException(Exception):
@@ -373,8 +457,6 @@ class ParseException(Exception):
 end
 
 class Parser:
-
-    ListType = Enum.of(["ARG", "CALL", "RAW"])
 
     def init(tokens): pass
 
@@ -407,13 +489,13 @@ class Parser:
     # An expression line is a desugaring candidate - multiple exprs on a single line
     # Raises an exception if desugaring doesn't work
     # Call syntax sugar rules:
-    # 1. unary prefix operator - -a instead of -(a), doSomething withThis instead of doSomething(withThis)
+    # 1. unary prefix operator - -a instead of a.-(), doSomething withThis instead of withThis.doSomething()
     # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
     # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
     def _expressionLine(blockGuid):
         exprs = $[]
         while not @_match(TokenType.NEWLINE):
-            @_checkTypedef(blockGuid)
+            if @_checkTypedef(blockGuid): continue
             exprs.append(@_expression(blockGuid))
         end
         print "Parsed on line " + exprs
@@ -573,7 +655,9 @@ class Parser:
             @_consume(TokenType.NEWLINE, "Need newline after typedef")
             print "Set typealias for \(id.literal) as \(type)"
             @typeAliases.(@_implicitKey(id.literal)) = type
+            return true
         end
+        return false
     end
 
     def _expression(blockGuid):
@@ -585,7 +669,7 @@ class Parser:
         elsif @_match(TokenType.NUMBER): op $= Property(@_numType, nil, Num(@_previous().literal))
         elsif @_match(TokenType.ID): op $= @_symbolToProperty(@_tokenToSymbol(@_previous()))
         elsif @_match(TokenType.LEFT_BRACKET):
-            list = @_list(blockGuid, @ListType.RAW)
+            list = @_list(blockGuid, List.Type.RAW)
             op $= Property(@_cacheType(list.type()), nil, list)
         end
         elsif @_match(TokenType.LEFT_BRACE):
@@ -608,7 +692,7 @@ class Parser:
             rec $= op
             op $= @_symbolToProperty(@_tokenToSymbol(@_consume(TokenType.ID, "Expected ID for a receiver call")))
         end
-        if @_match(TokenType.LEFT_PAREN): args $= @_list(blockGuid, @ListType.CALL)
+        if @_match(TokenType.LEFT_PAREN): args $= @_list(blockGuid, List.Type.CALL)
         call = Call(rec, op, args)
         return call
     end
@@ -619,7 +703,7 @@ class Parser:
         list = nil
         body = $[]
 
-        if @_match(TokenType.LEFT_BRACKET): list $= @_list(blockGuid, @ListType.ARG)
+        if @_match(TokenType.LEFT_BRACKET): list $= @_list(blockGuid, List.Type.ARG)
         else: list $= nil
         for arg in list: @_putSymbolType(blockGuid, arg.symbol, arg.type)
 
@@ -639,7 +723,12 @@ class Parser:
 
     def _list(blockGuid, type):
         args = $[]
-        terminator = ife(type == @ListType.CALL, TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACKET)
+        terminator = nil
+        when type:
+            List.Type.CALL: terminator $= TokenType.RIGHT_PAREN
+            List.Type.GENS: terminator $= TokenType.GREATER_THAN
+            else: terminator $= TokenType.RIGHT_BRACKET
+        end
         while true:
             @_matchAllNewlines()
             args.append(@_property(blockGuid, type, terminator))
@@ -647,26 +736,37 @@ class Parser:
             if @_match(terminator): break # end of arg list
             @_consume(TokenType.COMMA, "Expected , between list arguments")
         end
-        return List(args)
+        return List(type, args)
     end
 
     def _property(blockGuid, listType, terminator): # Type name[ default]
         type = nil
         name = nil
+        nameSymbol = nil
         val = nil
-        if listType != @ListType.ARG:
-           val $= @_expression(blockGuid)
-           if @_nextTokenIsValue(terminator):
-                name $= val
-                val $= @_expression(blockGuid)
-           end
+        when listType:
+            List.Type.GENS:
+                type $= @_type(blockGuid)
+                if @_nextTokenIsValue(): name $= @_consume(TokenType.ID, "Expected an ID for property name")
+                else: # It was just an ID without upper bound
+                    nameSymbol $= type.val
+                    type $= nil
+                end
+            end
+            List.Type.ARG:
+               type $= @_type(blockGuid)
+               name $= @_consume(TokenType.ID, "Expected an ID for property name")
+               if @_nextTokenIsValue(terminator): val $= @_expression(blockGuid) # has default val
+            end
+            else:
+              val $= @_expression(blockGuid)
+              if @_nextTokenIsValue(terminator):
+                   name $= val
+                   val $= @_expression(blockGuid)
+              end
+            end
         end
-        else:
-           type $= @_type(blockGuid)
-           name $= @_consume(TokenType.ID, "Expected an ID for property name")
-           if @_nextTokenIsValue(terminator): val $= @_expression(blockGuid) # has default val
-        end
-        nameSymbol = @_tokenToSymbol(name)
+        if not nameSymbol: nameSymbol $= @_tokenToSymbol(name)
         return Property(type, nameSymbol, val)
     end
 
@@ -689,19 +789,25 @@ class Parser:
             end
             else: type $= Type(@_tokenToSymbol(id))
         end
-        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(blockGuid, @ListType.ARG))
+        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(blockGuid, List.Type.ARG))
         else: type $= @_blockDef(blockGuid, nil)
         return @_cacheType(type)
     end
 
     def _blockDef(blockGuid, rec):
-        @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
+        gens = nil
         args = nil
         val = nil
-        if @_match(TokenType.LEFT_BRACKET): args $= @_list(blockGuid, @ListType.ARG)
+        if @_match(TokenType.LESS_THAN): gens $= @_list(blockGuid, List.Type.GENS)
+        if gens and not rec and @_peekSequence([TokenType.ID, TokenType.DOT]):
+            rec $= @_advance()
+            @_consume(TokenType.DOT, "This should never be printed")
+        end
+        @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
+        if @_match(TokenType.LEFT_BRACKET): args $= @_list(blockGuid, List.Type.ARG)
         if @_peek().type != TokenType.RIGHT_BRACE: val $= @_type(blockGuid)
         @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
-        return Type(@_tokenToSymbol(rec), args, val)
+        return Type(@_tokenToSymbol(rec), gens, args, val)
     end
 
      def _matchAllNewlines():
@@ -805,7 +911,7 @@ class Parser:
         if symbol is not Call: IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
     end
 
-    def _typeOfBlock(blockGuid, block is Block): Type(nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
+    def _typeOfBlock(blockGuid, block is Block): Type(nil, nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
 
     def _typeOfCall(blockGuid, call is Call):
         type = nil
@@ -876,6 +982,7 @@ end
 source = File.readString("adamtest.adam")
 scanner = Scanner(source)
 tokens = scanner.scanTokens(true)
+#print tokens
 parser = Parser(tokens)
 exprs = parser.parse()
 #print exprs

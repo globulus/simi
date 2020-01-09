@@ -59,6 +59,7 @@ class$ Object(in Actors, in Comparable):
 
     def append(elem): native
     def addAll(obj): native
+    def insertAt(loc, elem): native
     def clear(): native
 
     def indexOf(elem): native

@@ -388,6 +388,11 @@ class SimiObjectImpl implements SimiObject {
       line.addAll(other.line);
   }
 
+  void insertAt(SimiProperty location, SimiProperty elem, SimiEnvironment environment) {
+      checkMutability(Token.self(), environment);
+      line.add(Math.toIntExact(location.getValue().getNumber().asLong()), elem);
+  }
+
   @Override
   public String toString() {
       if (clazz != null) {

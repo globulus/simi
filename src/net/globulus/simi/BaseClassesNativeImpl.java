@@ -157,9 +157,26 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
+                try {
+                    SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                    SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getValue().getObject();
+                    self.addAll(obj, interpreter.getEnvironment());
+                    return arguments.get(0);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        });
+        methods.put(new OverloadableFunction("insertAt", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getValue().getObject();
-                self.addAll(obj, interpreter.getEnvironment());
+                self.insertAt(arguments.get(1), arguments.get(2), interpreter.getEnvironment());
                 return arguments.get(0);
             }
         });
