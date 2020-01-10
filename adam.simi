@@ -260,8 +260,9 @@ end
 class Type(Value):
     def init(rec is Symbol, gens is List, args is List, val is Type): pass
     def init(val):
-        if val == nil or (val is not Symbol and val is not List):
-            IllegalArgumentException("Type return val must be a symbol or a list!").raise()
+        if val is Type: val $= val.val # Destructure return type
+        if val == nil or (val is not Symbol and val is not List and val is not Num and val is not Str):
+            IllegalArgumentException("Type return val must be a primitive or a list!").raise() # BP
         end
         @val = val
     end
@@ -337,9 +338,11 @@ class List(Value):
     def toCode():
         op = nil
         en = nil
+        transformedArgs = @args
         if @type == @Type.CALL:
             op $= "("
             en $= ")"
+            transformedArgs $= transformedArgs.map(:Property(nil, _0.op, _0.val))
         end
         elsif @type == @Type.GENS:
             op $= "<"
@@ -349,7 +352,7 @@ class List(Value):
             op $= "["
             en $= "]"
         end
-        return op + String.from(@args.map(:_0.toCode()), ", ") + en
+        return op + String.from(transformedArgs.map(:_0.toCode()), ", ") + en
     end
     def toString(): @toCode()
     def iterate(): @args.iterate()
@@ -432,10 +435,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         sb = String.builder()
         if @rec: sb.add(@rec.val.toCode()).add(".")
         sb.add(@op.val.toCode())
-        if @args:
-            argsCode = @args.toCode()
-            sb.add("(").add(argsCode.substring(1, argsCode.len() - 1)).add(")")
-        end
+        if @args: sb.add(@args.toCode())
         elsif @rec: sb.add("()")
         return sb.build()
     end
@@ -447,7 +447,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
     end
     def toProperty(type): Property(type, nil, self)
-    def toList(type): List(List.Type.ARG, [@toProperty(type)])
+    def toCallList(type): List(List.Type.CALL, [@toProperty(type)])
 end
 
 class ParseException(Exception):
@@ -489,7 +489,7 @@ class Parser:
     # An expression line is a desugaring candidate - multiple exprs on a single line
     # Raises an exception if desugaring doesn't work
     # Call syntax sugar rules:
-    # 1. unary prefix operator - -a instead of a.-(), doSomething withThis instead of withThis.doSomething()
+    # 1. unary prefix operator with rec - -a instead of a.-(), doSomething withThis instead of withThis.doSomething()
     # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
     # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
     def _expressionLine(blockGuid):
@@ -611,7 +611,7 @@ class Parser:
                 return nil
             end
             print "Binary desugar found"
-            return Call(e1.toProperty(e1Type), e2.op, e3.toList(e3Type))
+            return Call(e1.toProperty(e1Type), e2.op, e3.toCallList(e3Type))
         end
         print "E2 isn't a symbol but \(e2.op), bailing"
         return nil
@@ -674,7 +674,7 @@ class Parser:
         end
         elsif @_match(TokenType.LEFT_BRACE):
             block = @_block(blockGuid)
-            op $= Property(@_cacheType(@_typeOfBlock(blockGuid, block)), nil, block)
+            op $= Property(@_cacheType(@_typeOfBlock(block.guid, block)), nil, block)
         end
         else: @_error(@_peek(), "Expected a value to start an expression!")
 
@@ -686,7 +686,7 @@ class Parser:
             args $= @_expressionLine(blockGuid)
             if args.len() != 1: @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
             @current = @current - 1 # Backtrack so that we still have the NEWLINE in queue
-            return Call(rec, op, args.first().toList(nil))
+            return Call(rec, op, args.first().toCallList(nil))
         end
         if @_match(TokenType.DOT):
             rec $= op
@@ -700,6 +700,7 @@ class Parser:
     def _block(parentGuid):
         blockGuid = guid()
         @blockParents.(blockGuid) = parentGuid
+        print "Analyzing block \(blockGuid) whose parent is \(parentGuid)"
         list = nil
         body = $[]
 
@@ -908,7 +909,10 @@ class Parser:
             end
             else: currentBlock $= @blockParents.(currentBlock) # Look up in parent environment
         end
-        if symbol is not Call: IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
+        if symbol is not Call:
+            a = 5 # B
+            IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
+        end
     end
 
     def _typeOfBlock(blockGuid, block is Block): Type(nil, nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
