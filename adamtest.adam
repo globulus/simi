@@ -3,8 +3,14 @@ def Num [
     {[Num arg]Num} +,
     {Num} -
 ]
-def if <T>{[Num condition, {T} block]T}
-def foreach <T>{[[T... vals] array, {[T it]} block]}
+def ifBranching <T>[
+    Num wasTrue,
+    T result,
+    {[T block]ifBranching} elsif,
+    {[T block]T} else
+]
+def if <T>{[Num condition, T block]ifBranching}
+def foreach <T>{[[T... vals] array, {[T it]} block][T... vals]}
 {[Num a, Num b, Num c, Num d, {[Num a, {[Str arg]Num} block]Num} go]
     a = 5
     - a
@@ -13,6 +19,11 @@ def foreach <T>{[[T... vals] array, {[T it]} block]}
     go(d) {
         10
     }
+
+    if (a) {
+        "something"
+    }
+
    // go(a, 5)
    // go(c, +(b, d))
    // go(e, class(Enum, {

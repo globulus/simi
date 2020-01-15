@@ -262,7 +262,7 @@ class Type(Value):
     def init(val):
         if val is Type: val $= val.val # Destructure return type
         if val == nil or (val is not Symbol and val is not List and val is not Num and val is not Str):
-            IllegalArgumentException("Type return val must be a primitive or a list!").raise() # BP
+            IllegalArgumentException("Type return val must be a primitive or a list!").raise()
         end
         @val = val
     end
@@ -282,6 +282,13 @@ class Type(Value):
     def toCode(): @eval(nil)
     def toString(): @toCode()
     def matches(other): @toString() == other.toString()
+
+    def hasGenType(genType is Type):
+        for gen in @gens:
+            if gen.symbol.matches(genType.val): return true
+        end
+        return false
+    end
 
     def isTypeOf(val): # Checks if provided val is of this type
         when val:
@@ -428,7 +435,9 @@ class Block(Value):
 end
 
 class Call(Value): # The sole expression in Adam is a block invocation with args
-    def init(rec is Property, op is Property, args is List): pass
+
+    def init(rec is Property, op is Property, args is List, gensTable is Object): pass
+    def init(rec, op, args): @init(rec, op, args, $[])
 
     def eval(args): @op.eval(args) # TODO add receiver
     def toCode():
@@ -439,7 +448,8 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         elsif @rec: sb.add("()")
         return sb.build()
     end
-    def toString(): @toCode()
+    def toString(): @toCode() + ife(@gensTable.isntEmpty(), \
+        " with <" + String.from(@gensTable.map(def (k, v): k + " = " + v).values(), ", ") + ">", "")
 
     def isPrimitive(): not rec and not args # Primitive call is one that has no receiver nor args, meaning it's just a value
     def toValue():
@@ -619,6 +629,7 @@ class Parser:
 
     def _desugarLastBlockParam(blockGuid, e1, e2):
         print "Attempting last block desugar \(e1) \(e2)"
+        gensTable = $[]
         if e2.op.val is Block:
             e1Type = @_typeOfCall(blockGuid, e1)
             if not e1Type.args:
@@ -630,9 +641,24 @@ class Parser:
                 return nil
             end
             lastArgType = e1Type.args.args.last().type
-            if not lastArgType.val.matches(e2.op.type.val):
-                print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2.op.type.val), bailing"
-                return nil
+            e2ReturnType = e2.op.type.val
+            if not lastArgType.val.matches(e2ReturnType):
+                if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
+                    genKey = @_implicitKey(lastArgType)
+                    previousGen = gensTable.(genKey)
+                    if previousGen and not previousGen.matches(e2ReturnType):
+                        print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
+                        return nil
+                    end
+                    else:
+                        print "Inferred generic type of \(e2ReturnType) for \(genKey)"
+                        gensTable.(genKey) = e2ReturnType
+                    end
+                end
+                else:
+                    print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2.op.type.val), bailing"
+                    return nil
+                end
             end
             lastArgArgLen = lastArgType.args.len() ?? 0
             e2ArgLen = e2.op.args.len() ?? 0
@@ -641,7 +667,7 @@ class Parser:
                 return nil
             end
             print "Last block desugar found"
-            return Call(e1.rec, e1.op, e1.args.plus(e2.op))
+            return Call(e1.rec, e1.op, e1.args.plus(e2.op), gensTable)
         end
         print "E2 isn't a block but \(e2.op), bailing"
         return nil
@@ -653,7 +679,7 @@ class Parser:
             id = @_consume(TokenType.ID, "Need ID for typedef")
             type = @_type(blockGuid)
             @_consume(TokenType.NEWLINE, "Need newline after typedef")
-            print "Set typealias for \(id.literal) as \(type)"
+            print "Set type alias for \(id.literal) as \(type)"
             @typeAliases.(@_implicitKey(id.literal)) = type
             return true
         end
@@ -804,10 +830,18 @@ class Parser:
             rec $= @_advance()
             @_consume(TokenType.DOT, "This should never be printed")
         end
-        @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
-        if @_match(TokenType.LEFT_BRACKET): args $= @_list(blockGuid, List.Type.ARG)
-        if @_peek().type != TokenType.RIGHT_BRACE: val $= @_type(blockGuid)
-        @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
+        if @_check(TokenType.LEFT_BRACKET): val $= @_type(blockGuid)
+        else:
+            @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
+            if @_match(TokenType.LEFT_BRACKET): args $= @_list(blockGuid, List.Type.ARG)
+            if not @_check(TokenType.RIGHT_BRACE): val $= @_type(blockGuid)
+            if args and not val:
+                print "Found a block def with args but no val: \(args). Switching them up..."
+                val $= Type(args)
+                args $= nil
+            end
+            @_consume(TokenType.RIGHT_BRACE, "Expected } for block def end")
+        end
         return Type(@_tokenToSymbol(rec), gens, args, val)
     end
 
@@ -909,8 +943,10 @@ class Parser:
             end
             else: currentBlock $= @blockParents.(currentBlock) # Look up in parent environment
         end
+        typeAlias = @typeAliases.(symbolKey)
+        if typeAlias: return typeAlias
         if symbol is not Call:
-            a = 5 # B
+            a = 5
             IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
         end
     end
@@ -944,7 +980,7 @@ class Parser:
     end
 
     def _returnTypeOfCall(blockGuid, call is Call):
-        print "Inferring return type of \(call.toCode())"
+        print "Inferring return type of \(call.toCode())..."
         type = @_typeOfCall(blockGuid, call)
 #        type = @_getSymbolType(blockGuid, call)
 #        if type:
@@ -954,6 +990,7 @@ class Parser:
        if call.rec: type $= type.type # Receiver calls have their return value a little deeper
         returnType = Type(type.val)
 #        @_putSymbolType(blockGuid, call, returnType)
+        print "...inferred \(returnType)"
         return returnType
     end
 

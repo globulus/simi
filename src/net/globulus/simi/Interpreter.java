@@ -1182,6 +1182,9 @@ class Interpreter implements
         object = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(b, this);
 //          runtimeError(expr.operator, "Right side must be an Object!");
       }
+      if (object == null) {
+        return false;
+      }
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line, expr.operator.file);
       SimiProperty p = call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a));
       return p.getValue().getNumber().asLong() != 0;
