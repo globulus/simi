@@ -6,7 +6,7 @@ def Num [
 def ifBranching <T>[
     Num wasTrue,
     T result,
-    {[T block]ifBranching} elsif,
+    {[Num condition, T block]ifBranching} elsif,
     {[T block]T} else
 ]
 def if <T>{[Num condition, T block]ifBranching}
@@ -21,8 +21,15 @@ def foreach <T>{[[T... vals] array, {[T it]} block][T... vals]}
     }
 
     if (a) {
-        "something"
+        "if a"
+    } elsif (b) {
+        "elsif b"
+    } elsif (c) {
+        "elsif c"
+    } else {
+        "else"
     }
+
 
    // go(a, 5)
    // go(c, +(b, d))

@@ -283,12 +283,7 @@ class Type(Value):
     def toString(): @toCode()
     def matches(other): @toString() == other.toString()
 
-    def hasGenType(genType is Type):
-        for gen in @gens:
-            if gen.symbol.matches(genType.val): return true
-        end
-        return false
-    end
+    def hasGenType(genType is Type): @gens.any(:_0.symbol.matches(genType.val))
 
     def isTypeOf(val): # Checks if provided val is of this type
         when val:
@@ -466,11 +461,14 @@ class ParseException(Exception):
     end
 end
 
+class UndefinedSymException(Exception):
+    def init(sym is Symbol): super.init("Attempt to infer type for undefined symbol: \(sym)")
+end
+
 class Parser:
 
-    def init(tokens): pass
-
-    def parse():
+    def init(tokens):
+        @tokens = tokens
         @current = 0
         @typeTable = $[]
         @_addPrimitiveTypes()
@@ -479,7 +477,9 @@ class Parser:
         @typeAliases = $[]
         @blockParents = $[]
         rootGuid = guid()
+    end
 
+    def parse():
         exprs = $[]
         @_matchAllNewlines()
         while not @_isAtEnd():
@@ -510,14 +510,14 @@ class Parser:
         end
         print "Parsed on line " + exprs
         # Desugaring phase
-        exprs $= @_desugarUnaryPass(blockGuid, exprs, "_desugarLastBlockParam")
-        exprs $= @_desugarUnaryPass(blockGuid, exprs, "_desugarUnary")
+        exprs $= @_desugarLastBlockParamPass(blockGuid, exprs)
+        exprs $= @_desugarUnaryPass(blockGuid, exprs)
         exprs $= @_desugarBinaryPass(blockGuid, exprs)
         print "desugared " + exprs
         return exprs
     end
 
-    def _desugarUnaryPass(blockGuid, exprs, fun):
+    def _desugarTwoOpPass(blockGuid, exprs, fun):
         len = exprs.len()
         if len == 1: return exprs
         desugared = $[]
@@ -525,7 +525,7 @@ class Parser:
         while i < len:
             e1 = exprs.(i - 1)
             e2 = exprs.(i)
-            unaryAttempt = @(fun)(blockGuid, e1, e2)
+            unaryAttempt = fun(blockGuid, desugared, e1, e2)
             if unaryAttempt:
                 desugared.append(unaryAttempt)
                 i += 1
@@ -536,6 +536,9 @@ class Parser:
         end
         return desugared
     end
+
+    def _desugarUnaryPass(blockGuid, exprs): @_desugarTwoOpPass(blockGuid, exprs, def (b, d, e1, e2): @_desugarUnary(b, e1, e2))
+    def _desugarLastBlockParamPass(blockGuid, exprs): @_desugarTwoOpPass(blockGuid, exprs, :@_desugarLastBlockParam(_0, _1.last(), _2, _3))
 
     def _desugarBinaryPass(blockGuid, exprs):
         len = exprs.len()
@@ -557,6 +560,27 @@ class Parser:
                 desugared.append(e2)
                 desugared.append(e3)
              end
+        end
+        return desugared
+    end
+
+    def _desugarLastBlockParamPass(blockGuid, exprs):
+        len = exprs.len()
+        if len == 1: return exprs
+        desugared = $[]
+        i = 1
+        while i < len:
+            e0 = desugared.last()
+            e1 = exprs.(i - 1)
+            e2 = exprs.(i)
+            unaryAttempt = @_desugarLastBlockParam(blockGuid, e0, e1, e2)
+            if unaryAttempt:
+                desugared.append(unaryAttempt)
+                i += 1
+            end
+            else: desugared.append(e1)
+            i += 1
+            if i == len: desugared.append(e2)
         end
         return desugared
     end
@@ -627,50 +651,97 @@ class Parser:
         return nil
     end
 
-    def _desugarLastBlockParam(blockGuid, e1, e2):
+    def _desugarLastBlockParam(blockGuid, e0, e1, e2):
         print "Attempting last block desugar \(e1) \(e2)"
-        gensTable = $[]
+        comboCandidate = false
+        undefinedSymEx = nil
         if e2.op.val is Block:
             e1Type = @_typeOfCall(blockGuid, e1)
-            if not e1Type.args:
-                print "E1 type isn't a block call \(e1Type), bailing"
-                return nil
+            rescue ex:
+                if ex is UndefinedSymException:
+                    print "\(ex.message) - found a combo binary candidate"
+                    comboCandidate $= true
+                    undefinedSymEx $= ex
+                end
+                else: ex.raise() # Rethrow as it's something we can't handle
             end
-            if e1Type.args.len() != e1.args.len() + 1:
-                print "E1 type isn't invoked with args len + 1, \(e1Type.args) vs \(e1.args), bailing"
-                return nil
-            end
-            lastArgType = e1Type.args.args.last().type
-            e2ReturnType = e2.op.type.val
-            if not lastArgType.val.matches(e2ReturnType):
-                if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
-                    genKey = @_implicitKey(lastArgType)
-                    previousGen = gensTable.(genKey)
-                    if previousGen and not previousGen.matches(e2ReturnType):
-                        print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
-                        return nil
+            if comboCandidate: # Combo candidate is a binary desugar on previously desugared member - if (a) { } else { }
+                e0Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e0))
+                e0List = e0Type.val
+                if e0List is not List:
+                    if e0List.val is List:
+                        e0List $= e0List.val
                     end
                     else:
-                        print "Inferred generic type of \(e2ReturnType) for \(genKey)"
-                        gensTable.(genKey) = e2ReturnType
+                        print "E0 isn't a list but \(e0Type)"
+                        undefinedSymEx.raise()
                     end
                 end
-                else:
-                    print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2.op.type.val), bailing"
-                    return nil
+                member = e0List.get(e1.op.val)
+                if not member:
+                    print "Member not found for \(e1.op.val), bailing"
+                    undefinedSymEx.raise()
                 end
+                print "SO FAR SO GOOD"
+                memberTypeWithoutGens = member.type
+                if e0.gensTable:
+                    memberTypeCode = memberTypeWithoutGens.toCode()
+                    for [genKey, genVal] in e0.gensTable.zip():
+                        gen = genKey.substring(1) # TODO move to a separate method
+                        memberTypeCode $= memberTypeCode.replacing(gen, genVal.toString())
+                    end
+                    memberTypeWithoutGens $= Parser(Scanner(memberTypeCode).scanTokens(true))._type(blockGuid)
+                end
+                desugaredRightSide = @_desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, memberTypeWithoutGens)
+                if not desugaredRightSide: undefinedSymEx.raise()
+                comboCall = Call(e0.toProperty(e0Type), desugaredRightSide.op, desugaredRightSide.args, e0.gensTable)
+                print "Combo desugar found: \(comboCall)"
+                return comboCall
             end
-            lastArgArgLen = lastArgType.args.len() ?? 0
-            e2ArgLen = e2.op.args.len() ?? 0
-            if e2ArgLen != 0 and e2ArgLen != lastArgArgLen:
-                print "Last arg argument count of \(lastArgArgLen) doesn't match non-zero E2 arg len of \(e2ArgLen), bailing"
-                return nil
-            end
-            print "Last block desugar found"
-            return Call(e1.rec, e1.op, e1.args.plus(e2.op), gensTable)
+            return @_desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type)
         end
         print "E2 isn't a block but \(e2.op), bailing"
         return nil
+    end
+
+    def _desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type):
+        if not e1Type.args:
+            print "E1 type isn't a block call \(e1Type), bailing"
+            return nil
+        end
+        if e1Type.args.len() != e1.args.len() + 1:
+            print "E1 type isn't invoked with args len + 1, \(e1Type.args) vs \(e1.args), bailing"
+            return nil
+        end
+        gensTable = $[]
+        lastArgType = e1Type.args.args.last().type
+        e2ReturnType = e2.op.type.val
+        if not lastArgType.val.matches(e2ReturnType):
+            if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
+                genKey = @_implicitKey(lastArgType)
+                previousGen = gensTable.(genKey)
+                if previousGen and not previousGen.matches(e2ReturnType):
+                    print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
+                    return nil
+                end
+                else:
+                    print "Inferred generic type of \(e2ReturnType) for \(genKey)"
+                    gensTable.(genKey) = e2ReturnType
+                end
+            end
+            else:
+                print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2.op.type.val), bailing"
+                return nil
+            end
+        end
+        lastArgArgLen = lastArgType.args.len() ?? 0
+        e2ArgLen = e2.op.args.len() ?? 0
+        if e2ArgLen != 0 and e2ArgLen != lastArgArgLen:
+            print "Last arg argument count of \(lastArgArgLen) doesn't match non-zero E2 arg len of \(e2ArgLen), bailing"
+            return nil
+        end
+        print "Last block desugar found"
+        return Call(e1.rec, e1.op, e1.args.plus(e2.op), gensTable)
     end
 
     def _checkTypedef(blockGuid):
@@ -947,7 +1018,7 @@ class Parser:
         if typeAlias: return typeAlias
         if symbol is not Call:
             a = 5
-            IllegalArgumentException("Attempt to infer type for undefined symbol: \(symbol)").raise()
+            UndefinedSymException(symbol).raise()
         end
     end
 
@@ -964,7 +1035,10 @@ class Parser:
             opType = call.op.type
             if not opType.matches(@_symbolType): IllegalArgumentException("Op in receiver call must be a symbol!").raise()
             recType $= @_listOrListAlias(recType)
-            if recType.val is not List: IllegalArgumentException("Can't invoke receiver call on a non-list receiver: \(rec)").raise()
+            if recType.val is not List:
+                a = 5 #BP
+                IllegalArgumentException("Can't invoke receiver call on a non-list receiver: \(rec)").raise()
+            end
             callee = recType.val.get(call.op.val)
             type $= callee
         end
@@ -996,6 +1070,7 @@ class Parser:
 
     def _listOrListAlias(type):
         if type.val is List: return type
+        if type.val.val is List: return type.val
         return @typeAliases.(@_implicitKey(type.val.toString()))
     end
 
