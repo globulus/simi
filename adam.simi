@@ -575,7 +575,11 @@ class Parser:
             e2 = exprs.(i)
             unaryAttempt = @_desugarLastBlockParam(blockGuid, e0, e1, e2)
             if unaryAttempt:
-                desugared.append(unaryAttempt)
+                if unaryAttempt is not Call and unaryAttempt.removeLast:
+                    desugared.pop()
+                    desugared.append(unaryAttempt.result)
+                end
+                else: desugared.append(unaryAttempt)
                 i += 1
             end
             else: desugared.append(e1)
@@ -621,11 +625,15 @@ class Parser:
             rescue ex:
                 if ex: print "Silenced unary exception: \(ex.message)"
             end
-            if e1Type.val is not List:
-                print "E1 isn't a list but \(e1Type), bailing"
-                return nil
+            e1List = e1Type.val
+            if e1List is not List:
+                if e1List.val is List: e1List $= e1List.val
+                else:
+                    print "E1 isn't a list but \(e1Type), bailing"
+                    return nil
+                end
             end
-            member = e1Type.val.get(e2.op.val)
+            member = e1List.get(e2.op.val)
             if not member:
                 print "Member not found for \(e2.op.val), bailing"
                 return nil
@@ -696,7 +704,7 @@ class Parser:
                 if not desugaredRightSide: undefinedSymEx.raise()
                 comboCall = Call(e0.toProperty(e0Type), desugaredRightSide.op, desugaredRightSide.args, e0.gensTable)
                 print "Combo desugar found: \(comboCall)"
-                return comboCall
+                return [result = comboCall, removeLast = true]
             end
             return @_desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type)
         end
@@ -709,8 +717,9 @@ class Parser:
             print "E1 type isn't a block call \(e1Type), bailing"
             return nil
         end
-        if e1Type.args.len() != e1.args.len() + 1:
-            print "E1 type isn't invoked with args len + 1, \(e1Type.args) vs \(e1.args), bailing"
+        e1Args = e1.args ?? List(List.Type.CALL, [])
+        if e1Type.args.len() != e1Args.len() + 1:
+            print "E1 type isn't invoked with args len + 1, \(e1Type.args) vs \(e1Args), bailing" # BP
             return nil
         end
         gensTable = $[]
@@ -741,7 +750,7 @@ class Parser:
             return nil
         end
         print "Last block desugar found"
-        return Call(e1.rec, e1.op, e1.args.plus(e2.op), gensTable)
+        return Call(e1.rec, e1.op, e1Args.plus(e2.op), gensTable)
     end
 
     def _checkTypedef(blockGuid):
