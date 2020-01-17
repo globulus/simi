@@ -103,6 +103,12 @@ class$ Object(in Actors, in Comparable):
         end
         return true
     end
+    def any(predicate):
+        for item in self:
+            if predicate(item): return true
+        end
+        return false
+    end
     def where(predicate):
         buffer = $[]
         for item in self:

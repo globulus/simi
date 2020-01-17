@@ -1168,7 +1168,7 @@ class Interpreter implements
     if (left instanceof SimiObjectImpl) {
       return ((SimiObjectImpl) left).is(clazz);
     } else if (left instanceof SimiException) {
-      return ((SimiClassImpl) right).name.equals(Constants.CLASS_EXCEPTION);
+      return ((SimiClassImpl) right).name.equals(((SimiClassImpl) left.getSimiClass()).name);
     } else {
       return left.getSimiClass() == clazz;
     }
@@ -1282,7 +1282,7 @@ class Interpreter implements
 
   private void raiseNilReferenceException(Token token) {
     String message = "Nil reference found at " + token.file + " line " + token.line + ": " + token.toString();
-    raiseException(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
+    raiseException(new SimiException(null, (SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
   }
   
   private void runtimeError(Token token, String message) {

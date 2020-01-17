@@ -864,7 +864,7 @@ class BaseClassesNativeImpl {
                         double number = Double.parseDouble(string);
                         return new SimiValue.Number(number);
                     } catch (NumberFormatException e2) {
-                        SimiException se = new SimiException((SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
+                        SimiException se = new SimiException(null, (SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
                                 "Invalid number format!");
                         interpreter.raiseException(se);
                         return null;
@@ -1102,7 +1102,7 @@ class BaseClassesNativeImpl {
                 if (messageProp != null) {
                     message = messageProp.getValue().getString();
                 }
-                interpreter.raiseException(new SimiException(self.clazz, message));
+                interpreter.raiseException(new SimiException(self, self.clazz, message));
                 return null;
             }
         });
