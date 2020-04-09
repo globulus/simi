@@ -320,6 +320,11 @@ class Property(Value):
         return sb.build()
     end
     def toString(): @toCode()
+    def getType():
+        if @type: return @type
+        if @val is Call: return @val.op.type
+        return nil
+    end
 end
 
 class ListMismatchException(Exception)
@@ -361,7 +366,7 @@ class List(Value):
     def len(): @args.len()
     def plus(newArg): @args = @args.joined([newArg])
 
-    def type(): Type(self)
+    def wrapType(): Type(self)
     def get(symbol is Symbol):
         arg = @args.where(:_0.symbol.matches(symbol)).first()
         if arg: return arg
@@ -502,12 +507,13 @@ class Parser:
     # 1. unary prefix operator with rec - -a instead of a.-(), doSomething withThis instead of withThis.doSomething()
     # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
     # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
-    def _expressionLine(blockGuid):
+    def _expressions(blockGuid, delimiter, rollBack):
         exprs = $[]
-        while not @_match(TokenType.NEWLINE):
+        while not @_match(delimiter):
             if @_checkTypedef(blockGuid): continue
             exprs.append(@_expression(blockGuid))
         end
+        if rollBack: @_rollBack()
         print "Parsed on line " + exprs
         # Desugaring phase
         exprs $= @_desugarLastBlockParamPass(blockGuid, exprs)
@@ -516,6 +522,11 @@ class Parser:
         print "desugared " + exprs
         return exprs
     end
+
+    def _expressionLine(blockGuid): @_expressions(blockGuid, TokenType.NEWLINE, false)
+    def _valueExpressions(blockGuid, delimiter): @_expressions(blockGuid, [TokenType.COMMA, delimiter], true).0 # Only return the first desugared item
+
+    #### DESUGARING
 
     def _desugarTwoOpPass(blockGuid, exprs, fun):
         len = exprs.len()
@@ -601,6 +612,13 @@ class Parser:
                 return nil
             end
             member = e2Type.val.get(e1.op.val)
+            rescue ex:
+                # Handled if exception is thrown when arg isn't found in the list above
+                if ex:
+                    print "Handled ex \(ex.message)"
+                    member $= nil
+                end
+            end
             if not member:
                 print "Member not found for \(e1.op.val), bailing"
                 return nil
@@ -724,25 +742,31 @@ class Parser:
         end
         gensTable = $[]
         lastArgType = e1Type.args.args.last().type
-        e2ReturnType = e2.op.type.val
-        if not lastArgType.val.matches(e2ReturnType):
-            if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
-                genKey = @_implicitKey(lastArgType)
-                previousGen = gensTable.(genKey)
-                if previousGen and not previousGen.matches(e2ReturnType):
-                    print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
-                    return nil
+        e2ReturnTypeOptions = @_returnTypeOfCall(blockGuid, e2, true).map(:ife(_0.val, _0.val, _0))
+        hasE2ReturnTypeMatch = false
+        for e2ReturnType in e2ReturnTypeOptions:
+            if not lastArgType.val.matches(e2ReturnType):
+                if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
+                    genKey = @_implicitKey(lastArgType)
+                    previousGen = gensTable.(genKey)
+                    if previousGen and not previousGen.matches(e2ReturnType):
+                        print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
+                        continue
+                    end
+                    else:
+                        print "Inferred generic type of \(e2ReturnType) for \(genKey)"
+                        gensTable.(genKey) = e2ReturnType
+                    end
                 end
                 else:
-                    print "Inferred generic type of \(e2ReturnType) for \(genKey)"
-                    gensTable.(genKey) = e2ReturnType
+                    print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2ReturnType), bailing" # BP
+                    continue
                 end
             end
-            else:
-                print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2.op.type.val), bailing"
-                return nil
-            end
+            hasE2ReturnTypeMatch $= true
+            break
         end
+        if not hasE2ReturnTypeMatch: return nil
         lastArgArgLen = lastArgType.args.len() ?? 0
         e2ArgLen = e2.op.args.len() ?? 0
         if e2ArgLen != 0 and e2ArgLen != lastArgArgLen:
@@ -752,6 +776,8 @@ class Parser:
         print "Last block desugar found"
         return Call(e1.rec, e1.op, e1Args.plus(e2.op), gensTable)
     end
+
+    #### PARSING
 
     def _checkTypedef(blockGuid):
          if @_peek().literal == "def":
@@ -776,7 +802,7 @@ class Parser:
         elsif @_match(TokenType.ID): op $= @_symbolToProperty(@_tokenToSymbol(@_previous()))
         elsif @_match(TokenType.LEFT_BRACKET):
             list = @_list(blockGuid, List.Type.RAW)
-            op $= Property(@_cacheType(list.type()), nil, list)
+            op $= Property(@_cacheType(list.wrapType()), nil, list)
         end
         elsif @_match(TokenType.LEFT_BRACE):
             block = @_block(blockGuid)
@@ -791,7 +817,7 @@ class Parser:
             op $= @_symbolToProperty(@_tokenToSymbol(@_advance()))
             args $= @_expressionLine(blockGuid)
             if args.len() != 1: @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
-            @current = @current - 1 # Backtrack so that we still have the NEWLINE in queue
+            @_rollBack() # Backtrack so that we still have the NEWLINE in queue
             return Call(rec, op, args.first().toCallList(nil))
         end
         if @_match(TokenType.DOT):
@@ -863,13 +889,14 @@ class Parser:
             List.Type.ARG:
                type $= @_type(blockGuid)
                name $= @_consume(TokenType.ID, "Expected an ID for property name")
-               if @_nextTokenIsValue(terminator): val $= @_expression(blockGuid) # has default val
+               if @_nextTokenIsValue(terminator): val $= @_valueExpressions(blockGuid, terminator) # has default val
             end
             else:
               val $= @_expression(blockGuid)
               if @_nextTokenIsValue(terminator):
                    name $= val
-                   val $= @_expression(blockGuid)
+                   # TODO roll back current if desugaring succeeds - maybe need to introduce more syntax
+                   val $= @_valueExpressions(blockGuid, terminator)
               end
             end
         end
@@ -961,6 +988,8 @@ class Parser:
          if not @_isAtEnd(): @current = @current + 1
          return @_previous()
      end
+
+     def _rollBack(): @current = @current - 1
 
      def _isAtEnd(): return @_peek().type == TokenType.EOF
 
@@ -1062,19 +1091,23 @@ class Parser:
         return type
     end
 
-    def _returnTypeOfCall(blockGuid, call is Call):
-        print "Inferring return type of \(call.toCode())..."
-        type = @_typeOfCall(blockGuid, call)
-#        type = @_getSymbolType(blockGuid, call)
-#        if type:
-#            print "Found memoized return value of \(type)"
-#            return type
-#        end
+    def _returnTypeOfCall(blockGuid, call): @_returnTypeOfCall(blockGuid, call, false)
+    def _returnTypeOfCall(blockGuid, call is Call, allowVararg):
+       print "Inferring return type of \(call.toCode())..."
+       type = @_typeOfCall(blockGuid, call)
        if call.rec: type $= type.type # Receiver calls have their return value a little deeper
-        returnType = Type(type.val)
-#        @_putSymbolType(blockGuid, call, returnType)
-        print "...inferred \(returnType)"
-        return returnType
+       returnType = Type(type.val)
+       if allowVararg and type.val is List:
+          firstItemType = type.val.args.0.getType()
+          print "FIRST ITEM TYPE " + firstItemType
+          if type.val.args.every(:_0.getType().matches(firstItemType)):
+            varargType = Vararg(firstItemType)
+            print "Found vararg list candidate \(varargType) on top of \(returnType)"
+            return [returnType, varargType]
+          end
+       end
+       print "...inferred \(returnType)"
+       return ife(allowVararg, :[returnType], returnType)
     end
 
     def _listOrListAlias(type):
@@ -1087,6 +1120,9 @@ class Parser:
 
     def _error(token, message): ParseException(token, message).raise()
 end
+
+
+### INTERPRETER
 
 class Interpreter:
     def init(exprs):

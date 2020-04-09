@@ -20,7 +20,7 @@ class Interpreter implements
   private final Map<Expr, Integer> locals = new HashMap<>();
   private final BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
   private final Stack<SimiBlock> loopBlocks = new Stack<>();
-  private final Stack<SimiException> raisedExceptions = new Stack<>();
+  private final Stack<SimiExceptionWithDebugInfo> raisedExceptions = new Stack<>();
   private final Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts = new HashMap<>();
 
   private Map<Object, List<SimiObject>> annotations = new HashMap<>();
@@ -94,9 +94,9 @@ class Interpreter implements
         if (raisedExceptions.isEmpty()) {
           result = execute(statement);
         } else {
-          SimiException e = raisedExceptions.peek();
+          SimiExceptionWithDebugInfo e = raisedExceptions.peek();
           debugger.triggerException(statement, e, true);
-          throw e;
+          throw e.exception;
         }
       }
     } catch (RuntimeError error) {
@@ -163,12 +163,12 @@ class Interpreter implements
               }
             }
             if (rescue != null) { // If not rescue block is available in this scope, maybe one is in scopes above
-              SimiException e = raisedExceptions.pop();
-              executeRescueBlock(rescue, e);
+              SimiExceptionWithDebugInfo e = raisedExceptions.pop();
+              executeRescueBlock(rescue, e.exception);
             } else if (block.canReturn()) {
               throw new Return(null);
             } else {
-              throw new Break(raisedExceptions.peek());
+              throw new Break(raisedExceptions.peek().exception);
             }
           }
         } catch (Yield yield) {
@@ -193,9 +193,11 @@ class Interpreter implements
 
   @Override
   public void raiseException(SimiException e) {
-    raisedExceptions.push(e);
+    Debugger.Capture capture = (debugger != null) ? debugger.copyCapture() : null;
+    SimiExceptionWithDebugInfo edi = new SimiExceptionWithDebugInfo(e, capture);
+    raisedExceptions.push(edi);
     if (debugger != null) {
-      debugger.triggerException(null, e, false);
+      debugger.triggerException(null, edi, false);
     }
   }
 

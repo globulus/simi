@@ -10,7 +10,7 @@ def ifBranching <T>[
     {[T block]T} else
 ]
 def if <T>{[Num condition, T block]ifBranching}
-def foreach <T>{[[T... vals] array, {[T it]} block][T... vals]}
+def foreach <T>{[[T... vals] array, {[T it][T... vals]} block][T... vals]}
 {[Num a, Num b, Num c, Num d, {[Num a, {[Str arg]Num} block]Num} go]
     a = 5
     - a
@@ -20,7 +20,7 @@ def foreach <T>{[[T... vals] array, {[T it]} block][T... vals]}
         10
     }
 
-    if (a) {
+    if (res a + 3) {
         "if a"
     } elsif (b) {
         "elsif b"
@@ -28,6 +28,10 @@ def foreach <T>{[[T... vals] array, {[T it]} block][T... vals]}
         "elsif c"
     } else {
         "else"
+    }
+
+    foreach ([1, 2, 3, 4]) {
+        [1, 2, 3]
     }
 
 

@@ -62,7 +62,7 @@ closureTest()
 
 #SimiSyncModels.ModelParser.parse(1)
 def typeCheckTest(a, b is String, c is Number, d is Range):
-    print "at end"
+    print "Type check passed"
 end
 print ivic typeCheckTest
 class TypeCheckTestClass:
@@ -799,11 +799,14 @@ def testStaticMethod:
          carInstance = Cara()
          carInstance.weight = 1500 # Works, self is Audi class which is subclass of Car
          personInstance = Person()
-         personInstance.weight = 80 # Error, self is Audi class which isn't subclass of Person
+#         personInstance.weight = 80 # Error, self is Audi class which isn't subclass of Person
       end
    end
    Audi.staticMethod()
 end
 testStaticMethod()
+
+print "scanf"
+Io.scanf("%c%c %d %s")
 
 print "kraj"

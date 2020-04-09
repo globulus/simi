@@ -33,8 +33,7 @@ public final class Debugger {
     }
     private DebuggerState state;
 
-    private FrameStack lineStack;
-    private FrameStack callStack;
+    private Capture capture;
     private DebuggerInterface debuggerInterface;
     private StringBuilder output;
     private Evaluator evaluator;
@@ -59,8 +58,7 @@ public final class Debugger {
 
     Debugger(DebuggerInterface debuggerInterface) {
         state = DebuggerState.OUTPUT;
-        lineStack = new FrameStack();
-        callStack = new FrameStack();
+        capture = new Capture(new FrameStack(), new FrameStack());
         this.debuggerInterface = debuggerInterface;
         output = new StringBuilder();
         ignoredBreakpoints = new HashSet<>();
@@ -78,11 +76,11 @@ public final class Debugger {
     }
 
     void pushLine(Frame frame) {
-        lineStack.push(frame);
+        capture.lineStack.push(frame);
     }
 
     void pushCall(Frame frame) {
-        callStack.push(frame);
+        capture.callStack.push(frame);
         if (stepState == StepState.STEP_OVER) {
             stepState = StepState.STEP_OVER_SUSPENDED;
             stepOverDepth++;
@@ -92,7 +90,7 @@ public final class Debugger {
     }
 
     void popCall() {
-        callStack.pop();
+        capture.callStack.pop();
         if (stepState == StepState.STEP_OVER_SUSPENDED) {
             stepOverDepth--;
             if (stepOverDepth == 0) {
@@ -121,20 +119,20 @@ public final class Debugger {
             }
         }
         currentBreakpoint = stmt;
-        currentStack = callStack;
+        currentStack = capture.callStack;
         output.append("***** BREAKPOINT *****\n\n");
         print(0, true);
         scanInput();
     }
 
-    void triggerException(Stmt stmt, SimiException e, boolean fatal) {
+    void triggerException(Stmt stmt, SimiExceptionWithDebugInfo e, boolean fatal) {
         if (debuggingOff || !(allExceptions || fatal)) {
             return;
         }
         currentBreakpoint = stmt;
-        currentStack = callStack;
+        currentStack = e.capture.callStack;
         output.append("***** ").append(fatal ? "FATAL " : "").append("EXCEPTION *****\n\n")
-                .append(e.getMessage()).append("\n\n");
+                .append(e.exception.getMessage()).append("\n\n");
         print(0, true);
         scanInput();
     }
@@ -150,8 +148,8 @@ public final class Debugger {
     private void print(int frameIndex, boolean printLine) {
         List<Frame> frames = currentStack.toList();
         output.append("============================\n");
-        if (printLine && currentStack != lineStack) {
-            focusFrame = lineStack.toList().get(frameIndex);
+        if (printLine && currentStack != capture.lineStack) {
+            focusFrame = capture.lineStack.toList().get(frameIndex);
         } else {
             focusFrame = frames.get(frameIndex);
         }
@@ -215,12 +213,12 @@ public final class Debugger {
         }
         switch (input.charAt(0)) {
             case 'c': { // Print call stack
-                currentStack = callStack;
+                currentStack = capture.callStack;
                 print(0, true);
             }
             break;
             case 'l': { // Print line stack
-                currentStack = lineStack;
+                currentStack = capture.lineStack;
                 print(0, true);
             }
             break;
@@ -307,11 +305,25 @@ public final class Debugger {
         output = new StringBuilder();
     }
 
+    Capture copyCapture() {
+        return new Capture(capture.lineStack.copy(), capture.callStack.copy());
+    }
+
     public interface FrameDump {
         String getLine();
         String getZippedEnvironment();
         Map<String, String> getFullEnvironment();
         SimiObject toSimiObject(SimiClassImpl objectClass);
+    }
+
+    static class Capture {
+        final FrameStack lineStack;
+        final FrameStack callStack;
+
+        public Capture(FrameStack lineStack, FrameStack callStack) {
+            this.lineStack = lineStack;
+            this.callStack = callStack;
+        }
     }
 
     static class Frame implements FrameDump {
@@ -338,7 +350,7 @@ public final class Debugger {
             if (index != null) {
                 output.append("[").append(index).append("] ");
             }
-            output.append("\"").append(line.getFileName()).append("\" line ").append(line.getLineNumber()).append(": ");
+            output.append("\"").append(line.getFileName()).append("\" line ").append(line.getLineNumber() - 1).append(": ");
             output.append(line.toCode(0, true)).append("\n");
         }
 
@@ -369,7 +381,7 @@ public final class Debugger {
 
     private static class FrameStack {
 
-        private static final int MAX_SIZE = 20;
+        private static final int MAX_SIZE = 50;
 
         private Frame[] stack;
         private int index;
@@ -415,6 +427,13 @@ public final class Debugger {
             }
             Collections.reverse(list);
             return list;
+        }
+
+        FrameStack copy() {
+            FrameStack copy = new FrameStack();
+            copy.index = index;
+            copy.stack = Arrays.copyOf(stack, stack.length);
+            return copy;
         }
     }
 
@@ -479,12 +498,12 @@ public final class Debugger {
 
         @Override
         public List<? extends FrameDump> getLineStack() {
-            return lineStack.toList();
+            return capture.lineStack.toList();
         }
 
         @Override
         public List<? extends Frame> getCallStack() {
-            return callStack.toList();
+            return capture.callStack.toList();
         }
 
         @Override
