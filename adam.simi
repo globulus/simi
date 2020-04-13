@@ -10,10 +10,10 @@ TokenType = Enum.of([
     "RIGHT_BRACKET",
     "LEFT_BRACE",
     "RIGHT_BRACE",
-    "LESS_THAN",
-    "GREATER_THAN",
     "COMMA",
     "DOT",
+    "TWO_DOTS",
+    "THREE_DOTS",
     "NEWLINE",
     "ID",
     "STRING",
@@ -66,24 +66,35 @@ class Scanner:
             "{": @_addToken(TokenType.LEFT_BRACE)
             "}": @_addToken(TokenType.RIGHT_BRACE)
             ",": @_addToken(TokenType.COMMA)
-            ".": @_addToken(TokenType.DOT)
+            ".":
+                if @_match('.'):
+                    if @_match('.'): @_addToken(TokenType.THREE_DOTS)
+                    else: @_addToken(TokenType.TWO_DOTS)
+                end
+                else: @_addToken(TokenType.DOT)
+            end
             "\n":
                 @line = @line + 1
                 @_addToken(TokenType.NEWLINE)
             end
             else:
                 if @_isWhiteSpace(c): pass
-                elsif @_isStringDelim(c): @_string(c)
-                elsif @_isDigit(c): @_number()
-                else:
-                    if c == "/": # Single line comments
-                        if @_match("/"):
+                elsif @_isStringDelim(c):
+                    if @_matchAll('""'): # Comments
+                        if @_match('"'): # Multi line
+                            while not @_matchAll('""""'):
+                                if @_peek() == '\n': @line = @line + 1
+                                @_advance()
+                            end
+                        end
+                        else: # Single line
                             while @_peek() != '\n' and not @_isAtEnd(): @_advance()
-                            return
                         end
                     end
-                    @_identifier()
+                    else: @_string(c)
                 end
+                elsif @_isDigit(c): @_number()
+                else: @_identifier()
             end
         end
     end
@@ -91,7 +102,7 @@ class Scanner:
     def _identifier():
         while @_isValidId(@_peek()): @_advance()
         text = @source.substring(@start, @current)
-        if not @_handleGenerics(text): @_addToken(TokenType.ID, text)
+        @_addToken(TokenType.ID, text)
     end
 
     def _number():
@@ -121,71 +132,18 @@ class Scanner:
         return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
     end
 
-    def _handleGenerics(text):
-        if text.endsWith(">") and text.len() > 1:
-            if text.startsWith("<"):
-                @_addToken(TokenType.LESS_THAN)
-                @_addToken(TokenType.ID, text.substring(1, text.len() - 1))
-                @_addToken(TokenType.GREATER_THAN)
-            end
-            else: @_gensListOrId(text)
-            return true
-        end
-        return false
-    end
-
-    def _gensListOrId(text): # Goes back to analyze if we had indeed a generics list
-        i = @tokens.len() - 1
-        foundGensList = false
-        while i >= 0:
-            token = @tokens.(i)
-            if token.type == TokenType.ID:
-                if @_tryLessThanSplit(token, i):
-                    foundGensList $= true
-                    break
-                end
-                else:
-                    i -= 1
-                    token $= @tokens.(i)
-                end
-            end
-            if token.type != TokenType.COMMA: break
-            i -= 1
-            token $= @tokens.(i)
-            if token.type != TokenType.ID: break
-            if @_tryLessThanSplit(token, i):
-                foundGensList $= true
-                break
-            end
-            i -= 1
-            token $= @tokens.(i)
-            if token.type == TokenType.COMMA: continue
-            if token.type != TokenType.ID: break
-            if @_tryLessThanSplit(token, i):
-                foundGensList $= true
-                break
-            end
-        end
-        if foundGensList:
-            @_addToken(TokenType.ID, text.substring(0, text.len() - 1))
-            @_addToken(TokenType.GREATER_THAN)
-        end
-        else: @_addToken(TokenType.ID, text)
-    end
-
-    def _tryLessThanSplit(token, i):
-        if token.literal.startsWith("<"):
-            @tokens.(i) = Token(TokenType.ID, nil, token.literal.substring(1), token.line)
-            @tokens.insertAt(i, Token(TokenType.LESS_THAN, nil, "<", token.line))
-            return true
-        end
-        return false
-    end
-
     def _match(expected):
         if @_isAtEnd(): return false
         if @_peek() != expected: return false
         @current = @current + 1
+        return true
+    end
+
+    def _matchAll(expected is String):
+        endIndex = @current + expected.len()
+        if endIndex >= @sourceLen: return false
+        if @source.substring(@current, endIndex) != expected: return false
+        @current = endIndex
         return true
     end
 
@@ -281,9 +239,50 @@ class Type(Value):
     end
     def toCode(): @eval(nil)
     def toString(): @toCode()
-    def matches(other): @toString() == other.toString()
+    def matches(other):
+        selfVal = @bottomTypeVal()
+        otherVal = ife(other is Type, other.bottomTypeVal(), other)
+        return selfVal.toString() == otherVal.toString()
+    end
+    def matchesArity(other):
+        selfVal = @bottomTypeVal()
+        otherVal = ife(other is Type, other.bottomTypeVal(), other)
+        if selfVal.vararg: # If we're dealing with varargs, we'll replace all the vararg args with stubs
+            print "Dealing with varargs \(@val.len()) other \(other.val.len())"
+            len = selfVal.len()
+            if len != otherVal.len(): return [success = false]
+            for i in len.times():
+                selfPropType = selfVal.at(i).type
+                otherPropType = otherVal.at(i).type
+                if selfPropType is Vararg: return [success = otherPropType is Vararg, vararg = true]
+                elsif not selfPropType.matches(otherPropType): return [success = false]
+            end
+        end
+        else: return [success = true, vararg = false]
+    end
 
-    def hasGenType(genType is Type): @gens.any(:_0.symbol.matches(genType.val))
+    def bottomVal():
+        val = @val
+        while true:
+            deeperVal = nil
+            if val.val: deeperVal $= val.val
+            elsif val is List:
+                lastPropType = val.args.last().type
+                if lastPropType is Vararg: lastPropType $= lastPropType.type
+                deeperVal $= lastPropType.val
+            end
+            if deeperVal: val $= deeperVal
+            else: break
+        end
+        return val
+    end
+    def bottomTypeVal():
+        val = @val
+        while val is Type and val.val: val $= val.val
+        return val
+    end
+
+    def hasGenType(genType): @gens.any(:_0.symbol.val == genType)
 
     def isTypeOf(val): # Checks if provided val is of this type
         when val:
@@ -320,6 +319,7 @@ class Property(Value):
         return sb.build()
     end
     def toString(): @toCode()
+    def matches(other): @toString == other.toString()
     def getType():
         if @type: return @type
         if @val is Call: return @val.op.type
@@ -352,8 +352,8 @@ class List(Value):
             transformedArgs $= transformedArgs.map(:Property(nil, _0.op, _0.val))
         end
         elsif @type == @Type.GENS:
-            op $= "<"
-            en $= ">"
+            op $= ".."
+            en $= ".."
         end
         else:
             op $= "["
@@ -364,6 +364,7 @@ class List(Value):
     def toString(): @toCode()
     def iterate(): @args.iterate()
     def len(): @args.len()
+    def at(index): @args.(index)
     def plus(newArg): @args = @args.joined([newArg])
 
     def wrapType(): Type(self)
@@ -449,7 +450,7 @@ class Call(Value): # The sole expression in Adam is a block invocation with args
         return sb.build()
     end
     def toString(): @toCode() + ife(@gensTable.isntEmpty(), \
-        " with <" + String.from(@gensTable.map(def (k, v): k + " = " + v).values(), ", ") + ">", "")
+        " with .." + String.from(@gensTable.map(def (k, v): k + " = " + v).values(), ", ") + "..", "")
 
     def isPrimitive(): not rec and not args # Primitive call is one that has no receiver nor args, meaning it's just a value
     def toValue():
@@ -742,24 +743,30 @@ class Parser:
         end
         gensTable = $[]
         lastArgType = e1Type.args.args.last().type
-        e2ReturnTypeOptions = @_returnTypeOfCall(blockGuid, e2, true).map(:ife(_0.val, _0.val, _0))
+        e2ReturnTypeOptions = @_returnTypeOfCall(blockGuid, e2, true)
         hasE2ReturnTypeMatch = false
         for e2ReturnType in e2ReturnTypeOptions:
-            if not lastArgType.val.matches(e2ReturnType):
-                if e1Type.hasGenType(lastArgType): # Check if maybe we're inferring a generic
-                    genKey = @_implicitKey(lastArgType)
+            if not lastArgType.matches(e2ReturnType):
+                lastArgTypeBottomVal = lastArgType.bottomVal() ?? lastArgType.val
+                arityMatch = lastArgType.matchesArity(e2ReturnType)
+                # If lastArgType and e2ReturnType match in arity, check if maybe we're inferring a generic
+                if arityMatch.success and e1Type.hasGenType(lastArgTypeBottomVal):
+                    # If we got a positive match when comparing varargs, the actual inferred generic is the bottom-most value
+                    # e.g, Num for [Num...]. If we weren't comparing varargs, then just get the bottom-most type.
+                    e2ReturnTypeBottomVal = ife(arityMatch.vararg, :e2ReturnType.bottomVal(), :e2ReturnType.bottomTypeVal())
+                    genKey = @_implicitKey(lastArgTypeBottomVal)
                     previousGen = gensTable.(genKey)
-                    if previousGen and not previousGen.matches(e2ReturnType):
-                        print "Inferred type of \(e2ReturnType) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
+                    if previousGen and not previousGen.matches(e2ReturnTypeBottomVal):
+                        print "Inferred type of \(e2ReturnTypeBottomVal) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
                         continue
                     end
                     else:
-                        print "Inferred generic type of \(e2ReturnType) for \(genKey)"
-                        gensTable.(genKey) = e2ReturnType
+                        print "Inferred generic type of \(e2ReturnTypeBottomVal) for \(genKey)"
+                        gensTable.(genKey) = e2ReturnTypeBottomVal
                     end
                 end
                 else:
-                    print "Last arg return type \(lastArgType.val) doesn't match E2 return type \(e2ReturnType), bailing" # BP
+                    print "Last arg return type \(lastArgType) doesn't match E2 return type \(e2ReturnType), bailing"
                     continue
                 end
             end
@@ -859,7 +866,7 @@ class Parser:
         terminator = nil
         when type:
             List.Type.CALL: terminator $= TokenType.RIGHT_PAREN
-            List.Type.GENS: terminator $= TokenType.GREATER_THAN
+            List.Type.GENS: terminator $= TokenType.TWO_DOTS
             else: terminator $= TokenType.RIGHT_BRACKET
         end
         while true:
@@ -913,14 +920,8 @@ class Parser:
         type = nil
         if @_match(TokenType.ID):
             id = @_previous()
-            if @_match(TokenType.DOT):
-                if @_peekSequence([TokenType.DOT, TokenType.DOT]):
-                    @_advance()
-                    @_advance()
-                    type $= Vararg(Type(@_tokenToSymbol(id)))
-                end
-                else: type $= @_blockDef(blockGuid, id)
-            end
+            if @_match(TokenType.DOT): type $= @_blockDef(blockGuid, id)
+            elsif @_match(TokenType.THREE_DOTS): type $= Vararg(Type(@_tokenToSymbol(id)))
             else: type $= Type(@_tokenToSymbol(id))
         end
         elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(blockGuid, List.Type.ARG))
@@ -932,7 +933,7 @@ class Parser:
         gens = nil
         args = nil
         val = nil
-        if @_match(TokenType.LESS_THAN): gens $= @_list(blockGuid, List.Type.GENS)
+        if @_match(TokenType.TWO_DOTS): gens $= @_list(blockGuid, List.Type.GENS)
         if gens and not rec and @_peekSequence([TokenType.ID, TokenType.DOT]):
             rec $= @_advance()
             @_consume(TokenType.DOT, "This should never be printed")
@@ -1101,7 +1102,7 @@ class Parser:
           firstItemType = type.val.args.0.getType()
           print "FIRST ITEM TYPE " + firstItemType
           if type.val.args.every(:_0.getType().matches(firstItemType)):
-            varargType = Vararg(firstItemType)
+            varargType = List(List.Type.ARG, [Property(Vararg(firstItemType), nil, nil)]).wrapType()
             print "Found vararg list candidate \(varargType) on top of \(returnType)"
             return [returnType, varargType]
           end

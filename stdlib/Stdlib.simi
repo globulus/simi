@@ -96,6 +96,7 @@ class$ Object(in Actors, in Comparable):
         if len == 0: return nil
         else: return @(len - 1)
     end
+    def setLast(newItem): @(@len() - 1) = newItem
     def push(elem): @append(elem)
     def every(predicate):
         for item in self:
