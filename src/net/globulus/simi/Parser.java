@@ -97,8 +97,8 @@ class Parser {
     List<Expr.Assign> constants = new ArrayList<>();
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
-    if (match(COLON)) {
-      while (!check(END) && !isAtEnd()) {
+    if (match(LEFT_BRACE)) {
+      while (!check(RIGHT_BRACE) && !isAtEnd()) {
         if (match(NEWLINE)) {
           continue;
         }
@@ -115,7 +115,7 @@ class Parser {
           }
         }
       }
-      consume(END, "Expect 'end' after class body.");
+      consume(RIGHT_BRACE, "Expect '}' after class body.");
     } else {
       consume(NEWLINE, "Expected newline after empty class declaration.");
     }
@@ -217,12 +217,12 @@ class Parser {
   private Stmt whenStatement() {
     Token when = previous();
     Expr left = call();
-    consume(COLON, "Expect a ':' after when.");
+    consume(LEFT_BRACE, "Expect a '{' after when.");
     consume(NEWLINE, "Expect a newline after when ':.");
     Stmt.Elsif firstElsif = null;
     List<Stmt.Elsif> elsifs = new ArrayList<>();
     Expr.Block elseBranch = null;
-    while (!check(END) && !isAtEnd()) {
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
       if (match(NEWLINE)) {
         continue;
       }
@@ -256,7 +256,7 @@ class Parser {
         elsifs.add(elsif);
       }
     }
-    consume(END, "Expect end at the end of when.");
+    consume(RIGHT_BRACE, "Expect } at the end of when.");
     return new Stmt.If(firstElsif, elsifs, elseBranch);
   }
 
@@ -406,8 +406,11 @@ class Parser {
       declaration = previous();
     }
     List<Expr> params = params(kind, lambda);
-    consume(COLON, "Expected a ':' at the start of block!");
-    List<Stmt> blockStmts = parseBlockStatements(declaration, kind).statements;
+    if (!match(COLON, LEFT_BRACE)) {
+      throw error(peek(), "Expected a ':' or a '{' at the start of block!");
+    }
+    Token opener = previous();
+    List<Stmt> blockStmts = parseBlockStatements(declaration, opener, kind).statements;
     List<Stmt> statements;
     if (prependedStmts != null) {
       statements = prependedStmts;
@@ -422,24 +425,33 @@ class Parser {
             kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
   }
 
-  private Expr shorthandBlock(Token token) {
-    Token declaration = new Token(DEF, null, null, token.line, token.file);
-    BlockParsingResult result = parseBlockStatements(declaration, LAMBDA);
+  private Expr shorthandBlock(Token opener) {
+    Token declaration = new Token(DEF, null, null, opener.line, opener.file);
+    BlockParsingResult result = parseBlockStatements(declaration, opener, LAMBDA);
     return new Expr.Block(declaration, result.implicitParams, result.statements, true);
   }
 
 
-  private BlockParsingResult parseBlockStatements(Token declaration, String kind) {
+  private BlockParsingResult parseBlockStatements(Token declaration, Token opener, String kind) {
     List<Stmt> statements = new ArrayList<>();
     List<Expr> implicitParams = null;
-    if (match(NEWLINE)) {
-      while (!check(END) && !isAtEnd()) {
+    if (match(RIGHT_BRACE)) { // Empty block
+      if (opener.type == COLON) {
+        throw error(opener, "Cannot match a '}' to a ':', use a '{'!");
+      } else {
+        return new BlockParsingResult(statements, null);
+      }
+    } else if (match(NEWLINE)) {
+      if (opener.type == COLON) {
+        throw error(opener, "A newline can't follow a ':' in a blockdef, use a '{'!");
+      }
+      while (!check(RIGHT_BRACE) && !isAtEnd()) {
         if (match(NEWLINE, PASS)) {
           continue;
         }
         statements.add(declaration());
       }
-      consume(END, "Expect 'end' after block.");
+      consume(RIGHT_BRACE, "Expect '}' after block.");
     } else {
       Stmt stmt = statement(true);
       implicitParams = detectImplicitParams(stmt);
@@ -457,7 +469,7 @@ class Parser {
   private List<Expr> params(String kind, boolean lambda) {
     List<Expr> params = new ArrayList<>();
     if (!check(LEFT_PAREN)) {
-      if (lambda && !check(COLON)) {
+      if (lambda && !check(COLON, LEFT_BRACE)) {
         Token id = consume(IDENTIFIER, "Expect parameter name.");
         params.add(new Expr.Variable(id));
       }
@@ -794,9 +806,16 @@ class Parser {
     throw error(peek(), message);
   }
 
-  private boolean check(TokenType tokenType) {
-    if (isAtEnd()) return tokenType == EOF;
-    return peek().type == tokenType;
+  private boolean check(TokenType... tokenTypes) {
+    for (TokenType tokenType : tokenTypes) {
+      if (isAtEnd() && tokenType == EOF) {
+        return true;
+      }
+      if (peek().type == tokenType) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private Token advance() {

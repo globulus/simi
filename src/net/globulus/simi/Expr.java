@@ -131,13 +131,13 @@ abstract class Expr implements Codifiable {
         return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
                 .append(opener)
                 .append(paramsBuilder.toString())
-                .append(TokenType.COLON.toCode())
+                .append(TokenType.LEFT_BRACE.toCode())
                 .append(TokenType.NEWLINE.toCode())
                 .append(statements.stream()
                         .map(s -> s.toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining())
                 )
-                .append(TokenType.END.toCode(indentationLevel, false))
+                .append(TokenType.RIGHT_BRACE.toCode(indentationLevel, false))
                 .append(TokenType.NEWLINE.toCode())
                 .toString();
       }

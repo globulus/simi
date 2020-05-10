@@ -148,7 +148,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + " ")) + TokenType.RIGHT_PAREN.toCode()
                       : ""
               )
-              .append(TokenType.COLON.toCode())
+              .append(TokenType.LEFT_BRACE.toCode())
               .append(TokenType.NEWLINE.toCode())
               .append(mixins.stream()
                       .map(m -> TokenType.IMPORT.toCode(indentationLevel + 1, false) + " " + m.toCode(0, false))
@@ -160,7 +160,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
               .append(TokenType.NEWLINE.toCode())
               .append(innerClasses.stream().map(i -> i.toCode(indentationLevel + 1, false)).collect(Collectors.joining()))
               .append(TokenType.NEWLINE.toCode())
-              .append(TokenType.END.toCode(indentationLevel, false))
+              .append(TokenType.RIGHT_BRACE.toCode(indentationLevel, false))
               .append(TokenType.NEWLINE.toCode())
               .toString();
     }

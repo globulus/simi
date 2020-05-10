@@ -8,16 +8,15 @@ import "./SimiSync/SimiSyncModels.simi"
 import "./Stdlib/sql/Mariadb.simi"
 import "./minibattle/Board.simi"
 
-
 print pow(2, 3)
 
-def testYieldExpr():
-    asyncFunc = def (a, callback):
+def testYieldExpr() {
+    asyncFunc = def (a, callback) {
         if a % 2: callback(10)
         else: callback(20)
-    end
+    }
 
-    test = def:
+    test = def {
         res = yield Net.post([url = "http://httpbin.org/post", json = "", headers = [accept = "application/json"]])
         print "RES IS " + res
 #        print ivic self(def)
@@ -27,27 +26,27 @@ def testYieldExpr():
         b = yield asyncFunc(10)
         print "20 == " + b
         print "After all"
-    end
+    }
     test()
     print ivic test
-end
+}
 testYieldExpr()
 
-def closureTest():
+def closureTest() {
    a = 5
-   (def:
+   (def {
     print a + " == 5"
     a = 6
     print a + " == 6"
-   end)()
+   })()
    print a + " == 5"
-   (def:
+   (def {
     print a + " == 5"
     a $= 3
     print a + " == 3"
-   end)()
+   })()
    print a + " == 3"
-   (def:
+   (def {
     print a + " == 3"
     a $= 4
     print a + " == 4"
@@ -55,19 +54,19 @@ def closureTest():
     print a + " == 7"
     a $= 8
     print a + " == 8"
-   end)()
+   })()
    print a + " == 4"
-end
+}
 closureTest()
 
 #SimiSyncModels.ModelParser.parse(1)
-def typeCheckTest(a, b is String, c is Number, d is Range):
+def typeCheckTest(a, b is String, c is Number, d is Range) {
     print "Type check passed"
-end
+}
 print ivic typeCheckTest
-class TypeCheckTestClass:
+class TypeCheckTestClass {
     def init(a is String, b, c, d is Number): pass
-end
+}
 print ivic TypeCheckTestClass.init
 typeCheckTest(1, "", 3, Range(1, 2))
 
@@ -77,16 +76,16 @@ print dejt.("class")
 print dejt.classObject()
 
 clck = clock()
- def ife1():
+ def ife1() {
         return ife(1 < 2, Math.pow(2, 32), Math.pow(2, 32))
-    end
+    }
     print "testing ife1()"
     print ife1()
     print "" + (clock() - clck)
     clck2 = clock()
-    def ife2():
+    def ife2() {
         return ife(1 < 2, :Math.pow(2, 32), :Math.pow(2, 32))
-    end
+    }
     print "testing ife2()"
     print ife2()
     print "" + (clock() - clck2)
@@ -107,7 +106,7 @@ print ife1 is Function
 #            arg $= n - 2
 #            b = loop()
 #            return a + b
-#        end
+#        }
 #        loop = def:
 #           while true:
 ##            print cache
@@ -116,53 +115,53 @@ print ife1 is Function
 ##            else: print "have cache for " + key
 ##            print "about to yield " + cache.(key)
 #            yield cache.(key)
-#         end
-#        end
+#         }
+#        }
 #        return inner(n)
-#    end
+#    }
 #
 #    decorate* "Decorator.memoize"
 #    def fib2(n):
 #        if n < 2: return n
 #        return fib2(n - 2) + fib2(n - 1)
-#    end
+#    }
 #
 #    decorate* "Decorator.memoize"
 #    def gcd(a, b):
 #        if b: return gcd(b, a % b)
 #        return a
-#    end
+#    }
 #
 #    decorate* "Decorator.timed"
 #    def testFib(n):
 #        print "Testing fib"
 #        print fib(n)
 #        print "Done testing fib"
-#    end
+#    }
 #    for _ in 3.times():
 #        testFib(10)
-#    end
+#    }
 #
 #    decorate* "Decorator.timed"
 #    def testFib2(n):
 #        print "Testing fib2"
 #        print fib2(n)
 #        print "Done testing fib2"
-#    end
+#    }
 #    for _ in 3.times():
 #        testFib2(10)
-#    end
+#    }
 #
 #    decorate* "Decorator.timed"
 #    def testGcd(a, b):
 #        print "Testing gcd"
 #        print gcd(a, b)
 #        print "Done testing gcd"
-#    end
+#    }
 #    for _ in 3.times():
 #        testGcd(10000, 41)
-#    end
-#end)()
+#    }
+#})()
 
 #Decorator.test()
 
@@ -171,7 +170,7 @@ print ife1 is Function
 #    print "Got response"
 #    print code
 #    print body
-#end)
+#})
 
 #asyncf = Async.go(def:
 #    a = 5
@@ -183,13 +182,13 @@ print ife1 is Function
 #    f = await* Gson.parseAsync('{a2:3}')
 #    print "async f is " + f
 #    g = 10
-#end)
+#})
 #asyncf()
 
-def fib(n):
+def fib(n) {
   if n < 2: return n
   return fib(n - 1) + fib(n - 2)
-end
+}
 
 #before = clock()
 #print fib(40)
@@ -198,14 +197,14 @@ end
 
 print gu "2+2"
 
-GuClass = gu "class GuClass:
+GuClass = gu "class GuClass {
     def test(): print 'GuClassTest'
-end"
+}"
 print GuClass().test()
 
-(def a:
+(def a {
     print a
-end)(3)
+})(3)
 
 Fruit = Enum.of(["APPLE" = [size = 3], "ORANGE" = [size = 2], "BANANA" = [size = 4]])
 apple = Fruit.APPLE
@@ -219,79 +218,78 @@ print "Apple size: " + apple.size
 print "Is potato round: " + potato.isRound()
 print "Is cucumber round: " + Veggies.CUCUMBER.isRound()
 
-class OuterClass:
+class OuterClass {
 
-    class InnerClass:
+    class InnerClass {
         def test(): print "Inner class test"
-    end
+    }
 
-    class _PrivateInnerClass:
+    class _PrivateInnerClass {
         def test(): print "Shouldn't happen"
-    end
-end
-def testInnerClass():
+    }
+}
+def testInnerClass() {
     OuterClass.InnerClass().test()
 #    OuterClass._PrivateInnerClass().test()
-end
+}
 testInnerClass()
 
 ![method = "POST"]
-def testFile():
+def testFile() {
     #File.readLines("README.md").forEach(def s: print s)
     file = File("README.md")
     reader = ReadStream(file)
-    while true:
+    while true {
         line = reader.readLine()
         if line: print line
         else: break
-    end
+    }
     writer = WriteStream(File("writetest.txt"))
     writer.write("string")
     writer.newLine()
     writer.write("new string")
-    rescue ex:
-    end
+    rescue ex { }
     reader.close()
     writer.close()
-end
+}
 #testFile()
 print "Annotations"
 print !!testFile
 def printFunAnnotations(fun): print !!fun
 printFunAnnotations(testFile)
 
-def testObjectDecomp():
+def testObjectDecomp() {
     print "Obj decomp"
     obj = [a = 3, b = 4]
     [a, c] = obj
     print a
     print b
     print c
-end
+}
 testObjectDecomp()
 
-def testWhen():
+def testWhen() {
     print "When test"
     a = 13
-    when a:
+    when a {
         5: print "a is 5"
         10 or 13: print "a is 10 or 13"
         is String: print "a is String"
         not in Range(12, 16): print "not between 12 and 16"
         else: print "reached the default branch"
-    end
-end
+    }
+}
 testWhen()
 
-def testYieldFun():
+def testYieldFun() {
     print "before yield"
-    for i in 3.times():
+    for i in 3.times() {
         if i < 2: yield "yield" + i
         else: return "return in yield"
-    end
+    }
     print "afterYield"
-end
-def testYield():
+}
+def testYield() {
     print "Calling yield test"
     print testYieldFun()
     print "Calling again..."
@@ -300,22 +298,22 @@ def testYield():
     print testYieldFun()
     print "Now it should restart"
     print testYieldFun()
-end
+}
 testYield()
 
-class Point:
+class Point {
     def init(x, y): pass
 
     # This is fully equivalent to:
     # def init(x, y):
     #   @x = x
     #   @y = y
-    # end
+    # }
 
     # In value classes, you may want to override the equals method
     # to check against fields, i.e to use matches() with == operator:
    # def equals(other): return @matches(other)
-end
+}
 
 p1 = Point(1, 2)
 p2 = Point(1, 2)
@@ -325,86 +323,82 @@ date = Date.now()
 print date
 print date.format("dd/MM/yyyy hh:mm:ss")
 
-def testStringNumberConversion():
+def testStringNumberConversion() {
     numStr = "123.3ž"
     numVal = numStr.toNumber()
-    rescue ex:
+    rescue ex {
         if ex: print "Invalid number format"
         else: print numVal
-    end
-end
+    }
+}
 testStringNumberConversion()
 
-def testNestedRescue():
-    for i in 10.times():
+def testNestedRescue() {
+    for i in 10.times() {
         addStringAndTryToConvert(i)
-    end
-    rescue ex:
+    }
+    rescue ex {
         if ex: print "Invalid number format detected outside of fun and loop"
         else: print "No invalid numbers detected"
-    end
-end
-def addStringAndTryToConvert(number):
+    }
+}
+def addStringAndTryToConvert(number) {
     str = number.toString()
     if Number.randomInt(2): str += "a"
     numVal = str.toNumber()
-end
+}
 testNestedRescue()
 
-class CarException(Exception):
-end
+class CarException(Exception)
 
-class TankOverflowException(Exception):
-end
+class TankOverflowException(Exception)
 
 ![dbName = "Car"]
 ![serialize = false]
-class Car:
+class Car {
 
     ![dbField = "wheels"]
     wheels = 4
 
     def init(capacity, tank): pass
 
-    def refill(amount):
+    def refill(amount) {
         print "Doing something"
         if amount < 0: CarException("Amount < 0!").raise()
         if amount > 100: TankOverflowException("Too much gasoline!").raise()
         if @tank + amount > @capacity: @tank = @capacity
         else: @tank = @tank + amount
-    end
+    }
 
-    def refill(amount, doprint):
+    def refill(amount, doprint) {
         @tank = 0
-     end
+     }
 
     ![method = "GET"]
      def f(): pass
-end
+}
 print "Car annotations"
 print !!Car
 print !!Car.wheels
 print !!Car.f
 printFunAnnotations(Car.f)
 
-class OtherCar(Car, Range):
-    def init():
+class OtherCar(Car, Range) {
+    def init() {
         super.init(10, 20)
         @start = 5
         @stop = 10
         @step = 2
         super.refill(2)
         @refill(3)
-   end
+   }
 
-   def refill(amount):
+   def refill(amount) {
         print "Doing nothing"
-   end
+   }
 
-   def has(value):
-    return super(Range).has(value)
-   end
-end
+   def has(value): super(Range).has(value)
+}
 
 otherCar = OtherCar()
 print otherCar.capacity
@@ -414,26 +408,26 @@ print 6 in otherCar
 #    min2 = def (a, b):
 #        if a < b: return a
 #        else: return b
-#    end
+#    }
 #    return min2(min2(a, b), c)
-#end
+#}
 
 #d = min3(4, 5, 3)
 
-def refillCar():
+def refillCar() {
     njuKar = Car.builder().capacity(10).tank(20).build()
     print "should be printed"
     njuKar.refill(10)
     print "should be skipped"
-    rescue ex:
+    rescue ex {
         print ex.message
         if ex: print "rescue from: " + ex.message
         if ex is CarException: print "car exc"
         else: print ex
         print "rescue always"
-    end
+    }
     print "after rescue"
-end
+}
 
 refillCar()
 
@@ -442,25 +436,25 @@ refillCar()
 
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
 print dict
-for i in dict:
+for i in dict {
     print i
     if i == "b": continue
     print dict.(i)
-end
+}
 
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
     .where(:_0 <= 5)\
     .map(:_0 * 2)\
-    .sorted(:_1 <> _0)
+    .sorted(:_1.compareTo(_0))
 print arr
 
 print Math.pow(2, 3)
 
 #Object.each = def f:
 #    for item in self: f(item)
-#end
+#}
 
 #print [a = "1", b = def a: return a * a].b(2)
 
@@ -491,14 +485,14 @@ str = "this is a 'string'"
 print str
 
 a = 2
-while a < 10:
+while a < 10 {
     print a
     a += 1
-end
+}
 
-for i in Range(start=10, stop=-20, step=-3):
+for i in Range(start=10, stop=-20, step=-3) {
     print i
-end
+}
 
 car = Car(40, 10)
 print(car.tank)
@@ -516,30 +510,30 @@ print carClone.matches(car)
 print ivic car
 print carClone
 
-so = [a = 5, c = "aaa", b = def (a, b):
+so = [a = 5, c = "aaa", b = def (a, b) {
     c = a + b + "dddd"
     return c
-end
+}
 ]
 print ivic so
 clone = gu ivic so
 print clone.matches(so)
 print ivic clone
 
-class_ ModuleClass:
+class_ ModuleClass {
 
-    class_ ModuleClassA:
+    class_ ModuleClassA {
         a = 5
 
         def methodA(): return 1
         def methodA(a): return a + 1
-    end
+    }
 
-    class ModuleClassB:
+    class ModuleClassB {
         b = 6
         def methodA(a): return a + 3
-    end
-end
+    }
+}
 #import ModuleClass
 print ModuleClassA
 print ModuleClassB
@@ -548,15 +542,15 @@ print ModuleClassA.matches(ModuleClass.ModuleClassA)
 class MixinTest(in ModuleClass.ModuleClassB)
 print "Mixin test: " + MixinTest().methodA(4)
 
-class Router:
+class Router {
     def init(a): pass
-end
+}
 
 clazz = gu "!Router(2)
-class RouterTest:
+class RouterTest {
     !Router(5)
     def b(): return 3
-end"
+}"
 print !!clazz
 
 print 12.bitAnd(25)
@@ -565,7 +559,7 @@ aa = 3
 aa //= 5
 print aa
 
-def testArgDecomp():
+def testArgDecomp() {
     print ivic self(def)
     f0 = :print "f0"
     f1 = def a: print "f1 \(a)"
@@ -573,15 +567,15 @@ def testArgDecomp():
     f0([])
     f1([1])
     f2([1, 2])
-end
+}
 testArgDecomp()
 
-class Button:
+class Button {
     def setTitle(title): pass
     def setBackgroundColor(color): pass
     def setOnClickListener(listener): pass
     def performClick(): @onClickListener(self)
-end
+}
 
 button = Button()\
     .setTitle("Click me")\
@@ -589,8 +583,14 @@ button = Button()\
     .setOnClickListener(def sender: print sender.title)
 button.performClick()
 
+def testKotlin() {
+    class Car2(Car, Iterable)
+    print ivic Car2
+}
+testKotlin()
+
 !Orm.Table()
-class OrmTesting:
+class OrmTesting {
     !Orm.Column()
     !Orm.PrimaryKey()
     id = 0
@@ -599,9 +599,9 @@ class OrmTesting:
     first = ""
 
     def init(id, first): pass
-end
+}
 
-def mariaDbTest():
+def mariaDbTest() {
     db = MariaDb()
     orm = Orm(db, "localhost", 3306, "test", "root", "")
     print db
@@ -612,22 +612,22 @@ def mariaDbTest():
 #    results = db.execute("SELECT * FROM REGISTRATION")
     results = orm.query(OrmTesting).iterator()
     print results
-    while results.next():
+    while results.next() {
         print "results.next()"
         print results.getString("first")
-    end
+    }
     orm.upsert(OrmTesting(2, "Test2"))
 #    orm.delete(OrmTesting(2, "Test2"))
 #    orm.deleteForId(OrmTesting, 2)
     print orm.queryForId(OrmTesting, 2)
     orm.close()
-    rescue ex:
+    rescue ex {
         if ex: print ex.message
-    end
-end
+    }
+}
 mariaDbTest()
 
-def compositeObjTest():
+def compositeObjTest() {
     compositeObj = [a = 3, 2, b = 4, 3, c = 5, 4, 6]
     print compositeObj
     iv = ivic compositeObj
@@ -645,29 +645,29 @@ def compositeObjTest():
     print ruler
     ruler.append(100)
     print compositeObj
-end
+}
 compositeObjTest()
 
-def arraySubclassTest():
-    class FixedSizeArray:
+def arraySubclassTest() {
+    class FixedSizeArray {
         _MAX = 3
 
-        def append(item):
+        def append(item) {
             super.append(item)
             @_trim()
-        end
+        }
 
-        def addAll(other):
+        def addAll(other) {
             super.addAll(other)
             @_trim()
-        end
+        }
 
-        def _trim():
+        def _trim() {
             d = @len() - @_MAX
             if d <= 0: return
             for _ in d.times(): @0 = nil
-        end
-    end
+        }
+    }
 
     arr = FixedSizeArray()
     arr.append(1)
@@ -678,7 +678,7 @@ def arraySubclassTest():
     print arr
     arr.append(5)
     print arr
-end
+}
 arraySubclassTest()
 
 print Board.zip()
@@ -688,10 +688,8 @@ print Board().render()
 #print inpt
 #print parseCell(inpt)
 
-
-
 import Test
-class TestCase:
+class TestCase {
     !Before()
     def before: print "before"
 
@@ -699,83 +697,83 @@ class TestCase:
     def after: print "after"
 
     !Case()
-    def testEq:
+    def testEq {
         Assert.equals(5, 5, "Should pass")
-    end
+    }
 
     !Case()
-    def testEqFail:
+    def testEqFail {
         Assert.equals(5, 4, "Should fail")
-    end
+    }
 
     !Case()
-    def testInterpreterFail:
+    def testInterpreterFail {
         c = "b" - "a"
         Assert.equals(5, 4, "Shouldn't happen")
-    end
-end
+    }
+}
 
 !Mock([Net = [post = def (args, callback): callback("posted")]])
-class TestMock:
+class TestMock {
     !Case()
-    def testPost():
+    def testPost() {
         result = yield Net.post([])
         Assert.equals(result, "posted", "Should be good")
-    end
+    }
 
     !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
     !Case()
-    def testPostAndFile():
+    def testPostAndFile() {
         result = yield Net.post([])
         Assert.isTrue(result == "posted", "Should be good")
         fileString = File.readString()
         Assert.equals(fileString, "mock reading", "Also good")
-    end
+    }
 
     !Case()
-    def failWithoutFileMock():
+    def failWithoutFileMock() {
         fileString = File.readString()
         Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
-    end
-end
+    }
+}
 print Reporter.report(Test.test([TestCase, TestMock]))
 
 def explicitReturn(): return 5
 print explicitReturn()
 def implicitReturn(): 5
 print implicitReturn()
-def implicitReturnSelf():
+def implicitReturnSelf() {
     if 5 < 4: 5 + 5
-end
+}
 print implicitReturnSelf()
 print [5].isEmpty()
 print [5].isntEmpty()
 
-def testImplicitParams:
+def testImplicitParams {
     print "Testing implicit params"
     print [1, 2, 3, 4].where(:_0 > 2)
-    print [1, 2, 3, 4].sorted(:_1 <> _0)
-end
+    print [1, 2, 3, 4].sorted(:_1.compareTo(_0))
+}
 testImplicitParams()
 
-def testSemicolonNewline:;a = 2;b = 3;c = 5;print "Semicolon newline: " + (a + b + c);end
+def testSemicolonNewline{;a = 2;b = 3;c = 5;print "Semicolon newline: " + (a + b + c);}
 testSemicolonNewline()
 
-def testLetApplyAlsoWith:
+def testLetApplyAlsoWith {
     print "let test"
     printf = def x: print x
     [12].let(printf)
     nil.let(printf) # not printed
 
     print "apply test"
-    class Person:
+    class Person {
         def setName(v): pass
         def setAge(v): pass
-    end
-    print Person().apply(def x:
+    }
+    print Person().apply(def x {
         x.setName("name")
         x.setAge(12)
-    end)
+    })
 
     print "also test"
     print [1, 2, 3, 4, 5].also(:print self).map(def i: i * 2)
@@ -784,26 +782,26 @@ def testLetApplyAlsoWith:
 #    print Person().with(def:
 #        setName("with name")
 #        setAge(22)
-#    end)
-end
+#    })
+}
 testLetApplyAlsoWith()
 
-def testStaticMethod:
+def testStaticMethod {
     class Person
    class Cara
 
-   class Audi(Cara):
-      def staticMethod:
+   class Audi(Cara) {
+      def staticMethod {
          audiInstance = Audi()
          audiInstance.weight = 1800 # Works, self is Audi class
          carInstance = Cara()
          carInstance.weight = 1500 # Works, self is Audi class which is subclass of Car
          personInstance = Person()
 #         personInstance.weight = 80 # Error, self is Audi class which isn't subclass of Person
-      end
-   end
+      }
+   }
    Audi.staticMethod()
-end
+}
 testStaticMethod()
 
 print "scanf"

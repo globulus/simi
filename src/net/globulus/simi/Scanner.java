@@ -20,7 +20,6 @@ class Scanner {
     keywords.put("class$",  TokenType.CLASS_OPEN);
     keywords.put("continue",    TokenType.CONTINUE);
     keywords.put("def",    TokenType.DEF);
-    keywords.put("end",    TokenType.END);
     keywords.put("else",   TokenType.ELSE);
     keywords.put("elsif",  TokenType.ELSIF);
     keywords.put("false",  TokenType.FALSE);
@@ -98,6 +97,8 @@ class Scanner {
       } break;
       case '[': addToken(TokenType.LEFT_BRACKET); break;
       case ']': addToken(TokenType.RIGHT_BRACKET); break;
+      case '{': addToken(TokenType.LEFT_BRACE); break;
+      case '}': addToken(TokenType.RIGHT_BRACE); break;
       case ',': addToken(TokenType.COMMA); break;
       case '.': addToken(TokenType.DOT); break;
       case ':': addToken(TokenType.COLON); break;

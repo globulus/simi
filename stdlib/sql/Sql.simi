@@ -1,9 +1,8 @@
 import "./stdlib/sql/Sql-java.jar"
 
-class SqlException(Exception):
-end
+class SqlException(Exception)
 
-class ResultSet(Closeable):
+class ResultSet(Closeable) {
     def moveTo(row): native
     def moveBy(rows): native
     def afterLast(): native
@@ -27,4 +26,4 @@ class ResultSet(Closeable):
     def previous(): native
     def next(): native
     def close(): native
-end
+}

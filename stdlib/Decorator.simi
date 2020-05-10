@@ -3,35 +3,35 @@ import "./Stdlib/CodeBlocks.simi"
 Decorator = [
     KEYWORD = "decorate *",
 
-    go = def (f):
+    go = def (f) {
         lines = (ivic f).split("\n")
         newLines = $[]
         decorators = nil
         skip = -1
-        for e in lines.zip():
+        for e in lines.zip() {
             [i, line] = e
             trimmedLine = line.trim()
-            if trimmedLine.startsWith(@KEYWORD):
+            if trimmedLine.startsWith(@KEYWORD) {
 #                print trimmedLine.substring(@KEYWORD.len() + 1)
                  decorators $= (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
 #                print "Found decorators: " + decorators
-            end
-            elsif decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine):
+            }
+            elsif decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine) {
                 func = CodeBlocks.FunctionCode(lines, i)
                 params = func.parametersWithoutParentheses()
                 newLines.append(line)
                 tempName = @_tempName()
                 newLines.append(tempName + " = def (" + params + "):")
                 newLines.addAll(func.body().map(def l: l.replacing(func.name + "(", tempName + "(")))
-                newLines.append("end")
+                newLines.append("}")
                 str = String.builder().add("return ")
-                for f in decorators:
+                for f in decorators {
                     str.add(f).add("(")
-                end
+                }
                 str.add(tempName)
-                for _ in decorators.len().times():
+                for _ in decorators.len().times() {
                     str.add(")")
-                end
+                }
                 needsBrackets = params.isEmpty() or "," in params
                 str\
                     .add("(").add(ife(needsBrackets, "[", ""))\
@@ -40,146 +40,146 @@ Decorator = [
                 newLines.append(str.build())
                 decorators $= nil
                 skip $= i + func.body().len()
-            end
+            }
             elsif i > skip: newLines.append(line)
-        end
+        }
         tempName = @_tempName()
         print  "[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName
         return gu ("[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName)
-    end,
+    },
 
     _tempName = :"temp" + clock().toString().substring(5),
 
-    test = def:
-        @go(def:
-            def timed(f):
-                wrapper = def args:
+    test = def {
+        @go(def {
+            def timed(f) {
+                wrapper = def args {
                     t1 = clock()
                     val = f(args)
                     print "It took " + (clock() - t1) + " ms to run"
                     return val
-                end
+                }
                 return wrapper
-            end
+            }
 
             decorate* "timed"
-            def printf(string, args):
+            def printf(string, args) {
                 print string.format(args)
-            end
+            }
 
             decorate* "timed"
-            def sum(n):
+            def sum(n) {
                 res = 0
-                for i in n.times():
+                for i in n.times() {
                     res += i
-                end
+                }
                 return res
-            end
+            }
 
             decorate* "timed"
-            def exp(a, b):
+            def exp(a, b) {
                 res = 1
-                for _ in b.times():
+                for _ in b.times() {
                     res *= a
-                end
+                }
                 return res
-            end
+            }
 
             printf("%.2f", [1.1111])
             print sum(10_000)
             print exp(2, 50)
-        end)()
-    end,
+        })()
+    },
 
-    timed = def f:
-        wrapper = def args:
+    timed = def f {
+        wrapper = def args {
             t1 = clock()
             val = f(args)
             print "It took " + (clock() - t1) + " ms to run"
             return val
-        end
+        }
         return wrapper
-    end,
+    },
 
-    memoize = def f:
+    memoize = def f {
         fcache = $[]
         workerCache = $[]
         farg = nil
-        fworker = def f:
+        fworker = def f {
             farg $= CodeBlocks.FunctionCode(f)
             return flooper()
-        end
-        flooper = def:
-            while true:
+        }
+        flooper = def {
+            while true {
                 fname = farg.name
 #                print "In flooper: " + fname
-                if fname not in fcache:
+                if fname not in fcache {
                     workerLines = $[]
                     workerLines.append(farg.anonymousDeclaration().replacing("(", "(looper, "))
                     temp = 0
-                    for line in farg.body():
+                    for line in farg.body() {
                         trimmedLine = line.trim()
-                        if fname in trimmedLine:
+                        if fname in trimmedLine {
                             parts = $[]
                             currentLine = trimmedLine
-                            while fname in currentLine:
+                            while fname in currentLine {
                                 index = currentLine.indexOf(fname)
                                 parts.append(currentLine.substring(0, index))
                                 rest = $currentLine.substring(index)
                                 parenCount = 0
                                 firstParen = -1
-                                for i in rest.len().times():
+                                for i in rest.len().times() {
                                     c = rest.(i)
-                                    if c == '(':
+                                    if c == '(' {
                                         if parenCount == 0: firstParen $= i
                                         parenCount += 1
-                                    end
-                                    elsif c == ')':
+                                    }
+                                    elsif c == ')' {
                                         parenCount -= 1
-                                        if parenCount == 0:
+                                        if parenCount == 0 {
                                             tempName = "temp" + temp
                                             temp += 1
                                             params $= rest.substring(firstParen, i + 1)
-                                            if farg.arity != 1:
+                                            if farg.arity != 1 {
                                                 params $= "[" + params.substring(1, params.len() - 1) + "]"
-                                            end
+                                            }
                                             workerLines.append("arg $= " + params)
                                             workerLines.append(tempName + " = looper()")
                                             parts.append(tempName)
                                             currentLine $= rest.substring(i + 1)
                                             break
-                                        end
-                                    end
-                                end
-                            end
+                                        }
+                                    }
+                                }
+                            }
 #                                print parts
                             workerLines.append(String.from(parts, " "))
-                        end
+                        }
                         else: workerLines.append(line)
-                    end
-                    workerLines.append("end")
+                    }
+                    workerLines.append("}")
 #                    print workerLines
                     workerCache.(fname) = gu ("[f = " + String.from(workerLines, "\n") + "].f")
-                    fcache.(fname) = def args:
+                    fcache.(fname) = def args {
                         cache = $[]
                         arg = 0
                         worker = workerCache.(fname)
-                        looper = def:
-                           while true:
+                        looper = def {
+                           while true {
                             key = arg.toString()
                             if key not in cache: cache.(key) = worker([looper].joined(arg))
 #                            else: print "found key in cache: " + key
                             yield cache.(key)
-                         end
-                       end
+                         }
+                       }
                        return worker([looper].joined(args))
-                    end
-                end
+                    }
+                }
                 yield fcache.(fname)
-            end
-        end
+            }
+        }
         return fworker(f)
-    end
+    }
 ]
 
 #Decorator.test()

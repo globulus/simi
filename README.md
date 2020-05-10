@@ -124,7 +124,7 @@ arr = [1, 2, 3]\
     .joined(with = [5, 6, 7])\
     .where(def i: i <= 5)\
     .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .sorted(def (l, r): r.compareTo(l))
 print arr
 ```
 
@@ -361,11 +361,11 @@ button = Button()\ # Implicit return self from init
 # More code...
 button.performClick()
 ```
-It also forces the programmer to explicity use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
+It also forces the programmer to explicitly use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
 
 ##### Implicit parameters
 
-While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *$* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
+While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *_* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
 
 ```ruby
 sumThree = :_1 + _0 + _2
@@ -383,7 +383,7 @@ This syntax nicely abbreviates often-used lambdas that programmers are familiar 
 arr = [1, 2, 3]\
     .where(def i: i <= 5)\
     .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .sorted(def (l, r): r.compareTo(l))
 ```
 
 abbreviated by using implicit params:
@@ -392,7 +392,7 @@ abbreviated by using implicit params:
 arr = [1, 2, 3]\
     .where(:_0 <= 5)\
     .map(:_0 * 2)\
-    .sorted(:_1 <> _0)
+    .sorted(:_1.compareTo(_0))
 ```
 
 Of course, the implicit params syntax can be used with any shorthand lambda, but improvements to conciseness shouldn't be made at the expense of readability.
@@ -782,11 +782,8 @@ not, and, or
 ==, !=, <, <=, >, >=, <>
 
 * On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class. If you need to check equivalence based on values, check out the *matches()* method.
-* The comparison operator <> implicitly invokes *compareTo()* method, which returns -1 if the left compared value is lesser than the right one, 0 is they're equal and 1 if it's greater. For Numbers and Strings, this operator returns the natural ordering, whereas for Objects it can be used in *sorted()* method, as well as a replacement for < and >:
-```ruby
-obj1 <> obj2 < 0 # Is equivalent to obj1 < obj2
-```
- * Remaining operators (<, <=, > and >=) can only be used with Numbers.
+* The comparison operator <> implicitly invokes *matches()* method.
+* Remaining operators (<, <=, > and >=) can only be used with Numbers.
 
 #### is and is not
 You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:

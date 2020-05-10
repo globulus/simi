@@ -1,6 +1,6 @@
 import "./stdlib/Net-java.jar"
 
-class Net:
+class Net {
     KEYWORD_POST = "post *"
 
     def get(request, callback): native
@@ -8,19 +8,19 @@ class Net:
     def put(request, callback): native
     def delete(request, callback): native
 
-    def go(f):
+    def go(f) {
         common = Async.KEYWORD + " Net."
         lines = (ivic f).replacing(@KEYWORD_POST, common + "post(").split("\n").clone(false)
         open = 0
-        for e in lines.zip():
+        for e in lines.zip() {
             [i, line] = e
             if line.endsWith("["): open += 1
-            elsif line.endsWith("]"):
+            elsif line.endsWith("]") {
                 open -= 1
                 if open == 0: lines.(i) = line + ")"
-            end
+            }
             elsif common in line: lines.(i) = line + ")"
-        end
+        }
         return gu Async.swl(lines)
-    end
-end
+    }
+}

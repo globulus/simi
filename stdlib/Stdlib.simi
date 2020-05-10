@@ -1,22 +1,22 @@
 import "./stdlib/Stdlib-java.jar"
 
-class Actors:
+class Actors {
   # Evaluates a function with self passed as param and returns its result. Can generally be used to map self
   # to something else, or to perform a nil check (as the function won't be called on a nil value).
   def let(f): return f(self)
 
   # Allows for quick init of object while returning self.
-  def apply(f):
+  def apply(f) {
      f(self)
      return self
-  end
+  }
 
   # Used to add extra steps in chains, as the passed function is invoked with self, while self itself is returned
   # and not mutated.
-  def also(f):
+  def also(f) {
       f$()
       return self
-  end
+  }
 
    # Evaluates the associated block as if all the non-keyword lines refer to self
    # and as such is useful as a cleaner (but a lot slower) alternative to apply().
@@ -26,22 +26,22 @@ class Actors:
 #            tl = l.trim()
 #            for keyword in CodeBlocks.KEYWORDS:
 #                if tl.startsWith(keyword): return l
-#            end
+#            }
 #            return "@" + tl
-#        end)
+#        })
 #       fc = FunctionComposer(nil, nil)
 #       fc.lines(body)
 #       mutatedBlock = gu fc.getString()
 #       mutatedBlock$()
 #       return self
-#   end
-end
+#   }
+}
 
-class Comparable:
+class Comparable {
     def compareTo(other): native
-end
+}
 
-class$ Object(in Actors, in Comparable):
+class$ Object(in Actors, in Comparable) {
     def len(): native
     def keys(): native
     def values(): native
@@ -76,130 +76,128 @@ class$ Object(in Actors, in Comparable):
 
     def array(capacity): native
     def array(capacity, fillValue): native
-    def iterating(iterator):
+    def iterating(iterator) {
         buffer = $[]
         for item in iterator: buffer.append(item)
         return buffer
-    end
+    }
     def slice(start, stop): native
     def builder(): native
 
     def length(): @len()
     def isEmpty(): @len() == 0
     def isntEmpty(): not @isEmpty()
-    def first():
+    def first() {
         if @isEmpty(): return nil
         else: return @0
-    end
-    def last():
+    }
+    def last() {
         len = @len()
         if len == 0: return nil
         else: return @(len - 1)
-    end
+    }
     def setLast(newItem): @(@len() - 1) = newItem
     def push(elem): @append(elem)
-    def every(predicate):
-        for item in self:
+    def every(predicate) {
+        for item in self {
             if not predicate(item): return false
-        end
+        }
         return true
-    end
-    def any(predicate):
-        for item in self:
+    }
+    def any(predicate) {
+        for item in self {
             if predicate(item): return true
-        end
+        }
         return false
-    end
-    def where(predicate):
+    }
+    def where(predicate) {
         buffer = $[]
-        for item in self:
+        for item in self {
             if predicate(item): buffer.append(item)
-        end
+        }
         if @isArray(): return buffer
         else: return buffer.zip()
-    end
-    def find(predicate):
-        for item in self:
+    }
+    def find(predicate) {
+        for item in self {
             if predicate(item): return item
-        end
+        }
         return nil
-    end
-    def findIndex(predicate):
-        for [index, item] in @zip():
+    }
+    def findIndex(predicate) {
+        for [index, item] in @zip() {
             if predicate(item): return index
-        end
+        }
         return nil
-    end
+    }
     def count(predicate): @where(predicate).len()
-    def forEach(function):
+    def forEach(function) {
         for item in self: function(item)
         return self
-    end
-    def joined(with):
+    }
+    def joined(with) {
         clone = @clone()
         extra = with
         if with is not Object: extra $= [with]
         clone.addAll(extra)
         return clone
-    end
-    def map(function):
-        if @isArray():
+    }
+    def map(function) {
+        if @isArray() {
              buffer = $[]
              for item in self: buffer.append(function(item))
              return buffer
-        end
-        else:
+        } else {
             buffer = $[]
             for key in self: buffer.(key) = function(key, @(key))
             return buffer
-        end
-    end
-    def pop():
+        }
+    }
+    def pop() {
         len = @len()
         if len == 0: return nil
-        else:
+        else {
             val = @(len - 1)
             @(len - 1) = nil
             return val
-        end
-   end
-   def reduce(initialValue, reducer):
+        }
+   }
+   def reduce(initialValue, reducer) {
         val = initialValue
-        for item in self:
+        for item in self {
             val $= reducer(val, item)
-        end
+        }
         return val
-   end
+   }
    def reduceRight(initialValue, reducer): @reversed().reduce(initiaValue, reducer)
-   def shift():
+   def shift() {
         if @isEmpty(): return nil
-        else:
+        else {
             val = @0
             @0 = nil
             return val
-        end
-   end
-   def removeIf(predicate):
-       for item in self.zip():
+        }
+   }
+   def removeIf(predicate) {
+       for item in self.zip() {
            if predicate(item): @(item.key) = nil
-       end
-   end
+       }
+   }
    def slice(start): @slice(start, @len())
    def randomItem(): @(Number.randomInt(@len()))
 
-   def use(f):
+   def use(f) {
        f$()
-
-   end
-end
+   }
+}
 
 class_ Function
 
-class Exception:
+class Exception {
     def init(message): pass
 
     def raise(): native
-end
+}
 
 class ScannerException(Exception)
 
@@ -215,76 +213,74 @@ class IllegalArgumentException(Exception)
 
 class UnsupportedOperationException(Exception)
 
-class AbstractMethodException(Exception):
+class AbstractMethodException(Exception) {
     def init(method, sender): @init("\(method) is abstract in \(sender.('class'))!")
-end
+}
 
-def ife(condition, ifval, elseval):
+def ife(condition, ifval, elseval) {
     if condition: return ifval()
     else: return elseval()
-end
+}
 
 Io = [
     read = def: native,
     readNumber = :@read().toNumber(),
-    scanf = def (format is String):
+    scanf = def (format is String) {
         line = @read()
         tokens = String.builder()
         index = -1
         while (index $= format.indexOf('%', index + 1)) != nil: tokens.add(format.(index + 1))
         tokens $= tokens.build()
         print tokens
-    end,
+    },
 
     printf = def (format is String, args): print format.format(args)
 ]
 
-class Iterator:
+class Iterator {
     def next(): pass
-end
+}
 
-class RangeIterator(Iterator):
-    def init(range):
+class RangeIterator(Iterator) {
+    def init(range) {
         @range = range
         @current = @range.start
-    end
+    }
 
-    def next():
-        if @current in @range:
+    def next() {
+        if @current in @range {
             c = @current
             @current = @current + @range.step
             return c
-        end
+        }
         return nil
-    end
-end
+    }
+}
 
-class Range:
-    def init(start, stop):
+class Range {
+    def init(start, stop) {
         @start = start
         @stop = stop
         @step = ife(start < stop, 1, -1)
-    end
+    }
 
     def init(start, stop, step): pass
 
     def iterate(): RangeIterator(self)
 
-    def has(val):
+    def has(val) {
         if @start < @stop: return val >= @start and val < @stop
         else: return val <= @start and val > @stop
-    end
+    }
 
-    def toString():
-        return String.builder()\
+    def toString(): String.builder()\
             .add("Range from ").add(@start)\
             .add(" to ").add(@stop)\
             .add(" by ").add(@step)\
             .build()
-    end
-end
+}
 
-class$ Number(in Actors, in Comparable):
+class$ Number(in Actors, in Comparable) {
     def isInteger(): native
 
     def times(): ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
@@ -310,9 +306,9 @@ class$ Number(in Actors, in Comparable):
     def char(): native
 
     def bool(): ife(self, "true", "false")
-end
+}
 
-class$ String(in Actors, in Comparable):
+class$ String(in Actors, in Comparable) {
    def len(): native
    def endsWith(suffix): native
    def format(args): native
@@ -338,17 +334,17 @@ class$ String(in Actors, in Comparable):
    def builder(): native
 
     def sum(a, b): a + b
-    def from(array, separator):
+    def from(array, separator) {
         if not array: return ""
         first = true
-        f = def (a, b):
+        f = def (a, b) {
             s = ""
             if first: first $= false
             else: s $= separator
             return a + s + b
-       end
+       }
        return array.reduce("", f)
-    end
+    }
 
     def length(): @len()
     def indexOf(str): @indexOf(str, 0)
@@ -357,11 +353,11 @@ class$ String(in Actors, in Comparable):
     def substring(start): @substring(start, @len())
     def isEmpty(): @len() == 0
     def isntEmpty(): not @isEmpty()
-end
+}
 
-class TypeMismatchException(Exception):
+class TypeMismatchException(Exception) {
     def init(var, type): super.init("Type mismatch exception: expected \(type.className()) but got \(var.className())!")
-end
+}
 
 Math = [
     pow = def (a, b): native,
@@ -393,21 +389,21 @@ Math = [
     toRadians = def (a): native
 ]
 
-class Closeable:
+class Closeable {
     def close(): native
-end
+}
 
-class Date:
+class Date {
     def init(timestamp): pass
 
     def now(): native
     def format(pattern): native
-end
+}
 
-class Enum:
+class Enum {
     def of(obj): @of(obj, nil)
 
-    def of(obj, funs):
+    def of(obj, funs) {
        if not obj or obj.isEmpty(): return nil
 
         timestamp = clock().toString()
@@ -420,45 +416,45 @@ class Enum:
         if not isArray and not isFirstValueScalar: args $= String.from(obj.0, ", ")
         args += ", key"
 
-        guStr = "class$ \(className)(Enum):
+        guStr = "class$ \(className)(Enum) {
             def init(\(args)): pass
             def equals(other): return @matches(other)
-        end"
+        }"
         clazz = gu guStr
 
         clazz.values = $[]
-        for key in obj:
+        for key in obj {
             val = nil
             if isArray: val $= clazz(key, key)
             elsif isFirstValueScalar: val $= clazz(obj.(key), key)
-            else:
+            else {
                 args $= String.from(obj.(key).values(), ", ")
                 args += ", \(key)"
                 constructor =  "clazz(" + args + ")"
                 val $= gu constructor
-            end
+            }
             clazz.(key) = val
             clazz.values.append(val)
-        end
+        }
 
-        for key in funs:
+        for key in funs {
             clazz.(key) = funs.(key)
-        end
+        }
 
         clazz.iterate = :@values.iterate()
 
         return clazz
-    end
-end
+    }
+}
 
-class_ Debugger:
+class_ Debugger {
     def watcher(): native
-end
+}
 
 Meta = [
-    go = def (mutators, f):
+    go = def (mutators, f) {
         mutated = f
         mutators.forEach(def m: mutated $= m.go($mutated))
         return mutated
-    end
+    }
 ]

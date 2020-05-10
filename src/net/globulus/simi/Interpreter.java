@@ -580,7 +580,7 @@ class Interpreter implements
     switch (expr.operator.type) {
       case BANG_EQUAL: return new SimiValue.Number(!isEqual(left, right, expr));
       case EQUAL_EQUAL: return new SimiValue.Number(isEqual(left, right, expr));
-      case LESS_GREATER: return compare(left, right, expr);
+      case LESS_GREATER: return matches(left, right, expr);
         case IS:
             return new SimiValue.Number(isInstance(left, right, expr));
         case ISNOT:
@@ -1129,7 +1129,7 @@ class Interpreter implements
     return a.equals(b);
   }
 
-  private SimiValue compare(SimiValue a, SimiValue b, Expr.Binary expr) {
+  private SimiValue matches(SimiValue a, SimiValue b, Expr.Binary expr) {
     // nil is only equal to nil.
     if (a == null && b == null) {
       return SimiValue.Number.TRUE;
@@ -1138,8 +1138,8 @@ class Interpreter implements
       return SimiValue.Number.FALSE;
     }
     if (a instanceof SimiValue.Object) {
-      Token compareTo = new Token(TokenType.IDENTIFIER, Constants.COMPARE_TO, null, expr.operator.line, expr.operator.file);
-      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment).getValue(), compareTo, Arrays.asList(b)).getValue();
+      Token matches = new Token(TokenType.IDENTIFIER, Constants.MATCHES, null, expr.operator.line, expr.operator.file);
+      return call(((SimiObjectImpl) a.getObject()).get(matches, 1, environment).getValue(), matches, Arrays.asList(b)).getValue();
     }
     return new SimiValue.Number(a.compareTo(b));
   }

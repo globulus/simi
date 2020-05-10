@@ -492,7 +492,7 @@ class Parser:
             exprs.addAll(@_expressionLine(rootGuid))
             @_matchAllNewlines()
         end
-        return exprs
+        return exprs # BP
     end
 
     def _addPrimitiveTypes():

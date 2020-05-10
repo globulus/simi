@@ -394,7 +394,7 @@ class BaseClassesNativeImpl {
                 return new SimiValue.String(arguments.get(0).getValue().getObject().toString());
             }
         });
-        methods.put(new OverloadableFunction("matches", 1), new SimiCallable() {
+        methods.put(new OverloadableFunction(Constants.MATCHES, 1), new SimiCallable() {
             @Override
             public int arity() {
                 return 1;
@@ -411,7 +411,7 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(self.matches(other, null));
             }
         });
-        methods.put(new OverloadableFunction("matches", 2), new SimiCallable() {
+        methods.put(new OverloadableFunction(Constants.MATCHES, 2), new SimiCallable() {
             @Override
             public int arity() {
                 return 2;
