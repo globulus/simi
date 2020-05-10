@@ -207,6 +207,51 @@ print GuClass().test()
     print a
 })(3)
 
+def testIfExpr {
+    c = 2
+    a = if c == 1 {
+        2
+    } elsif c == 2 {
+        print "c is 2"
+        5
+    } else {
+        3
+    }
+    print "if expr test a is \(a)"
+}
+testIfExpr()
+
+def testWhenExpr {
+    c = 2
+    a = when c {
+        1: 2
+        2: 3
+        3: 5
+    }
+    print "when expr test a is \(a)"
+}
+testWhenExpr()
+
+def testIfExprFun {
+    fun = :if _0 == 2 {
+        3
+    } else {
+        4
+    }
+    print "if expr fun test is \(fun(2))"
+}
+testIfExprFun()
+
+def testWhenExprFun {
+    fun = :when _0 {
+        1: 2
+        2: 3
+        3: 4
+    }
+    print "when expr fun test is \(fun(2))"
+}
+testWhenExprFun()
+
 Fruit = Enum.of(["APPLE" = [size = 3], "ORANGE" = [size = 2], "BANANA" = [size = 4]])
 apple = Fruit.APPLE
 print "Apple is fruit: " + (apple is Fruit)

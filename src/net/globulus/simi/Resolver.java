@@ -320,6 +320,16 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
+  @Override
+  public Void visitElsifExpr(Expr.Elsif expr) {
+    return null;
+  }
+
+  @Override
+  public Void visitIfExpr(Expr.If expr) {
+    return null;
+  }
+
   private void resolve(Stmt stmt) {
     stmt.accept(this);
   }

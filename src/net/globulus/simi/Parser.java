@@ -138,14 +138,14 @@ class Parser {
   }
 
   private Stmt statement(boolean lambda) {
-    if (match(FOR)) {
-        return forStatement();
-    }
     if (match(IF)) {
-        return ifStatement();
+      return ifStmt();
     }
     if (match(WHEN)) {
-      return whenStatement();
+      return whenStmt();
+    }
+    if (match(FOR)) {
+        return forStatement();
     }
     if (match(PRINT)) {
         return printStatement(lambda);
@@ -198,29 +198,45 @@ class Parser {
       return new Stmt.For(varExpr, iterable, body);
   }
 
-  private Stmt ifStatement() {
+  private Stmt ifStmt() {
+    return ifSomething(Stmt.If::new, Stmt.Elsif::new);
+  }
+
+  private Stmt whenStmt() {
+    return whenSomething(Stmt.If::new, Stmt.Elsif::new);
+  }
+
+  private Expr ifExpr() {
+    return ifSomething(Expr.If::new, Expr.Elsif::new);
+  }
+
+  private Expr whenExpr() {
+    return whenSomething(Expr.If::new, Expr.Elsif::new);
+  }
+
+  private <T, E> T ifSomething(IfProducer<T, E> ifProducer, ElsifProducer<E> elsifProducer) {
     Expr condition = expression();
     Expr.Block thenBranch = block("if", true);
     Expr.Block elseBranch = null;
-    List<Stmt.Elsif> elsifs = new ArrayList<>();
+    List<E> elsifs = new ArrayList<>();
     while (match(ELSIF, NEWLINE)) {
         if (previous().type == ELSIF) {
-          elsifs.add(new Stmt.Elsif(expression(), block("elsif", true)));
+          elsifs.add(elsifProducer.go(expression(), block("elsif", true)));
         }
     }
     if (match(ELSE)) {
       elseBranch = block("else", true);
     }
-    return new Stmt.If(new Stmt.Elsif(condition, thenBranch), elsifs, elseBranch);
+    return ifProducer.go(elsifProducer.go(condition, thenBranch), elsifs, elseBranch);
   }
 
-  private Stmt whenStatement() {
+  private <T, E> T whenSomething(IfProducer<T, E> ifProducer, ElsifProducer<E> elsifProducer) {
     Token when = previous();
     Expr left = call();
     consume(LEFT_BRACE, "Expect a '{' after when.");
     consume(NEWLINE, "Expect a newline after when ':.");
-    Stmt.Elsif firstElsif = null;
-    List<Stmt.Elsif> elsifs = new ArrayList<>();
+    E firstElsif = null;
+    List<E> elsifs = new ArrayList<>();
     Expr.Block elseBranch = null;
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
       if (match(NEWLINE)) {
@@ -249,7 +265,7 @@ class Parser {
       for (int i = 1; i < conditions.size(); i++) {
         condition = new Expr.Logical(condition, or, conditions.get(i));
       }
-      Stmt.Elsif elsif = new Stmt.Elsif(condition, block("when", true));
+      E elsif = elsifProducer.go(condition, block("when", true));
       if (firstElsif == null) {
         firstElsif = elsif;
       } else {
@@ -257,7 +273,7 @@ class Parser {
       }
     }
     consume(RIGHT_BRACE, "Expect } at the end of when.");
-    return new Stmt.If(firstElsif, elsifs, elseBranch);
+    return ifProducer.go(firstElsif, elsifs, elseBranch);
   }
 
   private Stmt printStatement(boolean lambda) {
@@ -376,8 +392,13 @@ class Parser {
     // Add implicit return for functions containing just a single expression in their body
     if (statements.size() == 1) {
       Stmt stmt = statements.get(0);
-      if (stmt instanceof Stmt.Expression) {
-        Expr expr = ((Stmt.Expression) stmt).expression;
+      if (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If) {
+        Expr expr;
+        if (stmt instanceof Stmt.Expression) {
+          expr = ((Stmt.Expression) stmt).expression;
+        } else {
+          expr = ((Stmt.If) stmt).toExpr();
+        }
         if (Expr.hasImplicitReturn(expr)) {
           Token mockReturn = new Token(RETURN, null, null, expr.getLineNumber(), expr.getFileName());
           statements.set(0, new Stmt.Return(mockReturn, expr));
@@ -458,8 +479,14 @@ class Parser {
       if (!implicitParams.isEmpty()) {
         int a = 5;
       }
-      if (kind.equals(LAMBDA) && stmt instanceof Stmt.Expression) {
-        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), ((Stmt.Expression) stmt).expression);
+      if (kind.equals(LAMBDA) && (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If)) {
+        Expr expr;
+        if (stmt instanceof Stmt.Expression) {
+          expr = ((Stmt.Expression) stmt).expression;
+        } else {
+          expr = ((Stmt.If) stmt).toExpr();
+        }
+        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), expr);
       }
       statements.add(stmt);
     }
@@ -726,7 +753,7 @@ class Parser {
          advance();
          advance();
        }
-        return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line, previous.file), specifier);
+       return new Expr.Self(new Token(TokenType.SELF, Constants.SELF, null, previous.line, previous.file), specifier);
     }
 
     if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {
@@ -753,6 +780,13 @@ class Parser {
 
     if (match(QUESTION)) {
       return new Expr.Unary(previous(), primary());
+    }
+
+    if (match(IF)) {
+      return ifExpr();
+    }
+    if (match(WHEN)) {
+      return whenExpr();
     }
 
     throw error(peek(), "Expect expression.");
@@ -930,13 +964,15 @@ class Parser {
                                   Arrays.asList(paramName, typeCheck.right)), new Expr.Variable(Token.named(Constants.RAISE)), 0),
                   paren, Collections.emptyList())
           ));
-          stmts.add(0, new Stmt.If(
-                  new Stmt.Elsif(new Expr.Logical(
+          stmts.add(0, new Stmt.Expression(new Expr.If(
+                  new Expr.Elsif(new Expr.Logical(
                             new Expr.Binary(paramName, new Token(BANG_EQUAL, null, null, declaration.line, declaration.file), new Expr.Literal(null)),
                             new Token(AND, null, null, declaration.line, declaration.file),
                             new Expr.Binary(paramName, new Token(ISNOT, null, null, declaration.line, declaration.file), paramType)),
                           new Expr.Block(typeCheck.operator, Collections.emptyList(),
-                                  exceptionStmt, true)), Collections.emptyList(), null));
+                                  exceptionStmt, true)), Collections.emptyList(), null)
+                  )
+          );
       }
     }
   }
@@ -999,5 +1035,13 @@ class Parser {
       this.statements = statements;
       this.implicitParams = implicitParams;
     }
+  }
+
+  private interface ElsifProducer<T> {
+    T go(Expr condition, Expr.Block thenBranch);
+  }
+
+  private interface IfProducer<T, E> {
+    T go(E ifstmt, List<E> elsifs, Expr.Block elseBranch);
   }
 }

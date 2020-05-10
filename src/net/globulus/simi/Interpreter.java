@@ -142,8 +142,9 @@ class Interpreter implements
   }
 
   @Override
-  public void executeBlock(SimiBlock block, SimiEnvironment environment, int startAt) {
+  public SimiProperty executeBlock(SimiBlock block, SimiEnvironment environment, int startAt) {
     Environment previous = this.environment;
+    SimiProperty returnValue = null;
     try {
       this.environment = (Environment) environment;
       List<? extends SimiStatement> statements = block.getStatements();
@@ -152,7 +153,7 @@ class Interpreter implements
         try {
           if (raisedExceptions.isEmpty()) {
             Stmt statement = (Stmt) statements.get(i);
-            execute(statement);
+            returnValue = execute(statement);
           } else { // Look for nearest rescue block
             Stmt.Rescue rescue = null;
             for (; i < size; i++) {
@@ -179,6 +180,7 @@ class Interpreter implements
     } finally {
       this.environment = previous;
     }
+    return returnValue;
   }
 
   @Override
@@ -396,6 +398,14 @@ class Interpreter implements
   }
 
   @Override
+  public SimiProperty visitElsifExpr(Expr.Elsif expr) {
+    if (isTruthy(evaluate(expr.condition))) {
+      return executeBlock(expr.thenBranch, this.environment, 0);
+    }
+    return ELSIF_FALSE;
+  }
+
+  @Override
   public SimiProperty visitIfStmt(Stmt.If stmt) {
     if (visitElsifStmt(stmt.ifstmt).getValue().getNumber().asLong() != 0) {
       return null;
@@ -418,6 +428,24 @@ class Interpreter implements
         throw returnYield;
       }
       this.environment.endBlock(stmt, yieldedStmts);
+    }
+    return null;
+  }
+
+  @Override
+  public SimiProperty visitIfExpr(Expr.If expr) {
+    SimiProperty ifResult = visitElsifExpr(expr.ifstmt);
+    if (ifResult != ELSIF_FALSE) {
+      return ifResult;
+    }
+    for (Expr.Elsif elsif : expr.elsifs) {
+      ifResult = visitElsifExpr(elsif);
+      if (ifResult != ELSIF_FALSE) {
+        return ifResult;
+      }
+    }
+    if (expr.elseBranch != null) {
+      return executeBlock(expr.elseBranch, this.environment, 0);
     }
     return null;
   }
@@ -1316,4 +1344,26 @@ class Interpreter implements
   private interface ClassImporter {
     void importValue(String key, SimiProperty prop);
   }
+
+  private final static SimiProperty ELSIF_FALSE = new SimiProperty() {
+    @Override
+    public SimiValue getValue() {
+      return null;
+    }
+
+    @Override
+    public void setValue(SimiValue value) {
+
+    }
+
+    @Override
+    public List<SimiObject> getAnnotations() {
+      return null;
+    }
+
+    @Override
+    public SimiProperty clone(boolean mutable) {
+      return null;
+    }
+  };
 }

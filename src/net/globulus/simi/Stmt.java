@@ -330,6 +330,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
       public boolean hasBreakPoint() {
         return condition.hasBreakPoint();
       }
+
+      public Expr.Elsif toExpr() {
+          return new Expr.Elsif(condition, thenBranch);
+      }
     }
 
   static class If extends Stmt implements BlockStmt {
@@ -386,6 +390,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
     @Override
     public boolean hasBreakPoint() {
       return ifstmt.hasBreakPoint();
+    }
+
+    public Expr.If toExpr() {
+      return new Expr.If(ifstmt.toExpr(), elsifs.stream().map(Elsif::toExpr).collect(Collectors.toList()), elseBranch);
     }
   }
 
