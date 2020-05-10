@@ -18,6 +18,8 @@ class Parser {
   private final List<Token> tokens;
   private int current = 0;
 
+  private boolean isInClassDeclr = false;
+
   private final Debugger debugger;
 
   private List<Stmt.Annotation> annotations = new ArrayList<>();
@@ -77,7 +79,6 @@ class Parser {
   private Stmt.Class classDeclaration() {
     Token opener = previous();
     Token name = consume(IDENTIFIER, "Expect class name.");
-
     List<Expr> mixins = new ArrayList<>();
     List<Expr> superclasses = null;
     if (match(LEFT_PAREN)) {
@@ -98,6 +99,7 @@ class Parser {
     List<Stmt.Class> innerClasses = new ArrayList<>();
     List<Stmt.Function> methods = new ArrayList<>();
     if (match(LEFT_BRACE)) {
+      isInClassDeclr = true;
       while (!check(RIGHT_BRACE) && !isAtEnd()) {
         if (match(NEWLINE)) {
           continue;
@@ -115,6 +117,7 @@ class Parser {
           }
         }
       }
+      isInClassDeclr = false;
       consume(RIGHT_BRACE, "Expect '}' after class body.");
     } else {
       consume(NEWLINE, "Expected newline after empty class declaration.");
@@ -769,7 +772,12 @@ class Parser {
     }
 
     if (match(IDENTIFIER)) {
-      return new Expr.Variable(previous());
+      Expr.Variable expr = new Expr.Variable(previous());
+      if (isInClassDeclr) { // Add backup self.var
+        Token selfToken = Token.self();
+        expr.backupSelfGet = new Expr.Get(selfToken, new Expr.Self(selfToken, null), expr, 0);
+      }
+      return expr;
     }
 
     if (match(LEFT_PAREN)) {

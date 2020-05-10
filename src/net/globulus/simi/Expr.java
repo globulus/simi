@@ -770,6 +770,7 @@ abstract class Expr implements Codifiable {
     static class Variable extends Expr {
 
       final Token name;
+      Expr.Get backupSelfGet;
 
         Variable(Token name) {
             this.name = name;

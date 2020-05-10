@@ -181,26 +181,7 @@ class Scanner {
               identifier();
           }
       } break;
-      case '#': {
-        // A comment goes until the end of the line.
-        while (peek() != '\n' && !isAtEnd()) {
-            advance();
-        }
-        if (debugger != null) {
-            String comment = source.substring(start + 1, current);
-            if (comment.trim().startsWith(Debugger.BREAKPOINT_LEXEME)) {
-                int size = tokens.size();
-                for (int i = size - 1; i >= 0; i--) {
-                  Token token = tokens.get(i);
-                  if (token.line == line) {
-                    token.hasBreakpoint = true;
-                  } else {
-                    break;
-                  }
-                }
-            }
-        }
-      } break;
+      case '#': comment(); break;
       case '\\': {
         if (match('\n')) {
           line++;
@@ -231,6 +212,36 @@ class Scanner {
         error("Unexpected character.");
         }
         break;
+    }
+  }
+
+  private void comment() {
+    if (match('#')) { // Multi line
+      while (!matchAll("##")) {
+        if (peek() == '\n') {
+          line++;
+        }
+        advance();
+      }
+    } else { // Single line
+      // A comment goes until the end of the line.
+      while (peek() != '\n' && !isAtEnd()) {
+        advance();
+      }
+      if (debugger != null) {
+        String comment = source.substring(start + 1, current);
+        if (comment.trim().startsWith(Debugger.BREAKPOINT_LEXEME)) {
+          int size = tokens.size();
+          for (int i = size - 1; i >= 0; i--) {
+            Token token = tokens.get(i);
+            if (token.line == line) {
+              token.hasBreakpoint = true;
+            } else {
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -363,6 +374,18 @@ class Scanner {
     if (source.charAt(current) != expected) return false;
 
     current++;
+    return true;
+  }
+
+  private boolean matchAll(String expected) {
+    int end = current + expected.length();
+    if (end >= source.length()) {
+      return false;
+    }
+    if (!source.substring(current, end).equals(expected)) {
+      return false;
+    }
+    current = end;
     return true;
   }
 

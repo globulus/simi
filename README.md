@@ -1,4 +1,5 @@
 # Šimi - an awesome programming language
+
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
 You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web).
@@ -61,7 +62,7 @@ What Šimi offers:
       - [Truth](#truth)
       - [if-elsif-else](#if-elsif-else)
       - [when](#when)
-      - [The *ife* function](#the-ife-function)
+      - [*if* and *when* expressions](#if-and-when-expressions)
         * [*ife* and lazy loading](#ife-and-lazy-loading)
       - [while loop](#while-loop)
       - [for-in loop](#for-in-loop)
@@ -96,20 +97,23 @@ What Šimi offers:
 ### Basic syntax
 
 #### Keywords
-Šimi has 27 reserved keywords:
+Šimi has 26 reserved keywords:
 ```ruby
-and break class continue def else elsif end false for gu if import
+and break class continue def else elsif false for gu if import
 in is native nil or pass print rescue return self super true while yield
 ```
 
-Check out the [keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
+Check out the [Keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
 
 #### Comments
 ```ruby
 # This is a single line comment
 print b # They span until the end of the line
+
+## And here is
+a multiline comment
+spanning multple lines ##
 ```
-Šimi currently does not support multiline comments.
 
 #### Identifiers
 Identifiers start with a letter, or _, and then may contain any combination of letters, numbers, or underscores. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
@@ -516,7 +520,7 @@ print compositeObj
 #]
 
 # Composite object literals are (de)serializable
-print (gu ivic compositeObj).matches(compositeObj) # true
+print (gu ivic compositeObj) <> compositeObj # true
 
 print compositeObj.len() # Prints total number of elements = 7
 print compositeObj.keys() # Keys are [a, b, c]
@@ -555,11 +559,11 @@ class Car(Vehicle, in ClassToMixin):
 
     def init(brand, model, year): pass
 
-    def refuel(amount): @fuel = Math.min(@tank, @fuel + amount)
+    def refuel(amount): @fuel = Math.min(tank, fuel + amount)
 
     def drive(distance):
-        fuelSpent = @expenditure * distance
-        @fuel = Math.max(0, @fuel - fuelSpent)
+        fuelSpent = expenditure * distance
+        @fuel = Math.max(0, fuel - fuelSpent)
     end
 end
 
@@ -599,7 +603,7 @@ class OtherCar(Car, Range): # This combination makes no sense :D
 end
 ```
 * Classes themselves are objects, with "class" set to a void object named "Class". You can check if an Object is a class by using **VAR is Class**, even though Class itself normally evaluates to *nil*.
-* From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
+* From within the class, all setters must use self or @ (i.e, self.fuel = 3, or @fuel = 3). Instance fields outside of setter may or may not use self-referencing (although it's recommended for legibility).
 * Instance vars and methods are mutable by default from within the class, and don't require usage of the $= operator.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
 * Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
@@ -625,7 +629,7 @@ class Point:
 
     # In value classes, you may want to override the equals method
     # to check against fields, i.e to use matches() with == operator:
-    def equals(other): return @matches(other)
+    def equals(other): self <> other
 end
 ```
 * Similarly, an empty method that starts with *set* and takes a single parameter will be autofilled with a setter for the given value.
@@ -752,7 +756,7 @@ print ModuleClassA # nil
 import ModuleClass # Import all ModuleClass values into the current environment
 
 print ModuleClassA # works
-print ModuleClassA.matches(ModuleClass.ModuleClassA) # true
+print ModuleClassA <> ModuleClass.ModuleClassA # true
 ```
 
 ### Operators
@@ -782,7 +786,7 @@ not, and, or
 ==, !=, <, <=, >, >=, <>
 
 * On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class. If you need to check equivalence based on values, check out the *matches()* method.
-* The comparison operator <> implicitly invokes *matches()* method.
+* The matching operator <> implicitly invokes *matches()* method. The default implementation of this method checks objects by their keys and values, basically checking their equivalence. You can, of course, override this method to accept any combination of arguments and perform different matching, e.g matching strings based on regular expressions.
 * Remaining operators (<, <=, > and >=) can only be used with Numbers.
 
 #### is and is not
@@ -890,8 +894,37 @@ when a:
 end
 ```
 
-#### The *ife* function
-While Šimi does not offer the ternary operator (?:), the Stdlib contains a global function named **ife**, which works exactly as ?: does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
+#### *if* and *when* expressions
+
+*if-elsif-else* branches (and, by default, its alternate form of *when*) can be used as expressions. The difference from their statement forms are twofold:
+1. You can't *return*, *yield*, *break* or *continue* from inside their bodies.
+2. The last obtained value in each block is returned as its value.
+
+```ruby
+a = if someCondition {
+    3
+} elsif otherConditions {
+    print "something"
+    c
+} elsif yetMoreConditions {
+    print "doing this"
+    doThis()
+} else {
+    2 + 2 * 3
+}
+```
+
+Naturally, functions with an implicit return of their single expression work with *if* and *when* expressions as well:
+
+```ruby
+def extractValue(obj): when obj {
+    is A: obj.aValue()
+    is B or is C: obj.bOrCValue()
+    else: obj.otherValue()
+}
+```
+
+If you prefer a shroter solution, the Stdlib contains a global function named **ife**, which works exactly as the ternary operator in some other languages (?:) does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
 ```ruby
 max = ife(a < b, a, b)
 ```
@@ -1406,7 +1439,7 @@ obj = [a = 5,
     end
 ]
 clone = gu ivic obj
-print clone.matches(obj) # true
+print clone <> obj # true
 ```
 
 These operators also allow for some interesting approaches to metaprogramming. Take, for example, how *gu* is used in *Enum.of()* function to generate the enum class and associate values with it:
@@ -1734,7 +1767,6 @@ Below is a glossary that lists all the Šimi keyword and their uses. It can be u
 * *else* - used as the default clause in [if-elsif-else](#if-elsif-else) and [when](#when) statements.
 * *elsif* - defines an alternative clause in an [if-elsif-else](#if-elsif-else) statement.
     + The misspelling is intentional.
-* *end* - ends a block of code, and a such terminates all multi-line statements (class, function, branching, loops, etc).
 * *false* - the [false value](#truth), equivalent to a Number with value 0.
 * *for* - defines [a for loop](#for-in-loop), which is used to iterate over [iterators and iterables](#iterators-and-iterables).
 * *gu* - unary operator that [evaluates the String supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi code to be executed at runtime.

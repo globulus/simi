@@ -1035,7 +1035,11 @@ class Interpreter implements
 
   @Override
   public SimiProperty visitVariableExpr(Expr.Variable expr) {
-    return lookUpVariable(expr.name, expr);
+    SimiProperty prop = lookUpVariable(expr.name, expr);
+    if (prop == null && expr.backupSelfGet != null) {
+      prop = visitGetExpr(expr.backupSelfGet);
+    }
+    return prop;
   }
 
     @Override

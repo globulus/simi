@@ -8,6 +8,12 @@ import "./SimiSync/SimiSyncModels.simi"
 import "./Stdlib/sql/Mariadb.simi"
 import "./minibattle/Board.simi"
 
+# Single line comment
+
+## Multiline comments
+span multiple lines
+yessir ##
+
 print pow(2, 3)
 
 def testYieldExpr() {
@@ -97,7 +103,7 @@ print ife1 is Function
 #Decorator.go(def:
 #
 #    def fib(n):
-##        print "first time in fib"
+#        print "first time in fib"
 #        cache = $[]
 #        arg = 0
 #        inner = def n:
@@ -110,11 +116,11 @@ print ife1 is Function
 #        }
 #        loop = def:
 #           while true:
-##            print cache
+#            print cache
 #            key = arg.toString()
 #            if key not in cache: cache.(key) = inner(arg)
-##            else: print "have cache for " + key
-##            print "about to yield " + cache.(key)
+#           else: print "have cache for " + key
+#            print "about to yield " + cache.(key)
 #            yield cache.(key)
 #         }
 #        }
@@ -412,8 +418,8 @@ class Car {
         print "Doing something"
         if amount < 0: CarException("Amount < 0!").raise()
         if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity
-        else: @tank = @tank + amount
+        if tank + amount > capacity: @tank = capacity
+        else: @tank = tank + amount
     }
 
     def refill(amount, doprint) {
@@ -539,6 +545,7 @@ while a < 10 {
 for i in Range(start=10, stop=-20, step=-3) {
     print i
 }
+print -15 in Range(start=10, stop=-20, step=-3)
 
 car = Car(40, 10)
 print(car.tank)

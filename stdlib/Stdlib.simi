@@ -268,15 +268,13 @@ class Range {
 
     def iterate(): RangeIterator(self)
 
-    def has(val) {
-        if @start < @stop: return val >= @start and val < @stop
-        else: return val <= @start and val > @stop
-    }
+    def has(val): if start < stop: val >= start and val < stop
+                  else: val <= start and val > stop
 
     def toString(): String.builder()\
-            .add("Range from ").add(@start)\
-            .add(" to ").add(@stop)\
-            .add(" by ").add(@step)\
+            .add("Range from ").add(start)\
+            .add(" to ").add(stop)\
+            .add(" by ").add(step)\
             .build()
 }
 
