@@ -191,7 +191,7 @@ class_ Orm(Closeable) {
     }
 
     def _prepareForOp(obj is Object, op is String) {
-        clazz = obj.("class")
+        clazz = obj.class
         tableData = @_tableData.(clazz.toString())
         if not tableData: IllegalArgumentException("Cannot \(op) object of type: \(clazz)!").raise()
         columns = tableData.columns.map(def c: c.name)

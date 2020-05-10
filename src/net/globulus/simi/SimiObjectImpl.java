@@ -54,7 +54,7 @@ class SimiObjectImpl implements SimiObject {
   SimiProperty get(Token name, Integer arity, Environment environment, boolean forbidPrivate) {
       String key = name.lexeme;
 
-      if (key.equals("class")) { // class is a special key available to all objects
+      if (key.equals(Constants.CLASS)) { // class is a special key available to all objects
           return new SimiValue.Object(clazz);
       }
 
@@ -434,7 +434,7 @@ class SimiObjectImpl implements SimiObject {
 
     @Override
     public SimiProperty get(String key, SimiEnvironment environment) {
-        if (key.equals("class")) {
+        if (key.equals(Constants.CLASS)) {
             return new SimiValue.Object(clazz);
         }
         return get(Token.nativeCall(key), null, (Environment) environment, true);

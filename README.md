@@ -1727,7 +1727,7 @@ Below is a glossary that lists all the Šimi keyword and their uses. It can be u
 * *and* - used as a [logical operator](#logical).
 * *break* - immediately [terminates the loop](#break-and-continue) inside which it is nested. Try to break outside of a loop throws an *InterpreterException*.
 * *class, class$, class_* - defines [a (regular, open or final) class](#classes).
-    + To get a value's class, use "class" (string) instead of the keyword: obj.("class")
+    + To get a value's class, just use *class*: obj.class
 * *continue* - proceeds to the [next iteration of the loop](#break-and-continue) inside which it is nested. Try to continue outside of a loop throws an *InterpreterException*.
 * *def* - defines [a function](#functions). Function declaration is very consistent in Šimi, and all functions, regardless of their purpose (regular functions, lambdas, methods, constructors) are always prefixed by *def*.
     + A parameterless, single-line lambda can be written with just the colon: length = :@len()

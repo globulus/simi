@@ -71,8 +71,9 @@ print ivic TypeCheckTestClass.init
 typeCheckTest(1, "", 3, Range(1, 2))
 
 dejt = Date()
+print "Dejt "
 print dejt
-print dejt.("class")
+print dejt.class
 print dejt.classObject()
 
 clck = clock()

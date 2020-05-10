@@ -650,6 +650,9 @@ class Parser {
               name = new Expr.Variable(consume(NUMBER, "Expected a number or id after '.'."));
           } else if (peek().type == LEFT_PAREN) {
             name = primary();
+          } else if (peek().type == CLASS) {
+            name = new Expr.Literal(new SimiValue.String(Constants.CLASS));
+            advance();
           } else {
             name = new Expr.Variable(consume(IDENTIFIER, "Expected a number of id after '.'."));
           }
