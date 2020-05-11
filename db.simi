@@ -1,87 +1,88 @@
 # Model superclass. It doesn't have its own table, but contains a primary key field
 # that will be used by all model superclasses.
-class Model:
+class Model {
     # The dbField in the annotation specifies that this field will have a column in
     # the corresponding table. If its value is true, we'll infer the column name
     # from the field name. Otherwise, we'll use the supplied string value.
     ![dbField = true, primaryKey = true]
     id = 0
-end
+}
 
 # We use the dbTable annotation to indicate that this class should have a table in
 # the database. The associated value is the name of the table.
 ![dbTable = "Users"]
-class User(Model):
+class User(Model) {
     ![dbField = "first_name"]
     firstName = ""
 
     ![dbField = "last_name"]
     lastName = ""
-end
+}
 
 ![dbTable = "Appointments"]
-class Appointment(Model):
+class Appointment(Model) {
     ![dbField = true]
     userId = ""
 
     ![dbField = "timeslot"]
     time = Date()
-end
+}
 
 # This class generates SQL code for creating tables based on a list of classes.
-class DbLib:
-    def init(tables):
+class DbLib {
+    def init(tables) {
         sqlBuilder = String.builder()
-        for table in tables:
-            @_sqlForTable(table, sqlBuilder)
-        end
+        for table in tables: _sqlForTable(table, sqlBuilder)
         @sql = sqlBuilder.build()
-    end
+    }
 
-    def _sqlForTable(table, sqlBuilder):
+    def _sqlForTable(table, sqlBuilder) {
         classAnnotations = !!table # First we get annotations for the class
         if not classAnnotations: return # If there aren't any, skip this class
-        for annot in classAnnotations:
+        for annot in classAnnotations {
             dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
-            if dbTable:
+            if dbTable {
                 name = ife(dbTable is String, dbTable, table.name) # Infer table name
                 sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n") # Construct SQL
-                @_sqlForFields(table, sqlBuilder) # Add column SQL
+                _sqlForFields(table, sqlBuilder) # Add column SQL
                 sqlBuilder.add(");\n")
-            end
-        end
-    end
+            }
+        }
+    }
 
-    def _sqlForFields(table, sqlBuilder):
+    def _sqlForFields(table, sqlBuilder) {
         # Iterate through all the class fields and find those that have an annotation
         # which contains the "dbField" field
-        for key in table:
+        for key in table {
             val = table.(key)
             keyAnnotations = !!val
             if not keyAnnotations: continue
-            for annot in keyAnnotations:
+            for annot in keyAnnotations {
                 dbField = annot.dbField
                 if not dbField: continue
                 name = ife(dbField is String, dbField, key) # Infer the name
-                $type = nil # Infer type based on calue associated with the field in class definition
-                if val is Number: $type = "int"
-                elsif val is String: $type = "varchar(255)"
-                elsif val is Date: $type = "date"
+                # Infer type based on calue associated with the field in class definition
+                type = when val {
+                    is Number: "int"
+                    is String: "varchar(255)"
+                    is Date: "date"
+                    else: nil
+                }
                 # ... of course, many more types could be added, including relationships to other tables
 
-                sqlBuilder.add(name).add(" ").add($type)
-                if annot.primaryKey: # Check for "primary key" field in the annotation
-                    if $type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                sqlBuilder.add(name).add(" ").add(type)
+                if annot.primaryKey { # Check for "primary key" field in the annotation
+                    if type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
                     sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
-                end
+                }
                 else: sqlBuilder.add(",")
                 sqlBuilder.add("\n")
-            end
-        end
-    end
-end
+            }
+        }
+    }
+}
 
-(def:
+(def {
     db = DbLib([Model, User, Appointment])
     print db.sql
-end)()
+})()

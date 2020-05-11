@@ -148,6 +148,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + " ")) + TokenType.RIGHT_PAREN.toCode()
                       : ""
               )
+              .append(" ")
               .append(TokenType.LEFT_BRACE.toCode())
               .append(TokenType.NEWLINE.toCode())
               .append(mixins.stream()

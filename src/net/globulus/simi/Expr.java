@@ -133,6 +133,7 @@ abstract class Expr implements Codifiable {
         return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
                 .append(opener)
                 .append(paramsBuilder.toString())
+                .append(" ")
                 .append(TokenType.LEFT_BRACE.toCode())
                 .append(TokenType.NEWLINE.toCode())
                 .append(statements.stream()
@@ -378,7 +379,7 @@ abstract class Expr implements Codifiable {
     final Token origin;
     final Expr object;
     final Expr name;
-    final Integer arity;
+    Integer arity;
 
     Get(Token origin, Expr object, Expr name, Integer arity) {
       this.origin = origin;

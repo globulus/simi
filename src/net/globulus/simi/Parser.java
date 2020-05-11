@@ -259,7 +259,7 @@ class Parser {
         Expr right = call();
         conditions.add(new Expr.Binary(left, op, right));
         match(OR);
-      } while (!check(COLON));
+      } while (!check(COLON, LEFT_BRACE));
       if (conditions.isEmpty()) {
         continue;
       }
@@ -350,7 +350,7 @@ class Parser {
   }
 
   private void checkStatementEnd(boolean lambda) {
-    if (match(NEWLINE, EOF)) {
+    if (match(NEWLINE, RIGHT_BRACE, EOF)) {
       return;
     }
     if (lambda) {
@@ -359,7 +359,7 @@ class Parser {
         return;
       }
     }
-    error(peek(), "Unterminated lambda expression!");
+    throw error(peek(), "Unterminated lambda expression!");
   }
 
   private Stmt.Function function(String kind) {
@@ -705,6 +705,11 @@ class Parser {
             } while (match(COMMA));
         }
         consume(RIGHT_PAREN, "Expect ')' after arguments.");
+        if (callee instanceof Expr.Variable && ((Expr.Variable) callee).backupSelfGet != null) {
+          // If a variable callee has a backup get, its arity needs to be adjusted because we're dealing with a call
+          // and not a single variable load.
+          ((Expr.Variable) callee).backupSelfGet.arity = arguments.size();
+        }
         return new Expr.Call(callee, paren, arguments);
     }
 

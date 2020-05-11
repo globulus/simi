@@ -422,14 +422,15 @@ class Enum {
 
         clazz.values = $[]
         for key in obj {
-            val = nil
-            if isArray: val $= clazz(key, key)
-            elsif isFirstValueScalar: val $= clazz(obj.(key), key)
-            else {
-                args $= String.from(obj.(key).values(), ", ")
+            val = if isArray {
+                clazz(key, key)
+            } elsif isFirstValueScalar {
+                clazz(obj.(key), key)
+            } else {
+                args = String.from(obj.(key).values(), ", ")
                 args += ", \(key)"
                 constructor =  "clazz(" + args + ")"
-                val $= gu constructor
+                gu constructor
             }
             clazz.(key) = val
             clazz.values.append(val)

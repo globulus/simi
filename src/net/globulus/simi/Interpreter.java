@@ -95,7 +95,9 @@ class Interpreter implements
           result = execute(statement);
         } else {
           SimiExceptionWithDebugInfo e = raisedExceptions.peek();
-          debugger.triggerException(statement, e, true);
+          if (debugger != null) {
+            debugger.triggerException(statement, e, true);
+          }
           throw e.exception;
         }
       }
