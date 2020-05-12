@@ -3,10 +3,10 @@ import "./stdlib/Net-java.jar"
 class Net {
     KEYWORD_POST = "post *"
 
-    def get(request, callback): native
-    def post(request, callback): native
-    def put(request, callback): native
-    def delete(request, callback): native
+    def get(request, callback) = native
+    def post(request, callback) = native
+    def put(request, callback) = native
+    def delete(request, callback) = native
 
     def go(f) {
         common = Async.KEYWORD + " Net."
@@ -14,12 +14,17 @@ class Net {
         open = 0
         for e in lines.zip() {
             [i, line] = e
-            if line.endsWith("["): open += 1
-            elsif line.endsWith("]") {
+            if line.endsWith("[") {
+                open += 1
+            } elsif line.endsWith("]") {
                 open -= 1
-                if open == 0: lines.(i) = line + ")"
+                if open == 0 {
+                    lines.(i) = line + ")"
+                }
             }
-            elsif common in line: lines.(i) = line + ")"
+            elsif common in line {
+                lines.(i) = line + ")"
+            }
         }
         return gu Async.swl(lines)
     }

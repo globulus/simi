@@ -21,23 +21,23 @@ TokenType = Enum.of([
     "EOF"
 ])
 
-class Token:
-    def init(type, lexeme, literal, line): pass
-    def toString(): "[\(@type.key), \(@lexeme), \(@literal), @\(@line)]"
+class Token=
+    def init(type, lexeme, literal, line) = pass
+    def toString() = "[\(@type.key), \(@lexeme), \(@literal), @\(@line)]"
 end
 
-class ScanException(Exception):
-    def init(line, message):
-        super.init("Scan exception @\(line ?? -1): \(message).")
+class ScanException(Exception)=
+    def init(line, message)=
+        super.init("Scan exception @\(line ?? -1) = \(message).")
     end
 end
 
-class Scanner:
+class Scanner=
 
     _NON_ID_CHARS = '()[]{},."'
     _WHITESPACE_CHARS = " \t\n"
 
-    def init(source):
+    def init(source)=
         @source = source
         @sourceLen = source.length()
         @tokens = $[]
@@ -47,79 +47,79 @@ class Scanner:
         @_lessThanCount = 0 # We keep track of < tokens to decide which ones are generics delimiters and which are IDs
     end
 
-    def scanTokens(addEof):
-        while not @_isAtEnd():
+    def scanTokens(addEof)=
+        while not @_isAtEnd()=
             @start = @current
             @_scanToken()
         end
-        if addEof: @tokens.append(Token(TokenType.EOF, "", nil, @line))
+        if addEof = @tokens.append(Token(TokenType.EOF, "", nil, @line))
         return @tokens
     end
 
-    def _scanToken():
+    def _scanToken()=
         c = @_advance()
-        when c:
-            "(": @_addToken(TokenType.LEFT_PAREN)
-            ")": @_addToken(TokenType.RIGHT_PAREN)
-            "[": @_addToken(TokenType.LEFT_BRACKET)
-            "]": @_addToken(TokenType.RIGHT_BRACKET)
-            "{": @_addToken(TokenType.LEFT_BRACE)
-            "}": @_addToken(TokenType.RIGHT_BRACE)
-            ",": @_addToken(TokenType.COMMA)
-            ".":
-                if @_match('.'):
-                    if @_match('.'): @_addToken(TokenType.THREE_DOTS)
-                    else: @_addToken(TokenType.TWO_DOTS)
+        when c=
+            "(" = @_addToken(TokenType.LEFT_PAREN)
+            ")" = @_addToken(TokenType.RIGHT_PAREN)
+            "[" = @_addToken(TokenType.LEFT_BRACKET)
+            "]" = @_addToken(TokenType.RIGHT_BRACKET)
+            "{" = @_addToken(TokenType.LEFT_BRACE)
+            "}" = @_addToken(TokenType.RIGHT_BRACE)
+            "," = @_addToken(TokenType.COMMA)
+            "."=
+                if @_match('.')=
+                    if @_match('.') = @_addToken(TokenType.THREE_DOTS)
+                    else = @_addToken(TokenType.TWO_DOTS)
                 end
-                else: @_addToken(TokenType.DOT)
+                else = @_addToken(TokenType.DOT)
             end
-            "\n":
+            "\n"=
                 @line = @line + 1
                 @_addToken(TokenType.NEWLINE)
             end
-            else:
-                if @_isWhiteSpace(c): pass
-                elsif @_isStringDelim(c):
-                    if @_matchAll('""'): # Comments
-                        if @_match('"'): # Multi line
-                            while not @_matchAll('""""'):
-                                if @_peek() == '\n': @line = @line + 1
+            else=
+                if @_isWhiteSpace(c) = pass
+                elsif @_isStringDelim(c)=
+                    if @_matchAll('""') = # Comments
+                        if @_match('"') = # Multi line
+                            while not @_matchAll('""""')=
+                                if @_peek() == '\n' = @line = @line + 1
                                 @_advance()
                             end
                         end
-                        else: # Single line
-                            while @_peek() != '\n' and not @_isAtEnd(): @_advance()
+                        else = # Single line
+                            while @_peek() != '\n' and not @_isAtEnd() = @_advance()
                         end
                     end
-                    else: @_string(c)
+                    else = @_string(c)
                 end
-                elsif @_isDigit(c): @_number()
-                else: @_identifier()
+                elsif @_isDigit(c) = @_number()
+                else = @_identifier()
             end
         end
     end
 
-    def _identifier():
-        while @_isValidId(@_peek()): @_advance()
+    def _identifier()=
+        while @_isValidId(@_peek()) = @_advance()
         text = @source.substring(@start, @current)
         @_addToken(TokenType.ID, text)
     end
 
-    def _number():
-        while @_isDigit(@_peek()): @_advance()
-        if @_peek()== "." and @_isDigit(@_peekNext()):
+    def _number()=
+        while @_isDigit(@_peek()) = @_advance()
+        if @_peek()== "." and @_isDigit(@_peekNext())=
             @_advance()
-            while @_isDigit(@_peek()): @_advance()
+            while @_isDigit(@_peek()) = @_advance()
         end
         @_addToken(TokenType.NUMBER, @source.substring(@start, @current).toNumber())
     end
 
-    def _string(opener):
-        while @_peek() != opener and not @_isAtEnd():
-            if @_peek()== "\n": @line = @line + 1
+    def _string(opener)=
+        while @_peek() != opener and not @_isAtEnd()=
+            if @_peek()== "\n" = @line = @line + 1
             @_advance()
         end
-        if @_isAtEnd():
+        if @_isAtEnd()=
             @_error(@line, "Unterminated string")
             return
         end
@@ -128,352 +128,352 @@ class Scanner:
         @_addToken(TokenType.STRING, val)
     end
 
-    def _escapedString(start, stop):
+    def _escapedString(start, stop)=
         return @source.substring(start, stop) #.replacing("\\n", "\n").replacing("\\t", "\t")
     end
 
-    def _match(expected):
-        if @_isAtEnd(): return false
-        if @_peek() != expected: return false
+    def _match(expected)=
+        if @_isAtEnd() = return false
+        if @_peek() != expected = return false
         @current = @current + 1
         return true
     end
 
-    def _matchAll(expected is String):
+    def _matchAll(expected is String)=
         endIndex = @current + expected.len()
-        if endIndex >= @sourceLen: return false
-        if @source.substring(@current, endIndex) != expected: return false
+        if endIndex >= @sourceLen = return false
+        if @source.substring(@current, endIndex) != expected = return false
         @current = endIndex
         return true
     end
 
-    def _peek():
-        if @_isAtEnd(): return '\0'
+    def _peek()=
+        if @_isAtEnd() = return '\0'
         return @source.(@current)
     end
 
-    def _peekNext():
-        if @current + 1 >= @sourceLen: return '\0'
+    def _peekNext()=
+        if @current + 1 >= @sourceLen = return '\0'
         return @source.(@current + 1)
     end
 
-    def _isAlpha(c): c.isAlpha() or c == "_" or c == "$"
+    def _isAlpha(c) = c.isAlpha() or c == "_" or c == "$"
 
-    def _isDigit(c): c.isDigit()
+    def _isDigit(c) = c.isDigit()
 
-    def _isValidId(c): not @_isWhiteSpace(c) and c not in @_NON_ID_CHARS
+    def _isValidId(c) = not @_isWhiteSpace(c) and c not in @_NON_ID_CHARS
 
-    def _isStringDelim(c): c == '"'
+    def _isStringDelim(c) = c == '"'
 
-    def _isWhiteSpace(c): c in @_WHITESPACE_CHARS
+    def _isWhiteSpace(c) = c in @_WHITESPACE_CHARS
 
-    def _isAtEnd(): return @current >= @sourceLen
+    def _isAtEnd() = return @current >= @sourceLen
 
-    def _advance():
+    def _advance()=
         @current = @current + 1
         return @source.(@current - 1)
     end
 
-    def _addToken(type): @_addToken(type, nil)
+    def _addToken(type) = @_addToken(type, nil)
 
-    def _addToken(type, literal):
+    def _addToken(type, literal)=
         text = @source.substring(@start, @current)
         @tokens.append(Token(type, text, literal, @line))
     end
 
-    def _error(line, str): ScanException(line, str).raise()
+    def _error(line, str) = ScanException(line, str).raise()
 end
 
 ### PARSER
 
-class CodePiece:
-    def toCode(): pass
+class CodePiece=
+    def toCode() = pass
 end
 
-class Value(CodePiece):
-    def eval(args): pass
+class Value(CodePiece)=
+    def eval(args) = pass
 end
 
-class Num(Value):
-    def init(val is Number): pass
-    def eval(args): @val
-    def toCode(): @val.toString()
+class Num(Value)=
+    def init(val is Number) = pass
+    def eval(args) = @val
+    def toCode() = @val.toString()
 end
 
-class Str(Value):
-    def init(val is String): pass
-    def eval(args): @val
-    def toCode(): '"' + @val + '"'
-    def toString(): @toCode()
+class Str(Value)=
+    def init(val is String) = pass
+    def eval(args) = @val
+    def toCode() = '"' + @val + '"'
+    def toString() = @toCode()
 end
 
-class Symbol(Value):
-    def init(val is String): pass
-    def eval(args): @val
-    def toCode(): @val
-    def toString(): @toCode()
-    def matches(other): @val == other.val
+class Symbol(Value)=
+    def init(val is String) = pass
+    def eval(args) = @val
+    def toCode() = @val
+    def toString() = @toCode()
+    def matches(other) = @val == other.val
 end
 
-class Type(Value):
-    def init(rec is Symbol, gens is List, args is List, val is Type): pass
-    def init(val):
-        if val is Type: val $= val.val # Destructure return type
-        if val == nil or (val is not Symbol and val is not List and val is not Num and val is not Str):
+class Type(Value)=
+    def init(rec is Symbol, gens is List, args is List, val is Type) = pass
+    def init(val)=
+        if val is Type = val $= val.val # Destructure return type
+        if val == nil or (val is not Symbol and val is not List and val is not Num and val is not Str)=
             IllegalArgumentException("Type return val must be a primitive or a list!").raise()
         end
         @val = val
     end
-    def eval(args):
+    def eval(args)=
         sb = String.builder()
-        if @gens: sb.add(@gens.toCode())
-        if @rec: sb.add(@rec.toCode()).add(".")
-        if @rec == nil and @args == nil and @val != nil: sb.add(@val.toCode())
-        else:
+        if @gens = sb.add(@gens.toCode())
+        if @rec = sb.add(@rec.toCode()).add(".")
+        if @rec == nil and @args == nil and @val != nil = sb.add(@val.toCode())
+        else=
             sb.add("{")
-            if @args: sb.add(@args.toCode())
-            if @val: sb.add(@val.toCode())
+            if @args = sb.add(@args.toCode())
+            if @val = sb.add(@val.toCode())
             sb.add("}")
         end
         return sb.build()
     end
-    def toCode(): @eval(nil)
-    def toString(): @toCode()
-    def matches(other):
+    def toCode() = @eval(nil)
+    def toString() = @toCode()
+    def matches(other)=
         selfVal = @bottomTypeVal()
         otherVal = ife(other is Type, other.bottomTypeVal(), other)
         return selfVal.toString() == otherVal.toString()
     end
-    def matchesArity(other):
+    def matchesArity(other)=
         selfVal = @bottomTypeVal()
         otherVal = ife(other is Type, other.bottomTypeVal(), other)
-        if selfVal.vararg: # If we're dealing with varargs, we'll replace all the vararg args with stubs
+        if selfVal.vararg = # If we're dealing with varargs, we'll replace all the vararg args with stubs
             print "Dealing with varargs \(@val.len()) other \(other.val.len())"
             len = selfVal.len()
-            if len != otherVal.len(): return [success = false]
-            for i in len.times():
+            if len != otherVal.len() = return [success = false]
+            for i in len.times()=
                 selfPropType = selfVal.at(i).type
                 otherPropType = otherVal.at(i).type
-                if selfPropType is Vararg: return [success = otherPropType is Vararg, vararg = true]
-                elsif not selfPropType.matches(otherPropType): return [success = false]
+                if selfPropType is Vararg = return [success = otherPropType is Vararg, vararg = true]
+                elsif not selfPropType.matches(otherPropType) = return [success = false]
             end
         end
-        else: return [success = true, vararg = false]
+        else = return [success = true, vararg = false]
     end
 
-    def bottomVal():
+    def bottomVal()=
         val = @val
-        while true:
+        while true=
             deeperVal = nil
-            if val.val: deeperVal $= val.val
-            elsif val is List:
+            if val.val = deeperVal $= val.val
+            elsif val is List=
                 lastPropType = val.args.last().type
-                if lastPropType is Vararg: lastPropType $= lastPropType.type
+                if lastPropType is Vararg = lastPropType $= lastPropType.type
                 deeperVal $= lastPropType.val
             end
-            if deeperVal: val $= deeperVal
-            else: break
+            if deeperVal = val $= deeperVal
+            else = break
         end
         return val
     end
-    def bottomTypeVal():
+    def bottomTypeVal()=
         val = @val
-        while val is Type and val.val: val $= val.val
+        while val is Type and val.val = val $= val.val
         return val
     end
 
-    def hasGenType(genType): @gens.any(:_0.symbol.val == genType)
+    def hasGenType(genType) = @gens.any(=_0.symbol.val == genType)
 
-    def isTypeOf(val): # Checks if provided val is of this type
-        when val:
-            is Num: return @val == Num
-            is Str: return @val == Str
-            is Symbol: return @val == Symbol
-            is Type: return self == val
-            is List: return @val.matches(val)
-            is Block:
+    def isTypeOf(val) = # Checks if provided val is of this type
+        when val=
+            is Num = return @val == Num
+            is Str = return @val == Str
+            is Symbol = return @val == Symbol
+            is Type = return self == val
+            is List = return @val.matches(val)
+            is Block=
                # TODO
             end
-            else: IllegalArgumentException("Unable to infer type of val \(val)").raise()
+            else = IllegalArgumentException("Unable to infer type of val \(val)").raise()
         end
     end
 end
 
-class Vararg(Type):
-    def init(type): pass
-    def eval(args): @type.eval(args) + "..."
+class Vararg(Type)=
+    def init(type) = pass
+    def eval(args) = @type.eval(args) + "..."
 end
 
-class Property(Value):
-    def init(type is Type, symbol is Symbol, val is Value): pass
-    def eval(args):
-        if not @val: UnsupportedOperationException("Unable to evaluate this property: \(self)").raise()
+class Property(Value)=
+    def init(type is Type, symbol is Symbol, val is Value) = pass
+    def eval(args)=
+        if not @val = UnsupportedOperationException("Unable to evaluate this property = \(self)").raise()
         return @val.eval(args)
     end
-    def toCode():
+    def toCode()=
         sb = String.builder()
-        if @type: sb.add(@type.toCode()).add(" ")
-        if @symbol: sb.add(@symbol.toCode())
-        if @symbol and @val: sb.add(" ")
-        if @val: sb.add(@val.toCode())
+        if @type = sb.add(@type.toCode()).add(" ")
+        if @symbol = sb.add(@symbol.toCode())
+        if @symbol and @val = sb.add(" ")
+        if @val = sb.add(@val.toCode())
         return sb.build()
     end
-    def toString(): @toCode()
-    def matches(other): @toString == other.toString()
-    def getType():
-        if @type: return @type
-        if @val is Call: return @val.op.type
+    def toString() = @toCode()
+    def matches(other) = @toString == other.toString()
+    def getType()=
+        if @type = return @type
+        if @val is Call = return @val.op.type
         return nil
     end
 end
 
 class ListMismatchException(Exception)
 
-class List(Value):
+class List(Value)=
     Type = Enum.of(["ARG", "CALL", "RAW", "GENS"])
 
-    def init(type is List.Type, args is Object):
-        if not args.every(:_0 is Property): IllegalArgumentException("List args must be of type Property!").raise()
-        varargIndex = args.findIndex(:_0.type is Vararg)
-        if varargIndex != nil and varargIndex != args.len() - 1: IllegalArgumentException("Vararg argument must be the last one in the list!").raise()
+    def init(type is List.Type, args is Object)=
+        if not args.every(=_0 is Property) = IllegalArgumentException("List args must be of type Property!").raise()
+        varargIndex = args.findIndex(=_0.type is Vararg)
+        if varargIndex != nil and varargIndex != args.len() - 1 = IllegalArgumentException("Vararg argument must be the last one in the list!").raise()
         @vararg = varargIndex != nil
         @args = args
         @type = type
     end
 
-    def eval(args): @args
-    def toCode():
+    def eval(args) = @args
+    def toCode()=
         op = nil
         en = nil
         transformedArgs = @args
-        if @type == @Type.CALL:
+        if @type == @Type.CALL=
             op $= "("
             en $= ")"
-            transformedArgs $= transformedArgs.map(:Property(nil, _0.op, _0.val))
+            transformedArgs $= transformedArgs.map(=Property(nil, _0.op, _0.val))
         end
-        elsif @type == @Type.GENS:
+        elsif @type == @Type.GENS=
             op $= ".."
             en $= ".."
         end
-        else:
+        else=
             op $= "["
             en $= "]"
         end
-        return op + String.from(transformedArgs.map(:_0.toCode()), ", ") + en
+        return op + String.from(transformedArgs.map(=_0.toCode()), ", ") + en
     end
-    def toString(): @toCode()
-    def iterate(): @args.iterate()
-    def len(): @args.len()
-    def at(index): @args.(index)
-    def plus(newArg): @args = @args.joined([newArg])
+    def toString() = @toCode()
+    def iterate() = @args.iterate()
+    def len() = @args.len()
+    def at(index) = @args.(index)
+    def plus(newArg) = @args = @args.joined([newArg])
 
-    def wrapType(): Type(self)
-    def get(symbol is Symbol):
-        arg = @args.where(:_0.symbol.matches(symbol)).first()
-        if arg: return arg
-        else: IllegalArgumentException("Unable to find arg with symbol \(symbol) in list: \(self)").raise()
+    def wrapType() = Type(self)
+    def get(symbol is Symbol)=
+        arg = @args.where(=_0.symbol.matches(symbol)).first()
+        if arg = return arg
+        else = IllegalArgumentException("Unable to find arg with symbol \(symbol) in list = \(self)").raise()
     end
 
-    def matchesTypes(other):
+    def matchesTypes(other)=
         checklist = $[] # Checklist holds vals as we go. All the properties must have a val at the end of the run.
-        for arg in @args: checklist.(arg) = arg.val # Init the checklist
-        for otherArg in other.args: # Go through all the provided args
-            if otherArg.symbol: # Provided arg has a named argument
-                arg = args.where(:_0.symbol == otherArg.symbol)
-                if not arg.type.isTypeOf(otherArg.val): ListMismatchException("Types don't match").raise()
+        for arg in @args = checklist.(arg) = arg.val # Init the checklist
+        for otherArg in other.args = # Go through all the provided args
+            if otherArg.symbol = # Provided arg has a named argument
+                arg = args.where(=_0.symbol == otherArg.symbol)
+                if not arg.type.isTypeOf(otherArg.val) = ListMismatchException("Types don't match").raise()
                 checklist.(arg) = otherArg.val # If types match, copy the provided val
             end
         end
-        if args.last() is Vararg:
+        if args.last() is Vararg=
 
         end
-        else:
+        else=
 
         end
     end
 end
 
-class UnassignedSymbolException(Exception):
-    def init(symbol): super.init("Unable to find value for symbol: \(symbol.toCode())!")
+class UnassignedSymbolException(Exception)=
+    def init(symbol) = super.init("Unable to find value for symbol = \(symbol.toCode())!")
 end
 
-class Environment:
-    def init(parent is Environment):
+class Environment=
+    def init(parent is Environment)=
         @parent = parent
-        @depth = ife(parent, :parent.depth + 1, 0)
+        @depth = ife(parent, =parent.depth + 1, 0)
         @_props = $[]
     end
 
-    def set(prop is Property): @_props.(prop.symbol) = prop
-    def get(key is Symbol):
+    def set(prop is Property) = @_props.(prop.symbol) = prop
+    def get(key is Symbol)=
         env = self
-        while env:
+        while env=
             value = @_props.(key)
-            if value: return value
-            else: env $= env.parent
+            if value = return value
+            else = env $= env.parent
         end
         UnassignedSymbolException().raise()
     end
 end
 
-class Block(Value):
-    def init(guid is String, args is List, body is Object): pass
-    def eval(args): pass # TODO
-    def toCode():
+class Block(Value)=
+    def init(guid is String, args is List, body is Object) = pass
+    def eval(args) = pass # TODO
+    def toCode()=
         addNewlines = @body.isntEmpty()
         sb = String.builder()
-        if @rec: sb.add(@rec.toCode()).add(".")
+        if @rec = sb.add(@rec.toCode()).add(".")
         sb.add("{")
-        if @args: sb.add(@args.toCode())
-        if addNewlines: sb.add("\n")
-        sb.add(String.from(@body.map(:_0.toCode()), "\n"))
-        if addNewlines: sb.add("\n")
+        if @args = sb.add(@args.toCode())
+        if addNewlines = sb.add("\n")
+        sb.add(String.from(@body.map(=_0.toCode()), "\n"))
+        if addNewlines = sb.add("\n")
         sb.add("}")
-        if addNewlines: sb.add("\n")
+        if addNewlines = sb.add("\n")
         return sb.build()
     end
-    def toString(): @toCode()
+    def toString() = @toCode()
 end
 
-class Call(Value): # The sole expression in Adam is a block invocation with args
+class Call(Value) = # The sole expression in Adam is a block invocation with args
 
-    def init(rec is Property, op is Property, args is List, gensTable is Object): pass
-    def init(rec, op, args): @init(rec, op, args, $[])
+    def init(rec is Property, op is Property, args is List, gensTable is Object) = pass
+    def init(rec, op, args) = @init(rec, op, args, $[])
 
-    def eval(args): @op.eval(args) # TODO add receiver
-    def toCode():
+    def eval(args) = @op.eval(args) # TODO add receiver
+    def toCode()=
         sb = String.builder()
-        if @rec: sb.add(@rec.val.toCode()).add(".")
+        if @rec = sb.add(@rec.val.toCode()).add(".")
         sb.add(@op.val.toCode())
-        if @args: sb.add(@args.toCode())
-        elsif @rec: sb.add("()")
+        if @args = sb.add(@args.toCode())
+        elsif @rec = sb.add("()")
         return sb.build()
     end
-    def toString(): @toCode() + ife(@gensTable.isntEmpty(), \
-        " with .." + String.from(@gensTable.map(def (k, v): k + " = " + v).values(), ", ") + "..", "")
+    def toString() = @toCode() + ife(@gensTable.isntEmpty(), \
+        " with .." + String.from(@gensTable.map(def (k, v) = k + " = " + v).values(), ", ") + "..", "")
 
-    def isPrimitive(): not rec and not args # Primitive call is one that has no receiver nor args, meaning it's just a value
-    def toValue():
-        if @isPrimitive(): return @op
-        else: UnsupportedOperationException("Unable to convert a non-primitive call to value: \(self)").raise()
+    def isPrimitive() = not rec and not args # Primitive call is one that has no receiver nor args, meaning it's just a value
+    def toValue()=
+        if @isPrimitive() = return @op
+        else = UnsupportedOperationException("Unable to convert a non-primitive call to value = \(self)").raise()
     end
-    def toProperty(type): Property(type, nil, self)
-    def toCallList(type): List(List.Type.CALL, [@toProperty(type)])
+    def toProperty(type) = Property(type, nil, self)
+    def toCallList(type) = List(List.Type.CALL, [@toProperty(type)])
 end
 
-class ParseException(Exception):
-    def init(token, message):
-        super.init("Parse exception @\(token): \(message).")
+class ParseException(Exception)=
+    def init(token, message)=
+        super.init("Parse exception @\(token) = \(message).")
     end
 end
 
-class UndefinedSymException(Exception):
-    def init(sym is Symbol): super.init("Attempt to infer type for undefined symbol: \(sym)")
+class UndefinedSymException(Exception)=
+    def init(sym is Symbol) = super.init("Attempt to infer type for undefined symbol = \(sym)")
 end
 
-class Parser:
+class Parser=
 
-    def init(tokens):
+    def init(tokens)=
         @tokens = tokens
         @current = 0
         @typeTable = $[]
@@ -485,17 +485,17 @@ class Parser:
         rootGuid = guid()
     end
 
-    def parse():
+    def parse()=
         exprs = $[]
         @_matchAllNewlines()
-        while not @_isAtEnd():
+        while not @_isAtEnd()=
             exprs.addAll(@_expressionLine(rootGuid))
             @_matchAllNewlines()
         end
         return exprs # BP
     end
 
-    def _addPrimitiveTypes():
+    def _addPrimitiveTypes()=
         @_numType = @_cacheType(Type(Symbol("Num")))
         @_strType = @_cacheType(Type(Symbol("Str")))
         @_symbolType = @_cacheType(Type(Symbol("Symbol")))
@@ -504,17 +504,17 @@ class Parser:
     # Purposely not using "statement" as expression line returns a value as well
     # An expression line is a desugaring candidate - multiple exprs on a single line
     # Raises an exception if desugaring doesn't work
-    # Call syntax sugar rules:
+    # Call syntax sugar rules=
     # 1. unary prefix operator with rec - -a instead of a.-(), doSomething withThis instead of withThis.doSomething()
     # 2. binary infix operator with rec - a + b instead of a.+(b), this does that instead of this.does(that)
     # 3. block outside parentheses if last param - do(this) { block } instead of do(this, { block })
-    def _expressions(blockGuid, delimiter, rollBack):
+    def _expressions(blockGuid, delimiter, rollBack)=
         exprs = $[]
-        while not @_match(delimiter):
-            if @_checkTypedef(blockGuid): continue
+        while not @_match(delimiter)=
+            if @_checkTypedef(blockGuid) = continue
             exprs.append(@_expression(blockGuid))
         end
-        if rollBack: @_rollBack()
+        if rollBack = @_rollBack()
         print "Parsed on line " + exprs
         # Desugaring phase
         exprs $= @_desugarLastBlockParamPass(blockGuid, exprs)
@@ -524,51 +524,51 @@ class Parser:
         return exprs
     end
 
-    def _expressionLine(blockGuid): @_expressions(blockGuid, TokenType.NEWLINE, false)
-    def _valueExpressions(blockGuid, delimiter): @_expressions(blockGuid, [TokenType.COMMA, delimiter], true).0 # Only return the first desugared item
+    def _expressionLine(blockGuid) = @_expressions(blockGuid, TokenType.NEWLINE, false)
+    def _valueExpressions(blockGuid, delimiter) = @_expressions(blockGuid, [TokenType.COMMA, delimiter], true).0 # Only return the first desugared item
 
     #### DESUGARING
 
-    def _desugarTwoOpPass(blockGuid, exprs, fun):
+    def _desugarTwoOpPass(blockGuid, exprs, fun)=
         len = exprs.len()
-        if len == 1: return exprs
+        if len == 1 = return exprs
         desugared = $[]
         i = 1
-        while i < len:
+        while i < len=
             e1 = exprs.(i - 1)
             e2 = exprs.(i)
             unaryAttempt = fun(blockGuid, desugared, e1, e2)
-            if unaryAttempt:
+            if unaryAttempt=
                 desugared.append(unaryAttempt)
                 i += 1
             end
-            else: desugared.append(e1)
+            else = desugared.append(e1)
             i += 1
-            if i == len: desugared.append(e2)
+            if i == len = desugared.append(e2)
         end
         return desugared
     end
 
-    def _desugarUnaryPass(blockGuid, exprs): @_desugarTwoOpPass(blockGuid, exprs, def (b, d, e1, e2): @_desugarUnary(b, e1, e2))
-    def _desugarLastBlockParamPass(blockGuid, exprs): @_desugarTwoOpPass(blockGuid, exprs, :@_desugarLastBlockParam(_0, _1.last(), _2, _3))
+    def _desugarUnaryPass(blockGuid, exprs) = @_desugarTwoOpPass(blockGuid, exprs, def (b, d, e1, e2) = @_desugarUnary(b, e1, e2))
+    def _desugarLastBlockParamPass(blockGuid, exprs) = @_desugarTwoOpPass(blockGuid, exprs, =@_desugarLastBlockParam(_0, _1.last(), _2, _3))
 
-    def _desugarBinaryPass(blockGuid, exprs):
+    def _desugarBinaryPass(blockGuid, exprs)=
         len = exprs.len()
-        if len < 3: return exprs
+        if len < 3 = return exprs
         desugared = $[]
         i = 2
-        while i < len:
+        while i < len=
              e1 = exprs.(i - 2)
              e2 = exprs.(i - 1)
              e3 = exprs.(i)
              binaryAttempt = @_desugarBinary(blockGuid, e1, e2, e3)
-             if binaryAttempt:
+             if binaryAttempt=
                 desugared.append(binaryAttempt)
                 i += 2
              end
-             else: desugared.append(e1)
+             else = desugared.append(e1)
              i += 1
-             if i == len:
+             if i == len=
                 desugared.append(e2)
                 desugared.append(e3)
              end
@@ -576,57 +576,57 @@ class Parser:
         return desugared
     end
 
-    def _desugarLastBlockParamPass(blockGuid, exprs):
+    def _desugarLastBlockParamPass(blockGuid, exprs)=
         len = exprs.len()
-        if len == 1: return exprs
+        if len == 1 = return exprs
         desugared = $[]
         i = 1
-        while i < len:
+        while i < len=
             e0 = desugared.last()
             e1 = exprs.(i - 1)
             e2 = exprs.(i)
             unaryAttempt = @_desugarLastBlockParam(blockGuid, e0, e1, e2)
-            if unaryAttempt:
-                if unaryAttempt is not Call and unaryAttempt.removeLast:
+            if unaryAttempt=
+                if unaryAttempt is not Call and unaryAttempt.removeLast=
                     desugared.pop()
                     desugared.append(unaryAttempt.result)
                 end
-                else: desugared.append(unaryAttempt)
+                else = desugared.append(unaryAttempt)
                 i += 1
             end
-            else: desugared.append(e1)
+            else = desugared.append(e1)
             i += 1
-            if i == len: desugared.append(e2)
+            if i == len = desugared.append(e2)
         end
         return desugared
     end
 
-    def _desugarUnary(blockGuid, e1, e2):
+    def _desugarUnary(blockGuid, e1, e2)=
         print "Attempting unary desugar \(e1) \(e2)"
-        if e1.op.val is Symbol:
+        if e1.op.val is Symbol=
             e2Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e2))
-            rescue ex:
-                if ex: print "Silenced unary exception: \(ex.message)"
+            rescue ex=
+                if ex = print "Silenced unary exception = \(ex.message)"
             end
-            if e2Type.val is not List:
+            if e2Type.val is not List=
                 print "E2 isn't a list but \(e2Type), bailing"
                 return nil
             end
             member = e2Type.val.get(e1.op.val)
-            rescue ex:
+            rescue ex=
                 # Handled if exception is thrown when arg isn't found in the list above
-                if ex:
+                if ex=
                     print "Handled ex \(ex.message)"
                     member $= nil
                 end
             end
-            if not member:
+            if not member=
                 print "Member not found for \(e1.op.val), bailing"
                 return nil
             end
             memberType = member.type
-            if memberType.args and memberType.args.isntEmpty():
-                print "Member is a non-primitive block: \(member), bailing"
+            if memberType.args and memberType.args.isntEmpty()=
+                print "Member is a non-primitive block = \(member), bailing"
                 return nil
             end
             print "Found primitive member \(member) on \(e2.op), returning desugar"
@@ -637,37 +637,37 @@ class Parser:
         return nil
     end
 
-    def _desugarBinary(blockGuid, e1, e2, e3):
+    def _desugarBinary(blockGuid, e1, e2, e3)=
         print "Attempting binary desugar \(e1) \(e2) \(e3)"
-        if e2.op.val is Symbol:
+        if e2.op.val is Symbol=
             e1Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e1))
-            rescue ex:
-                if ex: print "Silenced unary exception: \(ex.message)"
+            rescue ex=
+                if ex = print "Silenced unary exception = \(ex.message)"
             end
             e1List = e1Type.val
-            if e1List is not List:
-                if e1List.val is List: e1List $= e1List.val
-                else:
+            if e1List is not List=
+                if e1List.val is List = e1List $= e1List.val
+                else=
                     print "E1 isn't a list but \(e1Type), bailing"
                     return nil
                 end
             end
             member = e1List.get(e2.op.val)
-            if not member:
+            if not member=
                 print "Member not found for \(e2.op.val), bailing"
                 return nil
             end
             memberType = member.type
-            if memberType.args.len() != 1:
-                print "Member is not a single arg block: \(member), bailing"
+            if memberType.args.len() != 1=
+                print "Member is not a single arg block = \(member), bailing"
                 return nil
             end
             e3Type = @_returnTypeOfCall(blockGuid, e3)
-            rescue ex:
-                if ex: print "Silenced unary exception: \(ex.message)"
+            rescue ex=
+                if ex = print "Silenced unary exception = \(ex.message)"
             end
             firstArgType = memberType.args.args.0.type
-            if not e3Type.matches(firstArgType):
+            if not e3Type.matches(firstArgType)=
                 print "E3 type \(e3Type) doesn't match \(firstArgType), bailing"
                 return nil
             end
@@ -678,51 +678,51 @@ class Parser:
         return nil
     end
 
-    def _desugarLastBlockParam(blockGuid, e0, e1, e2):
+    def _desugarLastBlockParam(blockGuid, e0, e1, e2)=
         print "Attempting last block desugar \(e1) \(e2)"
         comboCandidate = false
         undefinedSymEx = nil
-        if e2.op.val is Block:
+        if e2.op.val is Block=
             e1Type = @_typeOfCall(blockGuid, e1)
-            rescue ex:
-                if ex is UndefinedSymException:
+            rescue ex=
+                if ex is UndefinedSymException=
                     print "\(ex.message) - found a combo binary candidate"
                     comboCandidate $= true
                     undefinedSymEx $= ex
                 end
-                else: ex.raise() # Rethrow as it's something we can't handle
+                else = ex.raise() # Rethrow as it's something we can't handle
             end
-            if comboCandidate: # Combo candidate is a binary desugar on previously desugared member - if (a) { } else { }
+            if comboCandidate = # Combo candidate is a binary desugar on previously desugared member - if (a) { } else { }
                 e0Type = @_listOrListAlias(@_returnTypeOfCall(blockGuid, e0))
                 e0List = e0Type.val
-                if e0List is not List:
-                    if e0List.val is List:
+                if e0List is not List=
+                    if e0List.val is List=
                         e0List $= e0List.val
                     end
-                    else:
+                    else=
                         print "E0 isn't a list but \(e0Type)"
                         undefinedSymEx.raise()
                     end
                 end
                 member = e0List.get(e1.op.val)
-                if not member:
+                if not member=
                     print "Member not found for \(e1.op.val), bailing"
                     undefinedSymEx.raise()
                 end
                 print "SO FAR SO GOOD"
                 memberTypeWithoutGens = member.type
-                if e0.gensTable:
+                if e0.gensTable=
                     memberTypeCode = memberTypeWithoutGens.toCode()
-                    for [genKey, genVal] in e0.gensTable.zip():
+                    for [genKey, genVal] in e0.gensTable.zip()=
                         gen = genKey.substring(1) # TODO move to a separate method
                         memberTypeCode $= memberTypeCode.replacing(gen, genVal.toString())
                     end
                     memberTypeWithoutGens $= Parser(Scanner(memberTypeCode).scanTokens(true))._type(blockGuid)
                 end
                 desugaredRightSide = @_desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, memberTypeWithoutGens)
-                if not desugaredRightSide: undefinedSymEx.raise()
+                if not desugaredRightSide = undefinedSymEx.raise()
                 comboCall = Call(e0.toProperty(e0Type), desugaredRightSide.op, desugaredRightSide.args, e0.gensTable)
-                print "Combo desugar found: \(comboCall)"
+                print "Combo desugar found = \(comboCall)"
                 return [result = comboCall, removeLast = true]
             end
             return @_desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type)
@@ -731,13 +731,13 @@ class Parser:
         return nil
     end
 
-    def _desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type):
-        if not e1Type.args:
+    def _desugarLastBlockParamWithKnownE1Type(blockGuid, e1, e2, e1Type)=
+        if not e1Type.args=
             print "E1 type isn't a block call \(e1Type), bailing"
             return nil
         end
         e1Args = e1.args ?? List(List.Type.CALL, [])
-        if e1Type.args.len() != e1Args.len() + 1:
+        if e1Type.args.len() != e1Args.len() + 1=
             print "E1 type isn't invoked with args len + 1, \(e1Type.args) vs \(e1Args), bailing" # BP
             return nil
         end
@@ -745,27 +745,27 @@ class Parser:
         lastArgType = e1Type.args.args.last().type
         e2ReturnTypeOptions = @_returnTypeOfCall(blockGuid, e2, true)
         hasE2ReturnTypeMatch = false
-        for e2ReturnType in e2ReturnTypeOptions:
-            if not lastArgType.matches(e2ReturnType):
+        for e2ReturnType in e2ReturnTypeOptions=
+            if not lastArgType.matches(e2ReturnType)=
                 lastArgTypeBottomVal = lastArgType.bottomVal() ?? lastArgType.val
                 arityMatch = lastArgType.matchesArity(e2ReturnType)
                 # If lastArgType and e2ReturnType match in arity, check if maybe we're inferring a generic
-                if arityMatch.success and e1Type.hasGenType(lastArgTypeBottomVal):
+                if arityMatch.success and e1Type.hasGenType(lastArgTypeBottomVal)=
                     # If we got a positive match when comparing varargs, the actual inferred generic is the bottom-most value
                     # e.g, Num for [Num...]. If we weren't comparing varargs, then just get the bottom-most type.
-                    e2ReturnTypeBottomVal = ife(arityMatch.vararg, :e2ReturnType.bottomVal(), :e2ReturnType.bottomTypeVal())
+                    e2ReturnTypeBottomVal = ife(arityMatch.vararg, =e2ReturnType.bottomVal(), =e2ReturnType.bottomTypeVal())
                     genKey = @_implicitKey(lastArgTypeBottomVal)
                     previousGen = gensTable.(genKey)
-                    if previousGen and not previousGen.matches(e2ReturnTypeBottomVal):
+                    if previousGen and not previousGen.matches(e2ReturnTypeBottomVal)=
                         print "Inferred type of \(e2ReturnTypeBottomVal) collides with previously inferred generic \(genKey) whose value is \(previousGen)"
                         continue
                     end
-                    else:
+                    else=
                         print "Inferred generic type of \(e2ReturnTypeBottomVal) for \(genKey)"
                         gensTable.(genKey) = e2ReturnTypeBottomVal
                     end
                 end
-                else:
+                else=
                     print "Last arg return type \(lastArgType) doesn't match E2 return type \(e2ReturnType), bailing"
                     continue
                 end
@@ -773,10 +773,10 @@ class Parser:
             hasE2ReturnTypeMatch $= true
             break
         end
-        if not hasE2ReturnTypeMatch: return nil
+        if not hasE2ReturnTypeMatch = return nil
         lastArgArgLen = lastArgType.args.len() ?? 0
         e2ArgLen = e2.op.args.len() ?? 0
-        if e2ArgLen != 0 and e2ArgLen != lastArgArgLen:
+        if e2ArgLen != 0 and e2ArgLen != lastArgArgLen=
             print "Last arg argument count of \(lastArgArgLen) doesn't match non-zero E2 arg len of \(e2ArgLen), bailing"
             return nil
         end
@@ -786,8 +786,8 @@ class Parser:
 
     #### PARSING
 
-    def _checkTypedef(blockGuid):
-         if @_peek().literal == "def":
+    def _checkTypedef(blockGuid)=
+         if @_peek().literal == "def"=
             @_advance()
             id = @_consume(TokenType.ID, "Need ID for typedef")
             type = @_type(blockGuid)
@@ -799,61 +799,61 @@ class Parser:
         return false
     end
 
-    def _expression(blockGuid):
+    def _expression(blockGuid)=
         rec = nil
         op = nil
         args = nil
 
-        if @_match(TokenType.STRING): op $= Property(@_strType, nil, Str(@_previous().literal))
-        elsif @_match(TokenType.NUMBER): op $= Property(@_numType, nil, Num(@_previous().literal))
-        elsif @_match(TokenType.ID): op $= @_symbolToProperty(@_tokenToSymbol(@_previous()))
-        elsif @_match(TokenType.LEFT_BRACKET):
+        if @_match(TokenType.STRING) = op $= Property(@_strType, nil, Str(@_previous().literal))
+        elsif @_match(TokenType.NUMBER) = op $= Property(@_numType, nil, Num(@_previous().literal))
+        elsif @_match(TokenType.ID) = op $= @_symbolToProperty(@_tokenToSymbol(@_previous()))
+        elsif @_match(TokenType.LEFT_BRACKET)=
             list = @_list(blockGuid, List.Type.RAW)
             op $= Property(@_cacheType(list.wrapType()), nil, list)
         end
-        elsif @_match(TokenType.LEFT_BRACE):
+        elsif @_match(TokenType.LEFT_BRACE)=
             block = @_block(blockGuid)
             op $= Property(@_cacheType(@_typeOfBlock(block.guid, block)), nil, block)
         end
-        else: @_error(@_peek(), "Expected a value to start an expression!")
+        else = @_error(@_peek(), "Expected a value to start an expression!")
 
         # Automatically desugar assignment expressions to make building of Core easier
         # Assignment has internally highest priority
-        if op.type.matches(@_symbolType) and @_peek().literal == "=":
+        if op.type.matches(@_symbolType) and @_peek().literal == "="=
             rec $= op
             op $= @_symbolToProperty(@_tokenToSymbol(@_advance()))
             args $= @_expressionLine(blockGuid)
-            if args.len() != 1: @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
+            if args.len() != 1 = @_error(@_peek(), "Invalid assignment expression \(rec) \(op) \(args)!")
             @_rollBack() # Backtrack so that we still have the NEWLINE in queue
             return Call(rec, op, args.first().toCallList(nil))
         end
-        if @_match(TokenType.DOT):
+        if @_match(TokenType.DOT)=
             rec $= op
             op $= @_symbolToProperty(@_tokenToSymbol(@_consume(TokenType.ID, "Expected ID for a receiver call")))
         end
-        if @_match(TokenType.LEFT_PAREN): args $= @_list(blockGuid, List.Type.CALL)
+        if @_match(TokenType.LEFT_PAREN) = args $= @_list(blockGuid, List.Type.CALL)
         call = Call(rec, op, args)
         return call
     end
 
-    def _block(parentGuid):
+    def _block(parentGuid)=
         blockGuid = guid()
         @blockParents.(blockGuid) = parentGuid
         print "Analyzing block \(blockGuid) whose parent is \(parentGuid)"
         list = nil
         body = $[]
 
-        if @_match(TokenType.LEFT_BRACKET): list $= @_list(blockGuid, List.Type.ARG)
-        else: list $= nil
-        for arg in list: @_putSymbolType(blockGuid, arg.symbol, arg.type)
+        if @_match(TokenType.LEFT_BRACKET) = list $= @_list(blockGuid, List.Type.ARG)
+        else = list $= nil
+        for arg in list = @_putSymbolType(blockGuid, arg.symbol, arg.type)
 
-        if @_match(TokenType.NEWLINE): # Multi line body
-            while not @_match(TokenType.RIGHT_BRACE):
+        if @_match(TokenType.NEWLINE) = # Multi line body
+            while not @_match(TokenType.RIGHT_BRACE)=
                 body.addAll(@_expressionLine(blockGuid))
                 @_matchAllNewlines()
             end
         end
-        elsif not @_match(TokenType.RIGHT_BRACE):
+        elsif not @_match(TokenType.RIGHT_BRACE)=
              body.append(@_expression(blockGuid))
              @_consume(TokenType.RIGHT_BRACE, "Expected } at end of block")
         end
@@ -861,90 +861,90 @@ class Parser:
         return block
     end
 
-    def _list(blockGuid, type):
+    def _list(blockGuid, type)=
         args = $[]
         terminator = nil
-        when type:
-            List.Type.CALL: terminator $= TokenType.RIGHT_PAREN
-            List.Type.GENS: terminator $= TokenType.TWO_DOTS
-            else: terminator $= TokenType.RIGHT_BRACKET
+        when type=
+            List.Type.CALL = terminator $= TokenType.RIGHT_PAREN
+            List.Type.GENS = terminator $= TokenType.TWO_DOTS
+            else = terminator $= TokenType.RIGHT_BRACKET
         end
-        while true:
+        while true=
             @_matchAllNewlines()
             args.append(@_property(blockGuid, type, terminator))
             @_matchAllNewlines()
-            if @_match(terminator): break # end of arg list
+            if @_match(terminator) = break # end of arg list
             @_consume(TokenType.COMMA, "Expected , between list arguments")
         end
         return List(type, args)
     end
 
-    def _property(blockGuid, listType, terminator): # Type name[ default]
+    def _property(blockGuid, listType, terminator) = # Type name[ default]
         type = nil
         name = nil
         nameSymbol = nil
         val = nil
-        when listType:
-            List.Type.GENS:
+        when listType=
+            List.Type.GENS=
                 type $= @_type(blockGuid)
-                if @_nextTokenIsValue(): name $= @_consume(TokenType.ID, "Expected an ID for property name")
-                else: # It was just an ID without upper bound
+                if @_nextTokenIsValue() = name $= @_consume(TokenType.ID, "Expected an ID for property name")
+                else = # It was just an ID without upper bound
                     nameSymbol $= type.val
                     type $= nil
                 end
             end
-            List.Type.ARG:
+            List.Type.ARG=
                type $= @_type(blockGuid)
                name $= @_consume(TokenType.ID, "Expected an ID for property name")
-               if @_nextTokenIsValue(terminator): val $= @_valueExpressions(blockGuid, terminator) # has default val
+               if @_nextTokenIsValue(terminator) = val $= @_valueExpressions(blockGuid, terminator) # has default val
             end
-            else:
+            else=
               val $= @_expression(blockGuid)
-              if @_nextTokenIsValue(terminator):
+              if @_nextTokenIsValue(terminator)=
                    name $= val
                    # TODO roll back current if desugaring succeeds - maybe need to introduce more syntax
                    val $= @_valueExpressions(blockGuid, terminator)
               end
             end
         end
-        if not nameSymbol: nameSymbol $= @_tokenToSymbol(name)
+        if not nameSymbol = nameSymbol $= @_tokenToSymbol(name)
         return Property(type, nameSymbol, val)
     end
 
-    def _nextTokenIsValue(terminator):
+    def _nextTokenIsValue(terminator)=
         type = @_peek().type
         return type != TokenType.COMMA and type != TokenType.NEWLINE and type != terminator
     end
 
-    def _type(blockGuid): # Either an ID or a block definition
+    def _type(blockGuid) = # Either an ID or a block definition
         type = nil
-        if @_match(TokenType.ID):
+        if @_match(TokenType.ID)=
             id = @_previous()
-            if @_match(TokenType.DOT): type $= @_blockDef(blockGuid, id)
-            elsif @_match(TokenType.THREE_DOTS): type $= Vararg(Type(@_tokenToSymbol(id)))
-            else: type $= Type(@_tokenToSymbol(id))
+            if @_match(TokenType.DOT) = type $= @_blockDef(blockGuid, id)
+            elsif @_match(TokenType.THREE_DOTS) = type $= Vararg(Type(@_tokenToSymbol(id)))
+            else = type $= Type(@_tokenToSymbol(id))
         end
-        elsif @_match(TokenType.LEFT_BRACKET): type $= Type(@_list(blockGuid, List.Type.ARG))
-        else: type $= @_blockDef(blockGuid, nil)
+        elsif @_match(TokenType.LEFT_BRACKET) = type $= Type(@_list(blockGuid, List.Type.ARG))
+        else = type $= @_blockDef(blockGuid, nil)
         return @_cacheType(type)
     end
 
-    def _blockDef(blockGuid, rec):
+    def _blockDef(blockGuid, rec)=
         gens = nil
         args = nil
         val = nil
-        if @_match(TokenType.TWO_DOTS): gens $= @_list(blockGuid, List.Type.GENS)
-        if gens and not rec and @_peekSequence([TokenType.ID, TokenType.DOT]):
+        if @_match(TokenType.TWO_DOTS) = gens $= @_list(blockGuid, List.Type.GENS)
+        if gens and not rec and @_peekSequence([TokenType.ID, TokenType.DOT])=
             rec $= @_advance()
             @_consume(TokenType.DOT, "This should never be printed")
         end
-        if @_check(TokenType.LEFT_BRACKET): val $= @_type(blockGuid)
-        else:
+        if @_check(TokenType.LEFT_BRACKET) = val $= @_type(blockGuid)
+        else=
             @_consume(TokenType.LEFT_BRACE, "Expected { for block def start")
-            if @_match(TokenType.LEFT_BRACKET): args $= @_list(blockGuid, List.Type.ARG)
-            if not @_check(TokenType.RIGHT_BRACE): val $= @_type(blockGuid)
-            if args and not val:
-                print "Found a block def with args but no val: \(args). Switching them up..."
+            if @_match(TokenType.LEFT_BRACKET) = args $= @_list(blockGuid, List.Type.ARG)
+            if not @_check(TokenType.RIGHT_BRACE) = val $= @_type(blockGuid)
+            if args and not val=
+                print "Found a block def with args but no val = \(args). Switching them up..."
                 val $= Type(args)
                 args $= nil
             end
@@ -953,87 +953,87 @@ class Parser:
         return Type(@_tokenToSymbol(rec), gens, args, val)
     end
 
-     def _matchAllNewlines():
-        while @_match(TokenType.NEWLINE): pass
+     def _matchAllNewlines()=
+        while @_match(TokenType.NEWLINE) = pass
      end
 
-     def _match(types):
-         if types is Object:
-             for type in types:
-                 if @_matchOne(type): return true
+     def _match(types)=
+         if types is Object=
+             for type in types=
+                 if @_matchOne(type) = return true
              end
              return false
          end
          return @_matchOne(types)
      end
 
-     def _matchOne(type):
-         if @_check(type):
+     def _matchOne(type)=
+         if @_check(type)=
              @_advance()
              return true
          end
          return false
      end
 
-     def _consume(type, message):
-         if @_check(type): return @_advance()
+     def _consume(type, message)=
+         if @_check(type) = return @_advance()
          @_error(@_peek(), message)
      end
 
-     def _check(type):
-         if @_isAtEnd(): return false
+     def _check(type)=
+         if @_isAtEnd() = return false
          return @_peek().type == type
      end
 
-     def _advance():
-         if not @_isAtEnd(): @current = @current + 1
+     def _advance()=
+         if not @_isAtEnd() = @current = @current + 1
          return @_previous()
      end
 
-     def _rollBack(): @current = @current - 1
+     def _rollBack() = @current = @current - 1
 
-     def _isAtEnd(): return @_peek().type == TokenType.EOF
+     def _isAtEnd() = return @_peek().type == TokenType.EOF
 
-     def _peek(): return @tokens.(@current)
+     def _peek() = return @tokens.(@current)
 
-     def _peekSequence(types):
-         if @current + types.length() >= @tokens.length(): return false
-         for i in types.length().times():
-             if (@tokens.(@current + i)).type != types.(i): return false
+     def _peekSequence(types)=
+         if @current + types.length() >= @tokens.length() = return false
+         for i in types.length().times()=
+             if (@tokens.(@current + i)).type != types.(i) = return false
          end
          return true
      end
 
-     def _previous(): return @tokens.(@current - 1)
+     def _previous() = return @tokens.(@current - 1)
 
-     def _tokenToSymbol(token):
-        if token is not Token: return nil
+     def _tokenToSymbol(token)=
+        if token is not Token = return nil
         symbol $= Symbol(token.literal)
         symbolKey = @_implicitKey(symbol.toString())
         cachedValue = @symbolTable.(symbolKey)
-        if cachedValue: return cachedValue
-        else:
+        if cachedValue = return cachedValue
+        else=
             @symbolTable.(symbolKey) = symbol
             return symbol
         end
     end
 
-    def _symbolToProperty(symbol): Property(@_symbolType, nil, symbol)
+    def _symbolToProperty(symbol) = Property(@_symbolType, nil, symbol)
 
-    def _cacheType(type):
+    def _cacheType(type)=
         typeKey = @_implicitKey(type.toString())
         cachedValue = @typeTable.(typeKey)
-        if cachedValue: return cachedValue
-        else:
+        if cachedValue = return cachedValue
+        else=
             @typeTable.(typeKey) = type
             return type
         end
     end
 
-    def _putSymbolType(blockGuid is String, symbol, type):
+    def _putSymbolType(blockGuid is String, symbol, type)=
         key = @_implicitKey(symbol.toString())
         symbolBlockTable = @symbolTypes.(key)
-        if not symbolBlockTable:
+        if not symbolBlockTable=
             symbolBlockTable $= $[]
             @symbolTypes.(key) = symbolBlockTable
         end
@@ -1041,101 +1041,101 @@ class Parser:
         print "Assigned type \(type) to \(key) in \(blockGuid)"
     end
 
-    def _getSymbolType(blockGuid is String, symbol):
+    def _getSymbolType(blockGuid is String, symbol)=
         symbolKey = @_implicitKey(symbol.toString())
         table = @symbolTypes.(symbolKey)
         currentBlock = blockGuid
-        while currentBlock:
+        while currentBlock=
             type = table.(currentBlock)
-            if type:
+            if type=
                 print "Inferred type \(type) for \(symbol) in \(blockGuid)"
                 return type
             end
-            else: currentBlock $= @blockParents.(currentBlock) # Look up in parent environment
+            else = currentBlock $= @blockParents.(currentBlock) # Look up in parent environment
         end
         typeAlias = @typeAliases.(symbolKey)
-        if typeAlias: return typeAlias
-        if symbol is not Call:
+        if typeAlias = return typeAlias
+        if symbol is not Call=
             a = 5
             UndefinedSymException(symbol).raise()
         end
     end
 
-    def _typeOfBlock(blockGuid, block is Block): Type(nil, nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
+    def _typeOfBlock(blockGuid, block is Block) = Type(nil, nil, block.args, @_returnTypeOfCall(blockGuid, block.body.last()))
 
-    def _typeOfCall(blockGuid, call is Call):
+    def _typeOfCall(blockGuid, call is Call)=
         type = nil
-        if call.rec:
+        if call.rec=
             recType = call.rec.type
-            if recType.matches(@_symbolType):
+            if recType.matches(@_symbolType)=
                 print "Call rec is symbol, inferring type..."
                 recType $= @_getSymbolType(blockGuid, call.rec.val)
             end
             opType = call.op.type
-            if not opType.matches(@_symbolType): IllegalArgumentException("Op in receiver call must be a symbol!").raise()
+            if not opType.matches(@_symbolType) = IllegalArgumentException("Op in receiver call must be a symbol!").raise()
             recType $= @_listOrListAlias(recType)
-            if recType.val is not List:
+            if recType.val is not List=
                 a = 5 #BP
-                IllegalArgumentException("Can't invoke receiver call on a non-list receiver: \(rec)").raise()
+                IllegalArgumentException("Can't invoke receiver call on a non-list receiver = \(rec)").raise()
             end
             callee = recType.val.get(call.op.val)
             type $= callee
         end
-        else:
+        else=
             opType = call.op.type
-            if opType.matches(@_symbolType):
+            if opType.matches(@_symbolType)=
                 print "Call op is symbol, inferring type..."
                 type $= @_getSymbolType(blockGuid, call.op.val)
             end
-            else: type $= opType
+            else = type $= opType
         end
         return type
     end
 
-    def _returnTypeOfCall(blockGuid, call): @_returnTypeOfCall(blockGuid, call, false)
-    def _returnTypeOfCall(blockGuid, call is Call, allowVararg):
+    def _returnTypeOfCall(blockGuid, call) = @_returnTypeOfCall(blockGuid, call, false)
+    def _returnTypeOfCall(blockGuid, call is Call, allowVararg)=
        print "Inferring return type of \(call.toCode())..."
        type = @_typeOfCall(blockGuid, call)
-       if call.rec: type $= type.type # Receiver calls have their return value a little deeper
+       if call.rec = type $= type.type # Receiver calls have their return value a little deeper
        returnType = Type(type.val)
-       if allowVararg and type.val is List:
+       if allowVararg and type.val is List=
           firstItemType = type.val.args.0.getType()
           print "FIRST ITEM TYPE " + firstItemType
-          if type.val.args.every(:_0.getType().matches(firstItemType)):
+          if type.val.args.every(=_0.getType().matches(firstItemType))=
             varargType = List(List.Type.ARG, [Property(Vararg(firstItemType), nil, nil)]).wrapType()
             print "Found vararg list candidate \(varargType) on top of \(returnType)"
             return [returnType, varargType]
           end
        end
        print "...inferred \(returnType)"
-       return ife(allowVararg, :[returnType], returnType)
+       return ife(allowVararg, =[returnType], returnType)
     end
 
-    def _listOrListAlias(type):
-        if type.val is List: return type
-        if type.val.val is List: return type.val
+    def _listOrListAlias(type)=
+        if type.val is List = return type
+        if type.val.val is List = return type.val
         return @typeAliases.(@_implicitKey(type.val.toString()))
     end
 
-    def _implicitKey(str): "#" + str
+    def _implicitKey(str) = "#" + str
 
-    def _error(token, message): ParseException(token, message).raise()
+    def _error(token, message) = ParseException(token, message).raise()
 end
 
 
 ### INTERPRETER
 
-class Interpreter:
-    def init(exprs):
+class Interpreter=
+    def init(exprs)=
         @exprs = exprs
         @env = Environment(nil)
     end
 
-    def interpret():
+    def interpret()=
 
     end
 
-    def _initRootEnv():
+    def _initRootEnv()=
     end
 end
 
@@ -1148,7 +1148,7 @@ tokens = scanner.scanTokens(true)
 parser = Parser(tokens)
 exprs = parser.parse()
 #print exprs
-#print "All exprs are calls: " + exprs.every(:_0 is Call).bool()
+#print "All exprs are calls = " + exprs.every(=_0 is Call).bool()
 #print parser.typeTable
 #print parser.symbolTable
 interpreter = Interpreter(exprs)

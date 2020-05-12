@@ -1,132 +1,132 @@
-class Return(Exception):
-    def init(value):
+class Return(Exception)=
+    def init(value)=
         super.init("Return")
         @value = value
     end
 end
 
-class Yield(Exception):
-    def init(value):
+class Yield(Exception)=
+    def init(value)=
         super.init("Yield")
         @value = value
     end
 end
 
-class BlockImpl:
-    def init(delcaration, closure): pass
+class BlockImpl=
+    def init(delcaration, closure) = pass
 
-    def bind(instance):
+    def bind(instance)=
         env = Environment(closure)
         env.assign(Token.selfToken(), instance, false)
         return BlockImpl(@declaration, env)
     end
 
-    def isNative(): return @declaration.isNative()
+    def isNative() = return @declaration.isNative()
 
-    def yieldBlock(index):
+    def yieldBlock(index)=
         @_lastStatement = index
         @_lastClosure = @closure
     end
 
-    def _clearYield():
+    def _clearYield()=
         @_lastStatement = nil
         @_lastClosure = nil
     end
 
-    def arity(): return @declaration.params.length()
+    def arity() = return @declaration.params.length()
 
-    def call(interpreter, args, rethrow):
+    def call(interpreter, args, rethrow)=
         env = Environment(@_lastClosure ?? @closure)
-        if args:
-            for i in @declaration.params.length().times(): env.define(@(declaration.params.(i)).lexeme, args.(i))
+        if args=
+            for i in @declaration.params.length().times() = env.define(@(declaration.params.(i)).lexeme, args.(i))
         end
         interpreter.executeBlock(self, env, @_lastStatement ?? 0)
-        rescue ex:
-            if ex is Return:
+        rescue ex=
+            if ex is Return=
                 @_clearYield()
-                if rethrow: ex.raise()
-                else: return ex.value
+                if rethrow = ex.raise()
+                else = return ex.value
             end
-            else if ex is Yield:
-                if rethrow: Yield(ex.value, true).raise()
-                else: return ex.value
+            else if ex is Yield=
+                if rethrow = Yield(ex.value, true).raise()
+                else = return ex.value
             end
         end
         @_clearYield()
         return nil
     end
 
-    def statements(): return @declaration.statements()
+    def statements() = return @declaration.statements()
 end
 
-class Environment:
-    def init():
+class Environment=
+    def init()=
         @depth = 0
         @_initFields()
     end
 
-    def init(enclosing):
+    def init(enclosing)=
         @enclosing = enclosing
         @depth = enclosing.depth + 1
         @_initFields()
     end
 
-    def _initFields():
+    def _initFields()=
         @values = $[]
         @statementBlocks = $[]
     end
 
-    def get(token):
+    def get(token)=
         $val = @values.(token.lexeme)
-        if $val: return $val
-        if @enclosing: return @enclosing.get(token)
+        if $val = return $val
+        if @enclosing = return @enclosing.get(token)
         return nil
     end
 
-    def assign(token, value, allowImmutable):
+    def assign(token, value, allowImmutable)=
         key = token.lexeme
-        if key in @values:
-            if allowImmutable or key.startsWith("$"): @values.(key) = value
-            else: print "Cannot assign to a const"
-        end else: @define(key, value)
+        if key in @values=
+            if allowImmutable or key.startsWith("$") = @values.(key) = value
+            else = print "Cannot assign to a const"
+        end else = @define(key, value)
     end
 
-    def define(name, value): @values.(name) = value
+    def define(name, value) = @values.(name) = value
 
-    def ancestor(distance):
+    def ancestor(distance)=
         $env = self
-        for i in distance.times(): $env = $env.enclosing
+        for i in distance.times() = $env = $env.enclosing
         return $env
     end
 
-    def getAt(distance, name): return @ancestor(distance).values.get(name)
+    def getAt(distance, name) = return @ancestor(distance).values.get(name)
 
-    def assignAt(distance, token, value): @ancestor(distance).assign(token, value, false)
+    def assignAt(distance, token, value) = @ancestor(distance).assign(token, value, false)
 
-    def tryGet(name):
+    def tryGet(name)=
         $env = self
-        while $env:
+        while $env=
             value = $env.values.get(name)
-            if value: return value
+            if value = return value
             $env = $env.enclosing
         end
         return nil
     end
 
-    def toString():
+    def toString()=
         sb = $String.builder()
         sb.add(values.toString())
-        if @enclosing: sb.add(" -> ").add(@enclosing.toString())
+        if @enclosing = sb.add(" -> ").add(@enclosing.toString())
         return sb.build()
     end
 
-    def getOrAssignBlock(stmt, declaration, yieldedStmts):
+    def getOrAssignBlock(stmt, declaration, yieldedStmts)=
         str = stmt.toString()
         $block = @statementBlocks.(str)
-        if $block:
+        if $block=
             yieldedBlocks = yieldedStmts.(str)
-            if yieldedBlocks: $block = yieldedBlocks.(@depth.toString())
-            if $block:
+            if yieldedBlocks = $block = yieldedBlocks.(@depth.toString())
+            if $block=
                 $block = BlockImpl(declaration, self)
                 @statementBlocks.(str) = $block
             end
@@ -134,21 +134,21 @@ class Environment:
         return $block
     end
 
-    def endBlock(stmt, yieldedStmts):
+    def endBlock(stmt, yieldedStmts)=
         str = stmt.toString()
         @statementBlocks.(str) = nil
         @popBlock(str, yieldedStmts)
-        for child in stmt.children(): @endBlock(child, yieldedStmts)
+        for child in stmt.children() = @endBlock(child, yieldedStmts)
     end
 
-    def popBlock(str, yieldedStmts):
+    def popBlock(str, yieldedStmts)=
         blocks = yieldedStmts.(str)
-        if blocks: blocks.(@depth.toString()) = nil
+        if blocks = blocks.(@depth.toString()) = nil
     end
 end
 
-class Interpreter:
-    def init(nativeModulesManager):
+class Interpreter=
+    def init(nativeModulesManager)=
         @nativeModulesManager = nativeModulesManager
         @_globals = Environment()
         @_environment = @_globals
@@ -158,35 +158,35 @@ class Interpreter:
         @_yieldedStmts = $[]
     end
 
-    def interpret(statements):
-        for stmt in statements:
-            if @_raisedExceptions.isEmpty(): @_execute(stmt)
-            else: @_raisedExceptions.last().raise()
+    def interpret(statements)=
+        for stmt in statements=
+            if @_raisedExceptions.isEmpty() = @_execute(stmt)
+            else = @_raisedExceptions.last().raise()
         end
     end
 
-    def _evaluate(expr): return expr.accept(self)
+    def _evaluate(expr) = return expr.accept(self)
 
-    def _execute(stmt): stmt.accept(self)
+    def _execute(stmt) = stmt.accept(self)
 
-#    def _resolve(expr, depth): @_locals
+#    def _resolve(expr, depth) = @_locals
 
-    def executeBlock(block, env, startAt):
+    def executeBlock(block, env, startAt)=
         previous = @_environment
         @_environment = env
         statements = block.statements()
         len = statements.length()
-        for i in Range(ife(startAt < len, startAt, 0), len):
-            if @_raisedExceptions.isEmpty:
+        for i in Range(ife(startAt < len, startAt, 0), len)=
+            if @_raisedExceptions.isEmpty=
                 stmt = statements.(i)
                 @_execute(stmt)
-            end else:
+            end else=
                # $rescue = nil
 
             end
-            rescue ex:
-                if ex is Yield:
-                    block.yieldBlock(i + ife(ex.rethrown ? 0 : 1))
+            rescue ex=
+                if ex is Yield=
+                    block.yieldBlock(i + ife(ex.rethrown ? 0  = 1))
                     ex.raise()
                 end
             end
@@ -194,13 +194,13 @@ class Interpreter:
         @_environment = previous
     end
 
-    def getGlobal(name): return @_globals.getAt(0, name)
+    def getGlobal(name) = return @_globals.getAt(0, name)
 
-    def getEnvironment(): return @_environment
+    def getEnvironment() = return @_environment
 
-    def raiseException(ex): @_raisedExceptions.push(ex)
+    def raiseException(ex) = @_raisedExceptions.push(ex)
 
-    def newObject(immutable, props): return props.clone(not immutable)
+    def newObject(immutable, props) = return props.clone(not immutable)
 
     def newArray(immutable, props)
 
@@ -255,7 +255,7 @@ class Interpreter:
       List<SimiClassImpl> superclasses = null;
       if (stmt.superclasses != null) {
         superclasses = new ArrayList<>();
-        for (Expr superclass : stmt.superclasses) {
+        for (Expr superclass  = stmt.superclasses) {
             SimiObject clazz = evaluate(superclass).getObject();
             if (!(clazz instanceof SimiClassImpl)) {
                 throw new RuntimeError(stmt.name, "Superclass must be a class.");
@@ -269,14 +269,14 @@ class Interpreter:
       environment.define(Constants.SUPER, new SimiClassImpl.SuperClassesList(superclasses));
 
       Map<String, SimiValue> constants = new HashMap<>();
-      for (Expr.Assign constant : stmt.constants) {
+      for (Expr.Assign constant  = stmt.constants) {
           String key = constant.name.lexeme;
           SimiValue value = evaluate(constant.value);
           constants.put(key, value);
       }
 
     Map<OverloadableFunction, SimiFunction> methods = new HashMap<>();
-    for (Stmt.Function method : stmt.methods) {
+    for (Stmt.Function method  = stmt.methods) {
         String name = method.name.lexeme;
       SimiFunction function = new SimiFunction(method, environment,
           name.equals(Constants.INIT), method.block.isNative());

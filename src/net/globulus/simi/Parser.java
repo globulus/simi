@@ -9,9 +9,10 @@ import static net.globulus.simi.TokenType.*;
 
 class Parser {
 
-  private static final String LAMBDA = "lambda";
-  private static final String FUNCTION = "function";
-  private static final String METHOD = "method";
+  private static final String KIND_LAMBDA = "lambda";
+  private static final String KIND_FUNCTION = "function";
+  private static final String KIND_METHOD = "method";
+  private static final String KIND_WHEN = "when";
 
   private static class ParseError extends RuntimeException {}
 
@@ -58,7 +59,7 @@ class Parser {
           return classDeclaration();
       }
       if (match(DEF)) {
-          return function(FUNCTION);
+          return function(KIND_FUNCTION);
       }
       if (match(BANG)) {
         return annotation();
@@ -105,7 +106,7 @@ class Parser {
           continue;
         }
         if (match(DEF)) {
-          methods.add(function(METHOD));
+          methods.add(function(KIND_METHOD));
         } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
           innerClasses.add(classDeclaration());
         } else if (match(BANG)) {
@@ -245,21 +246,27 @@ class Parser {
       if (match(NEWLINE)) {
         continue;
       }
-      List<Expr.Binary> conditions = new ArrayList<>();
+      List<Expr> conditions = new ArrayList<>();
       do {
         Token op;
-        if (match(IS, ISNOT, IN, NOTIN)) {
+        if (match(IS, ISNOT, IN, NOTIN, IF)) {
           op = previous();
         } else if (match(ELSE)) {
-          elseBranch = block("else", true);
+          elseBranch = block(KIND_WHEN, true);
           break;
         } else {
           op = new Token(EQUAL_EQUAL, null, null, when.line, when.file);
         }
         Expr right = call();
-        conditions.add(new Expr.Binary(left, op, right));
+        Expr condition;
+        if (op.type == IF) {
+          condition = right;
+        } else {
+          condition = new Expr.Binary(left, op, right);
+        }
+        conditions.add(condition);
         match(OR);
-      } while (!check(COLON, LEFT_BRACE));
+      } while (!check(LEFT_BRACE, COLON));
       if (conditions.isEmpty()) {
         continue;
       }
@@ -268,7 +275,7 @@ class Parser {
       for (int i = 1; i < conditions.size(); i++) {
         condition = new Expr.Logical(condition, or, conditions.get(i));
       }
-      E elsif = elsifProducer.go(condition, block("when", true));
+      E elsif = elsifProducer.go(condition, block(KIND_WHEN, true));
       if (firstElsif == null) {
         firstElsif = elsif;
       } else {
@@ -343,7 +350,10 @@ class Parser {
 
   private Stmt.Expression expressionStatement(boolean lambda) {
     Expr expr = expression();
-    if (!(expr instanceof Expr.Assign) || !(((Expr.Assign) expr).value instanceof Expr.Block)) {
+    if (!(expr instanceof Expr.Assign && ((Expr.Assign) expr).value instanceof Expr.Block)
+      && !(expr instanceof Expr.Set && ((Expr.Set) expr).value instanceof Expr.Block)) {
+      // If the left-hand side is an assign or set and right-hand side is a block, then we've already consumed the
+      // line ending and don't have to check the lambda end.
       checkStatementEnd(lambda);
     }
     return new Stmt.Expression(expr);
@@ -392,22 +402,22 @@ class Parser {
     if (statements == null) {
         statements = block.statements;
     }
-    // Add implicit return for functions containing just a single expression in their body
-    if (statements.size() == 1) {
-      Stmt stmt = statements.get(0);
-      if (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If) {
-        Expr expr;
-        if (stmt instanceof Stmt.Expression) {
-          expr = ((Stmt.Expression) stmt).expression;
-        } else {
-          expr = ((Stmt.If) stmt).toExpr();
-        }
-        if (Expr.hasImplicitReturn(expr)) {
-          Token mockReturn = new Token(RETURN, null, null, expr.getLineNumber(), expr.getFileName());
-          statements.set(0, new Stmt.Return(mockReturn, expr));
-        }
-      }
-    }
+//    // Add implicit return for functions containing just a single expression in their body
+//    if (statements.size() == 1) {
+//      Stmt stmt = statements.get(0);
+//      if (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If) {
+//        Expr expr;
+//        if (stmt instanceof Stmt.Expression) {
+//          expr = ((Stmt.Expression) stmt).expression;
+//        } else {
+//          expr = ((Stmt.If) stmt).toExpr();
+//        }
+//        if (Expr.hasImplicitReturn(expr)) {
+//          Token mockReturn = new Token(RETURN, null, null, expr.getLineNumber(), expr.getFileName());
+//          statements.set(0, new Stmt.Return(mockReturn, expr));
+//        }
+//      }
+//    }
     addParamChecks(declaration, block.params, statements);
     block = new Expr.Block(declaration, block.params, statements, true);
     return new Stmt.Function(name, block, annotations);
@@ -430,8 +440,16 @@ class Parser {
       declaration = previous();
     }
     List<Expr> params = params(kind, lambda);
-    if (!match(COLON, LEFT_BRACE)) {
-      throw error(peek(), "Expected a ':' or a '{' at the start of block!");
+    boolean canReturn = canBlockReturn(kind);
+    boolean allowsEquals = canReturn || kind.equals(Constants.INIT);
+    if (!allowsEquals && check(EQUAL)) {
+      throw error(peek(), "Expected a '{' at the start of block!");
+    }
+    if (!kind.equals(KIND_WHEN) && check(COLON)) {
+      throw error(peek(), "':' can only be used in when expr statements!");
+    }
+    if (!match(COLON, EQUAL, LEFT_BRACE)) {
+      throw error(peek(), "Expected a '=' or a '{' at the start of block!");
     }
     Token opener = previous();
     List<Stmt> blockStmts = parseBlockStatements(declaration, opener, kind).statements;
@@ -445,29 +463,32 @@ class Parser {
     if (addParamChecks) {
       addParamChecks(declaration, params, statements);
     }
-    return new Expr.Block(declaration, params, statements,
-            kind.equals(LAMBDA) || kind.equals(FUNCTION) || kind.equals(METHOD));
+    return new Expr.Block(declaration, params, statements, canReturn);
+  }
+
+  private boolean canBlockReturn(String kind) {
+    return kind.equals(KIND_LAMBDA) || kind.equals(KIND_FUNCTION) || kind.equals(KIND_METHOD);
   }
 
   private Expr shorthandBlock(Token opener) {
     Token declaration = new Token(DEF, null, null, opener.line, opener.file);
-    BlockParsingResult result = parseBlockStatements(declaration, opener, LAMBDA);
+    BlockParsingResult result = parseBlockStatements(declaration, opener, KIND_LAMBDA);
     return new Expr.Block(declaration, result.implicitParams, result.statements, true);
   }
-
 
   private BlockParsingResult parseBlockStatements(Token declaration, Token opener, String kind) {
     List<Stmt> statements = new ArrayList<>();
     List<Expr> implicitParams = null;
+    boolean singleLineOpener = opener.type == EQUAL || opener.type == COLON;
     if (match(RIGHT_BRACE)) { // Empty block
-      if (opener.type == COLON) {
-        throw error(opener, "Cannot match a '}' to a ':', use a '{'!");
+      if (singleLineOpener) {
+        throw error(opener, "Cannot match a '}' to a '=', use a '{'!");
       } else {
         return new BlockParsingResult(statements, null);
       }
     } else if (match(NEWLINE)) {
-      if (opener.type == COLON) {
-        throw error(opener, "A newline can't follow a ':' in a blockdef, use a '{'!");
+      if (singleLineOpener) {
+        throw error(opener, "A newline can't follow a '=' in a blockdef, use a '{'!");
       }
       while (!check(RIGHT_BRACE) && !isAtEnd()) {
         if (match(NEWLINE, PASS)) {
@@ -479,17 +500,21 @@ class Parser {
     } else {
       Stmt stmt = statement(true);
       implicitParams = detectImplicitParams(stmt);
-      if (!implicitParams.isEmpty()) {
-        int a = 5;
-      }
-      if (kind.equals(LAMBDA) && (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If)) {
-        Expr expr;
-        if (stmt instanceof Stmt.Expression) {
-          expr = ((Stmt.Expression) stmt).expression;
+      if (opener.type == EQUAL) {
+        if (stmt instanceof Stmt.Expression || stmt instanceof Stmt.If) {
+          boolean doHandle = stmt instanceof Stmt.If || !((Stmt.Expression) stmt).isPassOrNative();
+          if (doHandle) {
+            Expr expr;
+            if (stmt instanceof Stmt.Expression) {
+              expr = ((Stmt.Expression) stmt).expression;
+            } else {
+              expr = ((Stmt.If) stmt).toExpr();
+            }
+            stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), expr);
+          }
         } else {
-          expr = ((Stmt.If) stmt).toExpr();
+          throw error(opener, "Unable to set implicit return as the block content isn't an expression!");
         }
-        stmt = new Stmt.Return(new Token(RETURN, null, null, declaration.line, declaration.file), expr);
       }
       statements.add(stmt);
     }
@@ -499,7 +524,7 @@ class Parser {
   private List<Expr> params(String kind, boolean lambda) {
     List<Expr> params = new ArrayList<>();
     if (!check(LEFT_PAREN)) {
-      if (lambda && !check(COLON, LEFT_BRACE)) {
+      if (lambda && !check(COLON, EQUAL, LEFT_BRACE)) {
         Token id = consume(IDENTIFIER, "Expect parameter name.");
         params.add(new Expr.Variable(id));
       }
@@ -769,10 +794,10 @@ class Parser {
     }
 
     if (match(DEF)) {
-        return block(LAMBDA, true);
+        return block(KIND_LAMBDA, true);
     }
 
-    if (match(COLON)) {
+    if (match(EQUAL)) {
       return shorthandBlock(previous());
     }
 

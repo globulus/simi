@@ -4,35 +4,35 @@ class IoException(Exception) {
 }
 
 class ReadStream(Closeable) {
-    def init(file): native
-    def read(): native
-    def readLine(): native
-    def reset(): native
-    def skip(n): native
-    def close(): native
+    def init(file) = native
+    def read() = native
+    def readLine() = native
+    def reset() = native
+    def skip(n) = native
+    def close() = native
 }
 
 class WriteStream(Closeable) {
-    def init(file): native
-    def write(string): native
-    def close(): native
+    def init(file) = native
+    def write(string) = native
+    def close() = native
 
-    def newLine(): @write("\n")
+    def newLine() = @write("\n")
 }
 
 class File {
-    def init(path): pass
-    def isDirectory(): native
+    def init(path) = pass
+    def isDirectory() = native
 
-    def readLines(path): native
-    def readString(path): native
-    def listAll(path, filter, recursive): native
+    def readLines(path) = native
+    def readString(path) = native
+    def listAll(path, filter, recursive) = native
 
-    def fileName(): @path.substring((@path.lastIndexOf('/') ?? -1) + 1)
+    def fileName() = @path.substring((@path.lastIndexOf('/') ?? -1) + 1)
     def fileNameWithoutExtension() {
         fn = @fileName()
         return fn.substring(0, fn.indexOf('.'))
     }
-    def extension(): @path.substring(@path.lastIndexOf('.') + 1)
-    def changingExtension(to): File(@path.substring(0, @path.lastIndexOf('.') + 1) + to)
+    def extension() = @path.substring(@path.lastIndexOf('.') + 1)
+    def changingExtension(to) = File(@path.substring(0, @path.lastIndexOf('.') + 1) + to)
 }

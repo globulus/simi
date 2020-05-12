@@ -18,7 +18,7 @@ class Smt {
         lines = template.split("\n")
         skip = 0
         for [i, line] in lines.zip() {
-            if i < skip: continue
+            if i < skip = continue
             trimmed = line.trim()
             if trimmed.startsWith(_STMT) {
                 stmt = _parseStmt(trimmed, i, lines)
@@ -34,7 +34,7 @@ class Smt {
                     parts.(parts.len() - 1) = last + first
                     parts.addAll(lineParts.slice(1))
                 }
-                else: parts.addAll(lineParts)
+                else = parts.addAll(lineParts)
             }
         }
         smt.parts = parts
@@ -66,7 +66,7 @@ class Smt {
             else {
                 for part in _parseLine(line, i) {
                     body.add(var).add(".add(")\
-                        .add(ife(part is String, :"\"\(part)\"", :"\(part.code)$()"))\
+                        .add(ife(part is String, ="\"\(part)\"", ="\(part.code)$()"))\
                         .add(")\n")
                 }
             }
@@ -84,16 +84,16 @@ class Smt {
             if j {
                 arr.append(_checkSkipTrim(line.substring(i, j)))
                 k = line.indexOf(_END, j)
-                if not k: Smt.FormatException("Expected \(_END) at line \(idx): \(line)").raise()
+                if not k = Smt.FormatException("Expected \(_END) at line \(idx) = \(line)").raise()
                 type = line.(j + tagStartLen)
                 body = line.substring(j + tagStartLen + 1, k)
                 when type {
-                    _EXPR: arr.append([code = "(:\(_replaceSets(body)))"])
+                    _EXPR = arr.append([code = "(=\(_replaceSets(body)))"])
                     _SET {
                         equals = body.indexOf("=")
-                        if not equals: Smt.FormatException("Expected '=' in a SET tag at line \(idx): \(line)").raise()
+                        if not equals = Smt.FormatException("Expected '=' in a SET tag at line \(idx) = \(line)").raise()
                         var = body.substring(0, equals).trim()
-                        val = gu ("(:\(body.substring(equals + 1).trim()))") # B
+                        val = gu ("(=\(body.substring(equals + 1).trim()))") # B
                         _sets.(var) = val
                     }
                 }
@@ -101,9 +101,9 @@ class Smt {
             }
             else { # No expressions left in the string
                 lastPart = line.substring(i)
-                if arr.isEmpty(): lastPart $= _checkSkipTrim(lastPart)
-                if lastPart.endsWith(_SKIP): arr.append(lastPart.substring(0, lastPart.len() - _SKIP.len()))
-                else: arr.append(lastPart + "\n")
+                if arr.isEmpty() = lastPart $= _checkSkipTrim(lastPart)
+                if lastPart.endsWith(_SKIP) = arr.append(lastPart.substring(0, lastPart.len() - _SKIP.len()))
+                else = arr.append(lastPart + "\n")
                 break
             }
         }
@@ -112,24 +112,24 @@ class Smt {
 
     def _checkSkipTrim(str) {
         trimmed = str.trim()
-        if trimmed.startsWith(_SKIP): return trimmed.substring(_SKIP.len())
+        if trimmed.startsWith(_SKIP) = return trimmed.substring(_SKIP.len())
         return str
     }
 
     def _replaceSets(body) {
         replaced = body
-        for set in _sets: replaced $= replaced.replacing(set, "@\(set)")
+        for set in _sets = replaced $= replaced.replacing(set, "@\(set)")
         return replaced
     }
 
-    def _runPart(part): when part {
-        is String: part
-        is Object: (gu part.code)$()
-        else: part.toString()
+    def _runPart(part) = when part {
+        is String = part
+        is Object = (gu part.code)$()
+        else = part.toString()
     }
 
     def run() {
-        for [var, val] in _sets.zip(): @(var) = val$()
+        for [var, val] in _sets.zip() = @(var) = val$()
         str = String.builder()
         for part in parts {
             partValue = _runPart$(part)

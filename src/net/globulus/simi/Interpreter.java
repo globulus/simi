@@ -262,7 +262,11 @@ class Interpreter implements
       if (stmt.superclasses != null) {
         superclasses = new ArrayList<>();
         for (Expr superclass : stmt.superclasses) {
-            SimiObject clazz = evaluate(superclass).getValue().getObject();
+            SimiProperty clazzProp = evaluate(superclass);
+            if (clazzProp == null) {
+                int a = 5;
+            }
+            SimiObject clazz = clazzProp.getValue().getObject();
             if (!(clazz instanceof SimiClassImpl)) {
                 runtimeError(stmt.name, "Superclass must be a class.");
             }

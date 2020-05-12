@@ -1,11 +1,11 @@
 import "./stdlib/doc/Doc.simi"
 
 ## This is a *summary*.
-## Some points:
+## Some points=
 ## + first bullet
 ## + second bullet
 ## **bold** text
-class Test:
+class Test=
 
 end
 

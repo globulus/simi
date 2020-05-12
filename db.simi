@@ -32,13 +32,13 @@ class Appointment(Model) {
 class DbLib {
     def init(tables) {
         sqlBuilder = String.builder()
-        for table in tables: _sqlForTable(table, sqlBuilder)
+        for table in tables = _sqlForTable(table, sqlBuilder)
         @sql = sqlBuilder.build()
     }
 
     def _sqlForTable(table, sqlBuilder) {
         classAnnotations = !!table # First we get annotations for the class
-        if not classAnnotations: return # If there aren't any, skip this class
+        if not classAnnotations = return # If there aren't any, skip this class
         for annot in classAnnotations {
             dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
             if dbTable {
@@ -56,26 +56,26 @@ class DbLib {
         for key in table {
             val = table.(key)
             keyAnnotations = !!val
-            if not keyAnnotations: continue
+            if not keyAnnotations = continue
             for annot in keyAnnotations {
                 dbField = annot.dbField
-                if not dbField: continue
+                if not dbField = continue
                 name = ife(dbField is String, dbField, key) # Infer the name
                 # Infer type based on calue associated with the field in class definition
                 type = when val {
-                    is Number: "int"
-                    is String: "varchar(255)"
-                    is Date: "date"
-                    else: nil
+                    is Number = "int"
+                    is String = "varchar(255)"
+                    is Date = "date"
+                    else = nil
                 }
                 # ... of course, many more types could be added, including relationships to other tables
 
                 sqlBuilder.add(name).add(" ").add(type)
                 if annot.primaryKey { # Check for "primary key" field in the annotation
-                    if type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                    if type == "int" = sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
                     sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
                 }
-                else: sqlBuilder.add(",")
+                else = sqlBuilder.add(",")
                 sqlBuilder.add("\n")
             }
         }

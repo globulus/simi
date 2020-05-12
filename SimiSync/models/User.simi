@@ -1,7 +1,7 @@
 import "./SimiSyncModels.simi"
 
 !SimiSyncModels.Model(1)
-class User:
+class User=
     !SimiSyncModels.Field(false, 1, "un")
     username = ""
 
@@ -9,5 +9,5 @@ class User:
     password = ""
 
     !SimiSyncModels.Method()
-    def method(): return @username + "aaaa"
+    def method() = return @username + "aaaa"
 end

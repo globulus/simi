@@ -1,6 +1,8 @@
 class FixedSizeArray {
     def init(limit is Number) {
-        if limit <= 0: IllegalArgumentException("limit must be positive!").raise()
+        if limit <= 0 {
+            IllegalArgumentException("limit must be positive!").raise()
+        }
         @limit = limit
     }
 
@@ -16,7 +18,11 @@ class FixedSizeArray {
 
     def _trim() {
         d = @len() - @limit
-        if d <= 0: return
-        for _ in d.times(): @0 = nil
+        if d <= 0 {
+            return
+        }
+        for _ in d.times() {
+            @0 = nil
+        }
     }
 }

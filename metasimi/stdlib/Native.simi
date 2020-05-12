@@ -1,7 +1,7 @@
 import "./stdlib/Native-java.jar"
 
-class NativeModulesmanager:
-    native init(): pass
-    native loadJar(path): pass
-    native call(className, methodName, args): pass
+class NativeModulesmanager=
+    native init() = pass
+    native loadJar(path) = pass
+    native call(className, methodName, args) = pass
 end

@@ -2,12 +2,12 @@ import "./stdlib/File.simi"
 import "./MetaScanner.simi"
 import "./MetaParser.simi"
 
-class DocString:
-    def init(meat, ret, params, throws, sees): pass
+class DocString=
+    def init(meat, ret, params, throws, sees) = pass
 end
 
-class DocScanner:
-    def init(source):
+class DocScanner=
+    def init(source)=
         @source = source
         @len = source.length()
         @meat = $String.builder()
@@ -17,16 +17,16 @@ class DocScanner:
         @sees = $$[]
     end
 
-    def parse():
-        for line in @source.split("\n"):
+    def parse()=
+        for line in @source.split("\n")=
             words = line.split(" ")
             starter = words.0
             rest = line.substring(starter.length() + 1)
-            if word == "@return": @ret.add(rest)
-            elsif word == "@param": @params.push([words.1, line.substring(starter.length() + words.1.length() + 2)])
-            elsif word == "@throws": @throws.push(rest)
-            elsif word == "@see": @sees.push(rest)
-            else: @meat.add(line).add("\n")
+            if word == "@return" = @ret.add(rest)
+            elsif word == "@param" = @params.push([words.1, line.substring(starter.length() + words.1.length() + 2)])
+            elsif word == "@throws" = @throws.push(rest)
+            elsif word == "@see" = @sees.push(rest)
+            else = @meat.add(line).add("\n")
         end
         return DocString(@meat.build(), @ret.build(), @params, @throws, @sees)
     end
@@ -36,35 +36,35 @@ source = File.readString("./stdlib/Stdlib.simi")
 scanner = Scanner(source)
 tokens = scanner.scanTokens(true)
 parser = Parser(tokens)
-statements = parser.parse().where(def s: s is StmtClass or s is StmtFunction)
+statements = parser.parse().where(def s = s is StmtClass or s is StmtFunction)
 print statements.len()
 
 docFile = File("docs.md")
 ws = WriteStream(docFile)
 ws.write("## Classes")
 ws.newLine()
-for stmt in statements.where(def s: s is StmtClass):
+for stmt in statements.where(def s = s is StmtClass)=
     ws.write("### " + stmt.name.lexeme)
     ws.newLine()
-    if stmt.superclasses:
-        ws.write("* extends " + stmt.superclasses.reduce("", def (v, i): v += i))
+    if stmt.superclasses=
+        ws.write("* extends " + stmt.superclasses.reduce("", def (v, i) = v += i))
         ws.newLine()
     end
     ws.newLine()
-    if stmt.doc:
+    if stmt.doc=
         ws.write(stmt.doc)
         ws.newLine()
     end
-    for method in stmt.methods:
+    for method in stmt.methods=
         ws.write("#### " + method.name.lexeme)
         ws.newLine()
-        if method.doc:
+        if method.doc=
             ws.write(method.doc)
             ws.newLine()
         end
     end
 end
 ws.close()
-rescue ex:
-    if ex: print ex.message
+rescue ex=
+    if ex = print ex.message
 end

@@ -4,7 +4,8 @@ import net.globulus.simi.api.Codifiable;
 
 enum TokenType implements Codifiable {
   // Single-character tokens.
-  LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET,
+  LEFT_PAREN, RIGHT_PAREN,
+  LEFT_BRACKET, RIGHT_BRACKET,
   LEFT_BRACE, RIGHT_BRACE,
   COMMA, DOT, COLON, NEWLINE,
 

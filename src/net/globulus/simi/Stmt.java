@@ -246,6 +246,13 @@ abstract class Stmt implements SimiStatement, Codifiable {
     public boolean hasBreakPoint() {
       return expression.hasBreakPoint();
     }
+
+    public boolean isPassOrNative() {
+      if (expression instanceof Expr.Literal) {
+        return ((Expr.Literal) expression).value instanceof Pass || ((Expr.Literal) expression).value instanceof Native;
+      }
+      return false;
+    }
   }
 
   static class Function extends Stmt {

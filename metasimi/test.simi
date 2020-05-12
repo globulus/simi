@@ -3,13 +3,13 @@ import "./Stdlib/File.simi"
 print gu "2+2"
 
 def testFile() {
-    #File.readLines("README.md").forEach(def s: print s)
+    #File.readLines("README.md").forEach(def s = print s)
     file = File("README.md")
     reader = ReadStream(file)
     while true {
         line = reader.readLine()
-        if line: print line
-        else: break
+        if line = print line
+        else = break
     }
     writer = WriteStream(File("writetest.txt"))
     writer.write("string")
@@ -25,8 +25,8 @@ def testFile() {
 def testYieldFun() {
     print "before yield"
     for i in 3.times() {
-        if i < 2: yield "yield" + i
-        else: return "return in yield"
+        if i < 2 = yield "yield" + i
+        else = return "return in yield"
     }
     print "afterYield"
 }
@@ -43,17 +43,17 @@ def testYield() {
 testYield()
 
 class Point {
-    def init(x, y): pass
+    def init(x, y) = pass
 
-    # This is fully equivalent to:
-    # def init(x, y):
+    # This is fully equivalent to=
+    # def init(x, y)=
     #   @x = x
     #   @y = y
     # }
 
     # In value classes, you may want to override the equals method
-    # to check against fields, i.e to use matches() with == operator:
-   # def equals(other): return @matches(other)
+    # to check against fields, i.e to use matches() with == operator=
+   # def equals(other) = return @matches(other)
 }
 
 $var = 1
@@ -66,7 +66,7 @@ print p1 == p2
 
 date = Date.now()
 print date
-print date.format("dd/MM/yyyy hh:mm:ss")
+print date.format("dd/MM/yyyy hh=mm=ss")
 
 #$a = 3
 #b = 5
@@ -78,8 +78,8 @@ def testStringNumberConversion() {
     numStr = "123.3ž"
     numVal = numStr.toNumber()
     rescue ex {
-        if ex: print "Invalid number format"
-        else: print numVal
+        if ex = print "Invalid number format"
+        else = print numVal
     }
 }
 testStringNumberConversion()
@@ -92,21 +92,21 @@ class TankOverflowException(Exception) {
 
 class Car {
 
-    def init(capacity, tank): pass
+    def init(capacity, tank) = pass
 
     def refill(amount) {
         print "Doing something"
-        if amount < 0: CarException("Amount < 0!").raise()
-        if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity
-        else: @tank = @tank + amount
+        if amount < 0 = CarException("Amount < 0!").raise()
+        if amount > 100 = TankOverflowException("Too much gasoline!").raise()
+        if @tank + amount > @capacity = @tank = @capacity
+        else = @tank = @tank + amount
     }
 
     def refill(amount, doprint) {
         @tank = 0
      }
 
-     def f(): pass
+     def f() = pass
 }
 
 class OtherCar(Car, Range) {
@@ -123,17 +123,17 @@ class OtherCar(Car, Range) {
         print "Doing nothing"
    }
 
-   def has(value): super(Range).has(value)
+   def has(value) = super(Range).has(value)
 }
 
 otherCar = OtherCar()
 print otherCar.capacity
 print 6 in otherCar
 
-#def min3(a, b, c):
-#    min2 = def (a, b):
-#        if a < b: return a
-#        else: return b
+#def min3(a, b, c)=
+#    min2 = def (a, b)=
+#        if a < b = return a
+#        else = return b
 #    }
 #    return min2(min2(a, b), c)
 #}
@@ -147,9 +147,9 @@ def refillCar() {
     print "should be skipped"
     rescue ex {
         print ?ex.message
-        if ex: print "rescue from: " + ex.message
-        if ex is CarException: print "car exc"
-        else: print ex
+        if ex = print "rescue from = " + ex.message
+        if ex is CarException = print "car exc"
+        else = print ex
         print "rescue always"
     }
     print "after rescue"
@@ -164,47 +164,47 @@ dict = [a = 1, b = "str", c = Range(1, 10, 3)]
 print dict
 for i in dict {
     print i
-    if i == "b": continue
+    if i == "b" = continue
     print dict.(i)
 }
 
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): r.compareTo(l))
+    .where(def i = i <= 5)\
+    .map(def i = i * 2)\
+    .sorted(def (l, r) = r.compareTo(l))
 print arr
 
 print Math.pow(2, 3)
 
-#$Object.each = def f:
-#    for item in self: f(item)
+#$Object.each = def f=
+#    for item in self = f(item)
 #}
 
-#print [a = "1", b = def a: return a * a].b(2)
+#print [a = "1", b = def a = return a * a].b(2)
 
-for i in 6.times(): print i
+for i in 6.times() = print i
 
-for c in "abcdef": print c
+for c in "abcdef" = print c
 print "cde" in "abcd"
 print "afe" + "pde".1
 
 len = arr.len()
 print len
 
-#arr.each(def i: print i * 2)
+#arr.each(def i = print i * 2)
 
 keys = arr.keys()
 print keys
 
 print arr
-for i in arr: print i
+for i in arr = print i
 
-print "arr has value:"
+print "arr has value="
 print 22 in arr
 
-print "dict has key:"
+print "dict has key="
 print "gg" in dict
 
 str = "this is a 'string'"

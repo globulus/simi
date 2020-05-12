@@ -6,16 +6,16 @@ class_ SimiSyncModels {
 
     # Model annotation class
     class_ Model {
-        def init(version): pass
-        def init(version, clientName): pass
+        def init(version) = pass
+        def init(version, clientName) = pass
     }
 
     # Model field annotation class
     class_ Field {
-        def init(): @init(false, 1)
-        def init(serverOnly): pass
-        def init(serverOnly, version): pass
-        def init(serverOnly, version, clientName): pass
+        def init() = @init(false, 1)
+        def init(serverOnly) = pass
+        def init(serverOnly, version) = pass
+        def init(serverOnly, version, clientName) = pass
     }
 
     # Model method annotation class
@@ -36,18 +36,24 @@ class_ SimiSyncModels {
                 modelClass = gu @removeImports(modelCode)
                 # Each class should have a proper ModelClass annotation
                 modelClassAnnot = @extractAnnot(modelClass, SimiSyncModels.Model)
-                if not modelClassAnnot : continue
+                if not modelClassAnnot {
+                    continue
+                }
                 className = modelClassAnnot.clientName ?? ClassCode(modelClass).name
                 classComposer = ClassComposer(className)
                 for e in modelClass.zip() {
                     key = e.key
                     value = modelClass.(key)
                     if value is Function {
-                        if not @extractAnnot(value, SimiSyncModels.Method): continue
+                        if not @extractAnnot(value, SimiSyncModels.Method) {
+                            continue
+                        }
                         classComposer.method(value)
                     } else {
                         fieldAnnot = @extractAnnot(value, SimiSyncModels.Field)
-                        if not fieldAnnot or fieldAnnot.serverOnly or fieldAnnot.version > version: continue
+                        if not fieldAnnot or fieldAnnot.serverOnly or fieldAnnot.version > version {
+                            continue
+                        }
                         classComposer.field(fieldAnnot.clientName ?? key, value)
                     }
                 }
@@ -58,7 +64,9 @@ class_ SimiSyncModels {
                 writer = WriteStream(f)
                 writer.write(clientCode)
                 rescue ex {
-                    if ex: print ex.message
+                    if ex {
+                        print ex.message
+                    }
                     writer.close()
                 }
             }

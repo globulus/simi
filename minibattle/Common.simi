@@ -1,22 +1,24 @@
 class Renderable {
-    def render(): AbstractMethodException(self(def), self).raise()
+    def render() = AbstractMethodException(self(def), self).raise()
 }
 
 class BoardPiece(Renderable)
 
 class Cell {
-    def init(r, c): pass
+    def init(r, c) = pass
 }
 
 def parseCell(input) {
     parseLetter = def letter {
         code = letter.unicode()
         aCode = "a".unicode()
-        return ife(code >= aCode, :code - aCode, :code - "A".unicode())
+        return ife(code >= aCode, =code - aCode, =code - "A".unicode())
     }
     parseRest = def start {
         len = 1
-        if start + 1 < input.len() and input.(start + 1).isDigit(): len $= 2
+        if start + 1 < input.len() and input.(start + 1).isDigit() {
+            len $= 2
+        }
         return [val = input.substring(start, start + len).toNumber(), len = len]
     }
     c = 0

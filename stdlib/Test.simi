@@ -7,7 +7,7 @@ class Test {
 
     class Mock {
         def init(args) {
-            @code = "(def:\n" + String.from(args.zip().map(def (k, v): k + " $= " + ivic v), "\n") + "})"
+            @code = "(def { \n" + String.from(args.zip().map(def (k, v) = k + " $= " + ivic v), "\n") + "})"
         }
     }
 
@@ -18,16 +18,26 @@ class Test {
             after = nil
             cases = $[]
             mocks = $[]
-            classMock = gu (!!clazz).where(def a: a is Test.Mock).first().code
+            classMock = gu (!!clazz).where(def a = a is Test.Mock).first().code
             for [key, val] in clazz.zip() {
-                if val is not Function: continue
+                if val is not Function {
+                    continue
+                }
                 annots = !!val
-                if @_hasAnnot(annots, Test.Before): before $= key
-                elsif @_hasAnnot(annots, Test.After): after $= key
-                elsif @_hasAnnot(annots, Test.Case): cases.append(key)
+                if @_hasAnnot(annots, Test.Before) {
+                    before $= key
+                }
+                elsif @_hasAnnot(annots, Test.After) {
+                    after $= key
+                }
+                elsif @_hasAnnot(annots, Test.Case) {
+                    cases.append(key)
+                }
 
-                mock = gu annots.where(def a: a is Test.Mock).first().code
-                if mock: mocks.(key) = mock
+                mock = gu annots.where(def a = a is Test.Mock).first().code
+                if mock {
+                     mocks.(key) = mock
+                }
             }
             caseResults = $[]
             for case in cases {
@@ -47,7 +57,9 @@ class Test {
                         mock.(after)$()
                         instance.(after)$()
                     }
-                    rescue ex: caseResults.(case) = ex ?? true
+                    rescue ex {
+                        caseResults.(case) = ex ?? true
+                    }
                 })()
             }
             results.(clazz.className()) = caseResults
@@ -55,7 +67,7 @@ class Test {
         return results
     }
 
-    def _hasAnnot(annots, annotClass): annots.where(def a: a is annotClass).isntEmpty()
+    def _hasAnnot(annots, annotClass) = annots.where(def a = a is annotClass).isntEmpty()
 
     class Reporter {
         def report(results) {
@@ -68,7 +80,7 @@ class Test {
                  totalPass += classReport.passes
                  text.add(classReport.text)
             }
-            return "Total: \(totalPass) / \(totalCases) (\(@_percentString(totalCases, totalPass)))\n\n" + text.build()
+            return "Total = \(totalPass) / \(totalCases) (\(@_percentString(totalCases, totalPass)))\n\n" + text.build()
         }
 
         def _reportClass(name, classResults) {
@@ -77,9 +89,11 @@ class Test {
             passes = 0
             breakdown = String.builder()
             for func in classResults {
-                breakdown.add(func).add(": ")
+                breakdown.add(func).add(" = ")
                 res = classResults.(func)
-                if res is Exception: breakdown.add(res.message)
+                if res is Exception {
+                    breakdown.add(res.message)
+                }
                 else {
                     passes += 1
                     breakdown.add("PASS")
@@ -90,7 +104,7 @@ class Test {
             return [cases = cases, passes = passes, text = text.build()]
         }
 
-        def _percentString(cases, passes): return "%.1f%%".format([passes * 100 / cases])
+        def _percentString(cases, passes) = "%.1f%%".format([passes * 100 / cases])
     }
 }
 
@@ -98,22 +112,34 @@ class AssertionException(Exception)
 
 Assert = [
     equals = def (a, b, m) {
-        if a != b: @_raiseException("Equals", m, [a, b])
+        if a != b {
+            @_raiseException("Equals", m, [a, b])
+        }
     },
     matches = def (a, b, m) {
-        if not a.matches(b): @_raiseException("Matches", m, [a, b])
+        if not a.matches(b) {
+            @_raiseException("Matches", m, [a, b])
+        }
     },
     isTrue = def (c, m) {
-        if not c: @_raiseException("Is true", m, nil)
+        if not c {
+            @_raiseException("Is true", m, nil)
+        }
     },
     isFalse = def (c, m) {
-        if c: @_raiseException("Is false", m, nil)
+        if c {
+            @_raiseException("Is false", m, nil)
+        }
     },
     isNil = def (o, m) {
-        if o != nil: @_raiseException("Is Nil", m, nil)
+        if o != nil {
+            @_raiseException("Is Nil", m, nil)
+        }
     },
     isntNil = def (o, m) {
-        if o == nil: @_raiseException("Is Not Nil", m, nil)
+        if o == nil {
+            @_raiseException("Is Not Nil", m, nil)
+        }
     },
-    _raiseException = def(method, msg, params): AssertionException("Assertion failed at \(ivic method): \"\(msg)\", params: \(ivic params)").raise()
+    _raiseException = def(method, msg, params) = AssertionException("Assertion failed at \(ivic method) = \"\(msg)\", params = \(ivic params)").raise()
 ]

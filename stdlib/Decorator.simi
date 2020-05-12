@@ -14,15 +14,15 @@ Decorator = [
             if trimmedLine.startsWith(@KEYWORD) {
 #                print trimmedLine.substring(@KEYWORD.len() + 1)
                  decorators $= (gu trimmedLine.substring(@KEYWORD.len() + 1)).split(", ")
-#                print "Found decorators: " + decorators
+#                print "Found decorators = " + decorators
             }
             elsif decorators and CodeBlocks.FunctionCode.isDefLine(trimmedLine) {
                 func = CodeBlocks.FunctionCode(lines, i)
                 params = func.parametersWithoutParentheses()
                 newLines.append(line)
                 tempName = @_tempName()
-                newLines.append(tempName + " = def (" + params + "):")
-                newLines.addAll(func.body().map(def l: l.replacing(func.name + "(", tempName + "(")))
+                newLines.append(tempName + " = def (" + params + ")=")
+                newLines.addAll(func.body().map(def l = l.replacing(func.name + "(", tempName + "(")))
                 newLines.append("}")
                 str = String.builder().add("return ")
                 for f in decorators {
@@ -41,14 +41,16 @@ Decorator = [
                 decorators $= nil
                 skip $= i + func.body().len()
             }
-            elsif i > skip: newLines.append(line)
+            elsif i > skip {
+                newLines.append(line)
+            }
         }
         tempName = @_tempName()
         print  "[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName
         return gu ("[" + tempName + " = " + String.from(newLines, "\n") + "\n]." + tempName)
     },
 
-    _tempName = :"temp" + clock().toString().substring(5),
+    _tempName = ="temp" + clock().toString().substring(5),
 
     test = def {
         @go(def {
@@ -112,7 +114,7 @@ Decorator = [
         flooper = def {
             while true {
                 fname = farg.name
-#                print "In flooper: " + fname
+#                print "In flooper = " + fname
                 if fname not in fcache {
                     workerLines = $[]
                     workerLines.append(farg.anonymousDeclaration().replacing("(", "(looper, "))
@@ -131,10 +133,11 @@ Decorator = [
                                 for i in rest.len().times() {
                                     c = rest.(i)
                                     if c == '(' {
-                                        if parenCount == 0: firstParen $= i
+                                        if parenCount == 0 {
+                                            firstParen $= i
+                                        }
                                         parenCount += 1
-                                    }
-                                    elsif c == ')' {
+                                    } elsif c == ')' {
                                         parenCount -= 1
                                         if parenCount == 0 {
                                             tempName = "temp" + temp
@@ -154,8 +157,9 @@ Decorator = [
                             }
 #                                print parts
                             workerLines.append(String.from(parts, " "))
+                        } else {
+                            workerLines.append(line)
                         }
-                        else: workerLines.append(line)
                     }
                     workerLines.append("}")
 #                    print workerLines
@@ -167,8 +171,10 @@ Decorator = [
                         looper = def {
                            while true {
                             key = arg.toString()
-                            if key not in cache: cache.(key) = worker([looper].joined(arg))
-#                            else: print "found key in cache: " + key
+                            if key not in cache {
+                             cache.(key) = worker([looper].joined(arg))
+                            }
+#                            else = print "found key in cache = " + key
                             yield cache.(key)
                          }
                        }
