@@ -20,7 +20,7 @@ class Interpreter implements
   private final Map<Expr, Integer> locals = new HashMap<>();
   private final BaseClassesNativeImpl baseClassesNativeImpl = new BaseClassesNativeImpl();
   private final Stack<SimiBlock> loopBlocks = new Stack<>();
-  private final Stack<SimiException> raisedExceptions = new Stack<>();
+  private final Stack<SimiExceptionWithDebugInfo> raisedExceptions = new Stack<>();
   private final Map<Stmt.BlockStmt, SparseArray<BlockImpl>> yieldedStmts = new HashMap<>();
 
   private Map<Object, List<SimiObject>> annotations = new HashMap<>();
@@ -94,9 +94,11 @@ class Interpreter implements
         if (raisedExceptions.isEmpty()) {
           result = execute(statement);
         } else {
-          SimiException e = raisedExceptions.peek();
-          debugger.triggerException(statement, e, true);
-          throw e;
+          SimiExceptionWithDebugInfo e = raisedExceptions.peek();
+          if (debugger != null) {
+            debugger.triggerException(statement, e, true);
+          }
+          throw e.exception;
         }
       }
     } catch (RuntimeError error) {
@@ -142,8 +144,9 @@ class Interpreter implements
   }
 
   @Override
-  public void executeBlock(SimiBlock block, SimiEnvironment environment, int startAt) {
+  public SimiProperty executeBlock(SimiBlock block, SimiEnvironment environment, int startAt) {
     Environment previous = this.environment;
+    SimiProperty returnValue = null;
     try {
       this.environment = (Environment) environment;
       List<? extends SimiStatement> statements = block.getStatements();
@@ -152,7 +155,7 @@ class Interpreter implements
         try {
           if (raisedExceptions.isEmpty()) {
             Stmt statement = (Stmt) statements.get(i);
-            execute(statement);
+            returnValue = execute(statement);
           } else { // Look for nearest rescue block
             Stmt.Rescue rescue = null;
             for (; i < size; i++) {
@@ -163,12 +166,12 @@ class Interpreter implements
               }
             }
             if (rescue != null) { // If not rescue block is available in this scope, maybe one is in scopes above
-              SimiException e = raisedExceptions.pop();
-              executeRescueBlock(rescue, e);
+              SimiExceptionWithDebugInfo e = raisedExceptions.pop();
+              executeRescueBlock(rescue, e.exception);
             } else if (block.canReturn()) {
               throw new Return(null);
             } else {
-              throw new Break(raisedExceptions.peek());
+              throw new Break(raisedExceptions.peek().exception);
             }
           }
         } catch (Yield yield) {
@@ -179,6 +182,7 @@ class Interpreter implements
     } finally {
       this.environment = previous;
     }
+    return returnValue;
   }
 
   @Override
@@ -193,9 +197,11 @@ class Interpreter implements
 
   @Override
   public void raiseException(SimiException e) {
-    raisedExceptions.push(e);
+    Debugger.Capture capture = (debugger != null) ? debugger.copyCapture() : null;
+    SimiExceptionWithDebugInfo edi = new SimiExceptionWithDebugInfo(e, capture);
+    raisedExceptions.push(edi);
     if (debugger != null) {
-      debugger.triggerException(null, e, false);
+      debugger.triggerException(null, edi, false);
     }
   }
 
@@ -256,7 +262,11 @@ class Interpreter implements
       if (stmt.superclasses != null) {
         superclasses = new ArrayList<>();
         for (Expr superclass : stmt.superclasses) {
-            SimiObject clazz = evaluate(superclass).getValue().getObject();
+            SimiProperty clazzProp = evaluate(superclass);
+            if (clazzProp == null) {
+                int a = 5;
+            }
+            SimiObject clazz = clazzProp.getValue().getObject();
             if (!(clazz instanceof SimiClassImpl)) {
                 runtimeError(stmt.name, "Superclass must be a class.");
             }
@@ -394,6 +404,14 @@ class Interpreter implements
   }
 
   @Override
+  public SimiProperty visitElsifExpr(Expr.Elsif expr) {
+    if (isTruthy(evaluate(expr.condition))) {
+      return executeBlock(expr.thenBranch, this.environment, 0);
+    }
+    return ELSIF_FALSE;
+  }
+
+  @Override
   public SimiProperty visitIfStmt(Stmt.If stmt) {
     if (visitElsifStmt(stmt.ifstmt).getValue().getNumber().asLong() != 0) {
       return null;
@@ -416,6 +434,24 @@ class Interpreter implements
         throw returnYield;
       }
       this.environment.endBlock(stmt, yieldedStmts);
+    }
+    return null;
+  }
+
+  @Override
+  public SimiProperty visitIfExpr(Expr.If expr) {
+    SimiProperty ifResult = visitElsifExpr(expr.ifstmt);
+    if (ifResult != ELSIF_FALSE) {
+      return ifResult;
+    }
+    for (Expr.Elsif elsif : expr.elsifs) {
+      ifResult = visitElsifExpr(elsif);
+      if (ifResult != ELSIF_FALSE) {
+        return ifResult;
+      }
+    }
+    if (expr.elseBranch != null) {
+      return executeBlock(expr.elseBranch, this.environment, 0);
     }
     return null;
   }
@@ -578,7 +614,7 @@ class Interpreter implements
     switch (expr.operator.type) {
       case BANG_EQUAL: return new SimiValue.Number(!isEqual(left, right, expr));
       case EQUAL_EQUAL: return new SimiValue.Number(isEqual(left, right, expr));
-      case LESS_GREATER: return compare(left, right, expr);
+      case LESS_GREATER: return matches(left, right, expr);
         case IS:
             return new SimiValue.Number(isInstance(left, right, expr));
         case ISNOT:
@@ -1005,7 +1041,11 @@ class Interpreter implements
 
   @Override
   public SimiProperty visitVariableExpr(Expr.Variable expr) {
-    return lookUpVariable(expr.name, expr);
+    SimiProperty prop = lookUpVariable(expr.name, expr);
+    if (prop == null && expr.backupSelfGet != null) {
+      prop = visitGetExpr(expr.backupSelfGet);
+    }
+    return prop;
   }
 
     @Override
@@ -1127,7 +1167,7 @@ class Interpreter implements
     return a.equals(b);
   }
 
-  private SimiValue compare(SimiValue a, SimiValue b, Expr.Binary expr) {
+  private SimiValue matches(SimiValue a, SimiValue b, Expr.Binary expr) {
     // nil is only equal to nil.
     if (a == null && b == null) {
       return SimiValue.Number.TRUE;
@@ -1136,8 +1176,8 @@ class Interpreter implements
       return SimiValue.Number.FALSE;
     }
     if (a instanceof SimiValue.Object) {
-      Token compareTo = new Token(TokenType.IDENTIFIER, Constants.COMPARE_TO, null, expr.operator.line, expr.operator.file);
-      return call(((SimiObjectImpl) a.getObject()).get(compareTo, 1, environment).getValue(), compareTo, Arrays.asList(b)).getValue();
+      Token matches = new Token(TokenType.IDENTIFIER, Constants.MATCHES, null, expr.operator.line, expr.operator.file);
+      return call(((SimiObjectImpl) a.getObject()).get(matches, 1, environment).getValue(), matches, Arrays.asList(b)).getValue();
     }
     return new SimiValue.Number(a.compareTo(b));
   }
@@ -1168,7 +1208,7 @@ class Interpreter implements
     if (left instanceof SimiObjectImpl) {
       return ((SimiObjectImpl) left).is(clazz);
     } else if (left instanceof SimiException) {
-      return ((SimiClassImpl) right).name.equals(Constants.CLASS_EXCEPTION);
+      return ((SimiClassImpl) right).name.equals(((SimiClassImpl) left.getSimiClass()).name);
     } else {
       return left.getSimiClass() == clazz;
     }
@@ -1181,6 +1221,9 @@ class Interpreter implements
       } else {
         object = (SimiObjectImpl) SimiObjectImpl.getOrConvertObject(b, this);
 //          runtimeError(expr.operator, "Right side must be an Object!");
+      }
+      if (object == null) {
+        return false;
       }
       Token has = new Token(TokenType.IDENTIFIER, Constants.HAS, null, expr.operator.line, expr.operator.file);
       SimiProperty p = call(object.get(has, 1, environment).getValue(), has, Collections.singletonList(a));
@@ -1204,7 +1247,12 @@ class Interpreter implements
   }
 
   private SimiClassImpl getObjectClass() {
-    return (SimiClassImpl) globals.tryGet(Constants.CLASS_OBJECT).getValue().getObject();
+    SimiProperty classObj = globals.tryGet(Constants.CLASS_OBJECT);
+    if (classObj != null) {
+      return (SimiClassImpl) classObj.getValue().getObject();
+    } else {
+      return null;
+    }
   }
 
   private void putBlock(Stmt.BlockStmt stmt, BlockImpl block) {
@@ -1274,7 +1322,7 @@ class Interpreter implements
 
   private void raiseNilReferenceException(Token token) {
     String message = "Nil reference found at " + token.file + " line " + token.line + ": " + token.toString();
-    raiseException(new SimiException((SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
+    raiseException(new SimiException(null, (SimiClass) environment.tryGet(Constants.EXCEPTION_NIL_REFERENCE).getValue().getObject(), message));
   }
 
   private void runtimeError(Token token, String message) {
@@ -1306,4 +1354,26 @@ class Interpreter implements
   private interface ClassImporter {
     void importValue(String key, SimiProperty prop);
   }
+
+  private final static SimiProperty ELSIF_FALSE = new SimiProperty() {
+    @Override
+    public SimiValue getValue() {
+      return null;
+    }
+
+    @Override
+    public void setValue(SimiValue value) {
+
+    }
+
+    @Override
+    public List<SimiObject> getAnnotations() {
+      return null;
+    }
+
+    @Override
+    public SimiProperty clone(boolean mutable) {
+      return null;
+    }
+  };
 }

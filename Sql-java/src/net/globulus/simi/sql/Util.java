@@ -11,7 +11,7 @@ public class Util {
     private Util() { }
 
     static void raiseSqlException(SQLException e, BlockInterpreter interpreter) {
-        interpreter.raiseException(new SimiException((SimiClass) interpreter.getEnvironment()
+        interpreter.raiseException(new SimiException(null, (SimiClass) interpreter.getEnvironment()
                 .tryGet("SqlException").getValue().getObject(), e.getMessage()));
     }
 }

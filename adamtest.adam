@@ -1,0 +1,53 @@
+""" comment
+""""
+    multiline
+    comment
+""""
+
+def Num [
+    {[Num arg] Num} =,
+    {[Num arg] Num} +,
+    {Num} -
+]
+def ifBranching [T]..[
+    Num wasTrue,
+    T result,
+    {[Num condition, T block] ifBranching} elsif,
+    {[T block] T} else
+]
+def if [T]..{[Num condition, T block] ifBranching}
+def foreach [T]..{[[T... vals] array, {[T it] [T... vals]} block] [T... vals]}
+{[Num a, Num b, Num c, Num d, {[Num a, {[Str arg] Num} block] Num} go]
+    a = 5
+    - a
+    c = a + b
+    d = a + - d
+    go(d) {
+        10
+    }
+
+    if (res a + 3) {
+        "if a"
+    } elsif (b) {
+        "elsif b"
+    } elsif (c) {
+        "elsif c"
+    } else {
+        "else"
+    }
+
+    foreach ([1, 2, 3, 4]) {
+        [1, 2, 3]
+    }
+
+   """ go(a, 5)
+   """ go(c, +(b, d))
+   """ go(e, class(Enum, {
+   """     go(override(b), 5)
+   """     go(engine, "V6 TDI")
+   """ }))
+   """ a.do(this)
+   """ [a, b, c].do(that)
+   """ "something".substring(1, 3)
+   """ go(c, {[Str s, Num b 5, {[Num l, Num r]Str} toString, [Num... nums] numList]})
+}

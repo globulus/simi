@@ -125,6 +125,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     for (Stmt.Elsif elsif : stmt.elsifs) {
         visitElsifStmt(elsif);
     }
+    if (stmt.elseBranch != null) resolve(stmt.elseBranch);  visitElsifStmt(stmt.ifstmt);
+    for (Stmt.Elsif elsif : stmt.elsifs) {
+      visitElsifStmt(elsif);
+    }
     if (stmt.elseBranch != null) resolve(stmt.elseBranch);
     return null;
   }
@@ -317,6 +321,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       Expr toResolve = (prop instanceof Expr.Assign) ? ((Expr.Assign) prop).value : prop;
       resolve(toResolve);
     }
+    return null;
+  }
+
+  @Override
+  public Void visitElsifExpr(Expr.Elsif expr) {
+    resolve(expr.condition);
+    resolve(expr.thenBranch);
+    return null;
+  }
+
+  @Override
+  public Void visitIfExpr(Expr.If expr) {
+    visitElsifExpr(expr.ifstmt);
+    for (Expr.Elsif elsif : expr.elsifs) {
+      visitElsifExpr(elsif);
+    }
+    if (expr.elseBranch != null) resolve(expr.elseBranch);
     return null;
   }
 

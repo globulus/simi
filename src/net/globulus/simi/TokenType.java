@@ -4,7 +4,9 @@ import net.globulus.simi.api.Codifiable;
 
 enum TokenType implements Codifiable {
   // Single-character tokens.
-  LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET,
+  LEFT_PAREN, RIGHT_PAREN,
+  LEFT_BRACKET, RIGHT_BRACKET,
+  LEFT_BRACE, RIGHT_BRACE,
   COMMA, DOT, COLON, NEWLINE,
 
   // One or two character tokens.
@@ -27,7 +29,7 @@ enum TokenType implements Codifiable {
   // Keywords.
   AND, BREAK, CLASS, CLASS_FINAL, CLASS_OPEN, CONTINUE, ELSE,
   FALSE, DEF, FOR, RESCUE, IF, NIL, OR, PRINT, RETURN, SUPER,
-  SELF, TRUE, WHILE, PASS, IN, IS, NOT, ELSIF, END, ISNOT,
+  SELF, TRUE, WHILE, PASS, IN, IS, NOT, ELSIF, ISNOT,
   NOTIN, NATIVE, IMPORT, YIELD, WHEN,
 
   GU, IVIC,
@@ -44,6 +46,10 @@ enum TokenType implements Codifiable {
         return "[";
       case RIGHT_BRACKET:
         return "]";
+      case LEFT_BRACE:
+        return "{";
+      case RIGHT_BRACE:
+        return "}";
       case COMMA:
         return ",";
       case DOT:

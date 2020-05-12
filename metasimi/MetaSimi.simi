@@ -5,9 +5,9 @@ import "./MetaParser.simi"
 source = File.readString("test.simi")
 scanner = Scanner(source)
 tokens = scanner.scanTokens(true)
-#for token in tokens: print token
+#for token in tokens = print token
 parser = Parser(tokens)
 statements = parser.parse()
-rescue ex:
-    if ex: print ex.message
+rescue ex=
+    if ex = print ex.message
 end

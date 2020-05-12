@@ -18,8 +18,10 @@ final class Constants {
     public static final String HAS = "has";
     public static final String EQUALS = "equals";
     public static final String COMPARE_TO = "compareTo";
+    public static final String MATCHES = "matches";
     public static final String TO_STRING = "toString";
     public static final String RAISE = "raise";
+    public static final String CLASS = "class";
 
     public static final String CLASS_OBJECT = "Object";
     public static final String CLASS_FUNCTION = "Function";

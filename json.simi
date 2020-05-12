@@ -1,7 +1,6 @@
-class MalformedJsonException(Exception):
-end
+class MalformedJsonException(Exception)
 
-class Json:
+class Json {
     _TOKENS = [
         arrayStart = "[",
         arrayEnd = "]",
@@ -12,192 +11,241 @@ class Json:
         stringDelimiter = '"'
     ]
 
-    def stringify(obj):
-        if not obj: return @_strNull()
-        if obj is Number: return @_strNumber(obj)
-        if obj is String: return @_strString(obj)
-        if obj.isArray(): return @_strArray(obj)
-        return @_strObject(obj)
-    end
+    def stringify(obj) = when obj {
+        nil: _strNull()
+        is Number: _strNumber(obj)
+        is String: _strString(obj)
+        if obj.isArray(): _strArray(obj)
+        else: _strObject(obj)
+    }
 
-    def _strNull(): return "null"
+    def _strNull() = "null"
 
-    def _strNumber(num): return num.toString()
+    def _strNumber(num) = num.toString()
 
-    def _strString(str): return @_TOKENS.stringDelimiter + str + @_TOKENS.stringDelimiter
+    def _strString(str) = _TOKENS.stringDelimiter + str + _TOKENS.stringDelimiter
 
-    def _strArray(arr):
-        str = String.builder()
-        str.add(@_TOKENS.arrayStart)
-        $first = true
-        for val in arr:
-            if $first: $first = false
-            else: str.add(@_TOKENS.comma)
-            str.add(@stringify(val))
-        end
-        str.add(@_TOKENS.arrayEnd)
+    def _strArray(arr) {
+        str = String.builder()\
+            .add(_TOKENS.arrayStart)
+        first = true
+        for val in arr {
+            if first {
+                first $= false
+            } else {
+                str.add(_TOKENS.comma)
+            }
+            str.add(stringify(val))
+        }
+        str.add(_TOKENS.arrayEnd)
         return str.build()
-    end
+    }
 
-    def _strObject(obj):
-        str = String.builder()
-        str.add(@_TOKENS.objectStart)
-        $first = true
-        for key in obj.keys():
-            if $first: $first = false
-            else: str.add(@_TOKENS.comma)
+    def _strObject(obj) {
+        str = String.builder()\
+            .add(_TOKENS.objectStart)
+        first = true
+        for key in obj.keys() {
+            if first {
+                first $= false
+            } else {
+                str.add(_TOKENS.comma)
+            }
             str\
-                .add(@_TOKENS.stringDelimiter).add(key).add(@_TOKENS.stringDelimiter)\
-                .add(@_TOKENS.colon)\
-                .add(@stringify(obj.(key)))
-        end
-        str.add(@_TOKENS.objectEnd)
+                .add(_TOKENS.stringDelimiter).add(key).add(_TOKENS.stringDelimiter)\
+                .add(_TOKENS.colon)\
+                .add(stringify(obj.(key)))
+        }
+        str.add(_TOKENS.objectEnd)
         return str.build()
-    end
+    }
 
-    def parse(str):
-        $start = 0
-        $curr = 0
+    def parse(str) {
+        start = 0
+        curr = 0
         len = str.len()
 
-        match = def expected:
-            if isAtEnd(): return false
-            if peek() != expected: return false
-            $curr = $curr + 1
+        match = def expected {
+            if isAtEnd() {
+                return false
+            }
+            if peek() != expected {
+                return false
+            }
+            curr += 1
             return true
-        end
-        peek = def:
-            if isAtEnd(): return '\0'
-            return str.($curr)
-        end
-        peekNext = def:
-            if $curr + 1 >= len: return '\0'
-            return str.($curr + 1)
-        end
-        isAlpha = def c: c.isAlpha() or c == "_" or c == "$"
-        isDigit = def c: c.isDigit()
-        isAlphaNumeric = def c: isAlpha(c) or isDigit(c)
-        isStringDelim = def c: c == '"' or c == "'"
-        isAtEnd = def: $curr >= len
-        advance = def:
-            $curr = $curr + 1
-            return str.($curr - 1)
-        end
-        error = def message: MalformedJsonException(message).raise()
-        string = def:
-           $escaping = false
-           $escapedCount = 0
-           while not isAtEnd():
-               if peek() == @_TOKENS.stringDelimiter:
-                    if $escaping: $escaping = false
-                    else: break
-               end
-               elsif peek() == "\"":
-                    $escaping = true
-                    $escapedCount = $escapedCount + 1
-               end
+        }
+        peek = def = if isAtEnd() {
+            '\0'
+        } else {
+            str.(curr)
+        }
+        peekNext = def = if curr + 1 >= len {
+            '\0'
+        } else {
+          str.(curr + 1)
+        }
+        isAlpha = def c = c.isAlpha() or c == "_" or c == "$"
+        isDigit = def c = c.isDigit()
+        isAlphaNumeric = def c = isAlpha(c) or isDigit(c)
+        isStringDelim = def c = c == '"' or c == "'"
+        isAtEnd = def = curr >= len
+        advance = def {
+            curr += 1
+            return str.(curr - 1)
+        }
+        error = def message {
+            MalformedJsonException(message).raise()
+        }
+        string = def {
+           escaping = false
+           escapedCount = 0
+           while not isAtEnd() {
+               if peek() == _TOKENS.stringDelimiter {
+                    if escaping {
+                        escaping $= false
+                    } else {
+                        break
+                    }
+               } elsif peek() == "\"" {
+                    escaping $= true
+                    escapedCount += 1
+               }
                advance()
-           end
-            if isAtEnd():
+           }
+            if isAtEnd() {
                 error("Unterminated string")
                 return nil
-            end
+            }
             advance()
-            $curr = $curr - $escapedCount
-            return str.substring($start + 1, $curr - 1)
-        end
-        identifier = def:
-            while isAlphaNumeric(peek()): advance()
-            return str.substring($start, $curr)
-        end
-        number = def:
-            while isDigit(peek()): advance()
-            if peek() == "." and isDigit(peekNext()):
+            curr -= escapedCount
+            return str.substring(start + 1, curr - 1)
+        }
+        identifier = def {
+            while isAlphaNumeric(peek()) {
                 advance()
-                while isDigit(peek()): advance()
-            end
-            return str.substring($start, $curr).toNumber()
-        end
+            }
+            return str.substring(start, curr)
+        }
+        number = def {
+            while isDigit(peek()) {
+                advance()
+            }
+            if peek() == "." and isDigit(peekNext()) {
+                advance()
+                while isDigit(peek()) {
+                    advance()
+                }
+            }
+            return str.substring(start, curr).toNumber()
+        }
 
         tokens = $[]
-        while not isAtEnd():
-            $start = $curr
+        while not isAtEnd() {
+            start $= curr
             c = advance()
-            if c == ' ' or c == '\n': continue
-            elsif c in [@_TOKENS.arrayStart, @_TOKENS.arrayEnd, @_TOKENS.objectStart,\
-                @_TOKENS.objectEnd, @_TOKENS.colon, @_TOKENS.comma]: tokens.append(c)
-            elsif c == @_TOKENS.stringDelimiter: tokens.append(string())
-            elsif isDigit(c): tokens.append(number())
-            elsif isAlpha(c): tokens.append(identifier())
-            else: error("Unexpected character: " + c)
-        end
+            if c == ' ' or c == '\n' {
+                continue
+            } elsif c in [_TOKENS.arrayStart, _TOKENS.arrayEnd, _TOKENS.objectStart,\
+                _TOKENS.objectEnd, _TOKENS.colon, _TOKENS.comma] {
+                tokens.append(c)
+            } elsif c == _TOKENS.stringDelimiter {
+                tokens.append(string())
+            } elsif isDigit(c) {
+                tokens.append(number())
+            } elsif isAlpha(c) {
+                tokens.append(identifier())
+            } else {
+                error("Unexpected character = \(c)")
+            }
+        }
 
 #        print tokens
 
         numTokens = tokens.len()
-        if numTokens < 2: return nil
+        if numTokens < 2 {
+            return nil
+        }
 
-        hasNext = def: return $curr < numTokens
-        nextToken = def:
-            $curr = $curr + 1
-            return tokens.($curr)
-        end
-        parseRaw = def token:
-            if token == @_TOKENS.objectStart: return parseObject(token)
-            if token == @_TOKENS.arrayStart: return parseArray(token)
-            return token
-        end
-        parseObject = def opener:
-            if opener != @_TOKENS.objectStart: return nil
+        hasNext = def = curr < numTokens
+        nextToken = def {
+            curr += 1
+            return tokens.(curr)
+        }
+        parseRaw = def token = if token == _TOKENS.objectStart {
+            parseObject(token)
+        } elsif token == _TOKENS.arrayStart {
+            parseArray(token)
+        } else {
+            token
+        }
+        parseObject = def opener {
+            if opener != _TOKENS.objectStart {
+                return nil
+            }
             obj = $[]
-            while hasNext():
-                $token = nextToken()
-                if $token == @_TOKENS.objectEnd: return obj
-                if not obj.isEmpty():
-                    if $token != @_TOKENS.comma: error("Expected a ,!")
-                    $token = nextToken()
-                end
-                if $token is not String: error("Expecting string for key!")
-                key = $token
-                if nextToken() != @_TOKENS.colon: error("Expecting : after key!")
+            while hasNext() {
+                token $= nextToken()
+                if token == _TOKENS.objectEnd {
+                    return obj
+                }
+                if not obj.isEmpty() {
+                    if token != _TOKENS.comma {
+                        error("Expected a ,!")
+                    }
+                    token $= nextToken()
+                }
+                if token is not String {
+                    error("Expecting string for key!")
+                }
+                key = token
+                if nextToken() != _TOKENS.colon {
+                    error("Expecting  = after key!")
+                }
                 value = parseRaw(nextToken())
                 obj.(key) = value
-            end
+            }
             error("Unterminated Object!")
             return nil
-        end
+        }
 
-        parseArray = def opener:
-            if opener != @_TOKENS.arrayStart: return nil
+        parseArray = def opener {
+            if opener != _TOKENS.arrayStart {
+                return nil
+            }
             arr = $[]
-            while hasNext():
-                $token = nextToken()
-                if $token == @_TOKENS.arrayEnd: return arr
-                if not arr.isEmpty():
-                    if $token != @_TOKENS.comma: error("Expected a ,!")
-                    $token = nextToken()
-                end
-                value = parseRaw($token)
+            while hasNext() {
+                token $= nextToken()
+                if token == _TOKENS.arrayEnd {
+                    return arr
+                }
+                if not arr.isEmpty() {
+                    if token != _TOKENS.comma {
+                        error("Expected a ,!")
+                    }
+                    token $= nextToken()
+                }
+                value = parseRaw(token)
                 arr.append(value)
-            end
+            }
             error("Unterminated Array!")
             return nil
-        end
+        }
 
-        $curr = 0
-        token = tokens.($curr)
-        parsed = parseRaw(token)
-        rescue ex:
-            if ex:
+        curr $= 0
+        token $= tokens.(curr)
+        parsed $= parseRaw(token)
+        rescue ex {
+            if ex {
                 print ex.message
                 return nil
-            end
-        end
+            }
+        }
         return parsed
-    end
-end
+    }
+}
 
-#range = [a = 15, b = Range(10, 15), c = "asdjsakdaskd", d = [1, 2, 3]]
-#str = Json.stringify(range)
-#print str
-#print Json.parse(str)
+range = [a = 15, b = Range(10, 15), c = "asdjsakdaskd", d = [1, 2, 3]]
+str = Json.stringify(range)
+print str
+print Json.parse(str)

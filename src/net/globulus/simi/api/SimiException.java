@@ -6,10 +6,12 @@ public final class SimiException extends RuntimeException implements SimiObject 
 
     private static final String MESSAGE = "message";
 
+    private final SimiObject originalException;
     private final SimiClass clazz;
 
-    public SimiException(SimiClass clazz, String message) {
+    public SimiException(SimiObject originalException, SimiClass clazz, String message) {
         super(message);
+        this.originalException = originalException;
         this.clazz = clazz;
     }
 
@@ -23,7 +25,10 @@ public final class SimiException extends RuntimeException implements SimiObject 
         if (key.equals(MESSAGE)) {
             return new SimiValue.String(getMessage());
         }
-        return null;
+        if (originalException == null) {
+            return null;
+        }
+        return originalException.get(key, environment);
     }
 
     @Override

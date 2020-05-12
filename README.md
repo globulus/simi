@@ -1,4 +1,5 @@
 # Šimi - an awesome programming language
+
 Šimi (*she-me*) is small, object-oriented programming language that aims to combine the best features of Python, Ruby, JavaScript and Swift into a concise, expressive and highly regular syntax. Šimi's interpreted nature and built-in metaprogramming operators allow the code to be updated at runtime and features to be added to the language by anyone!
 
 You can run Šimi on any machine that has JVM by invoking the Simi JAR, which involves virtually all servers and desktop computers. There's also native support for devices running [Android](https://github.com/globulus/simi-android) or [iOS](https://github.com/globulus/simi-ios). You can also [write a server in Šimi!](https://github.com/globulus/simi-sync/tree/master/web).
@@ -61,7 +62,7 @@ What Šimi offers:
       - [Truth](#truth)
       - [if-elsif-else](#if-elsif-else)
       - [when](#when)
-      - [The *ife* function](#the-ife-function)
+      - [*if* and *when* expressions](#if-and-when-expressions)
         * [*ife* and lazy loading](#ife-and-lazy-loading)
       - [while loop](#while-loop)
       - [for-in loop](#for-in-loop)
@@ -96,20 +97,23 @@ What Šimi offers:
 ### Basic syntax
 
 #### Keywords
-Šimi has 27 reserved keywords:
+Šimi has 26 reserved keywords:
 ```ruby
-and break class continue def else elsif end false for gu if import
+and break class continue def else elsif false for gu if import
 in is native nil or pass print rescue return self super true while yield
 ```
 
-Check out the [keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
+Check out the [Keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
 
 #### Comments
 ```ruby
 # This is a single line comment
 print b # They span until the end of the line
+
+## And here is
+a multiline comment
+spanning multple lines ##
 ```
-Šimi currently does not support multiline comments.
 
 #### Identifiers
 Identifiers start with a letter, or _, and then may contain any combination of letters, numbers, or underscores. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
@@ -122,9 +126,9 @@ a = 5 # This is a line
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .where(def i = i <= 5)\
+    .map(def i = i * 2)\
+    .sorted(def (l, r) = r.compareTo(l))
 print arr
 ```
 
@@ -132,20 +136,23 @@ print arr
 The *pass* keyword is used to denote an empty expression, and is put where a statement or expression is syntactically required, but nothing should actually happen.
 ```ruby
 # It can also be used for specifying empty methods that are meant to be overriden
-def next(): pass
+def next() = pass
 ```
-It is also used to denote that a block should be autofilled by the interpreter (e.g, for [inits and setters](#classes)).
+It is also used to denote that a block should be auto-filled by the interpreter (e.g, for [inits and setters](#classes)).
 
 #### Code blocks
-A part of Šimi's consistent syntax is reflected in its use of code blocks - every single block of code starts with a colon (:), followed by one or multiple statements. If the block has only one statement, it can be placed in the same line as the block, otherwise the statements must start in a new line, and the block needs to be termined with an *end*.
+A block of code starts with a left brace *{*, followed by one or multiple statements, terminated with a right brace *}*.
 ```ruby
-if a < 5: print a # Single line block
-else: # Multiline block, termined with an end
+if a < 5 { print a } # Single line block
+else { # Multiline block, terminated with a }
     a += 3
     print b
-end
+}
 ```
-Blocks are used everywhere with the exact same syntax, for classes, functions, lambdas, and control flow statements.
+
+Later you'll learn that there's a way to define an [*expression function* with *=*](#implicit-return).
+
+> You can actually specify a single-line block with just a colon *:*. This is a remnant of original Šimi syntax, which used colon-*end* pairs to denote blocks. The current guideline is to only use colons in [when expressions](#if-and-when-expressions) if the right-hand side boils down to a short expression. For all the other purposes, **always use braces to denote even single-line blocks**.
 
 #### Variables and constants
 In Šimi, you needn't declare the variable before using it, a simple assignment expression both declares and defines a variable.
@@ -159,19 +166,19 @@ a = 5
 b = "str"
 c = [name = "Peter", surname = "Parker"]
 
-def f1():
+def f1() {
     print a # 5
     a = 10 # declares new variable a inside the given scope
     print a # 10
-end
+}
 f1()
 
 print a # 5, as the value didn't change within the function
 
-def f2():
+def f2() {
     a $= 20 # now we're changing the value of a from outside the scope
     print a # 20
-end
+}
 f2()
 print a # 20
 ```
@@ -213,68 +220,67 @@ print "a doubled is \(a * 2) and b minus 1 halved is \((b - 1) / 2)"
 # Prints: a doubled is 4 and b minus 1 halved is 1
 ```
 
-
 When used as objects, strings are boxed into an instance of open Stdlib class String, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
 
 Strings are pass-by-value, and boxed strings are pass-by-copy.
 
 The String class contains a native *builder()* method that allows you to concatenate a large number of string components without sacrificing the performance that results from copying a lot of strings:
 ```ruby
-class Range:
+class Range {
 
     ... rest of implementation omitted ...
 
-    def toString():
-        return String.builder()\
+    def toString = String.builder()\
             .add("Range from ").add(@start)\
             .add(" to ").add(@stop)\
             .add(" by ").add(@step)\
             .build()
-    end
-end
+}
 ```
 
 ##### Boxed numbers and strings
 Boxed numbers and strings are objects with two fields, a class being Number or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
 # Implementation of times() method from Number class
-def times(): return ife(@_ < 0, :Range(@_, 0), :Range(0, @_)).iterate()
+def times() = ife(@_ < 0, =Range(@_, 0), =Range(0, @_)).iterate()
 ```
 
 #### Functions
 A function is a named or unnamed parametrized block of code. Here are valid examples of functions:
 ```ruby
 # A free-standing function with two params
-def add(a, b):
+def add(a, b) {
     c = a + b
     return c
-end
+}
 
 # A function stored in a variable, equivalent to the example above
-subtract = def (a, b):
+subtract = def (a, b) {
     c = a - b
     return c
-end
+}
 
 # Functions that map to native code have a single native statement
 # in their bodies
-def pow(a, b): native
+def pow(a, b) = native
 
-# Functions without parameters are required to have parentheses
-def printFunction(): print "printing"
+# Functions without parameters aren't required to have parentheses
+def printFunction {
+    print "printing"
+ }
 
 # A lambda function passed to filter an array, has implicit return if it's single line
 # Lambdas with a single parameter needn't put the parameter in parentheses
-filteredArray = [1, 2, 3, 4, 5].where(def i: i > 2)
+filteredArray = [1, 2, 3, 4, 5].where(def i = i > 2)
 
 # There is a shorthand syntax for parameterless lambdas.
 # You can think of this syntax as storing uninterpreter Šimi code that
 # can be invoked later on. This pattern is heavily used with lazy loading
 # and the ife function.
-storedExpression = :2+2 # Parses into: def: return 2 + 2
+storedExpression = =2+2 # Parses into: def = 2 + 2
 
 # You can use the shorthand syntax with implicit params as well
-filteredArray = [1, 2, 3, 4, 5].where(:_0 > 2)
+filteredArray = [1, 2, 3, 4, 5].where(=_0 > 2)
 ```
 Functions start with the *def* keyword. Native functions are required to have a single *native* statement in their bodies.
 
@@ -304,55 +310,62 @@ fun is Function
 
 If you need to access a function from within itself, you can use the special *self(def)* construct:
 ```ruby
-def f(a):
+def f(a) {
     objectSelf = self # Resolves to invoked object (or nil)
     functionSelf = self(def) # Returns function f
-end
+}
 ```
 
 There's a syntax sugar that allows for static type checking of selected parameters:
 ```ruby
 # Note the x is Type syntax to enforce static type checking
 # Checked and unchecked params can be freely mixed
-def f(a is Number, b is Range, c):
+def f(a is Number, b is Range, c) {
     print "something"
-end
+}
 ```
 The above function is upon parsing internally stored with prepended type checks that raise *TypeMismatchException*:
 ```ruby
-def f(a, b, c):
-    if a is not Number:
-        TypeMismatchException(a, Number).raise()
-    end
-    if b is not Range:
-        TypeMismatchException(b, Range).raise()
-    end
+def f(a, b, c) {
+    if a is not Number {
+     TypeMismatchException(a, Number).raise()
+    }
+    if b is not Range{
+     TypeMismatchException(b, Range).raise()
+    }
     print "something"
-end
+}
 ```
 
 ##### Implicit return
 
-Functions that don't explicity [return or yield](#return-and-yield) have an **implicit return**:
- * Single-line functions whose only line is an expression return the **value of that expression**, *with the exception of setter functions*:
+If a function body is declared with equals sign *=*, it is allowed to hold a **single expression** and its result is implicitly returned, i.e:
+```ruby
+    def fun(a, b) = a + b
+    # equals
+    def fun(a, b) {
+        return a + b
+    }
+```
 
- ```ruby
- def wrapNameAndSurname(name, surname): "Name: \(name), Surname: \(surname") # Implicit return of string
- def isntEmpty(): not @isEmpty() # Implicit return of an expression
-
- def setValue(value): pass # Setters don't fall in this category
- def setter(value): @val = value # Setters don't fall in this category
- ```
-
- * Multi-line functions, setters and single-line functions containing statements implicity **return self**. This allows for chanining calls to methods that don't return a value and/or perform an object setup.
+An exception to this rule are **setter functions**, i.e those functions that being with *set* and have a *single parameter*.
 
 ```ruby
-class Button:
-    def setTitle(title): pass # Setters have implicit return self
-    def setBackgroundColor(color): pass
-    def setOnClickListener(listener): pass
-    def performClick(): @onClickListener(self) # Implicit return of function call
-end
+ def setValue(value) = pass # Setters don't fall in this category
+ def setter(value) = @val = value # Setters don't fall in this category
+ ```
+
+Functions with proper blocks implicitly **return self**. This allows for chaining calls to methods that don't return a value and/or perform an object setup.
+
+```ruby
+class Button {
+    def setTitle(title) = pass # Setters have implicit return self
+    def setBackgroundColor(color) = pass
+    def setOnClickListener(listener) = pass
+    def performClick() {
+        @onClickListener(self) # Implicit return of function call
+    }
+}
 
 button = Button()\ # Implicit return self from init
     .setTitle("Click me")\
@@ -361,38 +374,38 @@ button = Button()\ # Implicit return self from init
 # More code...
 button.performClick()
 ```
-It also forces the programmer to explicity use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
+It also forces the programmer to explicitly use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
 
 ##### Implicit parameters
 
-While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *$* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
+While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *_* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
 
 ```ruby
-sumThree = :_1 + _0 + _2
+sumThree = =_1 + _0 + _2
 ```
 
 internally translates to:
 
 ```ruby
-sumThree = def (_0, _1, _2): return _1 + _0 + _2
+sumThree = def (_0, _1, _2) { return _1 + _0 + _2 }
 ```
 
 This syntax nicely abbreviates often-used lambdas that programmers are familiar with, such as those passed to 2nd-order functions of the *Object* class. Consider the array transformation example from earlier on:
 
 ```ruby
 arr = [1, 2, 3]\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .where(def i = i <= 5)\
+    .map(def i = i * 2)\
+    .sorted(def (l, r) = r.compareTo(l))
 ```
 
 abbreviated by using implicit params:
 
 ```ruby
 arr = [1, 2, 3]\
-    .where(:_0 <= 5)\
-    .map(:_0 * 2)\
-    .sorted(:_1 <> _0)
+    .where(=_0 <= 5)\
+    .map(=_0 * 2)\
+    .sorted(=_1.compareTo(_0))
 ```
 
 Of course, the implicit params syntax can be used with any shorthand lambda, but improvements to conciseness shouldn't be made at the expense of readability.
@@ -453,8 +466,8 @@ immutableObject = [key4 = mutableObject.key3.len(), key5 = 12.345]
 # Immutable objects with constants and functions serve the role of
 # static classes in other languages.
 basicArithmetic = [
-    add = def (a, b): return a + b
-    subtract = def (a, b): return a - b
+    add = def (a, b) = a + b
+    subtract = def (a, b) = a - b
 ]
 
 # You can also have composite objects, that contain both associated
@@ -516,7 +529,7 @@ print compositeObj
 #]
 
 # Composite object literals are (de)serializable
-print (gu ivic compositeObj).matches(compositeObj) # true
+print (gu ivic compositeObj) <> compositeObj # true
 
 print compositeObj.len() # Prints total number of elements = 7
 print compositeObj.keys() # Keys are [a, b, c]
@@ -527,7 +540,7 @@ print compositeObj.sorted() # Sorts both parts separately
 # forEach uses an iterator and as such works either with dictionary
 # or array part, depending on which one is present (dictionary has
 # higher precedence). The same is true for other higher-order functions.
-compositeObj.forEach(def v: print v)
+compositeObj.forEach(def v { print v })
 
 # Enumerates ALL the values - dictionary first, and then array, and as
 # such can be used to iterate through entire composite object.
@@ -550,18 +563,20 @@ print compositeObj
 ### Classes
 Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
 ```ruby
-class Car(Vehicle, in ClassToMixin):
+class Car(Vehicle, in ClassToMixin) {
     wheels = 4
 
-    def init(brand, model, year): pass
+    def init(brand, model, year) = pass
 
-    def refuel(amount): @fuel = Math.min(@tank, @fuel + amount)
+    def refuel(amount) {
+        @fuel = Math.min(tank, fuel + amount)
+    }
 
-    def drive(distance):
-        fuelSpent = @expenditure * distance
-        @fuel = Math.max(0, @fuel - fuelSpent)
-    end
-end
+    def drive(distance) {
+        fuelSpent = expenditure * distance
+        @fuel = Math.max(0, fuel - fuelSpent)
+    }
+}
 
 car = Car("Peugeot", "2008", 2014) # Creating a new class instance
 print car.brand # Peugeot
@@ -578,69 +593,77 @@ Here's a quick rundown of classes:
 * All classes except base classes (Object, String, Number, Function, and Exception) silently inherit the Object class unless another superclass is specified. This means that every object, no matter what class it comes from, has access to Object methods.
 * You can access the superclass methods directly via the *super* keyword. The name resolution path is the same as described in multiple inheritance section. If multiple superclasses (Object included) override a certain method, and you want to use a method from a specific superclass, you may specify that superclass's name in parentheses:
 ```ruby
-class OtherCar(Car, Range): # This combination makes no sense :D
-    def init():
+class OtherCar(Car, Range) { # This combination makes no sense :D
+    def init() {
         super.init(10, 20) # Uses the init from Car class
         @start = 5
         @stop = 10
         @step = 2
         super.refill(2) # Refill from superclass
         @refill(3) # OtherCar implementation of refill
-   end
+   }
 
-   def refill(amount):
+   def refill(amount) {
         print "Doing nothing"
-   end
+   }
 
-   def has(value):
+   def has(value) {
     # Here we specify that we wish to use the has() method from the Range class
     return super(Range).has(value)
-   end
-end
+   }
+}
 ```
 * Classes themselves are objects, with "class" set to a void object named "Class". You can check if an Object is a class by using **VAR is Class**, even though Class itself normally evaluates to *nil*.
-* From within the class, all instance properties have to be accessed via self or @ (i.e, self.fuel is the instance variable, whereas fuel is a constant in the given scope).
+* From within the class, all setters must use self or @ (i.e, self.fuel = 3, or @fuel = 3). Instance fields outside of setter may or may not use self-referencing (although it's recommended for legibility).
 * Instance vars and methods are mutable by default from within the class, and don't require usage of the $= operator.
 * Class instances are immutable - you cannot add, remove or change their properties, except from within the class methods.
 * Class methods are different than normal functions because they can be overloaded, i.e you can have two functions with the same name, but different number of parameters. This cannot be done in regular key-value object literals:
 ```ruby
-class Writer: # Implicitly inherits Object
-    def write(words): print words
-    def write(words, times):
-        for i in times.times(): @write(words) # method chaining
-    end
-end
+class Writer { # Implicitly inherits Object
+    def write(words) {
+     print words
+    }
+    def write(words, times) {
+        for i in times.times() {
+         @write(words) # method chaining
+        }
+    }
+}
 ```
 * Constructor methods are named *init*. When an object is constructed via class instantation, the interpeter will look up for an *init* method with the appropriate number of parameters. All objects have a default empty constructor that takes no parameters.
 * An empty init with parameters is a special construct that creates instance variables for all the parameters. This makes it very easy to construct value object classes without having to write boilerplate code.
 ```ruby
-class Point:
+class Point {
     def init(x, y): pass
 
     # This is fully equivalent to:
-    # def init(x, y):
+    # def init(x, y) {
     #   @x = x
     #   @y = y
-    # end
+    # }
 
     # In value classes, you may want to override the equals method
     # to check against fields, i.e to use matches() with == operator:
-    def equals(other): return @matches(other)
-end
+    def equals(other) = self <> other
+}
 ```
 * Similarly, an empty method that starts with *set* and takes a single parameter will be autofilled with a setter for the given value.
 ```ruby
-class Person:
-    def setId(id): pass
-    def setName(n is String): pass
+class Person {
+    def setId(id) = pass
+    def setName(n is String) = pass
 
     # This is fully equivalent to:
-    # def setId(id): @id = id
-    # def setName(n is String):
-    #   if n is not String: TypeMismatchException(n, String).raise()
+    # def setId(id) {
+    #    @id = id
+    # }
+    # def setName(n is String) {
+    #   if n is not String {
+    #    TypeMismatchException(n, String).raise()
+    #   }
     #   @name = n
-    # end
-end
+    # }
+}
 ```
 * All methods in Šimi classes are at the same time static and non-static (class and instance), it's their content that defines if they can indeed by used as both - when referencing a method on an instance, *self* will point to that instance; conversely, it will point to the Class object when the method is invoked statically.
     + Do note that instance objects **are mutable** within static methods of their class or its subclasses. Consider the following example:
@@ -648,30 +671,29 @@ end
    class Person
    class Car
 
-   class Audi(Car):
-      def staticMethod:
+   class Audi(Car) {
+      def staticMethod {
          audiInstance = Audi()
          car.weight = 1800 # Works, self is Audi class
          carInstance = Car()
          car.weight = 1500 # Works, self is Audi class which is subclass of Car
          personInstance = Person()
          person.weight = 80 # Error, self is Audi class which isn't subclass of Person
-      end
-   end
-
+      }
+   }
    ```
 * Methods and instance variables that start with an *underscore* (_) are considered protected, i.e they can only be accessed from the current class and its subclasses. Trying to access such a field raises an error:
 
 ```ruby
-class Private:
-    def init():
+class Private {
+    def init() {
         self._privateField = 3
-    end
+    }
 
-    def _method():
+    def _method() {
         self._privateField = 2 # Works
-    end
-end
+    }
+}
 
 private = Private()
 print private._privateField # Error
@@ -680,7 +702,7 @@ print private._method() # Error
 * Classes that are defined as **class$ Name** are *open classes*, which means that you can add properties to them. Most base classes are open, allowing you to add methods to all Objects, Strings and Numbers:
 ```ruby
 # Adding a method that doubles a number
-Number.double = def: @_ * 2
+Number.double = =@_ * 2
 a = 3
 b = a.double() # b == 6
 ```
@@ -695,52 +717,56 @@ Car = Car.builder()\
 ```
 * The fact that Šimi has composite objects allows for so-called *array subclasses*:
 ```ruby
-class FixedSizeArray:
+class FixedSizeArray {
     _MAX = 3
 
-    def append(item):
+    def append(item) {
         super.append(item)
         @_trim()
-    end
+    }
 
-    def addAll(other):
+    def addAll(other) {
         super.addAll(other)
         @_trim()
-    end
+    }
 
-    def _trim():
+    def _trim() {
         d = @len() - @_MAX
-        if d <= 0: return
-        for _ in d.times(): @0 = nil
-    end
-end
+        if d <= 0 {
+            return
+        }
+        for _ in d.times() {
+            @0 = nil
+        }
+    }
+}
 ```
 
 #### Using classes as modules
 
 Classes can be used to define namespaces and prevent naming collisions when working on a larger project. Just define a (preferrably final) class and define classes, methods and fields that you want to modularize inside it:
 ```ruby
-class_ ModuleClass:
+class_ ModuleClass {
 
-    class ModuleClassA:
+    class ModuleClassA {
         a = 5
-    end
+    }
 
-    class ModuleClassB:
+    class ModuleClassB {
         b = 6
-    end
-end
+    }
+}
 
-class_ AnotherModuleClass:
+class_ AnotherModuleClass {
 
-    class ModuleClassA:
+    class ModuleClassA {
         a = 5
-    end
+    }
 
-    class ModuleClassB:
+    class ModuleClassB {
         b = 6
-    end
-end
+    }
+}
 a = ModuleClass.ModuleClassA()
 anotherA = AnotherModuleClass.ModuleClassA()
 ```
@@ -752,7 +778,7 @@ print ModuleClassA # nil
 import ModuleClass # Import all ModuleClass values into the current environment
 
 print ModuleClassA # works
-print ModuleClassA.matches(ModuleClass.ModuleClassA) # true
+print ModuleClassA <> ModuleClass.ModuleClassA # true
 ```
 
 ### Operators
@@ -782,11 +808,8 @@ not, and, or
 ==, !=, <, <=, >, >=, <>
 
 * On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class. If you need to check equivalence based on values, check out the *matches()* method.
-* The comparison operator <> implicitly invokes *compareTo()* method, which returns -1 if the left compared value is lesser than the right one, 0 is they're equal and 1 if it's greater. For Numbers and Strings, this operator returns the natural ordering, whereas for Objects it can be used in *sorted()* method, as well as a replacement for < and >:
-```ruby
-obj1 <> obj2 < 0 # Is equivalent to obj1 < obj2
-```
- * Remaining operators (<, <=, > and >=) can only be used with Numbers.
+* The matching operator <> implicitly invokes *matches()* method. The default implementation of this method checks objects by their keys and values, basically checking their equivalence. You can, of course, override this method to accept any combination of arguments and perform different matching, e.g matching strings based on regular expressions.
+* Remaining operators (<, <=, > and >=) can only be used with Numbers.
 
 #### is and is not
 You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:
@@ -805,15 +828,17 @@ car is not Object # false
 #### in and not in
 The *in* operator implicitly calls the *has()* method, that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
 ```ruby
-class Range:
+class Range {
 
     # ... rest of implementation omitted ...
 
-    def has(val):
-        if @start < @stop: return val >= @start and val < @stop
-        else: return val <= @start and val > @stop
-    end
-end
+    def has(val) = if @start < @stop {
+            val >= @start and val < @stop
+        } else {
+            val <= @start and val > @stop
+        }
+    }
+}
 "str" in "substring" # true
 "a" not in "bcdf" # true
 2 in [1, 2, 3] # true
@@ -869,76 +894,148 @@ while everything else (including empty strings and objects) is true.
 #### if-elsif-else
 Not much to say here, Šimi offers the usual if-elsif-...-elsif-else structure for code branching.
 ```ruby
-if a < b:
+if a < b {
   c = d
   print c
-end
-elsif a < c: print "a < c"
-elsif a < d:
+} elsif a < c {
+ print "a < c"
+} elsif a < d {
   a = e
   print e
-end
-else: print f
+} else {
+ print f
+}
 ```
 
 #### when
-A syntax sugar for a lot of elsifs when you're checking against the same value. It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*. You can use the *or* operator to check against multiple conditions in a single branch. *When* statement can be made exhaustive by adding an *else* block at the end.
+A syntax sugar for a lot of elsifs when you're checking against the same value:
+* It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*.
+* *if* can be used as an operator to denote that its right-hand side should be evaluated as-is (useful for function calls).
+* You can use the *or* operator to check against multiple conditions in a single branch.
+* *When* statement can be made exhaustive by adding an *else* block at the end.
 ```ruby
-when a:
-    5: print "a is 5"
-    10 or 13 or 15: print "a is 10 or 13 or 15"
-    is String: print "a is String"
-    not in Range(12, 16): print "not between 12 and 16"
-    else: print "reached the default branch"
-end
+when a {
+    5 {
+     print "a is 5"
+    }
+    10 or 13 or 15 {
+     print "a is 10 or 13 or 15"
+    }
+    is String {
+     print "a is String"
+    }
+    not in Range(12, 16) {
+     print "not between 12 and 16"
+    }
+    if isValidString(a) or is Number {
+        print "is valid string or a number"
+    }
+    else {
+     print "reached the default branch"
+    }
+}
 ```
 
-#### The *ife* function
-While Šimi does not offer the ternary operator (?:), the Stdlib contains a global function named **ife**, which works exactly as ?: does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
+#### *if* and *when* expressions
+
+*if-elsif-else* branches (and, by default, its alternate form of *when*) can be used as expressions. The difference from their statement forms are twofold:
+1. You can't *return*, *yield*, *break* or *continue* from inside their bodies.
+2. The last obtained value in each block is returned as its value.
+
+```ruby
+a = if someCondition {
+    3
+} elsif otherConditions {
+    print "something"
+    c
+} elsif yetMoreConditions {
+    print "doing this"
+    doThis()
+} else {
+    2 + 2 * 3
+}
+```
+
+Naturally, functions with an implicit return of their single expression work with *if* and *when* expressions as well:
+
+```ruby
+def extractValue(obj) = when obj {
+    is A: obj.aValue()
+    is B or is C: obj.bOrCValue()
+    else: obj.otherValue()
+}
+```
+
+Let's rewrite the *when* example above as an expression:
+
+```ruby
+print when a {
+    5: "a is 5"
+    10 or 13 or 15: "a is 10 or 13 or 15"
+    is String: "a is String"
+    not in Range(12, 16): print "not between 12 and 16"
+    if isValidString(a) or is Number: "is valid string or a number"
+    else: "reached the default branch"
+}
+```
+
+> Note the usage of the colon to denote a short expression block. This is, of course, purely optional.
+
+If you prefer a shorter solution, the Stdlib contains a global function named **ife**, which works exactly as the ternary operator in some other languages (?:) does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
+
 ```ruby
 max = ife(a < b, a, b)
 ```
 ##### *ife* and lazy loading
 If you look at the definition of the *ife* function, you'll see that it has call operator *()* for both of its "branches":
 ```ruby
-def ife(condition, ifval, elseval):
-    if condition: return ifval()
-    else: return elseval()
-end
+def ife(condition, ifval, elseval) = return if condition {
+    ifval()
+} else {
+    elseval()
+}
 ```
-In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def: ...), and then those params will be evaluated only when they're used in the said function:
+In Šimi, you can call any value - it's not just limited to functions and classes. If you invoke a call on a Number, String, nil or non-class Object, it will simply return itself. This allows for lazy loading to happen - if a function allows for it, you can pass params inside parameter-less, single-line lambdas (def = ...), and then those params will be evaluated only when they're used in the said function:
 ```ruby
 step = ife(min < max, 1, -1) # Works with non-function values
 
 # The following example uses functions to lazily compute only the value
-# which needs to be returned. Notice ":SOMETHING" syntax, which is shorthand for
-# def: return SOMETHING
-step = ife(min < max, :Math.pow(2, 32), :Math.pow(3, 10))
+# which needs to be returned. Notice "=SOMETHING" syntax, which is shorthand for
+# def { return SOMETHING }
+step = ife(min < max, =Math.pow(2, 32), =Math.pow(3, 10))
 ```
 
 #### while loop
 The *while* block is executed as long as its condition is true:
 ```ruby
-while a < 10:
+while a < 10 {
   print a
   a *= 2
-end
+}
 ```
 
 #### for-in loop
 Šimi offers a *for-in* loop for looping over iterables (and virtually everything in Šimi is iterable). The first parameter is the value alias, while the second one is an expression that has to evaluate either to an *iterator* or an *iterable*. The block of the loop will be executed as long as the iterator supplies non-nil values (see section below).
 ```ruby
-for i in 6.times(): print i # Prints 0 1 2 3 4 5 6
-for c in "abcdef": print c # Prints a b c d e f
+for i in 6.times() {  # Prints 0 1 2 3 4 5 6
+ print i
+}
+for c in "abcdef" { # Prints a b c d e f
+ print c
+}
 
 # Iterating over array iterates over its values
-for value in [10, 20, 30, 40]: print value # Prints 10 20 30 40
+for value in [10, 20, 30, 40] { # Prints 10 20 30 40
+ print value
+}
 
 object = [a = 1, b = "str", c = Pen(color = "blue")]
 # Iterating over keyed objects over its keys
 for key in object: print key # Prints a, b, c
 # Object decomposition syntax can be used with for loop as well
-for [key, value] in object.zip(): print key + " = " + value # Prints a = 1, b = str, etc.
+for [key, value] in object.zip() {  # Prints a = 1, b = str, etc.
+ print key + " = " + value
+}
 ```
 If the expression can't evaluate to an iterator or an iterable, an exception will be thrown.
 
@@ -962,23 +1059,28 @@ Control flow in functions is done via *return* and *yield* statements.
 
 The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was invoked, and can either pass or not pass a value:
  ```ruby
- def f(x):
-    if x < 5: return 0
+ def f(x) {
+    if x < 5 {
+        return 0
+    }
     return x
- end
+ }
  print f(2) # 0
  print f(6) # 6
  ```
 
  The *yield* statement is very similar to return, but the function block stores where it left off, and subsequent invocations resume the flow from that point:
 ```ruby
-def testYieldFun():
+def testYieldFun() {
     print "before yield"
-    for i in 3.times():
-        if i < 2: yield "yield " + i
-        else: return "return in yield"
-    end
-end
+    for i in 3.times() {
+        if i < 2 {
+            yield "yield " + i
+        } else {
+            return "return in yield"
+        }
+    }
+}
 print "Calling yield test"
 print testYieldFun()
 print "Calling again..."
@@ -1007,15 +1109,18 @@ Yielding allows for coding of generators, and serves as a lightweight basis for 
 
 *yield* can also be used as a part of assignments to avoid [callback hell.](http://blog.mclain.ca/assets/images/callbackhell.png) Basically, the function you're in will yield its execution to the other function, which needs to be async (i.e, its last parameter must be a single-parameter function) and resume once the callback is invoked. This allows for a flat code hierarchy that's easier to read and maintain, while in fact, behind the scenes, callbacks are being invoked and code is executed asynchronously:
 ```ruby
-def testYieldExpr():
+def testYieldExpr() {
     # The async function can take any number of parameters, but its
     # last one must be a function that accepts 1 param
-    asyncFunc = def (a, callback):
-        if a % 2: callback(10)
-        else: callback(20)
-    end
+    asyncFunc = def (a, callback) {
+        if a % 2 {
+            callback(10)
+        } else {
+            callback(20)
+        }
+    }
 
-    test = def:
+    test = def {
         print "Before yield expr test"
         a = yield asyncFunc(5)
         # After the asyncFunc callback is invoked, its value will
@@ -1025,9 +1130,9 @@ def testYieldExpr():
         b = yield asyncFunc(10)
         print "20 == " + b
         print "After all"
-    end
+    }
     test()
-end
+}
 testYieldExpr()
 ```
 The [Stdlib Async class](stdlib/Async.simi) used to do the same thing, but is now deprecated.
@@ -1041,23 +1146,28 @@ All exceptions thrown in Šimi do (and should) extend the base class *Exception*
 Šimi compresses the usual try-catch-...-catch-else-finally exception handling structure into a single concept, that of a *rescue block*.
 
 ```ruby
-def abs(value):
-  if value is not Number: InvalidParameterException("Expected a number!").raise()
+def abs(value) {
+  if value is not Number {
+    InvalidParameterException("Expected a number!").raise()
+  }
   return value.abs()
-end
+}
 
-def testAbs():
+def testAbs() {
   value = "string"
   print "This is printed"
   absValue = abs(value) # The exception is thrown here!
   print "This will be skipped"
-  rescue ex:
-    if ex: print "Exception occurred: " + ex.message
-    else: print "An exception did not happen"
+  rescue ex {
+    if ex {
+        print "Exception occurred: " + ex.message
+    } else {
+        print "An exception did not happen"
+    }
     print "This is always executed"
-  end
+  }
   print "Resuming the block normally..."
-end
+}
 ```
 The rescue block works as following:
 * If an exception is raised anywhere in the code, the interpreter will start skipping statements until it hits a rescue block, where it will enter, passing the raised exception as the parameter of the rescue block. Program execution will then resume normally at the end of the rescue block.
@@ -1216,12 +1326,10 @@ You may also expose *global* methods, i.e methods that aren't linked to a class 
 ```ruby
 class Api:
     ![method = "GET", endpoint = "/user"]
-    def getUser(result):
-
-    end
+    def getUser(result) { }
 
     ![method = "GET", endpoint = "/appointments"]
-    def getAppointments(result): pass
+    def getAppointments(result) = pass
 end
 ```
 You may have as many annotations before a field as you'd like, each in a separate line.
@@ -1230,91 +1338,103 @@ You can get a list of field's annotations using the **!!** operator. It returns 
 ```ruby
 # Model superclass. It doesn't have its own table, but contains a primary key field
 # that will be used by all model superclasses.
-class Model:
+class Model {
     # The dbField in the annotation specifies that this field will have a column in
     # the corresponding table. If its value is true, we'll infer the column name
     # from the field name. Otherwise, we'll use the supplied string value.
     ![dbField = true, primaryKey = true]
     id = 0
-end
+}
 
 # We use the dbTable annotation to indicate that this class should have a table in
 # the database. The associated value is the name of the table.
 ![dbTable = "Users"]
-class User(Model):
+class User(Model) {
     ![dbField = "first_name"]
     firstName = ""
 
     ![dbField = "last_name"]
     lastName = ""
-end
+}
 
 ![dbTable = "Appointments"]
-class Appointment(Model):
+class Appointment(Model) {
     ![dbField = true]
     userId = ""
 
     ![dbField = "timeslot"]
     time = Date()
-end
+}
 
 # This class generates SQL code for creating tables based on a list of classes.
-class DbLib:
-    def init(tables):
+class DbLib {
+    def init(tables) {
         sqlBuilder = String.builder()
-        for table in tables:
+        for table in tables {
             @_sqlForTable(table, sqlBuilder)
-        end
+        }
         @sql = sqlBuilder.build()
-    end
+    }
 
-    def _sqlForTable(table, sqlBuilder):
+    def _sqlForTable(table, sqlBuilder) {
         classAnnotations = !!table # First we get annotations for the class
-        if not classAnnotations: return # If there aren't any, skip this class
-        for annot in classAnnotations:
+        if not classAnnotations {
+            return # If there aren't any, skip this class
+        }
+        for annot in classAnnotations {
             dbTable = annot.dbTable # We're interested in the annotation that has "dbTable" field
-            if dbTable:
+            if dbTable {
                 name = ife(dbTable is String, dbTable, table.name) # Infer table name
                 sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n") # Construct SQL
                 @_sqlForFields(table, sqlBuilder) # Add column SQL
                 sqlBuilder.add(");\n")
-            end
-        end
-    end
+            }
+        }
+    }
 
-    def _sqlForFields(table, sqlBuilder):
+def _sqlForFields(table, sqlBuilder) {
         # Iterate through all the class fields and find those that have an annotation
         # which contains the "dbField" field
-        for key in table:
+        for key in table {
             val = table.(key)
             keyAnnotations = !!val
-            if not keyAnnotations: continue
-            for annot in keyAnnotations:
+            if not keyAnnotations {
+                continue
+            }
+            for annot in keyAnnotations {
                 dbField = annot.dbField
-                if not dbField: continue
+                if not dbField {
+                    continue
+                }
                 name = ife(dbField is String, dbField, key) # Infer the name
-                type = nil # Infer type based on calue associated with the field in class definition
-                if val is Number: type $= "int"
-                elsif val is String: type $= "varchar(255)"
-                elsif val is Date: type $= "date"
+                # Infer type based on calue associated with the field in class definition
+                type = when val {
+                    is Number: "int"
+                    is String: "varchar(255)"
+                    is Date: "date"
+                    else: nil
+                }
                 # ... of course, many more types could be added, including relationships to other tables
 
                 sqlBuilder.add(name).add(" ").add(type)
-                if annot.primaryKey: # Check for "primary key" field in the annotation
-                    if type == "int": sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                if annot.primaryKey { # Check for "primary key" field in the annotation
+                    if type == "int" {
+                        sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                    }
                     sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
-                end
-                else: sqlBuilder.add(",")
+                } else {
+                    sqlBuilder.add(",")
+                }
                 sqlBuilder.add("\n")
-            end
-        end
-    end
-end
+            }
+        }
+    }
+}
 
-(def:
+(def {
     db = DbLib([Model, User, Appointment])
     print db.sql
-end)()
+})()
 ```
 The output of this code is:
 ```
@@ -1341,25 +1461,32 @@ The basics:
 * **gu** takes a string (or an expression that evaluates to string) representation of a Šimi statement as input and interprets it, returning the result of the statement. E.g, gu "2+2" == 4
 * **ivic** takes a Šimi value as input and dumps it to a Šimi code string that's readily interpetable. Any output produced by the *ivic* operator can be readily pasted in Šimi code or invoked by the *gu* operator.
 
-An obvious power of this combo is that any internal state of a Šimi interpeter can be dumped into code and then interpreted again, making serialization and deserialization of Šimi classes, objects, or any other piece of code trivial. This is similar to what JSON does for JavaScript, with the added benefit of being able to serialize *anything* - functions, classes, annotations, etc:
+An obvious power of this combo is that any internal state of a Šimi interpreter can be dumped into code and then interpreted again, making serialization and deserialization of Šimi classes, objects, or any other piece of code trivial. This is similar to what JSON does for JavaScript, with the added benefit of being able to serialize *anything* - functions, classes, annotations, etc:
 ```ruby
-class Car:
+class Car {
 
     wheels = 4
 
     def init(capacity, tank): pass
 
-    def refill(amount):
-        if amount < 0: CarException("Amount < 0!").raise()
-        if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity
-        else: @tank = @tank + amount
-    end
+    def refill(amount) {
+        if amount < 0 {
+            CarException("Amount < 0!").raise()
+        }
+        if amount > 100 {
+            TankOverflowException("Too much gasoline!").raise()
+        }
+        if tank + amount > capacity {
+            @tank = capacity
+        } else {
+            @tank = tank + amount
+        }
+    }
 
-    def refill(amount, doprint):
-        @tank = 0
-     end
-end
+    def refill(amount, doprint) {
+        tank = 0
+     }
+}
 
 carInstance = Car(40, 10)
 
@@ -1368,30 +1495,34 @@ print ivic carInstance
 ```
 The code above produces the following output:
 ```
-class Car:
+class Car {
     wheels = 4
-    def init(capacity, tank):
+    def init(capacity, tank) {
         self.capacity = capacity
         self.tank = tank
-    end
-    def refill(amount):
-        if amount < 0:
+    }
+    def refill(amount) {
+        print "Doing something"
+        if amount < 0 {
             CarException("Amount < 0!").raise()
-        end
-        if amount > 100:
+        }
+        if amount > 100 {
             TankOverflowException("Too much gasoline!").raise()
-        end
-        if self.tank + amount > self.capacity:
-            self.tank = self.capacity
-        end
-        else:
-            self.tank = self.tank + amount
-        end
-    end
-    def refill(amount, doprint):
+        }
+        if tank + amount > capacity {
+            self.tank = capacity
+        }
+        else {
+            self.tank = tank + amount
+        }
+    }
+    def refill(amount, doprint) {
         self.tank = 0
-    end
-end
+    }
+    def f() {
+        return pass
+    }
+}
 [
     "class" = gu "Car",
     capacity = 40,
@@ -1403,36 +1534,38 @@ Naturally, invoking *gu ivic* clones objects:
 ```ruby
 obj = [a = 5,
     b = "aaa",
-    c = def (a, b):
+    c = def (a, b) {
         result = a + b + "dddd"
         return result
-    end
+    }
 ]
 clone = gu ivic obj
-print clone.matches(obj) # true
+print clone <> obj # true
 ```
 
 These operators also allow for some interesting approaches to metaprogramming. Take, for example, how *gu* is used in *Enum.of()* function to generate the enum class and associate values with it:
 ```ruby
-guStr = "class " + className + "(Enum):
+guStr = "class " + className + "(Enum) {
     def init(" + args + "): pass
     def equals(other): return @matches(other)
-end"
+}"
 clazz = gu guStr
 
 ...
 
-for key in obj:
-    val = nil
-    if isArray: val $= clazz(key)
-    elsif isFirstValueScalar: val $= clazz(obj.(key))
-    else:
+for key in obj {
+    val = if isArray {
+        clazz(key, key)
+    } elsif isFirstValueScalar {
+        clazz(obj.(key), key)
+    } else {
         args = String.from(obj.(key).values(), ", ")
+        args += ", \(key)"
         constructor =  "clazz(" + args + ")"
-        val $= gu constructor
-    end
+        gu constructor
+    }
     clazz.(key) = val
-end
+}
 ```
 Combining this with *ivic* allows for creation of programs that *change their code on the fly*. Simply, dump a block/function/method to code with *ivic*, use string manipulation to alter its body, and use it again by supplying the altered code to *gu*. Check out this [simple genetic algorithm](https://github.com/globulus/simi/blob/develop/genetic.simi) to see the duo in action!
 
@@ -1497,7 +1630,7 @@ The [Stdlib file](stdlib/Stdlib.simi) is a core module that is inseparable from 
     + NumberFormatException - raised, amongst other things, when a String cannot be converted using *toNumber()* method.
     + NilReferenceException - raised when a *nil* is encountered when [nil checking operator](#---nil-check) is used.
     + IllegalArgumentException - can be raised while checking params of a method.
-    + AbstractMethodException - can be put into bodies of methods that are meant to be overriden.
+    + AbstractMethodException - can be put into bodies of methods that are meant to be overridden.
     + TypeMismatchException - raised when checked params are used and don't match.
 * Iterator - defines iterable behavior.
 * Closable - defines closable behavior.
@@ -1516,20 +1649,22 @@ Files can be created, written and read using native classes *ReadStream* and *Wr
 
 Here is a simple code that demonstrates reading and writing of files:
 ```ruby
-def testFile():
+def testFile() {
     file = File("README.md")
     reader = ReadStream(file)
-    while true:
+    while true {
         line = reader.readLine()
-        if line: print line
-        else: break
-    end
+        if line {
+            print line
+        } else {
+            break
+        }
+    }
     writer = WriteStream(File("writetest.txt"))
     writer.write("string")
     writer.newLine()
     writer.write("new string")
-    rescue ex:
-    end
+    rescue ex { }
     reader.close()
     writer.close()
 end
@@ -1553,60 +1688,64 @@ The Test class contains several annotations that are used to set the test suite 
 * *Case* - denotes a test case method that will be invoked and its success or failure reported.
 * *Mock* - allows for mocking fields that are used in test cases. Takes a single parameter, an object whose key/value pairs denote which fields to replace with mocked values. Mocked values can be objects, classes, methods, or anything else that matches the signature of the field being mocked. Mocking can be used on *both* the test class as well any of its methods - class mocks are executed with every test case (and are valid for Before and After methods), whereas method mocks are only valid for the annotated method (Case, Before or After).
 
-Each test case is carried out in a separate environment, invoked on a fresh instance of the test class. The test class will be instantiated using a *parameterless constructor*, so if you need to perform any initialization, do it in there. Also, all the invoked methods (mocks, before, after, and cases) are invoked with [environment invocation]((#closure-vs-environment-invocation)), so you may want to use this invocation inside test cases as well in order to make sure mocks will work.
+Each test case is carried out in a separate environment, invoked on a fresh instance of the test class. The test class will be instantiated using a *parameter-less constructor*, so if you need to perform any initialization, do it in there. Also, all the invoked methods (mocks, before, after, and cases) are invoked with [environment invocation]((#closure-vs-environment-invocation)), so you may want to use this invocation inside test cases as well in order to make sure mocks will work.
 
 Tests should generally be used in conjunction with the *Assert* singleton, which provides several methods for asserting conditions, and each raises a descriptive *AssertionException* when failing.
 
 Here is a simple example that contains two test classes, and prints their report:
 ```ruby
 import Test
-class TestCase:
+class TestCase {
     !Before()
-    def before: print "before"
+    def before {
+        print "before"
+    }
 
     !After()
-    def after: print "after"
+    def after {
+        print "after"
+    }
 
     !Case()
-    def testEq:
+    def testEq {
         Assert.equals(5, 5, "Should pass")
-    end
+    }
 
     !Case()
-    def testEqFail:
+    def testEqFail {
         Assert.equals(5, 4, "Should fail")
-    end
+    }
 
     !Case()
-    def testInterpreterFail:
+    def testInterpreterFail {
         c = "b" - "a"
         Assert.equals(5, 4, "Shouldn't happen")
-    end
-end
+    }
+}
 
 !Mock([Net = [post = def (args, callback): callback("posted")]])
-class TestMock:
+class TestMock {
     !Case()
-    def testPost():
+    def testPost() {
         result = yield Net.post([])
         Assert.equals(result, "posted", "Should be good")
-    end
+    }
 
     !Mock([File = [readString = :"mock reading"]]) # Mock must be above to prevent annotations from applying to mock obj
     !Case()
-    def testPostAndFile():
+    def testPostAndFile() {
         result = yield Net.post([])
         Assert.isTrue(result == "posted", "Should be good")
         fileString = File.readString()
         Assert.equals(fileString, "mock reading", "Also good")
-    end
+    }
 
     !Case()
-    def failWithoutFileMock():
+    def failWithoutFileMock() {
         fileString = File.readString()
         Assert.equals(fileString, "mock reading", "Will fail, File not mocked")
-    end
-end
+    }
+}
 print Reporter.report(Test.test([TestCase, TestMock]))
 
 # Output is:
@@ -1641,16 +1780,16 @@ Consider the following SMT text file that represents HTML code interspersed with
         <%! docWideVal = 5 %>
         Value is: <b><%= value %></b> (should be 3) <%# This is a comment %>
         <ul>
-            %%for i in docWideVal.times():
+            %%for i in docWideVal.times() {
                 <li>Loop value is <%= i %>%_
-                %%if i % 2:
+                %%if i % 2 {
                     %_ odd%_
-                %%end
-                %%else:
+                %%}
+                %%else {
                     %_ even%_
-                %%end
+                %%}
                 %_ number</li>
-            %%end
+            %%}
         </ul>
     <body>
 </html>
@@ -1730,14 +1869,13 @@ Below is a glossary that lists all the Šimi keyword and their uses. It can be u
 * *and* - used as a [logical operator](#logical).
 * *break* - immediately [terminates the loop](#break-and-continue) inside which it is nested. Try to break outside of a loop throws an *InterpreterException*.
 * *class, class$, class_* - defines [a (regular, open or final) class](#classes).
-    + To get a value's class, use "class" (string) instead of the keyword: obj.("class")
+    + To get a value's class, just use *class*: obj.class
 * *continue* - proceeds to the [next iteration of the loop](#break-and-continue) inside which it is nested. Try to continue outside of a loop throws an *InterpreterException*.
 * *def* - defines [a function](#functions). Function declaration is very consistent in Šimi, and all functions, regardless of their purpose (regular functions, lambdas, methods, constructors) are always prefixed by *def*.
     + A parameterless, single-line lambda can be written with just the colon: length = :@len()
 * *else* - used as the default clause in [if-elsif-else](#if-elsif-else) and [when](#when) statements.
 * *elsif* - defines an alternative clause in an [if-elsif-else](#if-elsif-else) statement.
     + The misspelling is intentional.
-* *end* - ends a block of code, and a such terminates all multi-line statements (class, function, branching, loops, etc).
 * *false* - the [false value](#truth), equivalent to a Number with value 0.
 * *for* - defines [a for loop](#for-in-loop), which is used to iterate over [iterators and iterables](#iterators-and-iterables).
 * *gu* - unary operator that [evaluates the String supplied to it](#metaprogramming-and-deserialization---gu-and-ivic), allowing for Šimi code to be executed at runtime.

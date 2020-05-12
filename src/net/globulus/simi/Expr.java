@@ -32,6 +32,8 @@ abstract class Expr implements Codifiable {
     R visitUnaryExpr(Unary expr);
     R visitVariableExpr(Variable expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
+    R visitElsifExpr(Elsif expr);
+    R visitIfExpr(If expr);
   }
     static class Block extends Expr implements SimiBlock {
 
@@ -131,13 +133,14 @@ abstract class Expr implements Codifiable {
         return new StringBuilder(ignoreFirst ? "" : Codifiable.getIndentation(indentationLevel))
                 .append(opener)
                 .append(paramsBuilder.toString())
-                .append(TokenType.COLON.toCode())
+                .append(" ")
+                .append(TokenType.LEFT_BRACE.toCode())
                 .append(TokenType.NEWLINE.toCode())
                 .append(statements.stream()
                         .map(s -> s.toCode(indentationLevel + 1, false))
                         .collect(Collectors.joining())
                 )
-                .append(TokenType.END.toCode(indentationLevel, false))
+                .append(TokenType.RIGHT_BRACE.toCode(indentationLevel, false))
                 .append(TokenType.NEWLINE.toCode())
                 .toString();
       }
@@ -376,7 +379,7 @@ abstract class Expr implements Codifiable {
     final Token origin;
     final Expr object;
     final Expr name;
-    final Integer arity;
+    Integer arity;
 
     Get(Token origin, Expr object, Expr name, Integer arity) {
       this.origin = origin;
@@ -578,7 +581,7 @@ abstract class Expr implements Codifiable {
               .append(" ")
               .append(operator.type.toCode())
               .append(" ")
-              .append(left.toCode(0, false))
+              .append(right.toCode(0, false))
               .toString();
     }
 
@@ -768,6 +771,7 @@ abstract class Expr implements Codifiable {
     static class Variable extends Expr {
 
       final Token name;
+      Expr.Get backupSelfGet;
 
         Variable(Token name) {
             this.name = name;
@@ -882,6 +886,106 @@ abstract class Expr implements Codifiable {
       public boolean hasBreakPoint() {
           return keyword.hasBreakpoint;
       }
+  }
+
+  static class Elsif extends Expr {
+
+    final Expr condition;
+    final Expr.Block thenBranch;
+
+    Elsif(Expr condition, Expr.Block thenBranch) {
+      this.condition = condition;
+      this.thenBranch = thenBranch;
+    }
+
+    <R> R accept(Visitor<R> visitor, Object... args) {
+      return visitor.visitElsifExpr(this);
+    }
+
+//    @Override
+//    public List<BlockStmt> getChildren() {
+//      return thenBranch.getStatements().stream()
+//              .filter(s -> s instanceof BlockStmt)
+//              .map(s -> (BlockStmt) s)
+//              .collect(Collectors.toList());
+//    }
+
+    @Override
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return condition.toCode(indentationLevel, ignoreFirst) + thenBranch.toCode(indentationLevel, true);
+    }
+
+    @Override
+    public int getLineNumber() {
+      return condition.getLineNumber();
+    }
+
+    @Override
+    public String getFileName() {
+      return condition.getFileName();
+    }
+
+    @Override
+    public boolean hasBreakPoint() {
+      return condition.hasBreakPoint();
+    }
+  }
+
+  static class If extends Expr {
+
+    final Elsif ifstmt;
+    final List<Elsif> elsifs;
+    final Expr.Block elseBranch;
+
+    If(Elsif ifstmt, List<Elsif> elsifs, Expr.Block elseBranch) {
+      this.ifstmt = ifstmt;
+      this.elsifs = elsifs;
+      this.elseBranch = elseBranch;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor, Object... args) {
+      return visitor.visitIfExpr(this);
+    }
+
+//    @Override
+//    public List<BlockStmt> getChildren() {
+//      List<BlockStmt> children = new ArrayList<>();
+//      children.add(ifstmt);
+//      children.addAll(elsifs);
+//      if (elseBranch != null) {
+//        children.addAll(elseBranch.getStatements().stream()
+//                .filter(s -> s instanceof BlockStmt)
+//                .map(s -> (BlockStmt) s)
+//                .collect(Collectors.toList()));
+//      }
+//      return children;
+//    }
+
+    @Override
+    public String toCode(int indentationLevel, boolean ignoreFirst) {
+      return new StringBuilder(TokenType.IF.toCode(indentationLevel, false))
+              .append(" ")
+              .append(ifstmt.toCode(indentationLevel, true))
+              .append(elsifs.stream().map(e -> TokenType.ELSIF.toCode() + " " + e.toCode(indentationLevel, true)).collect(Collectors.joining()))
+              .append(elseBranch != null ? TokenType.ELSE.toCode(indentationLevel, false) + elseBranch.toCode(indentationLevel, true) : "")
+              .toString();
+    }
+
+    @Override
+    public int getLineNumber() {
+      return ifstmt.getLineNumber();
+    }
+
+    @Override
+    public String getFileName() {
+      return ifstmt.getFileName();
+    }
+
+    @Override
+    public boolean hasBreakPoint() {
+      return ifstmt.hasBreakPoint();
+    }
   }
 
   static boolean hasImplicitReturn(Expr expr) {

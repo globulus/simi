@@ -2,68 +2,74 @@ import "./Stdlib/File.simi"
 import "./Stdlib/CodeBlocks.simi"
 import "./SimiSync/SimiSyncCommons.simi"
 
-class_ SimiSyncModels:
+class_ SimiSyncModels {
 
     # Model annotation class
-    class_ Model:
-        def init(version): pass
-        def init(version, clientName): pass
-    end
+    class_ Model {
+        def init(version) = pass
+        def init(version, clientName) = pass
+    }
 
     # Model field annotation class
-    class_ Field:
-        def init(): @init(false, 1)
-        def init(serverOnly): pass
-        def init(serverOnly, version): pass
-        def init(serverOnly, version, clientName): pass
-    end
+    class_ Field {
+        def init() = @init(false, 1)
+        def init(serverOnly) = pass
+        def init(serverOnly, version) = pass
+        def init(serverOnly, version, clientName) = pass
+    }
 
     # Model method annotation class
-    class_ Method:
-    end
+    class_ Method
 
-    class_ ModelParser(in SimiSyncCommons.Parser):
-        def parse(version):
+    class_ ModelParser(in SimiSyncCommons.Parser) {
+        def parse(version) {
             import CodeBlocks
             # By convention, all model files should live in a directory named "models" and its subdirectories
             dirPath = nil
             print File.listAll("./SimiSync/models", "simi", true)
-            for file in File.listAll("./SimiSync/models", "simi", true):
-                if not dirPath:
+            for file in File.listAll("./SimiSync/models", "simi", true) {
+                if not dirPath {
                     dirPath $= file.path.substring(0, file.path.lastIndexOf('/') + 1) +  "clientModels/" + version + "/"
-                end
+                }
                 # Read and interpret the content of the file
                 modelCode = File.readString(file.path)
                 modelClass = gu @removeImports(modelCode)
                 # Each class should have a proper ModelClass annotation
                 modelClassAnnot = @extractAnnot(modelClass, SimiSyncModels.Model)
-                if not modelClassAnnot : continue
+                if not modelClassAnnot {
+                    continue
+                }
                 className = modelClassAnnot.clientName ?? ClassCode(modelClass).name
                 classComposer = ClassComposer(className)
-                for e in modelClass.zip():
+                for e in modelClass.zip() {
                     key = e.key
                     value = modelClass.(key)
-                    if value is Function:
-                        if not @extractAnnot(value, SimiSyncModels.Method): continue
+                    if value is Function {
+                        if not @extractAnnot(value, SimiSyncModels.Method) {
+                            continue
+                        }
                         classComposer.method(value)
-                    end
-                    else:
+                    } else {
                         fieldAnnot = @extractAnnot(value, SimiSyncModels.Field)
-                        if not fieldAnnot or fieldAnnot.serverOnly or fieldAnnot.version > version: continue
+                        if not fieldAnnot or fieldAnnot.serverOnly or fieldAnnot.version > version {
+                            continue
+                        }
                         classComposer.field(fieldAnnot.clientName ?? key, value)
-                    end
-                end
+                    }
+                }
                 clientCode = classComposer.getString()
                 print clientCode
                 f = File(dirPath + className + ".simi")
                 print f
                 writer = WriteStream(f)
                 writer.write(clientCode)
-                rescue ex:
-                    if ex: print ex.message
+                rescue ex {
+                    if ex {
+                        print ex.message
+                    }
                     writer.close()
-                end
-            end
-        end
-    end
-end
+                }
+            }
+        }
+    }
+}

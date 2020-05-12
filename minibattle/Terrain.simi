@@ -5,14 +5,12 @@ Terrain = Enum.of(["PLAINS" = [speed = 0, bonus = 0],
                    "SWAMP" = [speed = -1, bonus = -1],
                    "WATER" = [speed = 0, bonus = 0]
                   ],\
-                 [render = def:
-                    when self:
-                        Terrain.PLAINS: return "."
-                        Terrain.FOREST: return "|"
-                        Terrain.MOUNTAIN: return "^"
-                        Terrain.HILL: return "*"
-                        Terrain.SWAMP: return "#"
-                        Terrain.WATER: return "_"
-                    end
-                end
+                 [render = def = when self {
+                    Terrain.PLAINS: "."
+                    Terrain.FOREST: "|"
+                    Terrain.MOUNTAIN: "^"
+                    Terrain.HILL: "*"
+                    Terrain.SWAMP: "#"
+                    Terrain.WATER: "_"
+                }
 ])

@@ -148,7 +148,8 @@ abstract class Stmt implements SimiStatement, Codifiable {
                             .collect(Collectors.joining(TokenType.COMMA.toCode() + " ")) + TokenType.RIGHT_PAREN.toCode()
                       : ""
               )
-              .append(TokenType.COLON.toCode())
+              .append(" ")
+              .append(TokenType.LEFT_BRACE.toCode())
               .append(TokenType.NEWLINE.toCode())
               .append(mixins.stream()
                       .map(m -> TokenType.IMPORT.toCode(indentationLevel + 1, false) + " " + m.toCode(0, false))
@@ -160,7 +161,7 @@ abstract class Stmt implements SimiStatement, Codifiable {
               .append(TokenType.NEWLINE.toCode())
               .append(innerClasses.stream().map(i -> i.toCode(indentationLevel + 1, false)).collect(Collectors.joining()))
               .append(TokenType.NEWLINE.toCode())
-              .append(TokenType.END.toCode(indentationLevel, false))
+              .append(TokenType.RIGHT_BRACE.toCode(indentationLevel, false))
               .append(TokenType.NEWLINE.toCode())
               .toString();
     }
@@ -244,6 +245,13 @@ abstract class Stmt implements SimiStatement, Codifiable {
     @Override
     public boolean hasBreakPoint() {
       return expression.hasBreakPoint();
+    }
+
+    public boolean isPassOrNative() {
+      if (expression instanceof Expr.Literal) {
+        return ((Expr.Literal) expression).value instanceof Pass || ((Expr.Literal) expression).value instanceof Native;
+      }
+      return false;
     }
   }
 
@@ -330,6 +338,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
       public boolean hasBreakPoint() {
         return condition.hasBreakPoint();
       }
+
+      public Expr.Elsif toExpr() {
+          return new Expr.Elsif(condition, thenBranch);
+      }
     }
 
   static class If extends Stmt implements BlockStmt {
@@ -386,6 +398,10 @@ abstract class Stmt implements SimiStatement, Codifiable {
     @Override
     public boolean hasBreakPoint() {
       return ifstmt.hasBreakPoint();
+    }
+
+    public Expr.If toExpr() {
+      return new Expr.If(ifstmt.toExpr(), elsifs.stream().map(Elsif::toExpr).collect(Collectors.toList()), elseBranch);
     }
   }
 

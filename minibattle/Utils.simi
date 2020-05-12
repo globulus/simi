@@ -1,22 +1,28 @@
-class FixedSizeArray:
-    def init(limit is Number):
-        if limit <= 0: IllegalArgumentException("limit must be positive!").raise()
+class FixedSizeArray {
+    def init(limit is Number) {
+        if limit <= 0 {
+            IllegalArgumentException("limit must be positive!").raise()
+        }
         @limit = limit
-    end
+    }
 
-    def append(item):
+    def append(item) {
         super.append(item)
         @_trim()
-    end
+    }
 
-    def addAll(other):
+    def addAll(other) {
         super.addAll(other)
         @_trim()
-    end
+    }
 
-    def _trim():
+    def _trim() {
         d = @len() - @limit
-        if d <= 0: return
-        for _ in d.times(): @0 = nil
-    end
-end
+        if d <= 0 {
+            return
+        }
+        for _ in d.times() {
+            @0 = nil
+        }
+    }
+}

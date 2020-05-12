@@ -16,6 +16,8 @@ class BaseClassesNativeImpl {
 
     private Map<String, SimiNativeClass> classes;
 
+    private Scanner stdinScanner = new Scanner(System.in);
+
     BaseClassesNativeImpl() {
         classes = new HashMap<>();
         classes.put(Constants.CLASS_OBJECT, getObjectClass());
@@ -155,9 +157,26 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
+                try {
+                    SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
+                    SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getValue().getObject();
+                    self.addAll(obj, interpreter.getEnvironment());
+                    return arguments.get(0);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        });
+        methods.put(new OverloadableFunction("insertAt", 2), new SimiCallable() {
+            @Override
+            public int arity() {
+                return 1;
+            }
+
+            @Override
+            public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment env, List<SimiProperty> arguments, boolean rethrow) {
                 SimiObjectImpl self = (SimiObjectImpl) arguments.get(0).getValue().getObject();
-                SimiObjectImpl obj = (SimiObjectImpl) arguments.get(1).getValue().getObject();
-                self.addAll(obj, interpreter.getEnvironment());
+                self.insertAt(arguments.get(1), arguments.get(2), interpreter.getEnvironment());
                 return arguments.get(0);
             }
         });
@@ -375,7 +394,7 @@ class BaseClassesNativeImpl {
                 return new SimiValue.String(arguments.get(0).getValue().getObject().toString());
             }
         });
-        methods.put(new OverloadableFunction("matches", 1), new SimiCallable() {
+        methods.put(new OverloadableFunction(Constants.MATCHES, 1), new SimiCallable() {
             @Override
             public int arity() {
                 return 1;
@@ -392,7 +411,7 @@ class BaseClassesNativeImpl {
                 return new SimiValue.Number(self.matches(other, null));
             }
         });
-        methods.put(new OverloadableFunction("matches", 2), new SimiCallable() {
+        methods.put(new OverloadableFunction(Constants.MATCHES, 2), new SimiCallable() {
             @Override
             public int arity() {
                 return 2;
@@ -845,7 +864,7 @@ class BaseClassesNativeImpl {
                         double number = Double.parseDouble(string);
                         return new SimiValue.Number(number);
                     } catch (NumberFormatException e2) {
-                        SimiException se = new SimiException((SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
+                        SimiException se = new SimiException(null, (SimiClass) interpreter.getEnvironment().tryGet(Constants.EXCEPTION_NUMBER_FORMAT).getValue().getObject(),
                                 "Invalid number format!");
                         interpreter.raiseException(se);
                         return null;
@@ -1083,7 +1102,7 @@ class BaseClassesNativeImpl {
                 if (messageProp != null) {
                     message = messageProp.getValue().getString();
                 }
-                interpreter.raiseException(new SimiException(self.clazz, message));
+                interpreter.raiseException(new SimiException(self, self.clazz, message));
                 return null;
             }
         });
@@ -1166,8 +1185,10 @@ class BaseClassesNativeImpl {
 
             @Override
             public SimiProperty call(BlockInterpreter interpreter, SimiEnvironment environment, List<SimiProperty> arguments, boolean rethrow) {
-                try (Scanner scanner = new Scanner(System.in)) {
-                    return new SimiValue.String(scanner.nextLine());
+                if (stdinScanner.hasNextLine()) {
+                    return new SimiValue.String(stdinScanner.nextLine());
+                } else {
+                    return null;
                 }
             }
         });

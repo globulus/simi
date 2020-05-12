@@ -1,28 +1,28 @@
-class Field:
+class Field=
     bound = 8
 
-    def init(x, y): pass
-    def translatedBy(dx, dy):
+    def init(x, y) = pass
+    def translatedBy(dx, dy)=
         new = Field(@x + dx, @y + dy)
-        if new.isValid(): return new
+        if new.isValid() = return new
         return self
     end
-    def distance(): return Math.abs(@x - @bound) + Math.abs(@y - @bound)
-    def isValid(): return @x > 0 and @x <= @bound and @y > 0 and @y <= @bound
-    def equals(other): return @matches(other)
+    def distance() = return Math.abs(@x - @bound) + Math.abs(@y - @bound)
+    def isValid() = return @x > 0 and @x <= @bound and @y > 0 and @y <= @bound
+    def equals(other) = return @matches(other)
 end
 
-class Knight:
+class Knight=
     maxJumps = 10
 
-    def init(loc, move):
+    def init(loc, move)=
         @loc = loc
         @move = move
         @lastDist = nil
         @trace = $[]
     end
 
-    def mutate():
+    def mutate()=
         move = @move
         lines = (ivic move).split("\n").clone(false)
         lines.1 = @_randomMove()
@@ -30,21 +30,21 @@ class Knight:
         @move = gu newMove
     end
 
-    def jump():
+    def jump()=
         @loc = @move()
     end
 
-    def run():
-        if not @lastDist: @mutate()
-        for _ in @maxJumps.times(): @jump()
+    def run()=
+        if not @lastDist = @mutate()
+        for _ in @maxJumps.times() = @jump()
         move = @move
         @trace.push(ivic move)
         dist = @loc.distance()
-        if @lastDist and dist >= @lastDist: @mutate()
+        if @lastDist and dist >= @lastDist = @mutate()
         @lastDist = dist
     end
 
-    def _randomMove():
+    def _randomMove()=
         dx = Number.randomInt(4) * ife(Number.randomInt(2) == 0, 1, -1)
         dy = Number.randomInt(4) * ife(Number.randomInt(2) == 0, 1, -1)
         return "  return @loc.translatedBy(" + dx + ", " + dy + ")"
@@ -53,17 +53,17 @@ end
 
 maxKnights = 5
 knights = $[]
-for _ in maxKnights.times():
-    knights.push(Knight(Field(0, 0), :pass))
+for _ in maxKnights.times()=
+    knights.push(Knight(Field(0, 0), =pass))
 end
 
-for _ in 50.times():
-    knights.forEach(def k: k.run())
+for _ in 50.times()=
+    knights.forEach(def k = k.run())
 end
-sorted = knights.sorted(def (l, r): l.loc.distance() <> r.loc.distance())
+sorted = knights.sorted(def (l, r) = l.loc.distance() <> r.loc.distance())
 best = sorted.first()
 
-print "Best method: "
+print "Best method = "
 print best.trace
-print "Best distance: " + best.loc.distance()
-print "Rank: " + sorted.map(def k: k.loc.distance())
+print "Best distance = " + best.loc.distance()
+print "Rank = " + sorted.map(def k = k.loc.distance())

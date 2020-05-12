@@ -1,4 +1,4 @@
-class Smt:
+class Smt {
     _STMT = "%%"
     _TAG_START = "<%"
     _EXPR = "="
@@ -7,137 +7,134 @@ class Smt:
     _END = "%>"
     _SKIP = "%_"
 
-    class FormatException(Exception):
-    end
+    class FormatException(Exception)
 
     _sets = $[]
     _exprPartCodes = $[]
 
-    def compile(template):
+    def compile(template) {
         smt = Smt()
         parts = $[]
         lines = template.split("\n")
         skip = 0
-        for [i, line] in lines.zip():
-            if i < skip: continue
+        for [i, line] in lines.zip() {
+            if i < skip = continue
             trimmed = line.trim()
-            if trimmed.startsWith(@_STMT):
-                stmt = @_parseStmt(trimmed, i, lines)
+            if trimmed.startsWith(_STMT) {
+                stmt = _parseStmt(trimmed, i, lines)
                 parts.append(stmt.part)
                 parts.append("\n")
                 skip $= stmt.skip
-            end
-            else:
-                lineParts = @_parseLine(line, i)
+            }
+            else {
+                lineParts = _parseLine(line, i)
                 first = lineParts.first()
                 last = parts.last()
-                if first is String and last is String:
+                if first is String and last is String {
                     parts.(parts.len() - 1) = last + first
                     parts.addAll(lineParts.slice(1))
-                end
-                else: parts.addAll(lineParts)
-            end
-        end
+                }
+                else = parts.addAll(lineParts)
+            }
+        }
         smt.parts = parts
         return smt
-    end
+    }
 
-    def _parseStmt(trimmed, idx, lines):
+    def _parseStmt(trimmed, idx, lines) {
         var = "__var" + clock()
-        body = String.builder().add("(def:
+        body = String.builder().add("(def {
             \(var) = String.builder()
-            \(@_replaceSets(trimmed.substring(@_STMT.len())))
+            \(_replaceSets(trimmed.substring(_STMT.len())))
         ")
         endCount = 1
         skip = 0
-        for [i, line] in lines.slice(idx + 1).zip():
+        for [i, line] in lines.slice(idx + 1).zip() {
             tl = line.trim()
-            if tl == @_STMT + "end":
-                body.add("\nend\n")
+            if tl == _STMT + "}" {
+                body.add("\n}\n")
                 endCount -= 1
-                if endCount == 0:
+                if endCount == 0 {
                     skip $= i + idx + 2
                     break
-                end
-            end
-            elsif tl.startsWith(@_STMT):
-                body.add(@_replaceSets(tl.substring(@_STMT.len()))).add("\n")
+                }
+            }
+            elsif tl.startsWith(_STMT) {
+                body.add(_replaceSets(tl.substring(_STMT.len()))).add("\n")
                 endCount += 1
-            end
-            else:
-                for part in @_parseLine(line, i):
+            }
+            else {
+                for part in _parseLine(line, i) {
                     body.add(var).add(".add(")\
-                        .add(ife(part is String, :"\"\(part)\"", :"\(part.code)$()"))\
+                        .add(ife(part is String, ="\"\(part)\"", ="\(part.code)$()"))\
                         .add(")\n")
-                end
-            end
-        end
-        body.add("return \(var).build()\nend)")
+                }
+            }
+        }
+        body.add("return \(var).build()\n})")
         return [part = [code = body.build()], skip = skip]
-    end
+    }
 
-    def _parseLine(line, idx):
+    def _parseLine(line, idx) {
         i = 0
         arr = $[]
-        tagStartLen = @_TAG_START.len()
-        while true:
-            j = line.indexOf(@_TAG_START, i)
-            if j:
-                arr.append(@_checkSkipTrim(line.substring(i, j)))
-                k = line.indexOf(@_END, j)
-                if not k: Smt.FormatException("Expected \(@_END) at line \(idx): \(line)").raise()
+        tagStartLen = _TAG_START.len()
+        while true {
+            j = line.indexOf(_TAG_START, i)
+            if j {
+                arr.append(_checkSkipTrim(line.substring(i, j)))
+                k = line.indexOf(_END, j)
+                if not k = Smt.FormatException("Expected \(_END) at line \(idx) = \(line)").raise()
                 type = line.(j + tagStartLen)
                 body = line.substring(j + tagStartLen + 1, k)
-                when type:
-                    @_EXPR: arr.append([code = "(:\(@_replaceSets(body)))"])
-                    @_SET:
+                when type {
+                    _EXPR = arr.append([code = "(=\(_replaceSets(body)))"])
+                    _SET {
                         equals = body.indexOf("=")
-                        if not equals: Smt.FormatException("Expected '=' in a SET tag at line \(idx): \(line)").raise()
+                        if not equals = Smt.FormatException("Expected '=' in a SET tag at line \(idx) = \(line)").raise()
                         var = body.substring(0, equals).trim()
-                        val = gu ("(:\(body.substring(equals + 1).trim()))") # B
-                        @_sets.(var) = val
-                    end
-                end
-                i $= k + @_END.len()
-            end
-            else: # No expressions left in the string
+                        val = gu ("(=\(body.substring(equals + 1).trim()))") # B
+                        _sets.(var) = val
+                    }
+                }
+                i $= k + _END.len()
+            }
+            else { # No expressions left in the string
                 lastPart = line.substring(i)
-                if arr.isEmpty(): lastPart $= @_checkSkipTrim(lastPart)
-                if lastPart.endsWith(@_SKIP): arr.append(lastPart.substring(0, lastPart.len() - @_SKIP.len()))
-                else: arr.append(lastPart + "\n")
+                if arr.isEmpty() = lastPart $= _checkSkipTrim(lastPart)
+                if lastPart.endsWith(_SKIP) = arr.append(lastPart.substring(0, lastPart.len() - _SKIP.len()))
+                else = arr.append(lastPart + "\n")
                 break
-            end
-        end
+            }
+        }
         return arr
-    end
+    }
 
-    def _checkSkipTrim(str):
+    def _checkSkipTrim(str) {
         trimmed = str.trim()
-        if trimmed.startsWith(@_SKIP): return trimmed.substring(@_SKIP.len())
+        if trimmed.startsWith(_SKIP) = return trimmed.substring(_SKIP.len())
         return str
-    end
+    }
 
-    def _replaceSets(body):
+    def _replaceSets(body) {
         replaced = body
-        for set in @_sets: replaced $= replaced.replacing(set, "@\(set)")
+        for set in _sets = replaced $= replaced.replacing(set, "@\(set)")
         return replaced
-    end
+    }
 
-    def _runPart(part):
-        when part:
-            is String: return part
-            is Object: return (gu part.code)$()
-            else: return part.toString()
-        end
-    end
+    def _runPart(part) = when part {
+        is String = part
+        is Object = (gu part.code)$()
+        else = part.toString()
+    }
 
-    def run():
-        for [var, val] in @_sets.zip(): @(var) = val$()
+    def run() {
+        for [var, val] in _sets.zip() = @(var) = val$()
         str = String.builder()
-        for part in @parts:
-            partValue = @_runPart$(part)
+        for part in parts {
+            partValue = _runPart$(part)
             str.add(partValue)
-        end
+        }
         return str.build()
-    end
-end
+    }
+}

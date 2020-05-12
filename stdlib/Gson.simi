@@ -1,7 +1,7 @@
 import "./stdlib/Gson-java.jar"
 
-class Gson:
-    def parse(json): native
-    def parseAsync(json, callback): native
-    def stringify(obj): native
-end
+class Gson {
+    def parse(json) = native
+    def parseAsync(json, callback) = native
+    def stringify(obj) = native
+}

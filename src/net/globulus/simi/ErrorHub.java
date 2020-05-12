@@ -45,7 +45,7 @@ class ErrorHub {
             String exceptionMessage = "[\"" + file + "\" line " + line + "] Error" + where + ": " + message;
             SimiProperty exceptionClassProp = interpreter.getEnvironment().tryGet(exceptionClass);
             if (exceptionClassProp != null) {
-                interpreter.raiseException(new SimiException((SimiClass) exceptionClassProp.getValue().getObject(), exceptionMessage));
+                interpreter.raiseException(new SimiException(null, (SimiClass) exceptionClassProp.getValue().getObject(), exceptionMessage));
                 return;
             }
         }

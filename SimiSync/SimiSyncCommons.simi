@@ -1,18 +1,18 @@
-class_ SimiSyncCommons:
-    class_ Parser:
-        def removeImports(code):
+class_ SimiSyncCommons {
+    class_ Parser {
+        def removeImports(code) {
             lines = code.split("\n")
             start = 0
-            for e in lines.zip():
+            for e in lines.zip() {
                 [i, line] = e
-                if not line.isEmpty() and not line.startsWith("import"):
+                if not line.isEmpty() and not line.startsWith("import") {
                     start $= i
                     break
-                end
-            end
+                }
+            }
             return String.from(lines.slice(start, lines.len() + 1), "\n")
-        end
+        }
 
-        def extractAnnot(field, annotClass): return ?(!!field).where(def a: a is annotClass).first()
-    end
-end
+        def extractAnnot(field, annotClass) = ?(!!field).where(def a = a is annotClass).first()
+    }
+}

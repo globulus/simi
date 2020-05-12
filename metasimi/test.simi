@@ -2,35 +2,35 @@ import "./Stdlib/File.simi"
 
 print gu "2+2"
 
-def testFile():
-    #File.readLines("README.md").forEach(def s: print s)
+def testFile() {
+    #File.readLines("README.md").forEach(def s = print s)
     file = File("README.md")
     reader = ReadStream(file)
-    while true:
+    while true {
         line = reader.readLine()
-        if line: print line
-        else: break
-    end
+        if line = print line
+        else = break
+    }
     writer = WriteStream(File("writetest.txt"))
     writer.write("string")
     writer.newLine()
     writer.write("new string")
-    rescue ex:
-    end
+    rescue ex {
+    }
     reader.close()
     writer.close()
-end
+}
 #testFile()
 
-def testYieldFun():
+def testYieldFun() {
     print "before yield"
-    for i in 3.times():
-        if i < 2: yield "yield" + i
-        else: return "return in yield"
-    end
+    for i in 3.times() {
+        if i < 2 = yield "yield" + i
+        else = return "return in yield"
+    }
     print "afterYield"
-end
-def testYield():
+}
+def testYield() {
     print "Calling yield test"
     print testYieldFun()
     print "Calling again..."
@@ -39,22 +39,22 @@ def testYield():
     print testYieldFun()
     print "Now it should restart"
     print testYieldFun()
-end
+}
 testYield()
 
-class Point:
-    def init(x, y): pass
+class Point {
+    def init(x, y) = pass
 
-    # This is fully equivalent to:
-    # def init(x, y):
+    # This is fully equivalent to=
+    # def init(x, y)=
     #   @x = x
     #   @y = y
-    # end
+    # }
 
     # In value classes, you may want to override the equals method
-    # to check against fields, i.e to use matches() with == operator:
-   # def equals(other): return @matches(other)
-end
+    # to check against fields, i.e to use matches() with == operator=
+   # def equals(other) = return @matches(other)
+}
 
 $var = 1
 $var += 2
@@ -66,7 +66,7 @@ print p1 == p2
 
 date = Date.now()
 print date
-print date.format("dd/MM/yyyy hh:mm:ss")
+print date.format("dd/MM/yyyy hh=mm=ss")
 
 #$a = 3
 #b = 5
@@ -74,88 +74,86 @@ print date.format("dd/MM/yyyy hh:mm:ss")
 #$a = 4
 #print c
 
-def testStringNumberConversion():
+def testStringNumberConversion() {
     numStr = "123.3ž"
     numVal = numStr.toNumber()
-    rescue ex:
-        if ex: print "Invalid number format"
-        else: print numVal
-    end
-end
+    rescue ex {
+        if ex = print "Invalid number format"
+        else = print numVal
+    }
+}
 testStringNumberConversion()
 
-class CarException(Exception):
-end
+class CarException(Exception) {
+}
 
-class TankOverflowException(Exception):
-end
+class TankOverflowException(Exception) {
+}
 
-class Car:
+class Car {
 
-    def init(capacity, tank): pass
+    def init(capacity, tank) = pass
 
-    def refill(amount):
+    def refill(amount) {
         print "Doing something"
-        if amount < 0: CarException("Amount < 0!").raise()
-        if amount > 100: TankOverflowException("Too much gasoline!").raise()
-        if @tank + amount > @capacity: @tank = @capacity
-        else: @tank = @tank + amount
-    end
+        if amount < 0 = CarException("Amount < 0!").raise()
+        if amount > 100 = TankOverflowException("Too much gasoline!").raise()
+        if @tank + amount > @capacity = @tank = @capacity
+        else = @tank = @tank + amount
+    }
 
-    def refill(amount, doprint):
+    def refill(amount, doprint) {
         @tank = 0
-     end
+     }
 
-     def f(): pass
-end
+     def f() = pass
+}
 
-class OtherCar(Car, Range):
-    def init():
+class OtherCar(Car, Range) {
+    def init() {
         super.init(10, 20)
         @start = 5
         @stop = 10
         @step = 2
         super.refill(2)
         @refill(3)
-   end
+   }
 
-   def refill(amount):
+   def refill(amount) {
         print "Doing nothing"
-   end
+   }
 
-   def has(value):
-    return super(Range).has(value)
-   end
-end
+   def has(value) = super(Range).has(value)
+}
 
 otherCar = OtherCar()
 print otherCar.capacity
 print 6 in otherCar
 
-#def min3(a, b, c):
-#    min2 = def (a, b):
-#        if a < b: return a
-#        else: return b
-#    end
+#def min3(a, b, c)=
+#    min2 = def (a, b)=
+#        if a < b = return a
+#        else = return b
+#    }
 #    return min2(min2(a, b), c)
-#end
+#}
 
 #d = min3(4, 5, 3)
 
-def refillCar():
+def refillCar() {
     njuKar = Car.builder().capacity(10).tank(20).build()
     print "should be printed"
     njuKar.refill(10)
     print "should be skipped"
-    rescue ex:
+    rescue ex {
         print ?ex.message
-        if ex: print "rescue from: " + ex.message
-        if ex is CarException: print "car exc"
-        else: print ex
+        if ex = print "rescue from = " + ex.message
+        if ex is CarException = print "car exc"
+        else = print ex
         print "rescue always"
-    end
+    }
     print "after rescue"
-end
+}
 
 refillCar()
 
@@ -164,63 +162,63 @@ refillCar()
 
 dict = [a = 1, b = "str", c = Range(1, 10, 3)]
 print dict
-for i in dict:
+for i in dict {
     print i
-    if i == "b": continue
+    if i == "b" = continue
     print dict.(i)
-end
+}
 
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i: i <= 5)\
-    .map(def i: i * 2)\
-    .sorted(def (l, r): -(l <> r))
+    .where(def i = i <= 5)\
+    .map(def i = i * 2)\
+    .sorted(def (l, r) = r.compareTo(l))
 print arr
 
 print Math.pow(2, 3)
 
-#$Object.each = def f:
-#    for item in self: f(item)
-#end
+#$Object.each = def f=
+#    for item in self = f(item)
+#}
 
-#print [a = "1", b = def a: return a * a].b(2)
+#print [a = "1", b = def a = return a * a].b(2)
 
-for i in 6.times(): print i
+for i in 6.times() = print i
 
-for c in "abcdef": print c
+for c in "abcdef" = print c
 print "cde" in "abcd"
 print "afe" + "pde".1
 
 len = arr.len()
 print len
 
-#arr.each(def i: print i * 2)
+#arr.each(def i = print i * 2)
 
 keys = arr.keys()
 print keys
 
 print arr
-for i in arr: print i
+for i in arr = print i
 
-print "arr has value:"
+print "arr has value="
 print 22 in arr
 
-print "dict has key:"
+print "dict has key="
 print "gg" in dict
 
 str = "this is a 'string'"
 print str
 
 $a = 2
-while $a < 10:
+while $a < 10 {
     print $a
     $a = $a + 1
-end
+}
 
-for i in Range(start=10, stop=-20, step=-3):
+for i in Range(start=10, stop=-20, step=-3) {
     print i
-end
+}
 
 car = Car(40, 10)
 print(car.tank)
