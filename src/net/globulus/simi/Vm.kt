@@ -15,12 +15,14 @@ internal class Vm {
     fun interpret(input: Compiler.CompilerOutput) {
         buffer = ByteBuffer.wrap(input.byteCode)
         loop@ while (true) {
-            when (nextCode) {
+            val code = nextCode
+            when (code) {
                 OpCode.CONST_INT -> push(nextLong)
                 OpCode.CONST_FLOAT -> push(nextDouble)
                 OpCode.CONST_ID -> throw RuntimeException("WTF")
                 OpCode.CONST_STR -> push(input.strings[nextInt])
                 OpCode.NIL -> throw RuntimeException("WTF")
+                OpCode.POP -> pop()
                 OpCode.PUSH_SCOPE -> scopeStarts.push(sp)
                 OpCode.POP_SCOPE -> sp = scopeStarts.pop()
                 OpCode.SET_LOCAL -> stack[nextInt] = pop()
@@ -33,10 +35,25 @@ internal class Vm {
                 OpCode.DIVIDE_INT -> divideInt()
                 OpCode.MOD -> mod()
                 OpCode.PRINT -> println(pop())
+                OpCode.JUMP -> buffer.position(nextInt)
+                OpCode.JUMP_IF_FALSE -> {
+                    val offset = nextInt
+                    if (isFalsey(peek())) {
+                        buffer.position(offset)
+                    }
+                }
                 OpCode.HALT -> break@loop
             }
         }
         printStack()
+    }
+
+    private fun isFalsey(o: Any): Boolean {
+        return when (o) {
+            is Long -> o == 0L
+            is Double -> o == 0.0
+            else -> false
+        }
     }
 
     private fun negate() {
@@ -175,6 +192,13 @@ internal class Vm {
 
     private fun peek(): Any {
         return stack[sp - 1]!!
+    }
+
+    private fun gc() {
+        for (i in sp until stackSize) {
+            stack[i] = null
+        }
+        System.gc()
     }
 
     private fun printStack() {

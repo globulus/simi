@@ -1,5 +1,13 @@
 a = 5
 b = a + 3
 a $= b - 4 / (2 + 2 * 2)
+b /= 2
 print "a is \(a)"
 print "b is \(b)"
+if 0 {
+    print "a is true"
+} else if 0 {
+    print "b is true"
+} else {
+    print "both are false"
+}

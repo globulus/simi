@@ -37,11 +37,12 @@ fun MutableList<Byte>.setInt(i: Int, pos: Int) {
     }
 }
 
-fun MutableList<Byte>.emitMarkingPosition(block: MutableList<Byte>.() -> Unit) {
+fun MutableList<Byte>.emitMarkingPosition(block: MutableList<Byte>.() -> Unit): Int {
     val skipPos = size
     putInt(0)
     block()
     setInt(size, skipPos)
+    return size
 }
 
 fun MutableList<Byte>.putLong(l: Long): Int {
