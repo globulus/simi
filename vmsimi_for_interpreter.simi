@@ -8,7 +8,7 @@ print "b is \(b) == 4"
 print "if test \"a\" =="
 if a < 2 or a > 5 {
     print "a"
-} else if b == 4 {
+} elsif b == 4 {
     print "b"
 } else {
     print "both are false"
@@ -19,7 +19,7 @@ while a > 1 {
     if a == 4 {
         a -= 1
         continue
-    } else if a == 2 {
+    } elsif a == 2 {
         break
     }
     print "again"

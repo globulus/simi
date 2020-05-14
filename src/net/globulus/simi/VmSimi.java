@@ -46,8 +46,8 @@ public class VmSimi {
     time = System.currentTimeMillis();
     System.out.println("Compiling...");
 
-    Compiler compiler = new Compiler(tokens);
-    Compiler.CompilerOutput co = compiler.compile();
+    Compiler compiler = new Compiler();
+    Compiler.CompilerOutput co = compiler.compile(tokens);
 
     System.out.println((System.currentTimeMillis() - time) + " ms");
     time = System.currentTimeMillis();

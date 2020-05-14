@@ -9,8 +9,10 @@ import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.*
 import java.util.*
 
-internal class Compiler(private val tokens: List<Token>) {
+internal class Compiler() {
     private lateinit var byteCode: MutableList<Byte>
+
+    private lateinit var tokens: List<Token>
     private var current = 0
 
     private val strTable = mutableMapOf<String, Int>()
@@ -24,9 +26,22 @@ internal class Compiler(private val tokens: List<Token>) {
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
 
-    fun compile(): CompilerOutput {
+    fun compile(tokens: List<Token>): CompilerOutput {
         byteCode = mutableListOf()
+        this.tokens = tokens
+        current = 0
         beginScope()
+        compileInternal()
+        endScope()
+        emitCode(HALT)
+        printChunks()
+        return CompilerOutput(byteCode.toByteArray(), strList)
+    }
+
+    /**
+     * Moved to a separate fun to be able to handle syntax sugar compilations such as when.
+     */
+    private fun compileInternal() {
         while (!isAtEnd()) {
 //            if (match(TokenType.IMPORT)) {
 //                val keyword: Token = previous()
@@ -41,10 +56,16 @@ internal class Compiler(private val tokens: List<Token>) {
             }
             declaration()
         }
-        endScope()
-        emitCode(HALT)
-        printChunks()
-        return CompilerOutput(byteCode.toByteArray(), strList)
+    }
+
+    private fun compileNested(tokens: List<Token>) {
+        val currentSave = current
+        current = 0
+        val tokensSave = this.tokens
+        this.tokens = tokens + Token.copying(tokens.last(), EOF)
+        compileInternal()
+        this.tokens = tokensSave
+        current = currentSave
     }
 
     private fun beginScope() {
@@ -82,11 +103,11 @@ internal class Compiler(private val tokens: List<Token>) {
             endScope()
         }
         else if (match(IF)) {
-            return ifSomething()
+            ifSomething()
         }
-//        if (match(TokenType.WHEN)) {
-//            return whenStmt()
-//        }
+        else if (match(WHEN)) {
+            whenSomething()
+        }
 //        if (match(TokenType.FOR)) {
 //            return forStatement()
 //        }
@@ -224,57 +245,70 @@ internal class Compiler(private val tokens: List<Token>) {
         }
         patchJump(elseJump)
     }
-//    private fun <T, E> whenSomething(ifProducer: IfProducer<T, E?>, elsifProducer: ElsifProducer<E>): T {
-//        val `when` = previous()
-//        val left: Expr = call()
-//        consume(LEFT_BRACE, "Expect a '{' after when.")
-//        consume(NEWLINE, "Expect a newline after when ':.")
-//        var firstElsif: E? = null
-//        val elsifs: MutableList<E?> = ArrayList()
-//        var elseBranch: Block? = null
-//        while (!check(RIGHT_BRACE) && !isAtEnd()) {
-//            if (match(NEWLINE)) {
-//                continue
-//            }
-//            val conditions: MutableList<Expr> = ArrayList()
-//            do {
-//                var op: Token
-//                if (match(IS, ISNOT, IN, NOTIN, IF)) {
-//                    op = previous()
-//                } else if (match(ELSE)) {
-//                    elseBranch = block(Parser.KIND_WHEN, true)
-//                    break
-//                } else {
-//                    op = Token(EQUAL_EQUAL, null, null, `when`.line, `when`.file)
-//                }
-//                val right: Expr = call()
-//                var condition: Expr
-//                condition = if (op.type == IF) {
-//                    right
-//                } else {
-//                    Binary(left, op, right)
-//                }
-//                conditions.add(condition)
-//                match(OR)
-//            } while (!check(LEFT_BRACE, COLON))
-//            if (conditions.isEmpty()) {
-//                continue
-//            }
-//            var condition = conditions[0]
-//            val or = Token(OR, null, null, `when`.line, `when`.file)
-//            for (i in 1 until conditions.size) {
-//                condition = Logical(condition, or, conditions[i])
-//            }
-//            val elsif = elsifProducer.go(condition, block(Parser.KIND_WHEN, true))
-//            if (firstElsif == null) {
-//                firstElsif = elsif
-//            } else {
-//                elsifs.add(elsif)
-//            }
-//        }
-//        consume(RIGHT_BRACE, "Expect } at the end of when.")
-//        return ifProducer.go(firstElsif, elsifs, elseBranch)
-//    }
+
+    /**
+     * Actually creates a list of tokens that represent if-else-ifs that are then compiled internally
+     */
+    private fun whenSomething() {
+        val origin = previous()
+        val id = consume(IDENTIFIER, "Expected an identifier after 'when'")
+        var first = true
+        var wroteElse = false
+        val whenTokens = mutableListOf<Token>()
+        consume(LEFT_BRACE, "Expect a '{' after when")
+        consume(NEWLINE, "Expect a newline after when '{'")
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            matchAllNewlines()
+            if (match(ELSE)) {
+                wroteElse = true
+                whenTokens += previous()
+                whenTokens += consumeNextBlock()
+            } else if (wroteElse) {
+                // We could just break when we encountered a break, but that's make for a lousy compiler
+                throw error(previous(), "'else' must be the last clause in a 'when' block")
+            } else {
+                var ifToken: Token? = null
+                do {
+                    val op = if (match(IS, ISNOT, IN, NOTIN, IF)) {
+                        previous()
+                    } else {
+                        Token.copying(origin, EQUAL_EQUAL)
+                    }
+
+                    // Emit the beginning of the statement if it hasn't been already
+                    if (ifToken == null) {
+                        ifToken = Token.copying(op, IF)
+                        if (first) {
+                            first = false
+                        } else {
+                            whenTokens += Token.copying(ifToken, ELSE)
+                        }
+                        whenTokens += ifToken!!
+                    }
+
+                    // If the op type is IF, we'll just evaluate what comes after it,
+                    // otherwise it's a check against the id.
+                    if (op.type != IF) {
+                        whenTokens += id
+                        whenTokens += op
+                    }
+
+                    // Consume the rest of the condition
+                    whenTokens += consumeUntilType(OR, LEFT_BRACE)
+
+                    // If we've found an or, we just take it as-is
+                    if (match(OR)) {
+                        whenTokens += previous()
+                    }
+                } while (!check(LEFT_BRACE))
+
+                // Consume the statement
+                whenTokens += consumeNextBlock()
+            }
+        }
+        consume(RIGHT_BRACE, "Expect '}' at the end of when")
+        compileNested(whenTokens)
+    }
 
     private fun printStatement() {
         expression()
@@ -698,6 +732,36 @@ internal class Compiler(private val tokens: List<Token>) {
         throw error(peek(), "Unterminated lambda expression!")
     }
 
+    private fun consumeNextBlock(): List<Token> {
+        val start = current
+        var braceCount = 0
+        var end = 0
+        loop@ for (i in start until tokens.size) {
+            when (tokens[i].type) {
+                LEFT_BRACE -> braceCount++
+                RIGHT_BRACE -> {
+                    braceCount--
+                    if (braceCount == 0) {
+                        end = i
+                        break@loop
+                    }
+                }
+            }
+        }
+        current = end + 1
+        val sublist = tokens.subList(start, current)
+        matchAllNewlines()
+        return sublist
+    }
+
+    private fun consumeUntilType(vararg types: TokenType): List<Token> {
+        val start = current
+        while (!check(*types)) {
+            current++
+        }
+        return tokens.subList(start, current)
+    }
+
     private fun matchAllNewlines() {
         while (match(NEWLINE)) {
         }
@@ -729,7 +793,7 @@ internal class Compiler(private val tokens: List<Token>) {
         return false
     }
 
-    private fun consume(type: TokenType, message: String): Token? {
+    private fun consume(type: TokenType, message: String): Token {
         if (check(type)) return advance()
         throw error(peek(), message)
     }
@@ -746,7 +810,7 @@ internal class Compiler(private val tokens: List<Token>) {
         return false
     }
 
-    private fun advance(): Token? {
+    private fun advance(): Token {
         if (!isAtEnd()) current++
         return previous()
     }

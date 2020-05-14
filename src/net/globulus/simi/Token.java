@@ -40,6 +40,10 @@ class Token {
     return new Token(TokenType.IDENTIFIER, name, null, 0, null);
   }
 
+  static Token copying(Token other, TokenType newType) {
+    return new Token(newType, other.lexeme, other.literal, other.line, other.file);
+  }
+
   @Override
   public String toString() {
     return type + " " + lexeme + " " + literal;

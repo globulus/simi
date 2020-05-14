@@ -20,8 +20,8 @@ internal class Vm {
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> throw RuntimeException("WTF")
                 CONST_STR -> push(input.strings[nextInt])
-                NIL -> throw RuntimeException("WTF")
-                POP -> pop()
+                NIL -> push(Nil)
+                POP -> sp--
                 SET_LOCAL -> stack[nextInt] = pop()
                 GET_LOCAL -> push(stack[nextInt]!!)
                 NEGATE -> negate()
@@ -44,6 +44,7 @@ internal class Vm {
 
     private fun isFalsey(o: Any): Boolean {
         return when (o) {
+            Nil -> true
             is Long -> o == 0L
             is Double -> o == 0.0
             else -> false
@@ -62,7 +63,7 @@ internal class Vm {
     private fun add() {
         val b = pop()
         val a = pop()
-        push (when (a) {
+        push(when (a) {
             is String -> a + b
             else -> binaryOp(ADD, a, b)
         })
@@ -75,6 +76,9 @@ internal class Vm {
     }
 
     private fun binaryOp(opCode: OpCode, a: Any, b: Any): Any {
+        if (a == Nil || b == Nil) {
+            return Nil
+        }
         return if (a is Long && b is Long) {
             binaryOpTwoLongs(opCode, a, b)
         } else {
@@ -176,6 +180,8 @@ internal class Vm {
     private val nextInt: Int get() = buffer.int
     private val nextLong: Long get() = buffer.long
     private val nextDouble: Double get() = buffer.double
+
+    object Nil
 
     companion object {
         private const val INITIAL_STACK_SIZE = 1024
