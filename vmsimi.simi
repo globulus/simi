@@ -4,10 +4,10 @@ a $= b - 4 / (2 + 2 * 2)
 b /= 2
 print "a is \(a)"
 print "b is \(b)"
-if a == 3 {
-    print "a is 3"
+if a < 2 or a > 5 {
+    print "a"
 } else if b == 4 {
-    print "b is 4"
+    print "b"
 } else {
     print "both are false"
 }

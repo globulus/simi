@@ -1,6 +1,10 @@
 package net.globulus.simi
 
+import net.globulus.simi.Compiler.OpCode.*
 import net.globulus.simi.TokenType.*
+import net.globulus.simi.TokenType.MOD
+import net.globulus.simi.TokenType.NIL
+import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.*
 import java.util.*
@@ -39,18 +43,18 @@ internal class Compiler(private val tokens: List<Token>) {
             declaration()
         }
         endScope()
-        emitCode(OpCode.HALT)
+        emitCode(HALT)
         printChunks()
         return CompilerOutput(byteCode.toByteArray(), strList)
     }
 
     private fun beginScope() {
-        emitCode(OpCode.PUSH_SCOPE)
+        emitCode(PUSH_SCOPE)
         scopeDepth++
     }
 
     private fun endScope() {
-        emitCode(OpCode.POP_SCOPE)
+        emitCode(POP_SCOPE)
         scopeDepth--
     }
 
@@ -211,12 +215,12 @@ internal class Compiler(private val tokens: List<Token>) {
 
     private fun ifSomething() {
         expression()
-        val ifChunk = emitJump(OpCode.JUMP_IF_FALSE)
-        emitCode(OpCode.POP)
+        val ifChunk = emitJump(JUMP_IF_FALSE)
+        emitCode(POP)
         statement(true)
-        val elseJump = emitJump(OpCode.JUMP)
+        val elseJump = emitJump(JUMP)
         patchJump(ifChunk)
-        emitCode(OpCode.POP)
+        emitCode(POP)
         if (match(ELSE)) {
             statement(true)
         }
@@ -304,11 +308,11 @@ internal class Compiler(private val tokens: List<Token>) {
     private fun whileStatement() {
         val start = byteCode.size
         expression()
-        val skipChunk = emitJump(OpCode.JUMP_IF_FALSE)
+        val skipChunk = emitJump(JUMP_IF_FALSE)
         statement(true)
-        emitJump(OpCode.JUMP, start)
+        emitJump(JUMP, start)
         patchJump(skipChunk)
-        emitCode(OpCode.POP)
+        emitCode(POP)
     }
 //
 //    private fun breakStatement(): Stmt? {
@@ -351,14 +355,14 @@ internal class Compiler(private val tokens: List<Token>) {
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous()
             if (equals.type == EQUAL) {
-                if (lastChunk?.opCode != OpCode.CONST_ID) {
+                if (lastChunk?.opCode != CONST_ID) {
                     throw error(equals, "Expected an ID for var declaration!")
                 }
                 declareLocal(lastChunk!!.data[1] as String)
                 rollBackLastChunk()
                 or() // push the value on the stack
             } else {
-                if (lastChunk?.opCode != OpCode.GET_LOCAL) {
+                if (lastChunk?.opCode != GET_LOCAL) {
                     throw error(equals, "Assigning to undeclared var!")
                 }
                 val local = lastChunk!!.data[0] as Local
@@ -368,11 +372,11 @@ internal class Compiler(private val tokens: List<Token>) {
                 or() // right-hand side
                 if (equals.type != DOLLAR_EQUAL) {
                     emitCode(when (equals.type) {
-                        PLUS_EQUAL -> OpCode.ADD
-                        MINUS_EQUAL -> OpCode.SUBTRACT
-                        STAR_EQUAL -> OpCode.MULTIPLY
-                        SLASH_EQUAL -> OpCode.DIVIDE
-                        SLASH_SLASH_EQUAL -> OpCode.DIVIDE_INT
+                        PLUS_EQUAL -> ADD
+                        MINUS_EQUAL -> SUBTRACT
+                        STAR_EQUAL -> MULTIPLY
+                        SLASH_EQUAL -> DIVIDE
+                        SLASH_SLASH_EQUAL -> DIVIDE_INT
                         MOD_EQUAL -> OpCode.MOD
                         else -> throw IllegalArgumentException("WTF")
                         // TODO extend
@@ -396,23 +400,25 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun or() {
-        var expr = and()
-//        while (match(OR)) {
-//            val operator = previous()
-//            val right = and()
-//            expr = Logical(expr, operator, right)
-//        }
-//        return expr
+        and()
+        while (match(OR)) {
+            val elseChunk = emitJump(JUMP_IF_FALSE)
+            val endChunk = emitJump(JUMP)
+            patchJump(elseChunk)
+            emitCode(POP)
+            and()
+            patchJump(endChunk)
+        }
     }
 
     private fun and() {
-        var expr = equality()
-//        while (match(AND)) {
-//            val operator = previous()
-//            val right = equality()
-//            expr = Logical(expr, operator, right)
-//        }
-//        return expr
+        equality()
+        while (match(AND)) {
+            val endChunk = emitJump(JUMP_IF_FALSE)
+            emitCode(POP)
+            and()
+            patchJump(endChunk)
+        }
     }
 
     private fun equality() {
@@ -421,8 +427,8 @@ internal class Compiler(private val tokens: List<Token>) {
             val operator = previous()
             comparison()
             emitCode(when (operator.type) {
-                EQUAL_EQUAL -> OpCode.EQ
-                BANG_EQUAL -> OpCode.NE
+                EQUAL_EQUAL -> EQ
+                BANG_EQUAL -> NE
                 else -> throw IllegalArgumentException("WTF")
             })
             sp--
@@ -435,10 +441,10 @@ internal class Compiler(private val tokens: List<Token>) {
             val operator = previous()
             addition()
             emitCode(when (operator.type) {
-                GREATER -> OpCode.GT
-                GREATER_EQUAL -> OpCode.GE
-                LESS -> OpCode.LT
-                LESS_EQUAL -> OpCode.LE
+                GREATER -> GT
+                GREATER_EQUAL -> GE
+                LESS -> LT
+                LESS_EQUAL -> LE
                 else -> throw IllegalArgumentException("WTF")
             })
             sp--
@@ -450,7 +456,7 @@ internal class Compiler(private val tokens: List<Token>) {
         while (match(MINUS, PLUS)) {
             val operator = previous()
             multiplication()
-            emitCode(if (operator.type == PLUS) OpCode.ADD else OpCode.SUBTRACT)
+            emitCode(if (operator.type == PLUS) ADD else SUBTRACT)
             sp--
         }
     }
@@ -461,9 +467,9 @@ internal class Compiler(private val tokens: List<Token>) {
             val operator = previous()
             nilCoalescence()
             emitCode(when (operator.type) {
-                SLASH -> OpCode.DIVIDE
-                SLASH_SLASH -> OpCode.DIVIDE_INT
-                STAR -> OpCode.MULTIPLY
+                SLASH -> DIVIDE
+                SLASH_SLASH -> DIVIDE_INT
+                STAR -> MULTIPLY
                 MOD -> OpCode.MOD
                 else -> throw IllegalArgumentException("WTF")
             })
@@ -486,7 +492,7 @@ internal class Compiler(private val tokens: List<Token>) {
             val operator = previous()
 //            val right = unary()
             unary()
-            emitCode(OpCode.NEGATE)
+            emitCode(NEGATE)
         }
 //        if (match(GU)) {
 //            return Gu(unary())
@@ -780,7 +786,7 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun emitInt(i: Long) {
-        val opCode = OpCode.CONST_INT
+        val opCode = CONST_INT
         var size = byteCode.put(opCode)
         size += byteCode.putLong(i)
         pushLastChunk(Chunk(opCode, size, i))
@@ -788,7 +794,7 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun emitFloat(f: Double) {
-        val opCode = OpCode.CONST_FLOAT
+        val opCode = CONST_FLOAT
         var size = byteCode.put(opCode)
         size += byteCode.putDouble(f)
         pushLastChunk(Chunk(opCode, size, f))
@@ -796,11 +802,11 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun emitId(id: String) {
-        emitIdOrString(OpCode.CONST_ID, id)
+        emitIdOrString(CONST_ID, id)
     }
 
     private fun emitString(string: String) {
-        emitIdOrString(OpCode.CONST_STR, string)
+        emitIdOrString(CONST_STR, string)
     }
 
     private fun emitIdOrString(opCode: OpCode, s: String) {
@@ -811,7 +817,7 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun emitGetLocal(local: Local) {
-        val opCode = OpCode.GET_LOCAL
+        val opCode = GET_LOCAL
         var size = byteCode.put(opCode)
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
@@ -819,7 +825,7 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun emitSetLocal(local: Local) {
-        val opCode = OpCode.SET_LOCAL
+        val opCode = SET_LOCAL
         var size = byteCode.put(opCode)
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
