@@ -275,8 +275,6 @@ internal class Compiler(private val tokens: List<Token>) {
 //    }
 
     private fun printStatement(lambda: Boolean) {
-//        val value: Expr = expressionStatement(lambda).expression
-//        return Stmt.Print(value)
         expressionStatement(lambda)
         emitCode(OpCode.PRINT)
         sp--
@@ -418,40 +416,47 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun equality() {
-        var expr = comparison()
-//        while (match(BANG_EQUAL, EQUAL_EQUAL, IS, ISNOT, IN, NOTIN)) {
-//            val operator = previous()
-//            val right = comparison()
-//            expr = Binary(expr, operator, right)
-//        }
-//        return expr
+        comparison()
+        while (match(BANG_EQUAL, EQUAL_EQUAL/*, IS, ISNOT, IN, NOTIN*/)) {
+            val operator = previous()
+            comparison()
+            emitCode(when (operator.type) {
+                EQUAL_EQUAL -> OpCode.EQ
+                BANG_EQUAL -> OpCode.NE
+                else -> throw IllegalArgumentException("WTF")
+            })
+            sp--
+        }
     }
 
     private fun comparison() {
-        var expr = addition()
-//        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, LESS_GREATER)) {
-//            val operator = previous()
-//            val right = addition()
-//            expr = Binary(expr, operator, right)
-//        }
-//        return expr
+        addition()
+        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL/*, LESS_GREATER*/)) {
+            val operator = previous()
+            addition()
+            emitCode(when (operator.type) {
+                GREATER -> OpCode.GT
+                GREATER_EQUAL -> OpCode.GE
+                LESS -> OpCode.LT
+                LESS_EQUAL -> OpCode.LE
+                else -> throw IllegalArgumentException("WTF")
+            })
+            sp--
+        }
     }
 
     private fun addition() {
-        var expr = multiplication()
+        multiplication()
         while (match(MINUS, PLUS)) {
             val operator = previous()
             multiplication()
             emitCode(if (operator.type == PLUS) OpCode.ADD else OpCode.SUBTRACT)
             sp--
-//            val right = multiplication()
-//            expr = Binary(expr, operator, right)
         }
-//        return expr
     }
 
     private fun multiplication() {
-        var expr = nilCoalescence()
+        nilCoalescence()
         while (match(SLASH, SLASH_SLASH, STAR, MOD)) {
             val operator = previous()
             nilCoalescence()
@@ -463,10 +468,7 @@ internal class Compiler(private val tokens: List<Token>) {
                 else -> throw IllegalArgumentException("WTF")
             })
             sp--
-//            val right = nilCoalescence()
-//            expr = Expr.Binary(expr, operator, right)
         }
-//        return expr
     }
 
     private fun nilCoalescence() {
@@ -481,18 +483,20 @@ internal class Compiler(private val tokens: List<Token>) {
 
     private fun unary() {
         if (match(NOT, MINUS, BANG_BANG)) {
-//            val operator = previous()
+            val operator = previous()
 //            val right = unary()
             unary()
             emitCode(OpCode.NEGATE)
-//            return Unary(operator, right)
         }
 //        if (match(GU)) {
 //            return Gu(unary())
 //        }
         /*return if (match(IVIC)) {
             Ivic(unary())
-        } else*/ call()
+        } */
+        else {
+            call()
+        }
     }
 
     private fun call() {
@@ -903,6 +907,12 @@ internal class Compiler(private val tokens: List<Token>) {
         POP_SCOPE,
         SET_LOCAL,
         GET_LOCAL,
+        LT,
+        LE,
+        GT,
+        GE,
+        EQ,
+        NE,
         NEGATE,
         ADD,
         SUBTRACT,

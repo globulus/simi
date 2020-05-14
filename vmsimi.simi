@@ -4,15 +4,15 @@ a $= b - 4 / (2 + 2 * 2)
 b /= 2
 print "a is \(a)"
 print "b is \(b)"
-if 0 {
-    print "a is true"
-} else if 0 {
-    print "b is true"
+if a == 3 {
+    print "a is 3"
+} else if b == 4 {
+    print "b is 4"
 } else {
     print "both are false"
 }
 a $= 3
-while a {
+while a > 1 {
     print "a is \(a)"
     a -= 1
 }
