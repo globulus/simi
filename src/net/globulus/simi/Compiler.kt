@@ -17,10 +17,9 @@ internal class Compiler(private val tokens: List<Token>) {
     private val strList = mutableListOf<String>()
     private var strCount = 0
 
-    private var sp = 0
-    private val blocksStarts = mutableListOf<Int>()
     private val locals = mutableListOf<Local>()
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
+    private val loops = Stack<ActiveLoop>()
 
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
@@ -49,12 +48,11 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun beginScope() {
-        emitCode(PUSH_SCOPE)
         scopeDepth++
     }
 
     private fun endScope() {
-        emitCode(POP_SCOPE)
+        discardLocals(scopeDepth)
         scopeDepth--
     }
 
@@ -93,7 +91,7 @@ internal class Compiler(private val tokens: List<Token>) {
 //            return forStatement()
 //        }
         else if (match(PRINT)) {
-            printStatement(lambda)
+            printStatement()
         }
 //        if (match(TokenType.RETURN)) {
 //            return returnStatement(lambda)
@@ -101,12 +99,12 @@ internal class Compiler(private val tokens: List<Token>) {
         else if (match(WHILE)) {
             whileStatement()
         }
-//        if (match(TokenType.BREAK)) {
-//            return breakStatement()
-//        }
-//        if (match(TokenType.CONTINUE)) {
-//            return continueStatement()
-//        }
+        else if (match(BREAK)) {
+            breakStatement()
+        }
+        else if (match(CONTINUE)) {
+            continueStatement()
+        }
 //        if (match(TokenType.RESCUE)) {
 //            return rescueStatement()
 //        }
@@ -278,10 +276,9 @@ internal class Compiler(private val tokens: List<Token>) {
 //        return ifProducer.go(firstElsif, elsifs, elseBranch)
 //    }
 
-    private fun printStatement(lambda: Boolean) {
-        expressionStatement(lambda)
+    private fun printStatement() {
+        expression()
         emitCode(OpCode.PRINT)
-        sp--
     }
 
 //    private fun returnStatement(lambda: Boolean): Stmt? {
@@ -307,24 +304,46 @@ internal class Compiler(private val tokens: List<Token>) {
 
     private fun whileStatement() {
         val start = byteCode.size
+        loops.push(ActiveLoop(start, scopeDepth))
         expression()
         val skipChunk = emitJump(JUMP_IF_FALSE)
+        emitCode(POP)
         statement(true)
         emitJump(JUMP, start)
-        patchJump(skipChunk)
+        val end = patchJump(skipChunk)
+        val breaksToPatch = loops.pop().breakPositions
+        for (pos in breaksToPatch) {
+            // Set to jump 1 after end to skip the final POP as it already happened in the loop body
+            byteCode.setInt(end + 1, pos)
+        }
         emitCode(POP)
     }
-//
-//    private fun breakStatement(): Stmt? {
-//        val name = previous()
-//        return Break(name)
-//    }
-//
-//    private fun continueStatement(): Stmt? {
-//        val name = previous()
-//        return Continue(name)
-//    }
-//
+
+    private fun breakStatement() {
+        if (loops.isEmpty()) {
+            throw error(previous(), "Cannot 'break' outside of a loop!")
+        }
+        val activeLoop = loops.peek()
+        // Discards scopes up to the loop level (hence + 1)
+        for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
+            discardLocals(depth)
+        }
+        val chunk = emitJump(JUMP)
+        activeLoop.breakPositions += chunk.data[0] as Int
+    }
+
+    private fun continueStatement() {
+        if (loops.isEmpty()) {
+            throw error(previous(), "Cannot 'continue' outside of a loop!")
+        }
+        val activeLoop = loops.peek()
+        // Discards scopes up to the level of loop statement (hence + 2)
+        for (depth in scopeDepth downTo (activeLoop.depth + 2)) {
+            discardLocals(depth)
+        }
+        emitJump(JUMP, loops.peek().start)
+    }
+
 //    private fun rescueStatement(): Stmt? {
 //        val keyword = previous()
 //        val block: Block = block("rescue", true)
@@ -335,7 +354,10 @@ internal class Compiler(private val tokens: List<Token>) {
 //    }
 
     private fun expressionStatement(lambda: Boolean) {
-       /* val expr: Expr = */expression()
+        val shouldPop = expression()
+        if (shouldPop) {
+            emitCode(POP)
+        }
 //        if (!(expr is Assign && expr.value is Expr.Block)
 //                && !(expr is Expr.Set && expr.value is Expr.Block)) {
 //            // If the left-hand side is an assign or set and right-hand side is a block, then we've already consumed the
@@ -345,11 +367,11 @@ internal class Compiler(private val tokens: List<Token>) {
 //        return Stmt.Expression(expr)
     }
 
-    private fun expression() {
-        assignment()
+    private fun expression(): Boolean {
+        return assignment()
     }
 
-    private fun assignment() {
+    private fun assignment(): Boolean {
         or() // left-hand side
         if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
@@ -395,7 +417,9 @@ internal class Compiler(private val tokens: List<Token>) {
 //            }
             /*val value = assignment()*/
 //            return Parser.getAssignExpr(this, expr, equals, value)
+            return false
         }
+        return true
 //        return expr
     }
 
@@ -431,7 +455,6 @@ internal class Compiler(private val tokens: List<Token>) {
                 BANG_EQUAL -> NE
                 else -> throw IllegalArgumentException("WTF")
             })
-            sp--
         }
     }
 
@@ -447,7 +470,6 @@ internal class Compiler(private val tokens: List<Token>) {
                 LESS_EQUAL -> LE
                 else -> throw IllegalArgumentException("WTF")
             })
-            sp--
         }
     }
 
@@ -457,7 +479,6 @@ internal class Compiler(private val tokens: List<Token>) {
             val operator = previous()
             multiplication()
             emitCode(if (operator.type == PLUS) ADD else SUBTRACT)
-            sp--
         }
     }
 
@@ -473,7 +494,6 @@ internal class Compiler(private val tokens: List<Token>) {
                 MOD -> OpCode.MOD
                 else -> throw IllegalArgumentException("WTF")
             })
-            sp--
         }
     }
 
@@ -764,7 +784,7 @@ internal class Compiler(private val tokens: List<Token>) {
     private fun rollBackLastChunk() {
         rollBack(lastChunk!!.size)
         chunks.pop()
-        lastChunk = chunks.last
+        lastChunk = if (chunks.isEmpty()) null else chunks.last
     }
 
     private fun error(token: Token, message: String): ParseError {
@@ -790,7 +810,6 @@ internal class Compiler(private val tokens: List<Token>) {
         var size = byteCode.put(opCode)
         size += byteCode.putLong(i)
         pushLastChunk(Chunk(opCode, size, i))
-        sp++
     }
 
     private fun emitFloat(f: Double) {
@@ -798,7 +817,6 @@ internal class Compiler(private val tokens: List<Token>) {
         var size = byteCode.put(opCode)
         size += byteCode.putDouble(f)
         pushLastChunk(Chunk(opCode, size, f))
-        sp++
     }
 
     private fun emitId(id: String) {
@@ -821,7 +839,6 @@ internal class Compiler(private val tokens: List<Token>) {
         var size = byteCode.put(opCode)
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
-        sp++
     }
 
     private fun emitSetLocal(local: Local) {
@@ -846,11 +863,12 @@ internal class Compiler(private val tokens: List<Token>) {
 //        chunk.size = size
     }
 
-    private fun patchJump(chunk: Chunk) {
+    private fun patchJump(chunk: Chunk): Int {
         val offset = chunk.data[0] as Int
         val skip = byteCode.size
         byteCode.setInt(skip, offset)
         chunk.size += skip - offset
+        return skip
     }
 
     private fun pushLastChunk(chunk: Chunk) {
@@ -859,7 +877,8 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private fun declareLocal(name: String): Local {
-        for (i in locals.size - 1 downTo 0) {
+        val end = locals.size
+        for (i in end - 1 downTo 0) {
             val local = locals[i]
             if (local.depth < scopeDepth) {
                 break
@@ -868,7 +887,7 @@ internal class Compiler(private val tokens: List<Token>) {
                 throw error(previous(), "Variable $name is already declared in scope!")
             }
         }
-        val l = Local(name, sp, scopeDepth)
+        val l = Local(name, end, scopeDepth)
         locals += l
         return l
     }
@@ -883,6 +902,15 @@ internal class Compiler(private val tokens: List<Token>) {
         return null
     }
 
+    private fun discardLocals(depth: Int) {
+        var i = locals.size - 1
+        while (i >= 0 && locals[i].depth == depth) {
+            locals.removeAt(i)
+            i--
+            emitCode(POP)
+        }
+    }
+
     private fun printChunks() {
         while (chunks.isNotEmpty()) {
             println(chunks.last)
@@ -891,6 +919,10 @@ internal class Compiler(private val tokens: List<Token>) {
     }
 
     private data class Local(val name: String, val sp: Int, val depth: Int)
+
+    private data class ActiveLoop(val start: Int, val depth: Int) {
+        val breakPositions = mutableListOf<Int>()
+    }
 
     private class Chunk(val opCode: OpCode,
                         var size: Int,
@@ -909,8 +941,6 @@ internal class Compiler(private val tokens: List<Token>) {
         CONST_STR,
         NIL,
         POP,
-        PUSH_SCOPE,
-        POP_SCOPE,
         SET_LOCAL,
         GET_LOCAL,
         LT,

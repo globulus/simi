@@ -3,7 +3,6 @@ package net.globulus.simi
 import net.globulus.simi.Compiler.OpCode
 import net.globulus.simi.Compiler.OpCode.*
 import java.nio.ByteBuffer
-import java.util.*
 import kotlin.math.round
 
 internal class Vm {
@@ -11,7 +10,6 @@ internal class Vm {
     private var sp = 0
     private var stackSize = INITIAL_STACK_SIZE
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
-    private var scopeStarts = Stack<Int>() // At which point in the stack does a certain scope depth start
 
     fun interpret(input: Compiler.CompilerOutput) {
         buffer = ByteBuffer.wrap(input.byteCode)
@@ -24,8 +22,6 @@ internal class Vm {
                 CONST_STR -> push(input.strings[nextInt])
                 NIL -> throw RuntimeException("WTF")
                 POP -> pop()
-                PUSH_SCOPE -> scopeStarts.push(sp)
-                POP_SCOPE -> sp = scopeStarts.pop()
                 SET_LOCAL -> stack[nextInt] = pop()
                 GET_LOCAL -> push(stack[nextInt]!!)
                 NEGATE -> negate()
