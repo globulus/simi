@@ -11,3 +11,8 @@ if 0 {
 } else {
     print "both are false"
 }
+a $= 3
+while a {
+    print "a is \(a)"
+    a -= 1
+}

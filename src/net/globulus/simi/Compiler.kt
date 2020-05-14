@@ -94,9 +94,9 @@ internal class Compiler(private val tokens: List<Token>) {
 //        if (match(TokenType.RETURN)) {
 //            return returnStatement(lambda)
 //        }
-//        if (match(TokenType.WHILE)) {
-//            return whileStatement()
-//        }
+        else if (match(WHILE)) {
+            whileStatement()
+        }
 //        if (match(TokenType.BREAK)) {
 //            return breakStatement()
 //        }
@@ -208,23 +208,6 @@ internal class Compiler(private val tokens: List<Token>) {
 //        val body: Block = block("for", true, prependedStmts)
 //        return For(varExpr, iterable, body)
 //    }
-//
-//    private fun ifStmt(): Stmt? {
-//        return ifSomething(IfProducer { ifstmt: Stmt.Elsif?, elsifs: List<Stmt.Elsif?>?, elseBranch: Block? -> Stmt.If(ifstmt, elsifs, elseBranch) }, ElsifProducer { condition: Expr?, thenBranch: Block? -> Stmt.Elsif(condition, thenBranch) })
-//    }
-//
-//    private fun whenStmt(): Stmt? {
-//        return whenSomething(IfProducer { ifstmt: Stmt.Elsif?, elsifs: List<Stmt.Elsif?>?, elseBranch: Block? -> Stmt.If(ifstmt, elsifs, elseBranch) }, ElsifProducer { condition: Expr?, thenBranch: Block? -> Stmt.Elsif(condition, thenBranch) })
-//    }
-//
-//    private fun ifExpr(): Expr? {
-//        return ifSomething(IfProducer { ifstmt: Expr.Elsif?, elsifs: List<Expr.Elsif?>?, elseBranch: Block? -> Expr.If(ifstmt, elsifs, elseBranch) }, ElsifProducer { condition: Expr?, thenBranch: Block? -> Expr.Elsif(condition, thenBranch) })
-//    }
-//
-//    private fun whenExpr(): Expr? {
-//        return whenSomething(IfProducer { ifstmt: Expr.Elsif?, elsifs: List<Expr.Elsif?>?, elseBranch: Block? -> Expr.If(ifstmt, elsifs, elseBranch) }, ElsifProducer { condition: Expr?, thenBranch: Block? -> Expr.Elsif(condition, thenBranch) })
-//    }
-
 
     private fun ifSomething() {
         expression()
@@ -239,24 +222,6 @@ internal class Compiler(private val tokens: List<Token>) {
         }
         patchJump(elseJump)
     }
-
-//
-//    private fun <T, E> ifSomething(ifProducer: IfProducer<T, E>, elsifProducer: ElsifProducer<E>): T {
-//        val condition: Expr = expression()
-//        val thenBranch: Block = block("if", true)
-//        var elseBranch: Block? = null
-//        val elsifs: MutableList<E> = ArrayList()
-//        while (match(ELSIF, NEWLINE)) {
-//            if (previous().type == ELSIF) {
-//                elsifs.add(elsifProducer.go(expression(), block("elsif", true)))
-//            }
-//        }
-//        if (match(ELSE)) {
-//            elseBranch = block("else", true)
-//        }
-//        return ifProducer.go(elsifProducer.go(condition, thenBranch), elsifs, elseBranch)
-//    }
-//
 //    private fun <T, E> whenSomething(ifProducer: IfProducer<T, E?>, elsifProducer: ElsifProducer<E>): T {
 //        val `when` = previous()
 //        val left: Expr = call()
@@ -338,11 +303,15 @@ internal class Compiler(private val tokens: List<Token>) {
 //    }
 //
 
-//    private fun whileStatement(): Stmt? {
-//        val condition: Expr = expression()
-//        val block: Block = block("while", true)
-//        return While(condition, block)
-//    }
+    private fun whileStatement() {
+        val start = byteCode.size
+        expression()
+        val skipChunk = emitJump(OpCode.JUMP_IF_FALSE)
+        statement(true)
+        emitJump(OpCode.JUMP, start)
+        patchJump(skipChunk)
+        emitCode(OpCode.POP)
+    }
 //
 //    private fun breakStatement(): Stmt? {
 //        val name = previous()
@@ -852,10 +821,10 @@ internal class Compiler(private val tokens: List<Token>) {
         pushLastChunk(Chunk(opCode, size, local))
     }
 
-    private fun emitJump(opCode: OpCode): Chunk {
+    private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
         var size = byteCode.put(opCode)
         val offset = byteCode.size
-        size += byteCode.putInt(0)
+        size += byteCode.putInt(location ?: 0)
         val chunk = Chunk(opCode, size, offset)
         pushLastChunk(chunk)
         return chunk
