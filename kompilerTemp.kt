@@ -83,6 +83,12 @@ println(pop())
 push(stack[0]!!)
 push(2L)
 binaryOpOnStack(OpCode.LT)
+if (isFalsey(peek())) {
+sp--
+push(stack[0]!!)
+push(10L)
+binaryOpOnStack(OpCode.LT)
+}
 if (!isFalsey(peek())) {
 sp--
 push("a")
@@ -160,6 +166,40 @@ add()
 push("")
 add()
 println(pop())
+push("when test 2 == ")
+println(pop())
+push(3L)
+stack[0] = pop()
+push(stack[0]!!)
+push(2L)
+checkEquality(OpCode.EQ)
+if (!isFalsey(peek())) {
+sp--
+push("2")
+println(pop())
+}
+ else {
+sp--
+push(stack[0]!!)
+push(3L)
+checkEquality(OpCode.EQ)
+if (isFalsey(peek())) {
+sp--
+push(stack[0]!!)
+push(4L)
+checkEquality(OpCode.EQ)
+}
+if (!isFalsey(peek())) {
+sp--
+push("3 or 4")
+println(pop())
+}
+ else {
+sp--
+push("else")
+println(pop())
+}
+}
 sp--
 sp--
 

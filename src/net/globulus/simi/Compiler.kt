@@ -474,7 +474,7 @@ internal class Compiler() {
         while (match(AND)) {
             val endChunk = emitJump(JUMP_IF_FALSE)
             emitCode(POP)
-            and()
+            equality()
             patchJump(endChunk)
         }
     }

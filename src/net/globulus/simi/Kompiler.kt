@@ -43,7 +43,8 @@ internal class Kompiler {
                 OpCode.SUBTRACT, OpCode.MULTIPLY, OpCode.DIVIDE, OpCode.DIVIDE_INT, OpCode.MOD, OpCode.LE, OpCode.LT, OpCode.GE, OpCode.GT -> "binaryOpOnStack(OpCode.${chunk.opCode})"
                 OpCode.EQ, OpCode.NE -> "checkEquality(OpCode.${chunk.opCode})"
                 OpCode.PRINT -> "println(pop())"
-                OpCode.IFOP -> "if (!isFalsey(peek())) {"
+                OpCode.IF_TRUE -> "if (!isFalsey(peek())) {"
+                OpCode.IF_FALSE -> "if (isFalsey(peek())) {"
                 OpCode.ELSEOP -> " else {"
                 WHILEOP -> "while(true) {"
                 BREAKOP -> "break"
@@ -259,7 +260,7 @@ internal class Kompiler {
 
     private fun ifSomething() {
         expression()
-        emitCode(OpCode.IFOP)
+        emitCode(OpCode.IF_TRUE)
         emitCode(POP)
         statement(true)
         emitCode(END)
@@ -269,16 +270,6 @@ internal class Kompiler {
             statement(true)
         }
         emitCode(END)
-//        val ifChunk = emitJump(JUMP_IF_FALSE)
-//        emitCode(POP)
-//        statement(true)
-//        val elseJump = emitJump(JUMP)
-//        patchJump(ifChunk)
-//        emitCode(POP)
-//        if (match(ELSE)) {
-//            statement(true)
-//        }
-//        patchJump(elseJump)
     }
 
     /**
@@ -375,7 +366,7 @@ internal class Kompiler {
         loops.push(ActiveLoop(0, scopeDepth))
         emitCode(WHILEOP)
         expression()
-        emitCode(IFOP)
+        emitCode(IF_TRUE)
         emitCode(POP)
         statement(true)
         emitCode(END)
@@ -385,20 +376,6 @@ internal class Kompiler {
         emitCode(END)
         emitCode(END)
         loops.pop()
-//        val start = byteCode.size
-//        loops.push(ActiveLoop(start, scopeDepth))
-//        expression()
-//        val skipChunk = emitJump(JUMP_IF_FALSE)
-//        emitCode(POP)
-//        statement(true)
-//        emitJump(JUMP, start)
-//        val end = patchJump(skipChunk)
-//        val breaksToPatch = loops.pop().breakPositions
-//        for (pos in breaksToPatch) {
-//            // Set to jump 1 after end to skip the final POP as it already happened in the loop body
-//            byteCode.setInt(end + 1, pos)
-//        }
-//        emitCode(POP)
     }
 
     private fun breakStatement() {
@@ -411,8 +388,6 @@ internal class Kompiler {
             discardLocals(depth)
         }
         emitCode(BREAKOP)
-//        val chunk = emitJump(JUMP)
-//        activeLoop.breakPositions += chunk.data[0] as Int
     }
 
     private fun continueStatement() {
@@ -425,7 +400,6 @@ internal class Kompiler {
             discardLocals(depth)
         }
         emitCode(CONTINUEOP)
-//        emitJump(JUMP, loops.peek().start)
     }
 
 //    private fun rescueStatement(): Stmt? {
@@ -509,24 +483,28 @@ internal class Kompiler {
 
     private fun or() {
         and()
-//        while (match(OR)) {
+        while (match(OR)) {
+            emitCode(IF_FALSE)
+            emitCode(POP)
+            and()
+            emitCode(END)
 //            val elseChunk = emitJump(JUMP_IF_FALSE)
 //            val endChunk = emitJump(JUMP)
 //            patchJump(elseChunk)
 //            emitCode(POP)
 //            and()
 //            patchJump(endChunk)
-//        }
+        }
     }
 
     private fun and() {
         equality()
-//        while (match(AND)) {
-//            val endChunk = emitJump(JUMP_IF_FALSE)
-//            emitCode(POP)
-//            and()
-//            patchJump(endChunk)
-//        }
+        while (match(AND)) {
+            emitCode(IF_TRUE)
+            emitCode(POP)
+            equality()
+            emitCode(END)
+        }
     }
 
     private fun equality() {
@@ -1048,7 +1026,8 @@ internal class Kompiler {
         PRINT,
         JUMP,
         JUMP_IF_FALSE,
-        IFOP,
+        IF_TRUE,
+        IF_FALSE,
         ELSEOP,
         WHILEOP,
         BREAKOP,
