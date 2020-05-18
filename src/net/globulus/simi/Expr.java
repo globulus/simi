@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-abstract class Expr implements Codifiable {
+public abstract class Expr implements Codifiable {
 
   abstract <R> R accept(Visitor<R> visitor, Object... params);
 

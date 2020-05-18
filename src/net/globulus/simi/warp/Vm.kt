@@ -1,29 +1,36 @@
-package net.globulus.simi
+package net.globulus.simi.warp
 
-import net.globulus.simi.Compiler.OpCode
-import net.globulus.simi.Compiler.OpCode.*
+import net.globulus.simi.warp.OpCode.*
 import java.nio.ByteBuffer
 import kotlin.math.round
 
 internal class Vm {
-    private lateinit var buffer: ByteBuffer
     private var sp = 0
     private var stackSize = INITIAL_STACK_SIZE
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
-    fun interpret(input: Compiler.CompilerOutput) {
-        buffer = ByteBuffer.wrap(input.byteCode)
+    private var fp = 0
+    private lateinit var frame: CallFrame
+    private val callFrames = mutableListOf<CallFrame>()
+
+    fun interpret(input: Function) {
+        push(input)
+        call(input)
+        printStack()
+    }
+
+    private fun run() {
         loop@ while (true) {
             val code = nextCode
             when (code) {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> throw RuntimeException("WTF")
-                CONST_STR -> push(input.strings[nextInt])
+                CONST -> push(frame.function.constants[nextInt])
                 NIL -> push(Nil)
                 POP -> sp--
-                SET_LOCAL -> stack[nextInt] = pop()
-                GET_LOCAL -> push(stack[nextInt]!!)
+                SET_LOCAL -> stack[frame.sp + nextInt] = pop()
+                GET_LOCAL -> push(stack[frame.sp + nextInt]!!)
                 NEGATE -> negate()
                 ADD -> add()
                 SUBTRACT, MULTIPLY, DIVIDE, DIVIDE_INT, MOD, LE, LT, GE, GT -> binaryOpOnStack(code)
@@ -36,10 +43,10 @@ internal class Vm {
                         buffer.position(offset)
                     }
                 }
-                HALT -> break@loop
+                CALL -> call(pop())
+                RETURN, HALT -> break@loop
             }
         }
-        printStack()
     }
 
     private fun isFalsey(o: Any): Boolean {
@@ -142,6 +149,18 @@ internal class Vm {
         return a == b
     }
 
+    private fun call(callee: Any) {
+        if (callee !is Function) {
+            throw RuntimeException("Callee is not a func!")
+        }
+        callFrames += CallFrame(callee, sp - 1).apply {
+            frame = this
+        }
+        run()
+        frame = callFrames[callFrames.size - 2]
+        sp = frame.sp
+    }
+
     private fun resizeStackIfNecessary() {
         if (sp == stackSize) {
             stackSize *= STACK_GROWTH_FACTOR
@@ -175,6 +194,8 @@ internal class Vm {
         println(stack.copyOfRange(0, sp).joinToString(" "))
     }
 
+    private val buffer: ByteBuffer get() = frame.buffer
+
     private val nextCode: OpCode get() = OpCode.from(nextByte)
     private val nextByte: Byte get() = buffer.get()
     private val nextInt: Int get() = buffer.int
@@ -186,5 +207,6 @@ internal class Vm {
     companion object {
         private const val INITIAL_STACK_SIZE = 1024
         private const val STACK_GROWTH_FACTOR = 4
+        private const val MAX_FRAMES = 64
     }
 }

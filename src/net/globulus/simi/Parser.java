@@ -7,10 +7,10 @@ import java.util.stream.Collectors;
 
 import static net.globulus.simi.TokenType.*;
 
-class Parser {
+public class Parser {
 
   private static final String KIND_LAMBDA = "lambda";
-  private static final String KIND_FUNCTION = "function";
+  public static final String KIND_FUNCTION = "function";
   private static final String KIND_METHOD = "method";
   private static final String KIND_WHEN = "when";
 

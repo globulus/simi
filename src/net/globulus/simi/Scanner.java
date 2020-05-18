@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class Scanner {
+public class Scanner {
 
   private static final Map<String, TokenType> keywords;
 
@@ -57,13 +57,13 @@ class Scanner {
   private int stringInterpolationParentheses = 0;
   private char lastStringOpener = '"';
 
-  Scanner(String fileName, String source, Debugger debugger) {
+  public Scanner(String fileName, String source, Debugger debugger) {
     this.fileName = fileName;
     this.source = source;
     this.debugger = debugger;
   }
 
-  List<Token> scanTokens(boolean addEof) {
+  public List<Token> scanTokens(boolean addEof) {
     while (!isAtEnd()) {
       // We are at the beginning of the next lexeme.
       start = current;

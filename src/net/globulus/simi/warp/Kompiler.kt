@@ -1,23 +1,19 @@
-package net.globulus.simi
+package net.globulus.simi.warp
 
-import net.globulus.simi.Compiler.OpCode.*
+import net.globulus.simi.Expr
+import net.globulus.simi.Token
+import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
 import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
-import net.globulus.simi.tool.*
+import net.globulus.simi.warp.Kompiler.OpCode.*
 import java.util.*
 
-internal class Compiler() {
-    private lateinit var byteCode: MutableList<Byte>
-
+internal class Kompiler {
     private lateinit var tokens: List<Token>
     private var current = 0
-
-    private val strTable = mutableMapOf<String, Int>()
-    private val strList = mutableListOf<String>()
-    private var strCount = 0
 
     private val locals = mutableListOf<Local>()
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
@@ -26,16 +22,49 @@ internal class Compiler() {
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
 
-    fun compile(tokens: List<Token>): CompilerOutput {
-        byteCode = mutableListOf()
+    fun compile(tokens: List<Token>): String {
         this.tokens = tokens
         current = 0
         beginScope()
         compileInternal()
         endScope()
-        emitCode(HALT)
-        printChunks()
-        return CompilerOutput(byteCode.toByteArray(), strList)
+        emitCode(OpCode.HALT)
+//        printChunks()
+        val sb = StringBuilder()
+        for (chunk in chunks.reversed()) {
+            sb.appendln(when (chunk.opCode) {
+                OpCode.CONST_INT -> "push(${chunk.get<Long>(0)}L)"
+                OpCode.CONST_FLOAT -> "push(${chunk.get<Double>(0)})"
+                OpCode.CONST_ID -> throw RuntimeException("WTF")
+                OpCode.CONST_STR -> "push(\"${chunk.get<String>(0).replace("\"", "\\\"")}\")"
+                OpCode.NIL -> "push(Nil)"
+                OpCode.POP -> "sp--"
+                OpCode.SET_LOCAL -> "stack[${chunk.get<Local>(0).sp}] = pop()"
+                OpCode.GET_LOCAL -> "push(stack[${chunk.get<Local>(0).sp}]!!)"
+                OpCode.NEGATE -> "negate()"
+                OpCode.ADD -> "add()"
+                OpCode.SUBTRACT, OpCode.MULTIPLY, OpCode.DIVIDE, OpCode.DIVIDE_INT, OpCode.MOD, OpCode.LE, OpCode.LT, OpCode.GE, OpCode.GT -> "binaryOpOnStack(OpCode.${chunk.opCode})"
+                OpCode.EQ, OpCode.NE -> "checkEquality(OpCode.${chunk.opCode})"
+                OpCode.PRINT -> "println(pop())"
+                OpCode.IF_TRUE -> "if (!isFalsey(peek())) {"
+                OpCode.IF_FALSE -> "if (isFalsey(peek())) {"
+                OpCode.ELSEOP -> " else {"
+                WHILEOP -> "while(true) {"
+                BREAKOP -> "break"
+                CONTINUEOP -> "continue"
+                OpCode.END -> "}"
+//                OpCode.JUMP -> buffer.position(nextInt)
+//                OpCode.JUMP_IF_FALSE -> {
+//                    val offset = nextInt
+//                    if (isFalsey(peek())) {
+//                        buffer.position(offset)
+//                    }
+//                }
+//                OpCode.HALT -> break@loop
+                else -> ""
+            })
+        }
+        return sb.toString()
     }
 
     /**
@@ -234,16 +263,16 @@ internal class Compiler() {
 
     private fun ifSomething() {
         expression()
-        val ifChunk = emitJump(JUMP_IF_FALSE)
+        emitCode(OpCode.IF_TRUE)
         emitCode(POP)
         statement(true)
-        val elseJump = emitJump(JUMP)
-        patchJump(ifChunk)
+        emitCode(END)
+        emitCode(OpCode.ELSEOP)
         emitCode(POP)
-        if (match(ELSE)) {
+        if (match(TokenType.ELSE)) {
             statement(true)
         }
-        patchJump(elseJump)
+        emitCode(END)
     }
 
     /**
@@ -337,20 +366,19 @@ internal class Compiler() {
 //
 
     private fun whileStatement() {
-        val start = byteCode.size
-        loops.push(ActiveLoop(start, scopeDepth))
+        loops.push(ActiveLoop(0, scopeDepth))
+        emitCode(WHILEOP)
         expression()
-        val skipChunk = emitJump(JUMP_IF_FALSE)
+        emitCode(IF_TRUE)
         emitCode(POP)
         statement(true)
-        emitJump(JUMP, start)
-        val end = patchJump(skipChunk)
-        val breaksToPatch = loops.pop().breakPositions
-        for (pos in breaksToPatch) {
-            // Set to jump 1 after end to skip the final POP as it already happened in the loop body
-            byteCode.setInt(end + 1, pos)
-        }
+        emitCode(END)
+        emitCode(ELSEOP)
         emitCode(POP)
+        emitCode(BREAKOP)
+        emitCode(END)
+        emitCode(END)
+        loops.pop()
     }
 
     private fun breakStatement() {
@@ -362,8 +390,7 @@ internal class Compiler() {
         for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
             discardLocals(depth)
         }
-        val chunk = emitJump(JUMP)
-        activeLoop.breakPositions += chunk.data[0] as Int
+        emitCode(BREAKOP)
     }
 
     private fun continueStatement() {
@@ -375,7 +402,7 @@ internal class Compiler() {
         for (depth in scopeDepth downTo (activeLoop.depth + 2)) {
             discardLocals(depth)
         }
-        emitJump(JUMP, loops.peek().start)
+        emitCode(CONTINUEOP)
     }
 
 //    private fun rescueStatement(): Stmt? {
@@ -414,7 +441,7 @@ internal class Compiler() {
                 if (lastChunk?.opCode != CONST_ID) {
                     throw error(equals, "Expected an ID for var declaration!")
                 }
-                declareLocal(lastChunk!!.data[1] as String)
+                declareLocal(lastChunk!!.data[0] as String)
                 rollBackLastChunk()
                 or() // push the value on the stack
             } else {
@@ -460,22 +487,26 @@ internal class Compiler() {
     private fun or() {
         and()
         while (match(OR)) {
-            val elseChunk = emitJump(JUMP_IF_FALSE)
-            val endChunk = emitJump(JUMP)
-            patchJump(elseChunk)
+            emitCode(IF_FALSE)
             emitCode(POP)
             and()
-            patchJump(endChunk)
+            emitCode(END)
+//            val elseChunk = emitJump(JUMP_IF_FALSE)
+//            val endChunk = emitJump(JUMP)
+//            patchJump(elseChunk)
+//            emitCode(POP)
+//            and()
+//            patchJump(endChunk)
         }
     }
 
     private fun and() {
         equality()
         while (match(AND)) {
-            val endChunk = emitJump(JUMP_IF_FALSE)
+            emitCode(IF_TRUE)
             emitCode(POP)
             equality()
-            patchJump(endChunk)
+            emitCode(END)
         }
     }
 
@@ -839,14 +870,7 @@ internal class Compiler() {
         return tokens[current - 1]
     }
 
-    private fun rollBack(by: Int = 1) {
-        for (i in 0 until by) {
-            byteCode.removeAt(byteCode.size - 1)
-        }
-    }
-
     private fun rollBackLastChunk() {
-        rollBack(lastChunk!!.size)
         chunks.pop()
         lastChunk = if (chunks.isEmpty()) null else chunks.last
     }
@@ -855,32 +879,19 @@ internal class Compiler() {
 //        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message)
         return ParseError("At $token: $message")
     }
-
-    private fun strIndex(s: String): Int {
-        return strTable[s] ?: run {
-            strTable[s] = strCount++
-            strList += s
-            strCount - 1
-        }
-    }
-
+    
     private fun emitCode(opCode: OpCode) {
-        val size = byteCode.put(opCode)
-        pushLastChunk(Chunk(opCode, size))
+        pushLastChunk(Chunk(opCode))
     }
 
     private fun emitInt(i: Long) {
         val opCode = CONST_INT
-        var size = byteCode.put(opCode)
-        size += byteCode.putLong(i)
-        pushLastChunk(Chunk(opCode, size, i))
+        pushLastChunk(Chunk(opCode, i))
     }
 
     private fun emitFloat(f: Double) {
         val opCode = CONST_FLOAT
-        var size = byteCode.put(opCode)
-        size += byteCode.putDouble(f)
-        pushLastChunk(Chunk(opCode, size, f))
+        pushLastChunk(Chunk(opCode, f))
     }
 
     private fun emitId(id: String) {
@@ -892,48 +903,41 @@ internal class Compiler() {
     }
 
     private fun emitIdOrString(opCode: OpCode, s: String) {
-        var size = byteCode.put(opCode)
-        val strIdx = strIndex(s)
-        size += byteCode.putInt(strIdx)
-        pushLastChunk(Chunk(opCode, size, strIdx, s))
+        pushLastChunk(Chunk(opCode, s))
     }
 
     private fun emitGetLocal(local: Local) {
         val opCode = GET_LOCAL
-        var size = byteCode.put(opCode)
-        size += byteCode.putInt(local.sp)
-        pushLastChunk(Chunk(opCode, size, local))
+        pushLastChunk(Chunk(opCode, local))
     }
 
     private fun emitSetLocal(local: Local) {
         val opCode = SET_LOCAL
-        var size = byteCode.put(opCode)
-        size += byteCode.putInt(local.sp)
-        pushLastChunk(Chunk(opCode, size, local))
+        pushLastChunk(Chunk(opCode, local))
     }
 
-    private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
-        var size = byteCode.put(opCode)
-        val offset = byteCode.size
-        size += byteCode.putInt(location ?: 0)
-        val chunk = Chunk(opCode, size, offset)
-        pushLastChunk(chunk)
-        return chunk
-
-//        size += byteCode.emitMarkingPosition {
-//            emitCode(OpCode.POP)
-//            statement(true)
-//        }
-//        chunk.size = size
-    }
-
-    private fun patchJump(chunk: Chunk): Int {
-        val offset = chunk.data[0] as Int
-        val skip = byteCode.size
-        byteCode.setInt(skip, offset)
-        chunk.size += skip - offset
-        return skip
-    }
+//    private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
+//        var size = byteCode.put(opCode)
+//        val offset = byteCode.size
+//        size += byteCode.putInt(location ?: 0)
+//        val chunk = Chunk(opCode, size, offset)
+//        pushLastChunk(chunk)
+//        return chunk
+//
+////        size += byteCode.emitMarkingPosition {
+////            emitCode(OpCode.POP)
+////            statement(true)
+////        }
+////        chunk.size = size
+//    }
+//
+//    private fun patchJump(chunk: Chunk): Int {
+//        val offset = chunk.data[0] as Int
+//        val skip = byteCode.size
+//        byteCode.setInt(skip, offset)
+//        chunk.size += skip - offset
+//        return skip
+//    }
 
     private fun pushLastChunk(chunk: Chunk) {
         lastChunk = chunk
@@ -989,10 +993,12 @@ internal class Compiler() {
     }
 
     private class Chunk(val opCode: OpCode,
-                        var size: Int,
                         vararg val data: Any) {
+
+        operator fun <T> get(index: Int) = data[index] as T
+
         override fun toString(): String {
-            return "$opCode, size: $size b, data: ${data.joinToString()}"
+            return "$opCode, data: ${data.joinToString()}"
         }
     }
 
@@ -1023,6 +1029,13 @@ internal class Compiler() {
         PRINT,
         JUMP,
         JUMP_IF_FALSE,
+        IF_TRUE,
+        IF_FALSE,
+        ELSEOP,
+        WHILEOP,
+        BREAKOP,
+        CONTINUEOP,
+        END,
         HALT,
         ;
 

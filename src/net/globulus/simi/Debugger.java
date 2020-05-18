@@ -56,7 +56,7 @@ public final class Debugger {
 
     private DebuggerWatcher watcher;
 
-    Debugger(DebuggerInterface debuggerInterface) {
+    public Debugger(DebuggerInterface debuggerInterface) {
         state = DebuggerState.OUTPUT;
         capture = new Capture(new FrameStack(), new FrameStack());
         this.debuggerInterface = debuggerInterface;

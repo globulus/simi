@@ -1,6 +1,6 @@
 package net.globulus.simi.tool
 
-import net.globulus.simi.Compiler
+import net.globulus.simi.warp.OpCode
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
@@ -9,7 +9,7 @@ fun MutableList<Byte>.put(byte: Byte): Int {
     return 1
 }
 
-internal fun MutableList<Byte>.put(opCode: Compiler.OpCode): Int {
+internal fun MutableList<Byte>.put(opCode: OpCode): Int {
     add(opCode.byte)
     return 1
 }
@@ -57,7 +57,7 @@ fun MutableList<Byte>.putDouble(d: Double): Int {
     return ba.size
 }
 
-internal fun ByteArrayOutputStream.put(opCode: Compiler.OpCode) {
+internal fun ByteArrayOutputStream.put(opCode: OpCode) {
     write(opCode.byte.toInt())
 }
 

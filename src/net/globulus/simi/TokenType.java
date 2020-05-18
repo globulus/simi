@@ -2,7 +2,7 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.Codifiable;
 
-enum TokenType implements Codifiable {
+public enum TokenType implements Codifiable {
   // Single-character tokens.
   LEFT_PAREN, RIGHT_PAREN,
   LEFT_BRACKET, RIGHT_BRACKET,
