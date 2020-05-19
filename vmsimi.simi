@@ -35,8 +35,8 @@ when a {
     else { print "else" }
 }
 
-print "func test func == "
-def func() {
-    print "func"
+print "func test func6 == "
+def func(what, smth) {
+    print what + smth
 }
-func()
+func("func", 6)

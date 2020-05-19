@@ -10,12 +10,12 @@ internal class Vm {
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
     private var fp = 0
-    private lateinit var frame: CallFrame
-    private val callFrames = mutableListOf<CallFrame>()
+    private val callFrames = arrayOfNulls<CallFrame>(MAX_FRAMES)
 
     fun interpret(input: Function) {
         push(input)
-        call(input)
+        call(input, 0)
+        run()
         printStack()
     }
 
@@ -43,8 +43,21 @@ internal class Vm {
                         buffer.position(offset)
                     }
                 }
-                CALL -> call(pop())
-                RETURN, HALT -> break@loop
+                CALL -> {
+                    val argCount = nextInt
+                    call(peek(argCount), argCount)
+                }
+                RETURN -> {
+                    val result = pop()
+                    val returningFrame = frame
+                    fp--
+                    if (fp == 0) { // Returning from top-level func
+                        sp = 0
+                        break@loop
+                    }
+                    sp = returningFrame.sp
+                    push(result)
+                }
             }
         }
     }
@@ -149,16 +162,17 @@ internal class Vm {
         return a == b
     }
 
-    private fun call(callee: Any) {
+    private fun call(callee: Any, argCount: Int) {
         if (callee !is Function) {
             throw RuntimeException("Callee is not a func!")
         }
-        callFrames += CallFrame(callee, sp - 1).apply {
-            frame = this
+        if (argCount != callee.arity) {
+            throw RuntimeException("Expected ${callee.arity} arguments but got $argCount.")
         }
-        run()
-        frame = callFrames[callFrames.size - 2]
-        sp = frame.sp
+        if (fp == MAX_FRAMES) {
+            throw RuntimeException("Stack overflow.")
+        }
+        callFrames[fp++] = CallFrame(callee, sp - argCount - 1)
     }
 
     private fun resizeStackIfNecessary() {
@@ -179,8 +193,8 @@ internal class Vm {
         return stack[sp]!!
     }
 
-    private fun peek(): Any {
-        return stack[sp - 1]!!
+    private fun peek(offset: Int = 0): Any {
+        return stack[sp - offset - 1]!!
     }
 
     private fun gc() {
@@ -193,6 +207,8 @@ internal class Vm {
     private fun printStack() {
         println(stack.copyOfRange(0, sp).joinToString(" "))
     }
+
+    private val frame: CallFrame get() = callFrames[fp - 1]!!
 
     private val buffer: ByteBuffer get() = frame.buffer
 

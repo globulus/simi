@@ -33,6 +33,7 @@ class Compiler {
 
     fun compile(tokens: List<Token>) = compile(tokens, SCRIPT, 0) {
         compileInternal()
+        emitReturn()
     }
 
     private fun compile(tokens: List<Token>, name: String, arity: Int, within: Compiler.() -> Unit): Function {
@@ -44,7 +45,6 @@ class Compiler {
         this.within()
         endScope()
         if (name == SCRIPT) {
-            emitCode(HALT)
             printChunks()
         }
         return Function(name, arity, byteCode.toByteArray(), constList.toTypedArray())
@@ -112,18 +112,28 @@ class Compiler {
 
     private fun function(kind: String) {
         val declaration = previous()
-        val name = consume(IDENTIFIER, "Expected an identifier for function name").lexeme
-        consume(LEFT_PAREN, "Expected (")
-        consume(RIGHT_PAREN, "Expected )")
+        val name = consumeVar("Expected an identifier for function name")
+        val args = mutableListOf<String>()
+        if (match(LEFT_PAREN)) {
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    val paramName = consumeVar("Expected param name")
+                    args += paramName
+                } while (match(COMMA))
+            }
+            consume(RIGHT_PAREN, "Expected )")
+        }
+
         consume(LEFT_BRACE, "Expected {")
         val curr = current
-        val compiler = Compiler()
-        val f = compiler.compile(tokens, name, 0) {
+        val funcCompiler = Compiler()
+        val f = funcCompiler.compile(tokens, name, args.size) {
             current = curr
+            args.forEach { declareLocal(it) }
             block()
-            emitCode(OpCode.RETURN)
+            emitReturn()
         }
-        current = compiler.current
+        current = funcCompiler.current
         functionTable[name] = constIndex(f)
     }
 
@@ -625,8 +635,8 @@ class Compiler {
         val idx = functionTable[lastChunk!!.data[1] as String]!!
         rollBackLastChunk()
         emitConstWithIndex(idx)
-        consume(RIGHT_PAREN, "Expect ')' after arguments.")
-        emitCode(CALL)
+        val argCount = argList()
+        emitCall(argCount)
 //        val paren = previous()
 //        val arguments: MutableList<Expr> = ArrayList()
 //        if (!check(TokenType.RIGHT_PAREN)) {
@@ -642,6 +652,18 @@ class Compiler {
 //            callee.backupSelfGet.arity = arguments.size
 //        }
 //        return Call(callee, paren, arguments)
+    }
+
+    private fun argList(): Int {
+        var count = 0
+        if (!check(RIGHT_PAREN)) {
+            do {
+                count++
+                expression()
+            } while (match(COMMA))
+        }
+        consume(RIGHT_PAREN, "Expect ')' after arguments.")
+        return count
     }
 
     private fun primary() {
@@ -833,6 +855,10 @@ class Compiler {
         return false
     }
 
+    private fun consumeVar(message: String): String {
+        return consume(IDENTIFIER, message).lexeme
+    }
+
     private fun consume(type: TokenType, message: String): Token {
         if (check(type)) return advance()
         throw error(peek(), message)
@@ -981,9 +1007,21 @@ class Compiler {
         return skip
     }
 
+    private fun emitCall(argCount: Int) {
+        val opCode = CALL
+        var size = byteCode.put(opCode)
+        size += byteCode.putInt(argCount)
+        pushLastChunk(Chunk(opCode, size, argCount))
+    }
+
     private fun pushLastChunk(chunk: Chunk) {
         lastChunk = chunk
         chunks.push(chunk)
+    }
+
+    private fun emitReturn() {
+        emitCode(OpCode.NIL)
+        emitCode(OpCode.RETURN)
     }
 
     private fun declareLocal(name: String): Local {

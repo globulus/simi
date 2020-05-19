@@ -6,4 +6,8 @@ class Function(
         val code: ByteArray,
         val constants: Array<Any>,
         val overloads: Map<Int, Any>? = null
-)
+) {
+    override fun toString(): String {
+        return "<def $name $arity>"
+    }
+}

@@ -27,7 +27,6 @@ enum class OpCode {
     JUMP_IF_FALSE,
     CALL,
     RETURN,
-    HALT,
     ;
 
     val byte = ordinal.toByte()
