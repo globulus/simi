@@ -38,8 +38,8 @@ when a {
 print "func test func6 == "
 def func(what = "func", smth = 6) {
     print what + smth
-#    def a() { } # Uncomment to test stack trace printing
-#    a(1, 2, 3)
+    a $= 2
+    print "a inside is \(a)"
 }
 func()
 
@@ -51,7 +51,7 @@ def retFunc() {
 }
 print retFunc()
 
-#def c() { func(1, 2, 3) }
-#def b() { c() }
-#def a() { b() }
-#a()
+#def f3() { func(1, 2, 3) } # Uncomment to test stack trace printing
+#def f2() { f3() }
+#def f1() { f2() }
+#f1()

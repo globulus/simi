@@ -35,11 +35,14 @@ internal class Vm {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> throw runtimeError("WTF")
-                CONST -> push(frame.function.constants[nextInt])
+                CONST -> pushConst(frame)
+                CONST_OUTER -> pushConst(getOuterFrame())
                 NIL -> push(Nil)
                 POP -> sp--
-                SET_LOCAL -> stack[frame.sp + nextInt] = pop()
-                GET_LOCAL -> push(stack[frame.sp + nextInt]!!)
+                SET_LOCAL -> setVar(frame)
+                GET_LOCAL -> getVar(frame)
+                SET_OUTER -> setVar(getOuterFrame())
+                GET_OUTER -> getVar(getOuterFrame())
                 NEGATE -> negate()
                 ADD -> add()
                 SUBTRACT, MULTIPLY, DIVIDE, DIVIDE_INT, MOD, LE, LT, GE, GT -> binaryOpOnStack(code)
@@ -69,6 +72,22 @@ internal class Vm {
                 }
             }
         }
+    }
+
+    private fun pushConst(frame: CallFrame) {
+        push(frame.function.constants[nextInt])
+    }
+
+    private fun setVar(frame: CallFrame) {
+        stack[frame.sp + nextInt] = pop()
+    }
+
+    private fun getVar(frame: CallFrame) {
+        push(stack[frame.sp + nextInt]!!)
+    }
+
+    private fun getOuterFrame(): CallFrame {
+        return callFrames[nextInt]!!
     }
 
     private fun isFalsey(o: Any): Boolean {
@@ -176,7 +195,9 @@ internal class Vm {
             throw runtimeError("Callee is not a func!")
         }
         if (argCount != callee.arity) {
-            if (callee.optionalParamsStart != -1 && argCount >= callee.optionalParamsStart) {
+            if (argCount < callee.arity
+                    && callee.optionalParamsStart != -1
+                    && argCount >= callee.optionalParamsStart) {
                 for (i in argCount until (callee.optionalParamsStart + callee.defaultValues!!.size)) {
                     push(callee.defaultValues!![i - callee.optionalParamsStart])
                 }

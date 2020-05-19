@@ -31,6 +31,8 @@ class Compiler {
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
 
+    private var enclosing: Compiler? = null
+
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
 
@@ -143,7 +145,9 @@ class Compiler {
 
         consume(LEFT_BRACE, "Expected {")
         val curr = current
-        val funcCompiler = Compiler()
+        val funcCompiler = Compiler().also {
+            it.enclosing = this
+        }
         val f = funcCompiler.compileFunction(tokens, name, args.size) {
             current = curr
             args.forEach { declareLocal(it) }
@@ -481,7 +485,7 @@ class Compiler {
                 rollBackLastChunk()
                 or() // push the value on the stack
             } else {
-                if (lastChunk?.opCode != GET_LOCAL) {
+                if (lastChunk?.opCode != GET_LOCAL && lastChunk?.opCode != GET_OUTER) {
                     throw error(equals, "Assigning to undeclared var!")
                 }
                 val local = lastChunk!!.data[0] as Local
@@ -654,9 +658,9 @@ class Compiler {
         if (lastChunk?.opCode != CONST_ID) {
             throw error(paren, "Expected an ID for call!")
         }
-        val idx = functionTable[lastChunk!!.data[1] as String]!!
+        val const = findFunctionWithName(lastChunk!!.data[1] as String)
         rollBackLastChunk()
-        emitConstWithIndex(idx)
+        emitConstWithIndex(const)
         val argCount = argList()
         emitCall(argCount)
 //        val paren = previous()
@@ -960,7 +964,7 @@ class Compiler {
 
     private fun error(token: Token, message: String): ParseError {
 //        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message)
-        return ParseError("At $token: $message")
+        return ParseError("[\"${token.file}\" line ${token.line}] At ${token.type}: $message")
     }
 
     private fun constIndex(c: Any): Int {
@@ -998,10 +1002,13 @@ class Compiler {
         emitIdOrConst(CONST, c)
     }
 
-    private fun emitConstWithIndex(idx: Int) {
-        var size = byteCode.put(CONST)
-        size += byteCode.putInt(idx)
-        pushLastChunk(Chunk(CONST, size, idx))
+    private fun emitConstWithIndex(c: Const) {
+        var size = byteCode.put(if (c.level == -1) CONST else CONST_OUTER)
+        if (c.level != -1) {
+            size += byteCode.putInt(c.level)
+        }
+        size += byteCode.putInt(c.index)
+        pushLastChunk(Chunk(CONST, size, c.index, c.level))
     }
 
     private fun emitIdOrConst(opCode: OpCode, c: Any) {
@@ -1012,15 +1019,21 @@ class Compiler {
     }
 
     private fun emitGetLocal(local: Local) {
-        val opCode = GET_LOCAL
+        val opCode = if (local.level == -1) GET_LOCAL else GET_OUTER
         var size = byteCode.put(opCode)
+        if (local.level != -1) {
+            size += byteCode.putInt(local.level)
+        }
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
     }
 
     private fun emitSetLocal(local: Local) {
-        val opCode = SET_LOCAL
+        val opCode = if (local.level == -1) SET_LOCAL else SET_OUTER
         var size = byteCode.put(opCode)
+        if (local.level != -1) {
+            size += byteCode.putInt(local.level)
+        }
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
     }
@@ -1086,11 +1099,19 @@ class Compiler {
     }
 
     private fun findLocal(name: String): Local? {
-        for (i in locals.size - 1 downTo 0) {
-            val local = locals[i]
-            if (local.name == name) {
-                return local
+        var compiler: Compiler? = this
+        while (compiler != null) {
+            for (i in compiler.locals.size - 1 downTo 0) {
+                val local = compiler.locals[i]
+                if (local.name == name) {
+                    return if (compiler == this) {
+                        local
+                    } else {
+                        local.copyForLevel(compiler.numberOfEnclosingCompilers)
+                    }
+                }
             }
+            compiler = compiler.enclosing
         }
         return null
     }
@@ -1104,6 +1125,18 @@ class Compiler {
         }
     }
 
+    private fun findFunctionWithName(name: String): Const {
+        var compiler: Compiler? = this
+        while (compiler != null) {
+            compiler.functionTable[name]?.let {
+                val level = if (compiler == this) -1 else compiler!!.numberOfEnclosingCompilers
+                return Const(it, level)
+            }
+            compiler = compiler.enclosing
+        }
+        throw error(previous(), "Unable to find function with name $name.")
+    }
+
     private fun printChunks() {
         while (chunks.isNotEmpty()) {
             println(chunks.last)
@@ -1111,7 +1144,27 @@ class Compiler {
         }
     }
 
-    private data class Local(val name: String, val sp: Int, val depth: Int)
+    private val numberOfEnclosingCompilers: Int get() {
+        var count = 0
+        var compiler = this.enclosing
+        while (compiler != null) {
+            count++
+            compiler = compiler.enclosing
+        }
+        return count
+    }
+
+    private data class Const(val index: Int,
+                             val level: Int
+    )
+
+    private data class Local(val name: String,
+                             val sp: Int,
+                             val depth: Int,
+                             val level: Int = 0 // How far in enclosing compilers is this var located
+    ) {
+        fun copyForLevel(level: Int) = Local(name, sp, depth, level)
+    }
 
     private data class ActiveLoop(val start: Int, val depth: Int) {
         val breakPositions = mutableListOf<Int>()
@@ -1126,8 +1179,6 @@ class Compiler {
     }
 
     private class ParseError(message: String) : RuntimeException(message)
-
-    class CompilerOutput(val byteCode: ByteArray, val strings: List<String>)
 
     companion object {
         private const val SCRIPT = "Script"
