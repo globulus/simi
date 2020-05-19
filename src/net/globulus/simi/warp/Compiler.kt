@@ -1161,7 +1161,7 @@ class Compiler {
     private data class Local(val name: String,
                              val sp: Int,
                              val depth: Int,
-                             val level: Int = 0 // How far in enclosing compilers is this var located
+                             val level: Int = -1 // How far in enclosing compilers is this var located
     ) {
         fun copyForLevel(level: Int) = Local(name, sp, depth, level)
     }
