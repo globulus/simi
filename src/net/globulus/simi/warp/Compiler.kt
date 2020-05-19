@@ -114,10 +114,19 @@ class Compiler {
         val declaration = previous()
         val name = consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
+        var optionalParamsStart = -1
+        val defaultValues = mutableListOf<Any>()
         if (match(LEFT_PAREN)) {
             if (!check(RIGHT_PAREN)) {
                 do {
                     val paramName = consumeVar("Expected param name")
+                    if (match(EQUAL)) {
+                        val defaultValue = consumeValue("Expected a value as default param value!")
+                        if (optionalParamsStart == -1) {
+                            optionalParamsStart = args.size
+                        }
+                        defaultValues += defaultValue
+                    }
                     args += paramName
                 } while (match(COMMA))
             }
@@ -132,6 +141,11 @@ class Compiler {
             args.forEach { declareLocal(it) }
             block()
             emitReturn()
+        }.also {
+            if (optionalParamsStart != -1) {
+                it.optionalParamsStart = optionalParamsStart
+                it.defaultValues = defaultValues.toTypedArray()
+            }
         }
         current = funcCompiler.current
         functionTable[name] = constIndex(f)
@@ -659,6 +673,7 @@ class Compiler {
         if (!check(RIGHT_PAREN)) {
             do {
                 count++
+                matchSequence(IDENTIFIER, EQUAL) // allows for named params, e.g substr(start=1,end=2)
                 expression()
             } while (match(COMMA))
         }
@@ -855,13 +870,31 @@ class Compiler {
         return false
     }
 
+    private fun consume(type: TokenType, message: String): Token {
+        if (check(type)) return advance()
+        throw error(peek(), message)
+    }
+
     private fun consumeVar(message: String): String {
         return consume(IDENTIFIER, message).lexeme
     }
 
-    private fun consume(type: TokenType, message: String): Token {
-        if (check(type)) return advance()
-        throw error(peek(), message)
+    private fun consumeValue(message: String): Any {
+        return when {
+            match(FALSE) -> 0L
+            match(TRUE) -> 1L
+            match(NIL) -> Nil
+            match(NUMBER) -> {
+                val num = previous().literal.number
+                if (num.isInteger) {
+                    num.asLong()
+                } else {
+                    num.asDouble()
+                }
+            }
+            match(STRING) -> previous().literal.string
+            else -> throw error(peek(), message)
+        }
     }
 
     private fun check(vararg tokenTypes: TokenType): Boolean {

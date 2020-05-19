@@ -10,6 +10,13 @@ internal class Vm {
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
     private var fp = 0
+        set(value) {
+            field = value
+            if (value > 0) {
+                frame = callFrames[value - 1]!!
+            }
+        }
+    private lateinit var frame: CallFrame
     private val callFrames = arrayOfNulls<CallFrame>(MAX_FRAMES)
 
     fun interpret(input: Function) {
@@ -167,12 +174,19 @@ internal class Vm {
             throw RuntimeException("Callee is not a func!")
         }
         if (argCount != callee.arity) {
-            throw RuntimeException("Expected ${callee.arity} arguments but got $argCount.")
+            if (argCount >= callee.optionalParamsStart) {
+                for (i in argCount until (callee.optionalParamsStart + callee.defaultValues!!.size)) {
+                    push(callee.defaultValues!![i - callee.optionalParamsStart])
+                }
+            } else {
+                throw RuntimeException("Expected ${callee.arity} arguments but got $argCount.")
+            }
         }
         if (fp == MAX_FRAMES) {
             throw RuntimeException("Stack overflow.")
         }
-        callFrames[fp++] = CallFrame(callee, sp - argCount - 1)
+        callFrames[fp] = CallFrame(callee, sp - callee.arity - 1)
+        fp++
     }
 
     private fun resizeStackIfNecessary() {
@@ -208,8 +222,6 @@ internal class Vm {
         println(stack.copyOfRange(0, sp).joinToString(" "))
     }
 
-    private val frame: CallFrame get() = callFrames[fp - 1]!!
-
     private val buffer: ByteBuffer get() = frame.buffer
 
     private val nextCode: OpCode get() = OpCode.from(nextByte)
@@ -217,8 +229,6 @@ internal class Vm {
     private val nextInt: Int get() = buffer.int
     private val nextLong: Long get() = buffer.long
     private val nextDouble: Double get() = buffer.double
-
-    object Nil
 
     companion object {
         private const val INITIAL_STACK_SIZE = 1024
