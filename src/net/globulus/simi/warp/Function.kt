@@ -4,7 +4,8 @@ class Function(
         val name: String,
         val arity: Int,
         val code: ByteArray,
-        val constants: Array<Any>
+        val constants: Array<Any>,
+        val debugInfo: DebugInfo
 ) {
     internal var optionalParamsStart: Int = -1
     internal var defaultValues: Array<Any>? = null

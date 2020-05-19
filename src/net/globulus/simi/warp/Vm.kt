@@ -32,7 +32,7 @@ internal class Vm {
             when (code) {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
-                CONST_ID -> throw RuntimeException("WTF")
+                CONST_ID -> throw runtimeError("WTF")
                 CONST -> push(frame.function.constants[nextInt])
                 NIL -> push(Nil)
                 POP -> sp--
@@ -127,7 +127,7 @@ internal class Vm {
             LE -> boolToLong(a <= b)
             GE -> boolToLong(a >= b)
             GT -> boolToLong(a > b)
-            else -> throw IllegalArgumentException("WTF")
+            else -> throw runtimeError("WTF")
         }
     }
 
@@ -142,7 +142,7 @@ internal class Vm {
             LE -> boolToLong(a <= b)
             GE -> boolToLong(a >= b)
             GT -> boolToLong(a > b)
-            else -> throw IllegalArgumentException("WTF")
+            else -> throw runtimeError("WTF")
         }
     }
 
@@ -171,19 +171,19 @@ internal class Vm {
 
     private fun call(callee: Any, argCount: Int) {
         if (callee !is Function) {
-            throw RuntimeException("Callee is not a func!")
+            throw runtimeError("Callee is not a func!")
         }
         if (argCount != callee.arity) {
-            if (argCount >= callee.optionalParamsStart) {
+            if (callee.optionalParamsStart != -1 && argCount >= callee.optionalParamsStart) {
                 for (i in argCount until (callee.optionalParamsStart + callee.defaultValues!!.size)) {
                     push(callee.defaultValues!![i - callee.optionalParamsStart])
                 }
             } else {
-                throw RuntimeException("Expected ${callee.arity} arguments but got $argCount.")
+                throw runtimeError("Expected ${callee.arity} arguments but got $argCount.")
             }
         }
         if (fp == MAX_FRAMES) {
-            throw RuntimeException("Stack overflow.")
+            throw runtimeError("Stack overflow.")
         }
         callFrames[fp] = CallFrame(callee, sp - callee.arity - 1)
         fp++
@@ -220,6 +220,19 @@ internal class Vm {
 
     private fun printStack() {
         println(stack.copyOfRange(0, sp).joinToString(" "))
+    }
+
+    private fun runtimeError(message: String): Exception {
+        println()
+        println(message)
+        printCallStack()
+        return RuntimeException()
+    }
+
+    private fun printCallStack() {
+        for (i in fp - 1 downTo 0) {
+            println(callFrames[i])
+        }
     }
 
     private val buffer: ByteBuffer get() = frame.buffer

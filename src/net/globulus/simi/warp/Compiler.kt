@@ -31,12 +31,19 @@ class Compiler {
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
 
-    fun compile(tokens: List<Token>) = compile(tokens, SCRIPT, 0) {
+    // Debug info
+    private val debugInfoLines = mutableMapOf<Int, Int>()
+
+    fun compile(tokens: List<Token>) = compileFunction(tokens, SCRIPT, 0) {
         compileInternal()
         emitReturn()
     }
 
-    private fun compile(tokens: List<Token>, name: String, arity: Int, within: Compiler.() -> Unit): Function {
+    private fun compileFunction(tokens: List<Token>,
+                                name: String,
+                                arity: Int,
+                                within: Compiler.() -> Unit
+    ): Function {
         byteCode = mutableListOf()
         this.tokens = tokens
         current = 0
@@ -47,7 +54,7 @@ class Compiler {
         if (name == SCRIPT) {
             printChunks()
         }
-        return Function(name, arity, byteCode.toByteArray(), constList.toTypedArray())
+        return Function(name, arity, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
     /**
@@ -90,6 +97,7 @@ class Compiler {
     }
 
     private fun declaration() {
+        updateDebugInfoLines(peek())
 //        if (match(TokenType.CLASS, TokenType.CLASS_FINAL, TokenType.CLASS_OPEN)) {
 //            return classDeclaration()
 //        }
@@ -136,7 +144,7 @@ class Compiler {
         consume(LEFT_BRACE, "Expected {")
         val curr = current
         val funcCompiler = Compiler()
-        val f = funcCompiler.compile(tokens, name, args.size) {
+        val f = funcCompiler.compileFunction(tokens, name, args.size) {
             current = curr
             args.forEach { declareLocal(it) }
             block()
@@ -1055,6 +1063,10 @@ class Compiler {
     private fun emitReturn() {
         emitCode(OpCode.NIL)
         emitCode(OpCode.RETURN)
+    }
+
+    private fun updateDebugInfoLines(token: Token) {
+        debugInfoLines.putIfAbsent(token.line, byteCode.size)
     }
 
     private fun declareLocal(name: String): Local {

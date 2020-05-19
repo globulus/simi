@@ -38,5 +38,12 @@ when a {
 print "func test func6 == "
 def func(what = "func", smth = 6) {
     print what + smth
+#    def a() { } # Uncomment to test stack trace printing
+#    a(1, 2, 3)
 }
 func()
+
+#def c() { func(1, 2, 3) }
+#def b() { c() }
+#def a() { b() }
+#a()
