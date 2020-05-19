@@ -36,7 +36,7 @@ class Compiler {
 
     fun compile(tokens: List<Token>) = compileFunction(tokens, SCRIPT, 0) {
         compileInternal()
-        emitReturn()
+        emitReturnNil()
     }
 
     private fun compileFunction(tokens: List<Token>,
@@ -148,7 +148,7 @@ class Compiler {
             current = curr
             args.forEach { declareLocal(it) }
             block()
-            emitReturn()
+            emitReturnNil()
         }.also {
             if (optionalParamsStart != -1) {
                 it.optionalParamsStart = optionalParamsStart
@@ -166,10 +166,10 @@ class Compiler {
             endScope()
         }
         else if (match(IF)) {
-            ifSomething()
+            ifStatement()
         }
         else if (match(WHEN)) {
-            whenSomething()
+            whenStatement()
         }
 //        if (match(TokenType.FOR)) {
 //            return forStatement()
@@ -177,9 +177,9 @@ class Compiler {
         else if (match(PRINT)) {
             printStatement()
         }
-//        if (match(TokenType.RETURN)) {
-//            return returnStatement(lambda)
-//        }
+        else if (match(TokenType.RETURN)) {
+            returnStatement(lambda)
+        }
         else if (match(WHILE)) {
             whileStatement()
         }
@@ -295,7 +295,7 @@ class Compiler {
 //        return For(varExpr, iterable, body)
 //    }
 
-    private fun ifSomething() {
+    private fun ifStatement() {
         expression()
         val ifChunk = emitJump(JUMP_IF_FALSE)
         emitCode(POP)
@@ -312,7 +312,7 @@ class Compiler {
     /**
      * Actually creates a list of tokens that represent if-else-ifs that are then compiled internally
      */
-    private fun whenSomething() {
+    private fun whenStatement() {
         val origin = previous()
         val id = consume(IDENTIFIER, "Expected an identifier after 'when'")
         var first = true
@@ -378,16 +378,16 @@ class Compiler {
         emitCode(OpCode.PRINT)
     }
 
-//    private fun returnStatement(lambda: Boolean): Stmt? {
-//        val keyword = previous()
-//        var value: Expr? = null
-//        if (!check(NEWLINE)) {
-//            value = expression()
-//        }
-//        checkStatementEnd(lambda)
-//        return Return(keyword, value)
-//    }
-//
+    private fun returnStatement(lambda: Boolean) {
+        if (match(NEWLINE)) {
+            emitReturnNil()
+        } else {
+            expression()
+            consume(NEWLINE, "Expected newline after return value.")
+            emitCode(OpCode.RETURN)
+        }
+    }
+
 //    private fun yieldStatement(lambda: Boolean): Stmt? {
 //        val keyword = previous()
 //        var value: Expr? = null
@@ -1060,7 +1060,7 @@ class Compiler {
         chunks.push(chunk)
     }
 
-    private fun emitReturn() {
+    private fun emitReturnNil() {
         emitCode(OpCode.NIL)
         emitCode(OpCode.RETURN)
     }

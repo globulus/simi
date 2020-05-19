@@ -22,8 +22,10 @@ internal class Vm {
     fun interpret(input: Function) {
         push(input)
         call(input, 0)
-        run()
-        printStack()
+        try {
+            run()
+            printStack()
+        } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
     private fun run() {
@@ -226,7 +228,7 @@ internal class Vm {
         println()
         println(message)
         printCallStack()
-        return RuntimeException()
+        return IllegalStateException()
     }
 
     private fun printCallStack() {

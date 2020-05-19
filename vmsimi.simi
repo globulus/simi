@@ -43,6 +43,14 @@ def func(what = "func", smth = 6) {
 }
 func()
 
+print "return func test 5 == "
+def retFunc() {
+    print "in ret func"
+    return 5
+    print "this shouldn't be printed"
+}
+print retFunc()
+
 #def c() { func(1, 2, 3) }
 #def b() { c() }
 #def a() { b() }
