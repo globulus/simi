@@ -36,9 +36,16 @@ class Compiler {
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
 
-    fun compile(tokens: List<Token>) = compileFunction(tokens, SCRIPT, 0) {
-        compileInternal()
-        emitReturnNil()
+    fun compile(tokens: List<Token>): Function? {
+        return try {
+            compileFunction(tokens, SCRIPT, 0) {
+                compileInternal(false)
+                emitReturnNil()
+            }
+        } catch (e: ParseError) {
+            println(e.message)
+            null
+        }
     }
 
     private fun compileFunction(tokens: List<Token>,
@@ -62,7 +69,7 @@ class Compiler {
     /**
      * Moved to a separate fun to be able to handle syntax sugar compilations such as when.
      */
-    private fun compileInternal() {
+    private fun compileInternal(isExpr: Boolean) {
         while (!isAtEnd()) {
 //            if (match(TokenType.IMPORT)) {
 //                val keyword: Token = previous()
@@ -75,16 +82,20 @@ class Compiler {
             if (match(NEWLINE, PASS)) {
                 continue
             }
-            declaration()
+            if (isExpr) {
+                expression()
+            } else {
+                declaration()
+            }
         }
     }
 
-    private fun compileNested(tokens: List<Token>) {
+    private fun compileNested(tokens: List<Token>, isExpr: Boolean) {
         val currentSave = current
         current = 0
         val tokensSave = this.tokens
         this.tokens = tokens + Token.copying(tokens.last(), EOF)
-        compileInternal()
+        compileInternal(isExpr)
         this.tokens = tokensSave
         current = currentSave
     }
@@ -93,18 +104,23 @@ class Compiler {
         scopeDepth++
     }
 
-    private fun endScope() {
-        discardLocals(scopeDepth)
+    /**
+     * @return Number of discarded vars == number of emitted POPs
+     */
+    private fun endScope(emitPops: Boolean = true): Int {
+        val discarded = discardLocals(scopeDepth, emitPops)
         scopeDepth--
+        return discarded
     }
 
-    private fun declaration() {
+    private fun declaration(): Boolean {
         updateDebugInfoLines(peek())
 //        if (match(TokenType.CLASS, TokenType.CLASS_FINAL, TokenType.CLASS_OPEN)) {
 //            return classDeclaration()
 //        }
-        if (match(DEF)) {
+        return if (match(DEF)) {
             function(Parser.KIND_FUNCTION)
+            false
         }
 //        if (match(TokenType.BANG)) {
 //            return annotation()
@@ -116,7 +132,7 @@ class Compiler {
 //            }
 //        }
         else {
-            statement(false)
+            statement(isExpr = false, lambda = false)
         }
     }
 
@@ -151,7 +167,7 @@ class Compiler {
         val f = funcCompiler.compileFunction(tokens, name, args.size) {
             current = curr
             args.forEach { declareLocal(it) }
-            block()
+            block(false)
             emitReturnNil()
         }.also {
             if (optionalParamsStart != -1) {
@@ -163,35 +179,43 @@ class Compiler {
         functionTable[name] = constIndex(f)
     }
 
-    private fun statement(lambda: Boolean) {
-        if (match(LEFT_BRACE)) {
+    private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
+        return if (match(LEFT_BRACE)) {
             beginScope()
-            block()
+            block(false)
             endScope()
+            false
         }
         else if (match(IF)) {
-            ifStatement()
+            ifSomething(false)
+            false
         }
         else if (match(WHEN)) {
-            whenStatement()
+            whenSomething(false)
+            false
         }
 //        if (match(TokenType.FOR)) {
 //            return forStatement()
 //        }
         else if (match(PRINT)) {
             printStatement()
+            false
         }
         else if (match(TokenType.RETURN)) {
             returnStatement(lambda)
+            false
         }
         else if (match(WHILE)) {
             whileStatement()
+            false
         }
         else if (match(BREAK)) {
             breakStatement()
+            false
         }
         else if (match(CONTINUE)) {
             continueStatement()
+            false
         }
 //        if (match(TokenType.RESCUE)) {
 //            return rescueStatement()
@@ -200,17 +224,21 @@ class Compiler {
 //            return yieldStatement(lambda)
 //        }
         else {
-            expressionStatement(lambda)
+            return expressionStatement(lambda)
         }
     }
 
-    private fun block() {
+    private fun block(isExpr: Boolean) {
+        var lastLineIsExpr = false
         while (!check(RIGHT_BRACE)) {
             matchAllNewlines()
-            declaration()
+            lastLineIsExpr = statement(isExpr, false)
             matchAllNewlines()
         }
         consume(RIGHT_BRACE, "Expect '}' after block!")
+        if (isExpr && !lastLineIsExpr) {
+            throw error(previous(), "Block is not a valid expression block!")
+        }
     }
 
 //    private fun classDeclaration(): Stmt.Class {
@@ -299,24 +327,55 @@ class Compiler {
 //        return For(varExpr, iterable, body)
 //    }
 
-    private fun ifStatement() {
+    private fun ifSomething(isExpr: Boolean) {
+        val opener = previous()
         expression()
         val ifChunk = emitJump(JUMP_IF_FALSE)
         emitCode(POP)
-        statement(true)
+        compileIfBody(opener, isExpr)
         val elseJump = emitJump(JUMP)
         patchJump(ifChunk)
         emitCode(POP)
+        matchAllNewlines()
         if (match(ELSE)) {
-            statement(true)
+            compileIfBody(opener, isExpr)
+        } else if (isExpr) {
+            throw error(opener, "An if expression must have an else!")
         }
         patchJump(elseJump)
+    }
+
+    private fun compileIfBody(opener: Token, isExpr: Boolean) {
+        if (isExpr) {
+            val isRealExpr = expressionOrExpressionBlock() // Assignments can be statements, we can't know till we parse
+            if (!isRealExpr) {
+                throw error(opener, "An if expression must have a ")
+            }
+        } else {
+            statement(isExpr = false, lambda = true)
+        }
+    }
+
+    private fun expressionOrExpressionBlock(): Boolean {
+        return if (match(LEFT_BRACE)) {
+            beginScope()
+            block(true)
+            val popCount = endScope(false)
+            if (lastChunk?.opCode != POP) {
+                throw IllegalStateException("Compiler error - last chunk should be POP at this point!")
+            }
+            rollBackLastChunk()
+            emitPopUnder(popCount)
+            true
+        } else {
+            expression()
+        }
     }
 
     /**
      * Actually creates a list of tokens that represent if-else-ifs that are then compiled internally
      */
-    private fun whenStatement() {
+    private fun whenSomething(isExpr: Boolean) {
         val origin = previous()
         val id = consume(IDENTIFIER, "Expected an identifier after 'when'")
         var first = true
@@ -324,12 +383,23 @@ class Compiler {
         val whenTokens = mutableListOf<Token>()
         consume(LEFT_BRACE, "Expect a '{' after when")
         consume(NEWLINE, "Expect a newline after when '{'")
+        val consumeConditionBlock: () -> List<Token> = if (isExpr) {
+            { consumeUntilType(OR, LEFT_BRACE, EQUAL) }
+        } else {
+            { consumeUntilType(OR, LEFT_BRACE) }
+        }
+        val conditionAtEndBlock: () -> Boolean = if (isExpr) {
+            { check(LEFT_BRACE, EQUAL) }
+        } else {
+            { check(LEFT_BRACE) }
+        }
+
         while (!check(RIGHT_BRACE) && !isAtEnd()) {
             matchAllNewlines()
             if (match(ELSE)) {
                 wroteElse = true
                 whenTokens += previous()
-                whenTokens += consumeNextBlock()
+                whenTokens += consumeNextBlock(isExpr)
             } else if (wroteElse) {
                 // We could just break when we encountered a break, but that's make for a lousy compiler
                 throw error(previous(), "'else' must be the last clause in a 'when' block")
@@ -361,20 +431,20 @@ class Compiler {
                     }
 
                     // Consume the rest of the condition
-                    whenTokens += consumeUntilType(OR, LEFT_BRACE)
+                    whenTokens += consumeConditionBlock()
 
                     // If we've found an or, we just take it as-is
                     if (match(OR)) {
                         whenTokens += previous()
                     }
-                } while (!check(LEFT_BRACE))
+                } while (!conditionAtEndBlock())
 
                 // Consume the statement
-                whenTokens += consumeNextBlock()
+                whenTokens += consumeNextBlock(isExpr)
             }
         }
         consume(RIGHT_BRACE, "Expect '}' at the end of when")
-        compileNested(whenTokens)
+        compileNested(whenTokens, isExpr)
     }
 
     private fun printStatement() {
@@ -409,7 +479,7 @@ class Compiler {
         expression()
         val skipChunk = emitJump(JUMP_IF_FALSE)
         emitCode(POP)
-        statement(true)
+        statement(isExpr = false, lambda = true)
         emitJump(JUMP, start)
         val end = patchJump(skipChunk)
         val breaksToPatch = loops.pop().breakPositions
@@ -454,11 +524,12 @@ class Compiler {
 //        return Rescue(keyword, block)
 //    }
 
-    private fun expressionStatement(lambda: Boolean) {
+    private fun expressionStatement(lambda: Boolean): Boolean {
         val shouldPop = expression()
         if (shouldPop) {
             emitCode(POP)
         }
+        return shouldPop
 //        if (!(expr is Assign && expr.value is Expr.Block)
 //                && !(expr is Expr.Set && expr.value is Expr.Block)) {
 //            // If the left-hand side is an assign or set and right-hand side is a block, then we've already consumed the
@@ -789,12 +860,12 @@ class Compiler {
 //        if (match(TokenType.QUESTION)) {
 //            return Unary(previous(), primary())
 //        }
-//        if (match(TokenType.IF)) {
-//            return ifExpr()
-//        }
-//        if (match(TokenType.WHEN)) {
-//            return whenExpr()
-//        }
+        else if (match(IF)) {
+            return ifSomething(true)
+        }
+        else if (match(WHEN)) {
+            return whenSomething(true)
+        }
         else {
             throw error(peek(), "Expect expression.")
         }
@@ -829,26 +900,34 @@ class Compiler {
         throw error(peek(), "Unterminated lambda expression!")
     }
 
-    private fun consumeNextBlock(): List<Token> {
-        val start = current
-        var braceCount = 0
-        var end = 0
-        loop@ for (i in start until tokens.size) {
-            when (tokens[i].type) {
-                LEFT_BRACE -> braceCount++
-                RIGHT_BRACE -> {
-                    braceCount--
-                    if (braceCount == 0) {
-                        end = i
-                        break@loop
+    private fun consumeNextBlock(isExpr: Boolean): List<Token> {
+        if (isExpr && match(EQUAL)) {
+            val start = current
+            while (!match(NEWLINE)) {
+                current++
+            }
+            return tokens.subList(start, current)
+        } else {
+            val start = current
+            var braceCount = 0
+            var end = 0
+            loop@ for (i in start until tokens.size) {
+                when (tokens[i].type) {
+                    LEFT_BRACE -> braceCount++
+                    RIGHT_BRACE -> {
+                        braceCount--
+                        if (braceCount == 0) {
+                            end = i
+                            break@loop
+                        }
                     }
                 }
             }
+            current = end + 1
+            val sublist = tokens.subList(start, current)
+            matchAllNewlines()
+            return sublist
         }
-        current = end + 1
-        val sublist = tokens.subList(start, current)
-        matchAllNewlines()
-        return sublist
     }
 
     private fun consumeUntilType(vararg types: TokenType): List<Token> {
@@ -988,6 +1067,12 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size))
     }
 
+    private fun emitPopUnder(count: Int) {
+        var size = byteCode.put(POP_UNDER)
+        size += byteCode.putInt(count)
+        pushLastChunk(Chunk(POP_UNDER, size, count))
+    }
+
     private fun emitInt(i: Long) {
         val opCode = CONST_INT
         var size = byteCode.put(opCode)
@@ -1124,13 +1209,18 @@ class Compiler {
         return null
     }
 
-    private fun discardLocals(depth: Int) {
+    private fun discardLocals(depth: Int, emitPops: Boolean = true): Int {
+        var count = 0
         var i = locals.size - 1
         while (i >= 0 && locals[i].depth == depth) {
             locals.removeAt(i)
             i--
-            emitCode(POP)
+            if (emitPops) {
+                emitCode(POP)
+            }
+            count++
         }
+        return count
     }
 
     private fun findFunctionWithName(name: String): Const {

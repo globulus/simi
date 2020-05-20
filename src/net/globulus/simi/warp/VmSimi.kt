@@ -53,10 +53,12 @@ private fun run(source: String) {
     val compiler = Compiler()
     val co = compiler.compile(tokens)
     println((System.currentTimeMillis() - time).toString() + " ms")
-    time = System.currentTimeMillis()
-    val vm = Vm()
-    vm.interpret(co)
-    println("Running... " + (System.currentTimeMillis() - time) + " ms")
+    co?.let {
+        time = System.currentTimeMillis()
+        val vm = Vm()
+        vm.interpret(it)
+        println("Running... " + (System.currentTimeMillis() - time) + " ms")
+    }
 }
 
 //@Throws(IOException::class)

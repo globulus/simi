@@ -8,6 +8,7 @@ enum class OpCode {
     CONST_OUTER,
     NIL,
     POP,
+    POP_UNDER, // Keeps the top value and pops N values beneath it
     SET_LOCAL,
     GET_LOCAL,
     SET_OUTER,

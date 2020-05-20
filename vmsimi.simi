@@ -41,6 +41,24 @@ when a {
     else { print "else" }
 }
 
+print "if expr test 2 =="
+print if 0 {
+    print "yup"
+    5
+} else if 0 {
+    print "nope"
+    6
+} else {
+    2
+}
+
+print "when expr test 5 == "
+print when a {
+    2 = 2
+    3 = 5
+    else = 6
+}
+
 print "func test func6 == "
 def func(what = "func", smth = 6) {
     print what + smth

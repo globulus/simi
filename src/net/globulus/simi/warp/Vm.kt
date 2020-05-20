@@ -39,6 +39,11 @@ internal class Vm {
                 CONST_OUTER -> pushConst(getOuterFrame())
                 NIL -> push(Nil)
                 POP -> sp--
+                POP_UNDER -> {
+                    val value = pop()
+                    sp -= nextInt
+                    push(value)
+                }
                 SET_LOCAL -> setVar(frame)
                 GET_LOCAL -> getVar(frame)
                 SET_OUTER -> setVar(getOuterFrame())
