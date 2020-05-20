@@ -394,7 +394,7 @@ class Compiler {
             { check(LEFT_BRACE) }
         }
 
-        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+        while (!isAtEnd() && !check(RIGHT_BRACE)) {
             matchAllNewlines()
             if (match(ELSE)) {
                 wroteElse = true
@@ -442,6 +442,7 @@ class Compiler {
                 // Consume the statement
                 whenTokens += consumeNextBlock(isExpr)
             }
+            matchAllNewlines()
         }
         consume(RIGHT_BRACE, "Expect '}' at the end of when")
         compileNested(whenTokens, isExpr)
@@ -932,7 +933,7 @@ class Compiler {
 
     private fun consumeUntilType(vararg types: TokenType): List<Token> {
         val start = current
-        while (!check(*types)) {
+        while (!isAtEnd() && !check(*types)) {
             current++
         }
         return tokens.subList(start, current)
@@ -1014,7 +1015,7 @@ class Compiler {
     }
 
     private fun isAtEnd(): Boolean {
-        return peek().type == EOF
+        return current == tokens.size || peek().type == EOF
     }
 
     private fun peek(): Token {
@@ -1051,7 +1052,8 @@ class Compiler {
 
     private fun error(token: Token, message: String): ParseError {
 //        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message)
-        return ParseError("[\"${token.file}\" line ${token.line}] At ${token.type}: $message")
+        return ParseError("[\"${token.file}\" line ${token.line}] At ${token.type}: $message\n" +
+                TokenPatcher.patch(tokens, token))
     }
 
     private fun constIndex(c: Any): Int {
