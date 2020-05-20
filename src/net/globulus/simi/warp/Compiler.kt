@@ -561,21 +561,24 @@ class Compiler {
                     throw error(equals, "Assigning to undeclared var!")
                 }
                 val local = lastChunk!!.data[0] as Local
-                if (equals.type == DOLLAR_EQUAL) {
-                    rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
-                }
-                or() // right-hand side
-                if (equals.type != DOLLAR_EQUAL) {
-                    emitCode(when (equals.type) {
-                        PLUS_EQUAL -> ADD
-                        MINUS_EQUAL -> SUBTRACT
-                        STAR_EQUAL -> MULTIPLY
-                        SLASH_EQUAL -> DIVIDE
-                        SLASH_SLASH_EQUAL -> DIVIDE_INT
-                        MOD_EQUAL -> OpCode.MOD
-                        else -> throw IllegalArgumentException("WTF")
-                        // TODO extend
-                    })
+                if (equals.type == QUESTION_QUESTION_EQUAL) {
+                    nilCoalescenceWithKnownLeft { or() }
+                } else {
+                    if (equals.type == DOLLAR_EQUAL) {
+                        rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
+                    }
+                    or() // right-hand side
+                    if (equals.type != DOLLAR_EQUAL) {
+                        emitCode(when (equals.type) {
+                            PLUS_EQUAL -> ADD
+                            MINUS_EQUAL -> SUBTRACT
+                            STAR_EQUAL -> MULTIPLY
+                            SLASH_EQUAL -> DIVIDE
+                            SLASH_SLASH_EQUAL -> DIVIDE_INT
+                            MOD_EQUAL -> OpCode.MOD
+                            else -> throw IllegalArgumentException("WTF")
+                        })
+                    }
                 }
                 emitSetLocal(local)
             }
@@ -676,13 +679,17 @@ class Compiler {
     private fun nilCoalescence() {
         unary()
         while (match(QUESTION_QUESTION)) {
-            val elseChunk = emitJump(JUMP_IF_NIL)
-            val endChunk = emitJump(JUMP)
-            patchJump(elseChunk)
-            emitCode(POP)
-            unary()
-            patchJump(endChunk)
+            nilCoalescenceWithKnownLeft { unary() }
         }
+    }
+
+    private fun nilCoalescenceWithKnownLeft(right: () -> Unit) {
+        val elseChunk = emitJump(JUMP_IF_NIL)
+        val endChunk = emitJump(JUMP)
+        patchJump(elseChunk)
+        emitCode(POP)
+        right()
+        patchJump(endChunk)
     }
 
     private fun unary() {

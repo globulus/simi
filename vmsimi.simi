@@ -19,6 +19,13 @@ print "testing nil coalescence 5 =="
 a $= nil
 print a ?? 5
 
+print "testing nil coalescence assign 5 == "
+a ??= 5
+print a
+print "and testing nil coalescence assign some more 5 == "
+a ??= 6
+print a
+
 a $= 5
 while a > 1 {
     print "a is \(a)"
