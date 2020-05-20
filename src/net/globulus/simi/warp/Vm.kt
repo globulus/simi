@@ -43,32 +43,23 @@ internal class Vm {
                 GET_LOCAL -> getVar(frame)
                 SET_OUTER -> setVar(getOuterFrame())
                 GET_OUTER -> getVar(getOuterFrame())
+                INVERT -> invert()
                 NEGATE -> negate()
                 ADD -> add()
                 SUBTRACT, MULTIPLY, DIVIDE, DIVIDE_INT, MOD, LE, LT, GE, GT -> binaryOpOnStack(code)
-                EQ, NE -> checkEquality(code)
+                EQ -> checkEquality(code)
                 PRINT -> println(pop())
                 JUMP -> buffer.position(nextInt)
-                JUMP_IF_FALSE -> {
-                    val offset = nextInt
-                    if (isFalsey(peek())) {
-                        buffer.position(offset)
-                    }
-                }
+                JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
+                JUMP_IF_NIL -> jumpIf { it == Nil }
                 CALL -> {
                     val argCount = nextInt
                     call(peek(argCount), argCount)
                 }
                 RETURN -> {
-                    val result = pop()
-                    val returningFrame = frame
-                    fp--
-                    if (fp == 0) { // Returning from top-level func
-                        sp = 0
+                    if (doReturn()) {
                         break@loop
                     }
-                    sp = returningFrame.sp
-                    push(result)
                 }
             }
         }
@@ -97,6 +88,11 @@ internal class Vm {
             is Double -> o == 0.0
             else -> false
         }
+    }
+
+    private fun invert() {
+        val a = pop()
+        push(if (isFalsey(a)) 1L else 0L)
     }
 
     private fun negate() {
@@ -190,6 +186,13 @@ internal class Vm {
         return a == b
     }
 
+    private fun jumpIf(predicate: (Any) -> Boolean) {
+        val offset = nextInt
+        if (predicate(peek())) {
+            buffer.position(offset)
+        }
+    }
+
     private fun call(callee: Any, argCount: Int) {
         if (callee !is Function) {
             throw runtimeError("Callee is not a func!")
@@ -210,6 +213,22 @@ internal class Vm {
         }
         callFrames[fp] = CallFrame(callee, sp - callee.arity - 1)
         fp++
+    }
+
+    /**
+     * @return true if the program should terminate
+     */
+    private fun doReturn(): Boolean {
+        val result = pop()
+        val returningFrame = frame
+        fp--
+        if (fp == 0) { // Returning from top-level func
+            sp = 0
+            return true
+        }
+        sp = returningFrame.sp
+        push(result)
+        return false
     }
 
     private fun resizeStackIfNecessary() {

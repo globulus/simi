@@ -17,7 +17,7 @@ enum class OpCode {
     GT,
     GE,
     EQ,
-    NE,
+    INVERT,
     NEGATE,
     ADD,
     SUBTRACT,
@@ -28,6 +28,7 @@ enum class OpCode {
     PRINT,
     JUMP,
     JUMP_IF_FALSE,
+    JUMP_IF_NIL,
     CALL,
     RETURN,
     ;

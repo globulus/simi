@@ -551,11 +551,14 @@ class Compiler {
         while (match(BANG_EQUAL, EQUAL_EQUAL/*, IS, ISNOT, IN, NOTIN*/)) {
             val operator = previous()
             comparison()
-            emitCode(when (operator.type) {
-                EQUAL_EQUAL -> EQ
-                BANG_EQUAL -> NE
+            when (operator.type) {
+                EQUAL_EQUAL -> emitCode(EQ)
+                BANG_EQUAL -> {
+                    emitCode(EQ)
+                    emitCode(INVERT)
+                }
                 else -> throw IllegalArgumentException("WTF")
-            })
+            }
         }
     }
 
@@ -599,21 +602,26 @@ class Compiler {
     }
 
     private fun nilCoalescence() {
-        var expr = unary()
-//        while (match(QUESTION_QUESTION)) {
-//            val operator = previous()
-//            val right = unary()
-//            expr = Binary(expr, operator, right)
-//        }
-//        return expr
+        unary()
+        while (match(QUESTION_QUESTION)) {
+            val elseChunk = emitJump(JUMP_IF_NIL)
+            val endChunk = emitJump(JUMP)
+            patchJump(elseChunk)
+            emitCode(POP)
+            unary()
+            patchJump(endChunk)
+        }
     }
 
     private fun unary() {
         if (match(NOT, MINUS, BANG_BANG)) {
             val operator = previous()
-//            val right = unary()
             unary()
-            emitCode(NEGATE)
+            emitCode(when (operator.type) {
+                NOT -> INVERT
+                MINUS -> NEGATE
+                else -> throw IllegalArgumentException("WTF")
+            })
         }
 //        if (match(GU)) {
 //            return Gu(unary())
