@@ -1,6 +1,7 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.warp.OpCode.*
+import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import kotlin.math.round
 
@@ -19,13 +20,16 @@ internal class Vm {
     private lateinit var frame: CallFrame
     private val callFrames = arrayOfNulls<CallFrame>(MAX_FRAMES)
 
+    private var openUpvalues: Upvalue? = null
+
     fun interpret(input: Function) {
-        push(input)
-        call(input, 0)
-        try {
+        val closure = Closure(input)
+        push(closure)
+        call(closure, 0)
+//        try {
             run()
             printStack()
-        } catch (ignored: IllegalStateException) { } // Silently abort the program
+//        } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
     private fun run() {
@@ -36,7 +40,7 @@ internal class Vm {
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> throw runtimeError("WTF")
                 CONST -> pushConst(frame)
-                CONST_OUTER -> pushConst(getOuterFrame())
+//                CONST_OUTER -> pushConst(getOuterFrame())
                 NIL -> push(Nil)
                 POP -> sp--
                 POP_UNDER -> {
@@ -46,8 +50,8 @@ internal class Vm {
                 }
                 SET_LOCAL -> setVar(frame)
                 GET_LOCAL -> getVar(frame)
-                SET_OUTER -> setVar(getOuterFrame())
-                GET_OUTER -> getVar(getOuterFrame())
+                SET_UPVALUE -> frame.closure.upvalues[nextInt]!!.location = WeakReference(sp - 1) // -1 because we need to point at an actual slot
+                GET_UPVALUE -> push(readUpvalue(frame.closure.upvalues[nextInt]!!))
                 INVERT -> invert()
                 NEGATE -> negate()
                 ADD -> add()
@@ -61,6 +65,21 @@ internal class Vm {
                     val argCount = nextInt
                     call(peek(argCount), argCount)
                 }
+                CLOSURE -> {
+                    val function = currentFunction.constants[nextInt] as Function
+                    val closure = Closure(function)
+                    push(closure)
+                    for (i in 0 until function.upvalueCount) {
+                        val isLocal = nextByte == 1.toByte()
+                        val sp = nextInt
+                        closure.upvalues[i] = if (isLocal) {
+                            captureUpvalue(frame.sp + sp)
+                        } else {
+                            frame.closure.upvalues[sp]
+                        }
+                    }
+                }
+                CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
                     if (doReturn()) {
                         break@loop
@@ -71,7 +90,7 @@ internal class Vm {
     }
 
     private fun pushConst(frame: CallFrame) {
-        push(frame.function.constants[nextInt])
+        push(currentFunction.constants[nextInt])
     }
 
     private fun setVar(frame: CallFrame) {
@@ -198,26 +217,73 @@ internal class Vm {
         }
     }
 
+    private fun closeUpvalue() {
+        closeUpvalues(sp - 1)
+        sp--
+    }
+
     private fun call(callee: Any, argCount: Int) {
-        if (callee !is Function) {
-            throw runtimeError("Callee is not a func!")
+        if (callee !is Closure) {
+            throw runtimeError("Callee is not a closure!")
         }
-        if (argCount != callee.arity) {
-            if (argCount < callee.arity
-                    && callee.optionalParamsStart != -1
-                    && argCount >= callee.optionalParamsStart) {
-                for (i in argCount until (callee.optionalParamsStart + callee.defaultValues!!.size)) {
-                    push(callee.defaultValues!![i - callee.optionalParamsStart])
+        val f = callee.function
+        if (argCount != f.arity) {
+            if (argCount < f.arity
+                    && f.optionalParamsStart != -1
+                    && argCount >= f.optionalParamsStart) {
+                for (i in argCount until (f.optionalParamsStart + f.defaultValues!!.size)) {
+                    push(f.defaultValues!![i - f.optionalParamsStart])
                 }
             } else {
-                throw runtimeError("Expected ${callee.arity} arguments but got $argCount.")
+                throw runtimeError("Expected ${f.arity} arguments but got $argCount.")
             }
         }
         if (fp == MAX_FRAMES) {
             throw runtimeError("Stack overflow.")
         }
-        callFrames[fp] = CallFrame(callee, sp - callee.arity - 1)
+        callFrames[fp] = CallFrame(callee, sp - f.arity - 1)
         fp++
+    }
+
+    private fun captureUpvalue(sp: Int): Upvalue {
+        var prevUpvalue: Upvalue? = null
+        var upvalue = openUpvalues
+        while (upvalue != null && upvalue.sp > sp) {
+            prevUpvalue = upvalue
+            upvalue = upvalue.next
+        }
+        if (upvalue != null && upvalue.sp == sp) {
+            return upvalue
+        }
+        val createdUpvalue = Upvalue(WeakReference(sp), false, upvalue)
+        if (prevUpvalue == null) {
+            openUpvalues = createdUpvalue
+        } else {
+            prevUpvalue.next = createdUpvalue
+        }
+        return createdUpvalue
+    }
+
+    private fun closeUpvalues(last: Int) {
+        while (openUpvalues != null && openUpvalues!!.sp >= last) {
+            val upvalue = openUpvalues?.apply {
+                closed = true
+                location = WeakReference(readUpvalueFromStack(this))
+            }
+            openUpvalues = upvalue?.next
+        }
+    }
+
+    private fun readUpvalue(upvalue: Upvalue): Any {
+        return if (upvalue.closed) {
+            upvalue.location.get()!!
+        } else {
+            readUpvalueFromStack(upvalue)
+        }
+    }
+
+    private fun readUpvalueFromStack(upvalue: Upvalue): Any {
+        return stack[upvalue.sp]!!
     }
 
     /**
@@ -226,6 +292,16 @@ internal class Vm {
     private fun doReturn(): Boolean {
         val result = pop()
         val returningFrame = frame
+        closeUpvalues(returningFrame.sp)
+        val numberOfPops = nextInt
+        for (i in 0 until numberOfPops) {
+            val code = nextCode
+            when (code) { // TODO move somewhere else, reuse existing code
+                POP -> sp--
+                CLOSE_UPVALUE -> closeUpvalue()
+                else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
+            }
+        }
         fp--
         if (fp == 0) { // Returning from top-level func
             sp = 0
@@ -283,6 +359,7 @@ internal class Vm {
     }
 
     private val buffer: ByteBuffer get() = frame.buffer
+    private val currentFunction: Function get() = frame.closure.function
 
     private val nextCode: OpCode get() = OpCode.from(nextByte)
     private val nextByte: Byte get() = buffer.get()

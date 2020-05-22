@@ -82,6 +82,16 @@ def retFunc() {
 }
 print retFunc()
 
+def outer() {
+  x = "outside"
+  def inner() {
+    print x
+  }
+  return inner
+}
+closure = outer()
+closure()
+
 #def f3() { func(1, 2, 3) } # Uncomment to test stack trace printing
 #def f2() { f3() }
 #def f1() { f2() }

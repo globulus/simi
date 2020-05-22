@@ -5,14 +5,13 @@ enum class OpCode {
     CONST_FLOAT,
     CONST_ID,
     CONST,
-    CONST_OUTER,
     NIL,
     POP,
     POP_UNDER, // Keeps the top value and pops N values beneath it
     SET_LOCAL,
     GET_LOCAL,
-    SET_OUTER,
-    GET_OUTER,
+    SET_UPVALUE,
+    GET_UPVALUE,
     LT,
     LE,
     GT,
@@ -31,6 +30,8 @@ enum class OpCode {
     JUMP_IF_FALSE,
     JUMP_IF_NIL,
     CALL,
+    CLOSURE,
+    CLOSE_UPVALUE,
     RETURN,
     ;
 

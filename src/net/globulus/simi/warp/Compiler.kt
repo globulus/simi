@@ -22,9 +22,8 @@ class Compiler {
     private val constList = mutableListOf<Any>()
     private var constCount = 0
 
-    private val functionTable = mutableMapOf<String, Int>() // maps function signatures to their const table indices
-
     private val locals = mutableListOf<Local>()
+    private val upvalues = mutableListOf<Upvalue>()
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
     private val loops = Stack<ActiveLoop>()
 
@@ -56,14 +55,12 @@ class Compiler {
         byteCode = mutableListOf()
         this.tokens = tokens
         current = 0
-        locals += Local("", 0, 0) // Stores the top-level function
+        locals += Local("", 0, 0, false) // Stores the top-level function
         beginScope()
         this.within()
         endScope()
-        if (name == SCRIPT) {
-            printChunks()
-        }
-        return Function(name, arity, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
+        printChunks(name)
+        return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
     /**
@@ -85,7 +82,7 @@ class Compiler {
             if (isExpr) {
                 expression()
             } else {
-                declaration()
+                declaration(false)
             }
         }
     }
@@ -108,18 +105,18 @@ class Compiler {
      * @return Number of discarded vars == number of emitted POPs
      */
     private fun endScope(emitPops: Boolean = true): Int {
-        val discarded = discardLocals(scopeDepth, emitPops)
+        val popCount = discardLocals(scopeDepth, emitPops)
         scopeDepth--
-        return discarded
+        return popCount
     }
 
-    private fun declaration(): Boolean {
+    private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek())
 //        if (match(TokenType.CLASS, TokenType.CLASS_FINAL, TokenType.CLASS_OPEN)) {
 //            return classDeclaration()
 //        }
         return if (match(DEF)) {
-            function(Parser.KIND_FUNCTION)
+            funDeclaration()
             false
         }
 //        if (match(TokenType.BANG)) {
@@ -132,11 +129,16 @@ class Compiler {
 //            }
 //        }
         else {
-            statement(isExpr = false, lambda = false)
+            statement(isExpr, lambda = false)
         }
     }
 
-    private fun function(kind: String) {
+    private fun funDeclaration() {
+        val function = function(Parser.KIND_FUNCTION)
+        declareLocal(function.name)
+    }
+
+    private fun function(kind: String): Function {
         val declaration = previous()
         val name = consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
@@ -176,7 +178,8 @@ class Compiler {
             }
         }
         current = funcCompiler.current
-        functionTable[name] = constIndex(f)
+        emitClosure(f, funcCompiler)
+        return f
     }
 
     private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
@@ -232,7 +235,7 @@ class Compiler {
         var lastLineIsExpr = false
         while (!check(RIGHT_BRACE)) {
             matchAllNewlines()
-            lastLineIsExpr = statement(isExpr, false)
+            lastLineIsExpr = declaration(isExpr)
             matchAllNewlines()
         }
         consume(RIGHT_BRACE, "Expect '}' after block!")
@@ -454,13 +457,18 @@ class Compiler {
     }
 
     private fun returnStatement(lambda: Boolean) {
-        if (match(NEWLINE)) {
-            emitReturnNil()
-        } else {
+        if (!match(NEWLINE)) {
             expression()
-            consume(NEWLINE, "Expected newline after return value.")
-            emitCode(OpCode.RETURN)
+            checkIfUnidentified()
         }
+        consume(NEWLINE, "Expected newline after return value.")
+        emitCode(OpCode.RETURN)
+        // After return is emitted, we need to close the scope, so we emit the number of additional
+        // instructions to interpret before we actually return from call frame
+        val pos = byteCode.size
+        byteCode.putInt(0)
+        val popCount = endScope()
+        byteCode.setInt(popCount, pos)
     }
 
 //    private fun yieldStatement(lambda: Boolean): Stmt? {
@@ -557,10 +565,11 @@ class Compiler {
                 rollBackLastChunk()
                 or() // push the value on the stack
             } else {
-                if (lastChunk?.opCode != GET_LOCAL && lastChunk?.opCode != GET_OUTER) {
-                    throw error(equals, "Assigning to undeclared var!")
+                val variable: Any = when (lastChunk?.opCode) {
+                    GET_LOCAL -> lastChunk!!.data[0] as Local
+                    GET_UPVALUE -> lastChunk!!.data[0] as Int
+                    else -> throw error(equals, "Assigning to undeclared var!")
                 }
-                val local = lastChunk!!.data[0] as Local
                 if (equals.type == QUESTION_QUESTION_EQUAL) {
                     nilCoalescenceWithKnownLeft { or() }
                 } else {
@@ -580,7 +589,7 @@ class Compiler {
                         })
                     }
                 }
-                emitSetLocal(local)
+                emitSet(variable)
             }
 //            if (match(TokenType.YIELD)) {
 //                val keyword = previous()
@@ -741,13 +750,8 @@ class Compiler {
     }
 
     private fun finishCall() {
+        checkIfUnidentified()
         val paren = previous()
-        if (lastChunk?.opCode != CONST_ID) {
-            throw error(paren, "Expected an ID for call!")
-        }
-        val const = findFunctionWithName(lastChunk!!.data[1] as String)
-        rollBackLastChunk()
-        emitConstWithIndex(const)
         val argCount = argList()
         emitCall(argCount)
 //        val paren = previous()
@@ -848,11 +852,16 @@ class Compiler {
         else if (match(IDENTIFIER)) {
             val id = previous()
             val name = id.lexeme
-            val local = findLocal(name)
+            val local = findLocal(this, name)
             if (local != null) {
                 emitGetLocal(local)
             } else {
-                emitId(name)
+                val upvalue = resolveUpvalue(this, name)
+                if (upvalue != null) {
+                    emitGetUpvalue(upvalue)
+                } else {
+                    emitId(name)
+                }
             }
 //            val expr = Variable(previous())
 //            if (isInClassDeclr) { // Add backup self.var
@@ -1105,7 +1114,7 @@ class Compiler {
     }
 
     private fun emitConstWithIndex(c: Const) {
-        var size = byteCode.put(if (c.level == -1) CONST else CONST_OUTER)
+        var size = byteCode.put(CONST)//if (c.level == -1) CONST else CONST_OUTER)
         if (c.level != -1) {
             size += byteCode.putInt(c.level)
         }
@@ -1120,24 +1129,53 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, c))
     }
 
-    private fun emitGetLocal(local: Local) {
-        val opCode = if (local.level == -1) GET_LOCAL else GET_OUTER
+    private fun emitClosure(f: Function, funcCompiler: Compiler) {
+        val opCode = CLOSURE
         var size = byteCode.put(opCode)
-        if (local.level != -1) {
-            size += byteCode.putInt(local.level)
+        val constIdx = constIndex(f)
+        size += byteCode.putInt(constIdx)
+        for (i in 0 until f.upvalueCount) {
+            val upvalue = funcCompiler.upvalues[i]
+            size += byteCode.put((if (upvalue.isLocal) 1 else 0).toByte())
+            size += byteCode.putInt(upvalue.sp)
         }
+        pushLastChunk(Chunk(opCode, size, constIdx, f))
+    }
+
+    private fun emitGetLocal(local: Local) {
+        val opCode = GET_LOCAL
+        var size = byteCode.put(opCode)
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
     }
 
-    private fun emitSetLocal(local: Local) {
-        val opCode = if (local.level == -1) SET_LOCAL else SET_OUTER
+    private fun emitGetUpvalue(upvalue: Upvalue) {
+        val opCode = GET_UPVALUE
+        val index = upvalues.indexOf(upvalue)
         var size = byteCode.put(opCode)
-        if (local.level != -1) {
-            size += byteCode.putInt(local.level)
+        size += byteCode.putInt(index)
+        pushLastChunk(Chunk(opCode, size, index, upvalue))
+    }
+
+    private fun emitSet(it: Any) {
+        when (it) {
+            is Local -> emitSetLocal(it)
+            is Int -> emitSetUpvalue(it)
+            else -> throw IllegalArgumentException("WTF")
         }
+    }
+
+    private fun emitSetLocal(local: Local) {
+        val opCode = SET_LOCAL
+        var size = byteCode.put(opCode)
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
+    }
+    private fun emitSetUpvalue(index: Int) {
+        val opCode = SET_UPVALUE
+        var size = byteCode.put(opCode)
+        size += byteCode.putInt(index)
+        pushLastChunk(Chunk(opCode, size, index, upvalues[index]))
     }
 
     private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
@@ -1178,6 +1216,7 @@ class Compiler {
     private fun emitReturnNil() {
         emitCode(OpCode.NIL)
         emitCode(OpCode.RETURN)
+        byteCode.putInt(0) // No additional instructions to skip
     }
 
     private fun updateDebugInfoLines(token: Token) {
@@ -1195,58 +1234,85 @@ class Compiler {
                 throw error(previous(), "Variable $name is already declared in scope!")
             }
         }
-        val l = Local(name, end, scopeDepth)
+        val l = Local(name, end, scopeDepth, false)
         locals += l
         return l
     }
 
-    private fun findLocal(name: String): Local? {
-        var compiler: Compiler? = this
-        while (compiler != null) {
+    private fun findLocal(compiler: Compiler, name: String): Local? {
+//        var compiler: Compiler? = this
+//        while (compiler != null) {
             for (i in compiler.locals.size - 1 downTo 0) {
                 val local = compiler.locals[i]
                 if (local.name == name) {
-                    return if (compiler == this) {
-                        local
-                    } else {
-                        local.copyForLevel(compiler.numberOfEnclosingCompilers)
-                    }
+//                    return if (compiler == this) {
+                        return local
+//                    } else {
+//                        local.copyForLevel(compiler.numberOfEnclosingCompilers)
+//                    }
                 }
             }
-            compiler = compiler.enclosing
+//            compiler = compiler.enclosing
+//        }
+        return null
+    }
+
+    /**
+     * @return The number of popping statements emitted
+     */
+    private fun discardLocals(depth: Int, emitPops: Boolean = true): Int {
+        var popCount = 0
+        var i = locals.size - 1
+        while (i >= 0 && locals[i].depth == depth) {
+            if (emitPops) {
+                popCount++
+                if (locals[i].isCaptured) {
+                    emitCode(CLOSE_UPVALUE)
+                } else {
+                    emitCode(POP)
+                }
+            }
+            locals.removeAt(i)
+            i--
+        }
+        return popCount
+    }
+
+    private fun resolveUpvalue(compiler: Compiler, name: String): Upvalue? {
+        if (compiler.enclosing == null) {
+            return null
+        }
+        val local = findLocal(compiler.enclosing!!, name)
+        if (local != null) {
+            local.isCaptured = true
+            return addUpvalue(compiler, local.sp, true)
+        }
+        val upvalue = resolveUpvalue(compiler.enclosing!!, name)
+        if (upvalue != null) {
+            return addUpvalue(compiler, upvalue.sp, false)
         }
         return null
     }
 
-    private fun discardLocals(depth: Int, emitPops: Boolean = true): Int {
-        var count = 0
-        var i = locals.size - 1
-        while (i >= 0 && locals[i].depth == depth) {
-            locals.removeAt(i)
-            i--
-            if (emitPops) {
-                emitCode(POP)
+    private fun addUpvalue(compiler: Compiler, sp: Int, isLocal: Boolean): Upvalue {
+        for (upvalue in compiler.upvalues) {
+            if (upvalue.sp == sp && upvalue.isLocal == isLocal) {
+                return upvalue
             }
-            count++
         }
-        return count
+        val upvalue = Upvalue(sp, isLocal)
+        compiler.upvalues += upvalue
+        return upvalue
     }
 
-    private fun findFunctionWithName(name: String): Const {
-        var compiler: Compiler? = this
-        while (compiler != null) {
-            compiler.functionTable[name]?.let {
-                val level = if (compiler == this) -1 else compiler!!.numberOfEnclosingCompilers
-                return Const(it, level)
-            }
-            compiler = compiler.enclosing
+    private fun printChunks(name: String) {
+        val tabLevel = numberOfEnclosingCompilers
+        if (tabLevel > 0) {
+            println("  ".repeat(tabLevel - 1) + "in $name")
         }
-        throw error(previous(), "Unable to find function with name $name.")
-    }
-
-    private fun printChunks() {
+        val tabs = "  ".repeat(tabLevel)
         while (chunks.isNotEmpty()) {
-            println(chunks.last)
+            println(tabs + chunks.last)
             chunks.removeLast()
         }
     }
@@ -1261,6 +1327,12 @@ class Compiler {
         return count
     }
 
+    private fun checkIfUnidentified() {
+        if (lastChunk?.opCode == CONST_ID) {
+            throw error(previous(), "Unable to resolve identifier: ${lastChunk!!.data[1]}")
+        }
+    }
+
     private data class Const(val index: Int,
                              val level: Int
     )
@@ -1268,10 +1340,12 @@ class Compiler {
     private data class Local(val name: String,
                              val sp: Int,
                              val depth: Int,
-                             val level: Int = -1 // How far in enclosing compilers is this var located
-    ) {
-        fun copyForLevel(level: Int) = Local(name, sp, depth, level)
-    }
+                             var isCaptured: Boolean
+    )
+
+    private data class Upvalue(val sp: Int,
+                               val isLocal: Boolean
+    )
 
     private data class ActiveLoop(val start: Int, val depth: Int) {
         val breakPositions = mutableListOf<Int>()
