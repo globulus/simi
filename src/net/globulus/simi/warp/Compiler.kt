@@ -581,11 +581,17 @@ class Compiler {
                     or()
                     emitCode(SET_PROP)
                 } else {
-                    if (lastChunk?.opCode != CONST_ID) {
+                    if (lastChunk?.opCode == GET_UPVALUE) {
+                        val name = lastChunk!!.data[2] as String
+                        warn(previous(), "Name shadowed: $name.")
+                        declareLocal(name)
+                        rollBackLastChunk()
+                    } else if (lastChunk?.opCode != CONST_ID) {
                         throw error(equals, "Expected an ID for var declaration!")
+                    } else {
+                        declareLocal(lastChunk!!.data[1] as String)
+                        rollBackLastChunk()
                     }
-                    declareLocal(lastChunk!!.data[1] as String)
-                    rollBackLastChunk()
                     or() // push the value on the stack
                 }
             } else {
@@ -1110,8 +1116,15 @@ class Compiler {
 
     private fun error(token: Token, message: String): ParseError {
 //        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message)
-        return ParseError("[\"${token.file}\" line ${token.line}] At ${token.type}: $message\n" +
-                TokenPatcher.patch(tokens, token))
+        return ParseError(bundleTokenWithMessage(token, message) + TokenPatcher.patch(tokens, token))
+    }
+
+    private fun warn(token: Token, message: String) {
+        println("w: ${bundleTokenWithMessage(token, message)}")
+    }
+
+    private fun bundleTokenWithMessage(token: Token, message: String): String {
+        return "[\"${token.file}\" line ${token.line}] At ${token.type}: $message\n"
     }
 
     private fun constIndex(c: Any): Int {

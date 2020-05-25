@@ -68,6 +68,7 @@ print when a {
 
 print "func test func6 == "
 def func(what = "func", smth = 6) {
+    b = 3
     print what + smth
     a $= 2
     print "a inside is \(a)"
