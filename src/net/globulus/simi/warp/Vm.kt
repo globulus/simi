@@ -25,7 +25,7 @@ internal class Vm {
     fun interpret(input: Function) {
         val closure = Closure(input)
         push(closure)
-        call(closure, 0)
+        callClosure(closure, 0)
 //        try {
             run()
             printStack()
@@ -38,7 +38,7 @@ internal class Vm {
             when (code) {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
-                CONST_ID -> throw runtimeError("WTF")
+                CONST_ID -> push(nextString)
                 CONST -> pushConst(frame)
 //                CONST_OUTER -> pushConst(getOuterFrame())
                 NIL -> push(Nil)
@@ -52,6 +52,19 @@ internal class Vm {
                 GET_LOCAL -> getVar(frame)
                 SET_UPVALUE -> frame.closure.upvalues[nextInt]!!.location = WeakReference(sp - 1) // -1 because we need to point at an actual slot
                 GET_UPVALUE -> push(readUpvalue(frame.closure.upvalues[nextInt]!!))
+                SET_PROP -> {
+                    val value = pop()
+                    val prop = pop()
+                    (pop() as? Instance)?.let {
+                        it.fields[prop.toString()] = value
+                    } ?: throw runtimeError("Only instances can have fields!")
+                }
+                GET_PROP -> {
+                    val prop = pop()
+                    (pop() as? Instance)?.let {
+                        push(it.fields[prop.toString()] ?: Nil)
+                    } ?: throw runtimeError("Only instances can have fields!")
+                }
                 INVERT -> invert()
                 NEGATE -> negate()
                 ADD -> add()
@@ -85,6 +98,7 @@ internal class Vm {
                         break@loop
                     }
                 }
+                CLASS -> push(SClass(nextString))
             }
         }
     }
@@ -223,10 +237,15 @@ internal class Vm {
     }
 
     private fun call(callee: Any, argCount: Int) {
-        if (callee !is Closure) {
-            throw runtimeError("Callee is not a closure!")
+        when (callee) {
+            is Closure -> callClosure(callee, argCount)
+            is SClass -> stack[sp - argCount - 1] = Instance(callee)
+            else -> throw runtimeError("Unable to call a $callee!")
         }
-        val f = callee.function
+    }
+
+    private fun callClosure(closure: Closure, argCount: Int) {
+        val f = closure.function
         if (argCount != f.arity) {
             if (argCount < f.arity
                     && f.optionalParamsStart != -1
@@ -241,7 +260,7 @@ internal class Vm {
         if (fp == MAX_FRAMES) {
             throw runtimeError("Stack overflow.")
         }
-        callFrames[fp] = CallFrame(callee, sp - f.arity - 1)
+        callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
         fp++
     }
 
@@ -366,6 +385,7 @@ internal class Vm {
     private val nextInt: Int get() = buffer.int
     private val nextLong: Long get() = buffer.long
     private val nextDouble: Double get() = buffer.double
+    private val nextString: String get() = currentFunction.constants[nextInt] as String
 
     companion object {
         private const val INITIAL_STACK_SIZE = 1024

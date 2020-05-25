@@ -4,6 +4,7 @@ import net.globulus.simi.Parser
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
+import net.globulus.simi.TokenType.CLASS
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
 import net.globulus.simi.TokenType.PRINT
@@ -112,10 +113,11 @@ class Compiler {
 
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek())
-//        if (match(TokenType.CLASS, TokenType.CLASS_FINAL, TokenType.CLASS_OPEN)) {
-//            return classDeclaration()
-//        }
-        return if (match(DEF)) {
+        return if (match(TokenType.CLASS, CLASS_FINAL, CLASS_OPEN)) {
+            classDeclaration()
+            false
+        }
+        else if (match(DEF)) {
             funDeclaration()
             false
         }
@@ -182,6 +184,100 @@ class Compiler {
         return f
     }
 
+    private fun classDeclaration() {
+        val opener = previous()
+        val name = consumeVar("Expect class name.")
+        declareLocal(name)
+        emitClass(name)
+        if (match(LEFT_BRACE)) {
+
+            consume(RIGHT_BRACE, "\"Expect '}' after class body.\"")
+        } else {
+            consume(NEWLINE, "Expect newline after class declaration.")
+        }
+//        val mixins: MutableList<Expr> = ArrayList()
+//        var superclasses: MutableList<Expr?>? = null
+//        if (match(LEFT_PAREN)) {
+//            if (!check(RIGHT_PAREN)) {
+//                superclasses = ArrayList()
+//                do {
+//                    if (match(IN)) {
+//                        mixins.add(call())
+//                    } else {
+//                        superclasses.add(call())
+//                    }
+//                } while (match(COMMA))
+//            }
+//            consume(RIGHT_PAREN, "Expect ')' after superclasses.")
+//        }
+//        val constants: MutableList<Assign> = ArrayList()
+//        val innerClasses: MutableList<Stmt.Class> = ArrayList()
+//        val methods: MutableList<Stmt.Function> = ArrayList()
+//        if (match(LEFT_BRACE)) {
+//            isInClassDeclr = true
+//            while (!check(RIGHT_BRACE) && !isAtEnd()) {
+//                if (match(NEWLINE)) {
+//                    continue
+//                }
+//                if (match(DEF)) {
+//                    methods.add(function(Parser.KIND_METHOD))
+//                } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
+//                    innerClasses.add(classDeclaration())
+//                } else if (match(BANG)) {
+//                    annotations.add(annotation())
+//                } else {
+//                    val expr: Expr = assignment()
+//                    if (expr is Assign) {
+//                        constants.add(expr)
+//                    }
+//                }
+//            }
+//            isInClassDeclr = false
+//            consume(RIGHT_BRACE, "Expect '}' after class body.")
+//        } else {
+//            consume(NEWLINE, "Expected newline after empty class declaration.")
+//        }
+//        return Class(opener, name, superclasses, mixins, constants, innerClasses, methods, getAnnotations())
+    }
+//
+//    private fun annotation(): Stmt.Annotation? {
+//        var expr: Expr? = null
+//        if (peek().type == LEFT_BRACKET) {
+//            advance()
+//            expr = objectLiteral()
+//        } else if (peek().type == IDENTIFIER) {
+//            expr = call()
+//        } else {
+//            Parser.error(peek(), "Annotation expect either an object literal or a constructor invocation!")
+//        }
+//        checkStatementEnd(false)
+//        return Annotation(expr)
+//    }
+
+//    private fun forStatement(): Stmt? {
+//        val forToken = previous()
+//        var `var`: Token? = null
+//        var decompExpr: Expr? = null
+//        if (match(IDENTIFIER)) {
+//            `var` = previous()
+//        } else if (match(LEFT_BRACKET)) {
+//            `var` = Token(IDENTIFIER, "var" + System.currentTimeMillis(), null, forToken.line, forToken.file)
+//            decompExpr = objectLiteral()
+//        } else {
+//            Parser.error(peek(), "Expected identifier or object decomp in for loop.")
+//        }
+//        consume(IN, "Expected 'in'.")
+//        val iterable: Expr = expression()
+//        var prependedStmts: MutableList<Stmt?>? = null
+//        val varExpr = Variable(`var`)
+//        if (decompExpr != null) {
+//            prependedStmts = ArrayList()
+//            prependedStmts.add(Expression(Parser.getAssignExpr(this, decompExpr, forToken, varExpr)))
+//        }
+//        val body: Block = block("for", true, prependedStmts)
+//        return For(varExpr, iterable, body)
+//    }
+
     private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
         return if (match(LEFT_BRACE)) {
             beginScope()
@@ -243,92 +339,6 @@ class Compiler {
             throw error(previous(), "Block is not a valid expression block!")
         }
     }
-
-//    private fun classDeclaration(): Stmt.Class {
-//        val opener = previous()
-//        val name = consume(IDENTIFIER, "Expect class name.")
-//        val mixins: MutableList<Expr> = ArrayList()
-//        var superclasses: MutableList<Expr?>? = null
-//        if (match(LEFT_PAREN)) {
-//            if (!check(RIGHT_PAREN)) {
-//                superclasses = ArrayList()
-//                do {
-//                    if (match(IN)) {
-//                        mixins.add(call())
-//                    } else {
-//                        superclasses.add(call())
-//                    }
-//                } while (match(COMMA))
-//            }
-//            consume(RIGHT_PAREN, "Expect ')' after superclasses.")
-//        }
-//        val constants: MutableList<Assign> = ArrayList()
-//        val innerClasses: MutableList<Stmt.Class> = ArrayList()
-//        val methods: MutableList<Stmt.Function> = ArrayList()
-//        if (match(LEFT_BRACE)) {
-//            isInClassDeclr = true
-//            while (!check(RIGHT_BRACE) && !isAtEnd()) {
-//                if (match(NEWLINE)) {
-//                    continue
-//                }
-//                if (match(DEF)) {
-//                    methods.add(function(Parser.KIND_METHOD))
-//                } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
-//                    innerClasses.add(classDeclaration())
-//                } else if (match(BANG)) {
-//                    annotations.add(annotation())
-//                } else {
-//                    val expr: Expr = assignment()
-//                    if (expr is Assign) {
-//                        constants.add(expr)
-//                    }
-//                }
-//            }
-//            isInClassDeclr = false
-//            consume(RIGHT_BRACE, "Expect '}' after class body.")
-//        } else {
-//            consume(NEWLINE, "Expected newline after empty class declaration.")
-//        }
-//        return Class(opener, name, superclasses, mixins, constants, innerClasses, methods, getAnnotations())
-//    }
-//
-//    private fun annotation(): Stmt.Annotation? {
-//        var expr: Expr? = null
-//        if (peek().type == LEFT_BRACKET) {
-//            advance()
-//            expr = objectLiteral()
-//        } else if (peek().type == IDENTIFIER) {
-//            expr = call()
-//        } else {
-//            Parser.error(peek(), "Annotation expect either an object literal or a constructor invocation!")
-//        }
-//        checkStatementEnd(false)
-//        return Annotation(expr)
-//    }
-
-//    private fun forStatement(): Stmt? {
-//        val forToken = previous()
-//        var `var`: Token? = null
-//        var decompExpr: Expr? = null
-//        if (match(IDENTIFIER)) {
-//            `var` = previous()
-//        } else if (match(LEFT_BRACKET)) {
-//            `var` = Token(IDENTIFIER, "var" + System.currentTimeMillis(), null, forToken.line, forToken.file)
-//            decompExpr = objectLiteral()
-//        } else {
-//            Parser.error(peek(), "Expected identifier or object decomp in for loop.")
-//        }
-//        consume(IN, "Expected 'in'.")
-//        val iterable: Expr = expression()
-//        var prependedStmts: MutableList<Stmt?>? = null
-//        val varExpr = Variable(`var`)
-//        if (decompExpr != null) {
-//            prependedStmts = ArrayList()
-//            prependedStmts.add(Expression(Parser.getAssignExpr(this, decompExpr, forToken, varExpr)))
-//        }
-//        val body: Block = block("for", true, prependedStmts)
-//        return For(varExpr, iterable, body)
-//    }
 
     private fun ifSomething(isExpr: Boolean) {
         val opener = previous()
@@ -558,12 +568,18 @@ class Compiler {
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous()
             if (equals.type == EQUAL) {
-                if (lastChunk?.opCode != CONST_ID) {
-                    throw error(equals, "Expected an ID for var declaration!")
+                if (lastChunk?.opCode == GET_PROP) {
+                    rollBackLastChunk()
+                    or()
+                    emitCode(SET_PROP)
+                } else {
+                    if (lastChunk?.opCode != CONST_ID) {
+                        throw error(equals, "Expected an ID for var declaration!")
+                    }
+                    declareLocal(lastChunk!!.data[1] as String)
+                    rollBackLastChunk()
+                    or() // push the value on the stack
                 }
-                declareLocal(lastChunk!!.data[1] as String)
-                rollBackLastChunk()
-                or() // push the value on the stack
             } else {
                 val variable: Any = when (lastChunk?.opCode) {
                     GET_LOCAL -> lastChunk!!.data[0] as Local
@@ -605,7 +621,6 @@ class Compiler {
             return false
         }
         return true
-//        return expr
     }
 
     private fun or() {
@@ -727,8 +742,14 @@ class Compiler {
         while (true) {
             if (match(LEFT_PAREN, DOLLAR_LEFT_PAREN)) {
                 expr = finishCall()
-//            } else if (match(TokenType.DOT)) {
-//                val dot = previous()
+            } else if (match(DOT)) {
+                val dot = previous()
+                if (match(CLASS)) {
+                    emitId("class")
+                } else {
+                    primary()
+                }
+                emitCode(GET_PROP)
 //                var name: Expr
 //                if (peek().type == TokenType.NUMBER) {
 //                    name = Variable(consume(NUMBER, "Expected a number or id after '.'."))
@@ -1140,6 +1161,14 @@ class Compiler {
             size += byteCode.putInt(upvalue.sp)
         }
         pushLastChunk(Chunk(opCode, size, constIdx, f))
+    }
+
+    private fun emitClass(name: String) {
+        val opCode = OpCode.CLASS
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
     private fun emitGetLocal(local: Local) {

@@ -12,6 +12,8 @@ enum class OpCode {
     GET_LOCAL,
     SET_UPVALUE,
     GET_UPVALUE,
+    SET_PROP,
+    GET_PROP,
     LT,
     LE,
     GT,
@@ -33,6 +35,7 @@ enum class OpCode {
     CLOSURE,
     CLOSE_UPVALUE,
     RETURN,
+    CLASS,
     ;
 
     val byte = ordinal.toByte()

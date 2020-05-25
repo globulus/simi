@@ -92,6 +92,20 @@ def outer() {
 closure = outer()
 closure()
 
+class Brioche
+print "Brioche == " Brioche
+br = Brioche()
+print "Brioche instance == \(br)"
+br.jam = "jelly"
+print "jelly == \(br.jam)"
+
+class Pair
+pair = Pair()
+pair.first = 1
+pair.second = 2
+print "3 == \(pair.first + pair.second)"
+
+
 #def f3() { func(1, 2, 3) } # Uncomment to test stack trace printing
 #def f2() { f3() }
 #def f1() { f2() }
