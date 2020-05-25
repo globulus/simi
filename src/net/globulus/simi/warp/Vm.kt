@@ -26,10 +26,10 @@ internal class Vm {
         val closure = Closure(input)
         push(closure)
         callClosure(closure, 0)
-//        try {
+        try {
             run()
             printStack()
-//        } catch (ignored: IllegalStateException) { } // Silently abort the program
+        } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
     private fun run() {
@@ -55,15 +55,15 @@ internal class Vm {
                 SET_PROP -> {
                     val value = pop()
                     val prop = pop()
-                    (pop() as? Instance)?.let {
-                        it.fields[prop.toString()] = value
-                    } ?: throw runtimeError("Only instances can have fields!")
+                    val obj = pop()
+                    getFieldsOrThrow(obj)[prop.toString()] = value
                 }
                 GET_PROP -> {
-                    val prop = pop()
-                    (pop() as? Instance)?.let {
-                        push(it.fields[prop.toString()] ?: Nil)
-                    } ?: throw runtimeError("Only instances can have fields!")
+                    val name = pop().toString()
+                    val obj = pop()
+                    val prop = getFieldsOrThrow(obj)[name]
+                    push(prop ?: Nil)
+                    bindMethod(obj, getSClass(obj), prop, name)
                 }
                 INVERT -> invert()
                 NEGATE -> negate()
@@ -99,6 +99,7 @@ internal class Vm {
                     }
                 }
                 CLASS -> push(SClass(nextString))
+                METHOD -> defineMethod(nextString)
             }
         }
     }
@@ -239,6 +240,10 @@ internal class Vm {
     private fun call(callee: Any, argCount: Int) {
         when (callee) {
             is Closure -> callClosure(callee, argCount)
+            is BoundMethod -> {
+                stack[sp - argCount - 1] = callee.receiver
+                callClosure(callee.method, argCount)
+            }
             is SClass -> stack[sp - argCount - 1] = Instance(callee)
             else -> throw runtimeError("Unable to call a $callee!")
         }
@@ -331,6 +336,12 @@ internal class Vm {
         return false
     }
 
+    private fun defineMethod(name: String) {
+        val method = pop() as Closure
+        val klass = peek() as SClass
+        klass.fields[name] = method
+    }
+
     private fun resizeStackIfNecessary() {
         if (sp == stackSize) {
             stackSize *= STACK_GROWTH_FACTOR
@@ -351,6 +362,33 @@ internal class Vm {
 
     private fun peek(offset: Int = 0): Any {
         return stack[sp - offset - 1]!!
+    }
+
+    private fun getFieldsOrThrow(it: Any): MutableMap<String, Any> {
+        return when (it) {
+            is Instance -> it.fields
+            is SClass -> it.fields
+            else -> throw runtimeError("Only instances can have fields!")
+        }
+    }
+
+    private fun getSClass(it: Any): SClass {
+        return when (it) {
+            is Instance -> it.klass
+            is SClass -> it
+            else -> throw runtimeError("Unable to get SClass for $it!")
+        }
+    }
+
+    private fun bindMethod(receiver: Any, klass: SClass, prop: Any?, name: String) {
+        val method = if (prop is Closure) {
+            prop
+        } else {
+            (klass.fields[name] as? Closure)?.let { it } ?: return
+        }
+        val bound = BoundMethod(receiver, method)
+        pop()
+        push(bound)
     }
 
     private fun gc() {

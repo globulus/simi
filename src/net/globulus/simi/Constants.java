@@ -1,6 +1,6 @@
 package net.globulus.simi;
 
-final class Constants {
+public final class Constants {
 
     public static final String PRIVATE = "_";
     public static final String IMPLICIT = "#";

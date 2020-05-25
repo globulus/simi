@@ -100,7 +100,17 @@ public class Scanner {
       case '{': addToken(TokenType.LEFT_BRACE); break;
       case '}': addToken(TokenType.RIGHT_BRACE); break;
       case ',': addToken(TokenType.COMMA); break;
-      case '.': addToken(TokenType.DOT); break;
+      case '.': {
+        if (match('.')) {
+          if (match('.')) {
+            addToken(TokenType.DOT_DOT_DOT);
+          } else {
+            addToken(TokenType.DOT_DOT);
+          }
+        } else {
+          addToken(TokenType.DOT);
+        }
+      } break;
       case ':': addToken(TokenType.COLON); break;
       case '@':
         addToken(TokenType.SELF);

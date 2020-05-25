@@ -92,18 +92,35 @@ def outer() {
 closure = outer()
 closure()
 
-class Brioche
-print "Brioche == " Brioche
+class Brioche {
+    def eat(a, b) {
+        print "ate \(a) and \(b)"
+    }
+    def spit() {}
+}
+print "Brioche == \(Brioche)"
 br = Brioche()
 print "Brioche instance == \(br)"
 br.jam = "jelly"
 print "jelly == \(br.jam)"
+br.eat("yes", "no")
 
 class Pair
 pair = Pair()
 pair.first = 1
 pair.second = 2
 print "3 == \(pair.first + pair.second)"
+
+class Nested {
+  def method() {
+    def function() {
+      print self
+    }
+    function()
+  }
+}
+
+Nested().method()
 
 
 #def f3() { func(1, 2, 3) } # Uncomment to test stack trace printing

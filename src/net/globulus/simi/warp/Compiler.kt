@@ -1,5 +1,6 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.Constants
 import net.globulus.simi.Parser
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
@@ -28,6 +29,8 @@ class Compiler {
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
     private val loops = Stack<ActiveLoop>()
 
+    private var currentClass: ClassCompiler? = null
+
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
 
@@ -38,7 +41,7 @@ class Compiler {
 
     fun compile(tokens: List<Token>): Function? {
         return try {
-            compileFunction(tokens, SCRIPT, 0) {
+            compileFunction(tokens, SCRIPT, 0, SCRIPT) {
                 compileInternal(false)
                 emitReturnNil()
             }
@@ -51,12 +54,14 @@ class Compiler {
     private fun compileFunction(tokens: List<Token>,
                                 name: String,
                                 arity: Int,
+                                kind: String,
                                 within: Compiler.() -> Unit
     ): Function {
         byteCode = mutableListOf()
         this.tokens = tokens
         current = 0
-        locals += Local("", 0, 0, false) // Stores the top-level function
+        val selfName = if (kind != Parser.KIND_FUNCTION) Constants.SELF else ""
+        locals += Local(selfName, 0, 0, false) // Stores the top-level function
         beginScope()
         this.within()
         endScope()
@@ -113,7 +118,7 @@ class Compiler {
 
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek())
-        return if (match(TokenType.CLASS, CLASS_FINAL, CLASS_OPEN)) {
+        return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             classDeclaration()
             false
         }
@@ -140,9 +145,9 @@ class Compiler {
         declareLocal(function.name)
     }
 
-    private fun function(kind: String): Function {
+    private fun function(kind: String, providedName: String? = null): Function {
         val declaration = previous()
-        val name = consumeVar("Expected an identifier for function name")
+        val name = providedName ?: consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
         var optionalParamsStart = -1
         val defaultValues = mutableListOf<Any>()
@@ -167,8 +172,9 @@ class Compiler {
         val curr = current
         val funcCompiler = Compiler().also {
             it.enclosing = this
+            it.currentClass = currentClass
         }
-        val f = funcCompiler.compileFunction(tokens, name, args.size) {
+        val f = funcCompiler.compileFunction(tokens, name, args.size, kind) {
             current = curr
             args.forEach { declareLocal(it) }
             block(false)
@@ -187,14 +193,26 @@ class Compiler {
     private fun classDeclaration() {
         val opener = previous()
         val name = consumeVar("Expect class name.")
+
+        currentClass = ClassCompiler(previous(), currentClass)
+
         declareLocal(name)
         emitClass(name)
         if (match(LEFT_BRACE)) {
-
+            while (!isAtEnd() && !check(RIGHT_BRACE)) {
+                if (match(NEWLINE)) {
+                    continue
+                }
+                if (match(DEF)) {
+                    method()
+                }
+            }
             consume(RIGHT_BRACE, "\"Expect '}' after class body.\"")
         } else {
-            consume(NEWLINE, "Expect newline after class declaration.")
+            consume(NEWLINE, "Expect newline after empty class declaration.")
         }
+
+        currentClass = currentClass?.enclosing
 //        val mixins: MutableList<Expr> = ArrayList()
 //        var superclasses: MutableList<Expr?>? = null
 //        if (match(LEFT_PAREN)) {
@@ -210,36 +228,14 @@ class Compiler {
 //            }
 //            consume(RIGHT_PAREN, "Expect ')' after superclasses.")
 //        }
-//        val constants: MutableList<Assign> = ArrayList()
-//        val innerClasses: MutableList<Stmt.Class> = ArrayList()
-//        val methods: MutableList<Stmt.Function> = ArrayList()
-//        if (match(LEFT_BRACE)) {
-//            isInClassDeclr = true
-//            while (!check(RIGHT_BRACE) && !isAtEnd()) {
-//                if (match(NEWLINE)) {
-//                    continue
-//                }
-//                if (match(DEF)) {
-//                    methods.add(function(Parser.KIND_METHOD))
-//                } else if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
-//                    innerClasses.add(classDeclaration())
-//                } else if (match(BANG)) {
-//                    annotations.add(annotation())
-//                } else {
-//                    val expr: Expr = assignment()
-//                    if (expr is Assign) {
-//                        constants.add(expr)
-//                    }
-//                }
-//            }
-//            isInClassDeclr = false
-//            consume(RIGHT_BRACE, "Expect '}' after class body.")
-//        } else {
-//            consume(NEWLINE, "Expected newline after empty class declaration.")
-//        }
-//        return Class(opener, name, superclasses, mixins, constants, innerClasses, methods, getAnnotations())
     }
-//
+
+    private fun method() {
+        val name = consumeVar("Expect method name.")
+        function(Parser.KIND_METHOD, name)
+        emitMethod(name)
+    }
+
 //    private fun annotation(): Stmt.Annotation? {
 //        var expr: Expr? = null
 //        if (peek().type == LEFT_BRACKET) {
@@ -850,7 +846,11 @@ class Compiler {
 //            val arity: Int = peekParams()
 //            return Super(keyword, superclass, method, arity)
 //        }
-//        if (match(TokenType.SELF)) {
+        else if (match(SELF)) {
+            if (currentClass == null) {
+                throw error(previous(), "Cannot use 'self' outside of class.")
+            }
+            variable()
 //            val previous = previous()
 //            var specifier: Token? = null
 //            if (peekSequence(TokenType.LEFT_PAREN, TokenType.DEF, TokenType.RIGHT_PAREN)) {
@@ -860,7 +860,7 @@ class Compiler {
 //                advance()
 //            }
 //            return Self(Token(TokenType.SELF, Constants.SELF, null, previous!!.line, previous.file), specifier)
-//        }
+        }
 //        if (match(TokenType.LEFT_BRACKET, TokenType.DOLLAR_LEFT_BRACKET)) {
 //            return objectLiteral()
 //        }
@@ -871,19 +871,7 @@ class Compiler {
 //            return shorthandBlock(previous())
 //        }
         else if (match(IDENTIFIER)) {
-            val id = previous()
-            val name = id.lexeme
-            val local = findLocal(this, name)
-            if (local != null) {
-                emitGetLocal(local)
-            } else {
-                val upvalue = resolveUpvalue(this, name)
-                if (upvalue != null) {
-                    emitGetUpvalue(upvalue)
-                } else {
-                    emitId(name)
-                }
-            }
+            variable()
 //            val expr = Variable(previous())
 //            if (isInClassDeclr) { // Add backup self.var
 //                val selfToken = Token.self()
@@ -906,6 +894,22 @@ class Compiler {
         }
         else {
             throw error(peek(), "Expect expression.")
+        }
+    }
+
+    private fun variable() {
+        val id = previous()
+        val name = id.lexeme
+        val local = findLocal(this, name)
+        if (local != null) {
+            emitGetLocal(local)
+        } else {
+            val upvalue = resolveUpvalue(this, name)
+            if (upvalue != null) {
+                emitGetUpvalue(upvalue)
+            } else {
+                emitId(name)
+            }
         }
     }
 
@@ -1171,6 +1175,14 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
+    private fun emitMethod(name: String) {
+        val opCode = OpCode.METHOD
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, constIdx, name))
+    }
+
     private fun emitGetLocal(local: Local) {
         val opCode = GET_LOCAL
         var size = byteCode.put(opCode)
@@ -1387,6 +1399,10 @@ class Compiler {
             return "$opCode, size: $size b, data: ${data.joinToString()}"
         }
     }
+
+    private class ClassCompiler(val name: Token,
+                                val enclosing: ClassCompiler?
+    )
 
     private class ParseError(message: String) : RuntimeException(message)
 

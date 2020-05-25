@@ -7,7 +7,9 @@ public enum TokenType implements Codifiable {
   LEFT_PAREN, RIGHT_PAREN,
   LEFT_BRACKET, RIGHT_BRACKET,
   LEFT_BRACE, RIGHT_BRACE,
-  COMMA, DOT, COLON, NEWLINE,
+  COMMA,
+  DOT, DOT_DOT, DOT_DOT_DOT,
+  COLON, NEWLINE,
 
   // One or two character tokens.
   BANG, BANG_BANG, BANG_EQUAL,

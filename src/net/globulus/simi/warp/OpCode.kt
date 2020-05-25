@@ -36,6 +36,7 @@ enum class OpCode {
     CLOSE_UPVALUE,
     RETURN,
     CLASS,
+    METHOD,
     ;
 
     val byte = ordinal.toByte()
