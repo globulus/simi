@@ -35,6 +35,7 @@ class Compiler {
     private val chunks: Deque<Chunk> = LinkedList()
 
     private var enclosing: Compiler? = null
+    private lateinit var kind: String
 
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
@@ -60,6 +61,7 @@ class Compiler {
         byteCode = mutableListOf()
         this.tokens = tokens
         current = 0
+        this.kind = kind
         val selfName = if (kind != Parser.KIND_FUNCTION) Constants.SELF else ""
         locals += Local(selfName, 0, 0, false) // Stores the top-level function
         beginScope()
@@ -178,7 +180,13 @@ class Compiler {
             current = curr
             args.forEach { declareLocal(it) }
             block(false)
-            emitReturnNil()
+            emitReturn {
+                if (kind == Parser.KIND_INIT) {
+                    emitGetLocal(Constants.SELF, null) // Emit self
+                } else {
+                    emitCode(OpCode.NIL)
+                }
+            }
         }.also {
             if (optionalParamsStart != -1) {
                 it.optionalParamsStart = optionalParamsStart
@@ -232,7 +240,8 @@ class Compiler {
 
     private fun method() {
         val name = consumeVar("Expect method name.")
-        function(Parser.KIND_METHOD, name)
+        val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
+        function(kind, name)
         emitMethod(name)
     }
 
@@ -463,6 +472,9 @@ class Compiler {
     }
 
     private fun returnStatement(lambda: Boolean) {
+        if (kind == Parser.KIND_INIT) {
+            throw error(previous(), "Can't return from init!")
+        }
         if (!match(NEWLINE)) {
             expression()
             checkIfUnidentified()
@@ -578,7 +590,7 @@ class Compiler {
                 }
             } else {
                 val variable: Any = when (lastChunk?.opCode) {
-                    GET_LOCAL -> lastChunk!!.data[0] as Local
+                    GET_LOCAL -> lastChunk!!.data[1] as Local
                     GET_UPVALUE -> lastChunk!!.data[0] as Int
                     else -> throw error(equals, "Assigning to undeclared var!")
                 }
@@ -745,6 +757,11 @@ class Compiler {
                 } else {
                     primary()
                 }
+                if (lastChunk?.opCode == GET_LOCAL) {
+                    val name = lastChunk!!.data[0] as String
+                    rollBackLastChunk()
+                    emitId(name)
+                }
                 emitCode(GET_PROP)
 //                var name: Expr
 //                if (peek().type == TokenType.NUMBER) {
@@ -902,11 +919,11 @@ class Compiler {
         val name = id.lexeme
         val local = findLocal(this, name)
         if (local != null) {
-            emitGetLocal(local)
+            emitGetLocal(name, local)
         } else {
             val upvalue = resolveUpvalue(this, name)
             if (upvalue != null) {
-                emitGetUpvalue(upvalue)
+                emitGetUpvalue(name, upvalue)
             } else {
                 emitId(name)
             }
@@ -1183,19 +1200,19 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
-    private fun emitGetLocal(local: Local) {
+    private fun emitGetLocal(name: String, local: Local?) {
         val opCode = GET_LOCAL
         var size = byteCode.put(opCode)
-        size += byteCode.putInt(local.sp)
-        pushLastChunk(Chunk(opCode, size, local))
+        size += byteCode.putInt(local?.sp ?: 0)
+        pushLastChunk(Chunk(opCode, size, name, local ?: name))
     }
 
-    private fun emitGetUpvalue(upvalue: Upvalue) {
+    private fun emitGetUpvalue(name: String, upvalue: Upvalue) {
         val opCode = GET_UPVALUE
         val index = upvalues.indexOf(upvalue)
         var size = byteCode.put(opCode)
         size += byteCode.putInt(index)
-        pushLastChunk(Chunk(opCode, size, index, upvalue))
+        pushLastChunk(Chunk(opCode, size, index, upvalue, name))
     }
 
     private fun emitSet(it: Any) {
@@ -1254,10 +1271,16 @@ class Compiler {
         chunks.push(chunk)
     }
 
-    private fun emitReturnNil() {
-        emitCode(OpCode.NIL)
+    private fun emitReturn(value: () -> Unit) {
+        value()
         emitCode(OpCode.RETURN)
         byteCode.putInt(0) // No additional instructions to skip
+    }
+
+    private fun emitReturnNil() {
+        emitReturn {
+            emitCode(OpCode.NIL)
+        }
     }
 
     private fun updateDebugInfoLines(token: Token) {

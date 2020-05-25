@@ -12,6 +12,7 @@ public class Parser {
   private static final String KIND_LAMBDA = "lambda";
   public static final String KIND_FUNCTION = "function";
   public static final String KIND_METHOD = "method";
+  public static final String KIND_INIT = "init";
   private static final String KIND_WHEN = "when";
 
   private static class ParseError extends RuntimeException {}

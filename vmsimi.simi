@@ -105,10 +105,13 @@ br.jam = "jelly"
 print "jelly == \(br.jam)"
 br.eat("yes", "no")
 
-class Pair
-pair = Pair()
-pair.first = 1
-pair.second = 2
+class Pair {
+    def init(first, second) {
+        self.first = first
+        self.second = second
+    }
+}
+pair = Pair(1, 2)
 print "3 == \(pair.first + pair.second)"
 
 class Nested {

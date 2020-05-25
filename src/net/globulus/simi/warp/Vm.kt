@@ -1,5 +1,6 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.Constants
 import net.globulus.simi.warp.OpCode.*
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
@@ -244,7 +245,12 @@ internal class Vm {
                 stack[sp - argCount - 1] = callee.receiver
                 callClosure(callee.method, argCount)
             }
-            is SClass -> stack[sp - argCount - 1] = Instance(callee)
+            is SClass -> {
+                stack[sp - argCount - 1] = Instance(callee)
+                (callee.fields[Constants.INIT] as? Closure)?.let {
+                    callClosure(it, argCount)
+                }
+            }
             else -> throw runtimeError("Unable to call a $callee!")
         }
     }
