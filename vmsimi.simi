@@ -107,8 +107,8 @@ print "jelly == \(br.jam)"
 
 class Pair {
     def init(first, second) {
-        self.first = first
-        self.second = second
+        @first = first
+        @second = second
     }
 }
 pair = Pair(1, 2)
@@ -132,9 +132,9 @@ class RangeIterator {
     }
 
     def next() {
-        return if self.current < self.range.max {
-            self.current = self.current + 1
-            self.current - 1
+        return if self.current <= self.range.max {
+            @current = @current + 1
+            @current - 1
         } else {
             nil
         }
@@ -143,8 +143,8 @@ class RangeIterator {
 
 class Range {
     def init(min, max) {
-        self.min = min
-        self.max = max
+        @min = min
+        @max = max
     }
 
     def iterate() {
@@ -152,6 +152,15 @@ class Range {
     }
 }
 
-for i in Range(1, 5) {
+class Num {
+    def rangeTo(lim) {
+        return Range(@_, lim)
+    }
+    def rangeUntil(lim) {
+        return Range(@_, lim - 1)
+    }
+}
+
+for i in 1...5 {
     print i
 }

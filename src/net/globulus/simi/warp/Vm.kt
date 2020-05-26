@@ -11,6 +11,8 @@ internal class Vm {
     private var stackSize = INITIAL_STACK_SIZE
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
+    private var numClass: SClass? = null
+
     private var fp = 0
         set(value) {
             field = value
@@ -104,7 +106,14 @@ internal class Vm {
                         break@loop
                     }
                 }
-                CLASS -> push(SClass(nextString))
+                CLASS -> {
+                    val name = nextString
+                    val klass = SClass(name)
+                    if (numClass == null && name == Constants.CLASS_NUM) {
+                        numClass = klass
+                    }
+                    push(klass)
+                }
                 METHOD -> defineMethod(nextString)
             }
         }
@@ -281,17 +290,15 @@ internal class Vm {
     }
 
     private fun invoke(name: String, argCount: Int) {
-        (peek(argCount) as? Instance)?.let { receiver ->
-            (receiver.fields[name])?.let {
-                stack[sp - argCount - 1] = it
-                call(it, argCount)
-            } ?: run {
-                (receiver.klass.fields[name] as? Closure)?.let { method ->
-                    callClosure(method, argCount)
-                } ?: throw runtimeError("Undefined method $name.")
-            }
-        } ?: throw runtimeError("Can't invoke a non-instance!")
-
+        val receiver = boxIfNotInstance(argCount)
+        (receiver.fields[name])?.let {
+            stack[sp - argCount - 1] = it
+            call(it, argCount)
+        } ?: run {
+            (receiver.klass.fields[name] as? Closure)?.let { method ->
+                callClosure(method, argCount)
+            } ?: throw runtimeError("Undefined method $name.")
+        }
     }
 
     private fun captureUpvalue(sp: Int): Upvalue {
@@ -415,6 +422,26 @@ internal class Vm {
         val bound = BoundMethod(receiver, method)
         pop()
         push(bound)
+    }
+
+    /**
+     * Check if peek(offset) is instance, if it isn't it tries to box it.
+     */
+    private fun boxIfNotInstance(offset: Int): Instance {
+        val loc = sp - offset - 1
+        val value = stack[loc]
+        if (value is Instance) {
+            return value
+        }
+        if (value is Long || value is Double) {
+            val boxedNum = Instance(numClass!!).apply {
+                fields[Constants.PRIVATE] = value
+            }
+            stack[loc] = boxedNum
+            return boxedNum
+        } else {
+            throw runtimeError("Unable to box $value!")
+        }
     }
 
     private fun gc() {

@@ -113,7 +113,7 @@ public class Scanner {
       } break;
       case ':': addToken(TokenType.COLON); break;
       case '@':
-        addToken(TokenType.SELF);
+        tokens.add(new Token(TokenType.SELF, Constants.SELF, null, line, fileName));
         addToken(TokenType.DOT);
       break;
       case '?': {

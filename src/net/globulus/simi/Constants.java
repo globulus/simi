@@ -27,8 +27,10 @@ public final class Constants {
     public static final String CLASS_FUNCTION = "Function";
     public static final String CLASS_STRING = "String";
     public static final String CLASS_NUMBER = "Number";
+    public static final String CLASS_NUM = "Num";
     public static final String CLASS_CLASS = "Class";
     public static final String CLASS_EXCEPTION = "Exception";
+    public static final String CLASS_RANGE = "Range";
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
     static final String CLASS_DEBUGGER = "Debugger";
 

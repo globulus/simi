@@ -456,38 +456,17 @@ class Compiler {
             val rp = Token.ofType(RIGHT_PAREN)
             val dot = Token.ofType(DOT)
             val nl = Token.ofType(NEWLINE)
-            add(iterator)
-            add(eq)
-            add(lp)
-            addAll(iterableTokens)
-            add(rp)
-            add(dot)
-            add(Token.named(Constants.ITERATE))
-            add(lp)
-            add(rp)
-            add(nl)
-
-            add(Token.ofType(WHILE))
-            add(iterator)
+            addAll(listOf(iterator, eq, lp)); addAll(iterableTokens); addAll(listOf(rp, dot,
+                Token.named(Constants.ITERATE), lp, rp, nl,
+                Token.ofType(WHILE), iterator
+                ))
             for ((i, blockToken) in blockTokens.withIndex()) {
                 add(blockToken)
                 if (i == 0) {
-                    add(nl)
-                    add(id)
-                    add(eq)
-                    add(iterator)
-                    add(dot)
-                    add(Token.named(Constants.NEXT))
-                    add(lp)
-                    add(rp)
-                    add(nl)
-
-                    add(Token.ofType(IF))
-                    add(id)
-                    add(Token.ofType(EQUAL_EQUAL))
-                    add(Token.ofType(NIL))
-                    add(Token.ofType(BREAK))
-                    add(nl)
+                    addAll(listOf(nl, id, eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl,
+                            Token.ofType(IF), id, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL),
+                            Token.ofType(BREAK), nl
+                    ))
                 }
             }
         }
@@ -723,9 +702,11 @@ class Compiler {
         while (match(DOT_DOT, DOT_DOT_DOT)) {
             val operator = previous()
             addition()
-//            emitCode(when (operator.type) {
-//                DOT_DOT -> dsfds
-//            })
+            emitInvoke(when (operator.type) {
+                DOT_DOT -> "rangeUntil"
+                DOT_DOT_DOT -> "rangeTo"
+                else -> throw IllegalArgumentException("WTF")
+            }, 1)
         }
     }
 
