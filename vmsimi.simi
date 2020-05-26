@@ -1,5 +1,5 @@
 class RangeIterator {
-    def init(@range) {
+    init(@range) {
         self.current = range.min
     }
 
@@ -12,7 +12,7 @@ class RangeIterator {
 }
 
 class Range {
-    def init(@min, @max)
+    init(@min, @max)
 
     def iterate() = RangeIterator(self)
 
@@ -143,7 +143,7 @@ br.jam = "jelly"
 print "jelly == \(br.jam)"
 
 class Pair {
-    def init(@first, @second)
+    init(@first, @second)
 }
 pair = Pair(1, 2)
 print "3 == \(pair.first + pair.second)"
@@ -169,7 +169,7 @@ for i in 1...5 {
 }
 
 class Klass {
-    def init(@ja is String = "str")
+    init(@ja is String = "str")
 }
 print Klass().ja
 print Klass("dva").ja

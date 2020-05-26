@@ -250,6 +250,11 @@ class Compiler {
                 }
                 if (match(DEF)) {
                     method()
+                } else if (match(IDENTIFIER)) {
+                    val name = previous().lexeme
+                    if (name == Constants.INIT) {
+                        method(name)
+                    }
                 }
             }
             consume(RIGHT_BRACE, "\"Expect '}' after class body.\"")
@@ -275,8 +280,8 @@ class Compiler {
 //        }
     }
 
-    private fun method() {
-        val name = consumeVar("Expect method name.")
+    private fun method(providedName: String? = null) {
+        val name = providedName ?: consumeVar("Expect method name.")
         val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
         function(kind, name)
         emitMethod(name)
