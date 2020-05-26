@@ -30,12 +30,12 @@ internal class Vm {
         push(closure)
         callClosure(closure, 0)
         try {
-            run()
+            run(0)
             printStack()
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
-    private fun run() {
+    private fun run(breakAtFp: Int) {
         loop@ while (true) {
             val code = nextCode
             when (code) {
@@ -63,7 +63,8 @@ internal class Vm {
                 }
                 GET_PROP -> {
                     val name = pop().toString()
-                    val obj = pop()
+                    val obj = boxIfNotInstance(0)
+                    pop()
                     val prop = getFieldsOrThrow(obj)[name]
                     push(prop ?: Nil)
                     bindMethod(obj, getSClass(obj), prop, name)
@@ -73,6 +74,13 @@ internal class Vm {
                 ADD -> add()
                 SUBTRACT, MULTIPLY, DIVIDE, DIVIDE_INT, MOD, LE, LT, GE, GT -> binaryOpOnStack(code)
                 EQ -> checkEquality(code)
+                IS -> checkIs()
+                HAS -> {
+                    val b = stack[sp - 1]
+                    stack[sp - 1] = stack[sp - 2]
+                    stack[sp - 2] = b
+                    invoke(Constants.HAS, 1)
+                }
                 PRINT -> println(pop())
                 JUMP -> buffer.position(nextInt)
                 JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
@@ -102,7 +110,7 @@ internal class Vm {
                 }
                 CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
-                    if (doReturn()) {
+                    if (doReturn(breakAtFp)) {
                         break@loop
                     }
                 }
@@ -236,8 +244,25 @@ internal class Vm {
     }
 
     private fun areEqual(a: Any, b: Any): Boolean {
-        // TODO add comparison by equals()
-        return a == b
+        return if (a == b) {
+            true
+        } else if (a is Instance) {
+            push(a)
+            push(b)
+            invoke(Constants.EQUALS, 1, false)
+            run(fp - 1)
+            !isFalsey(pop())
+        } else {
+            false
+        }
+    }
+
+    private fun checkIs() {
+        val b = pop() as SClass
+        val a = boxIfNotInstance(0)
+        pop()
+        val r = a.klass == b
+        push(boolToLong(r))
     }
 
     private fun jumpIf(predicate: (Any) -> Boolean) {
@@ -265,7 +290,6 @@ internal class Vm {
                     callClosure(it, argCount)
                 }
             }
-            else -> throw runtimeError("Unable to call a $callee!")
         }
     }
 
@@ -289,7 +313,7 @@ internal class Vm {
         fp++
     }
 
-    private fun invoke(name: String, argCount: Int) {
+    private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
         val receiver = boxIfNotInstance(argCount)
         (receiver.fields[name])?.let {
             stack[sp - argCount - 1] = it
@@ -297,7 +321,11 @@ internal class Vm {
         } ?: run {
             (receiver.klass.fields[name] as? Closure)?.let { method ->
                 callClosure(method, argCount)
-            } ?: throw runtimeError("Undefined method $name.")
+            } ?: run {
+                if (checkError) {
+                    throw runtimeError("Undefined method $name.")
+                }
+            }
         }
     }
 
@@ -345,7 +373,7 @@ internal class Vm {
     /**
      * @return true if the program should terminate
      */
-    private fun doReturn(): Boolean {
+    private fun doReturn(breakAtFp: Int): Boolean {
         val result = pop()
         val returningFrame = frame
         closeUpvalues(returningFrame.sp)
@@ -359,13 +387,14 @@ internal class Vm {
             }
         }
         fp--
-        if (fp == 0) { // Returning from top-level func
+        return if (fp == 0) { // Returning from top-level func
             sp = 0
-            return true
+            true
+        } else {
+            sp = returningFrame.sp
+            push(result)
+            fp == breakAtFp
         }
-        sp = returningFrame.sp
-        push(result)
-        return false
     }
 
     private fun defineMethod(name: String) {

@@ -401,7 +401,7 @@ class Compiler {
             } else {
                 var ifToken: Token? = null
                 do {
-                    val op = if (match(IS, ISNOT, IN, NOTIN, IF)) {
+                    val op = if (match(TokenType.IS, ISNOT, IN, NOTIN, IF)) {
                         previous()
                     } else {
                         Token.copying(origin, EQUAL_EQUAL)
@@ -668,13 +668,23 @@ class Compiler {
 
     private fun equality() {
         comparison()
-        while (match(BANG_EQUAL, EQUAL_EQUAL/*, IS, ISNOT, IN, NOTIN*/)) {
+        while (match(BANG_EQUAL, EQUAL_EQUAL, TokenType.IS, ISNOT, IN, NOTIN)) {
             val operator = previous()
             comparison()
             when (operator.type) {
                 EQUAL_EQUAL -> emitCode(EQ)
                 BANG_EQUAL -> {
                     emitCode(EQ)
+                    emitCode(INVERT)
+                }
+                TokenType.IS -> emitCode(OpCode.IS)
+                ISNOT -> {
+                    emitCode(OpCode.IS)
+                    emitCode(INVERT)
+                }
+                IN -> emitCode(HAS)
+                NOTIN -> {
+                    emitCode(HAS)
                     emitCode(INVERT)
                 }
                 else -> throw IllegalArgumentException("WTF")
@@ -684,16 +694,20 @@ class Compiler {
 
     private fun comparison() {
         range()
-        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL/*, LESS_GREATER*/)) {
+        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, LESS_GREATER)) {
             val operator = previous()
             range()
-            emitCode(when (operator.type) {
-                GREATER -> GT
-                GREATER_EQUAL -> GE
-                LESS -> LT
-                LESS_EQUAL -> LE
-                else -> throw IllegalArgumentException("WTF")
-            })
+            if (operator.type == LESS_GREATER) {
+                emitInvoke(Constants.MATCHES, 1)
+            } else {
+                emitCode(when (operator.type) {
+                    GREATER -> GT
+                    GREATER_EQUAL -> GE
+                    LESS -> LT
+                    LESS_EQUAL -> LE
+                    else -> throw IllegalArgumentException("WTF")
+                })
+            }
         }
     }
 
@@ -778,7 +792,7 @@ class Compiler {
                 finishCall()
             } else if (match(DOT)) {
                 if (match(CLASS)) {
-                    emitId("class")
+                    emitId(Constants.CLASS)
                 } else {
                     primary()
                 }

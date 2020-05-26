@@ -19,6 +19,7 @@ enum class OpCode {
     GT,
     GE,
     EQ,
+    IS,
     INVERT,
     NEGATE,
     ADD,
@@ -27,6 +28,7 @@ enum class OpCode {
     DIVIDE,
     DIVIDE_INT,
     MOD,
+    HAS, // Requires a special OpCode as the operands are inverted
     PRINT,
     JUMP,
     JUMP_IF_FALSE,
