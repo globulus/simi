@@ -6,6 +6,7 @@ import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.TokenType.CLASS
+import net.globulus.simi.TokenType.IS
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
 import net.globulus.simi.TokenType.PRINT
@@ -151,7 +152,7 @@ class Compiler {
         val declaration = previous()
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
-        val initAutosetArgs = mutableListOf<Token>()
+        val prependedTokens = mutableListOf<Token>()
         var optionalParamsStart = -1
         val defaultValues = mutableListOf<Any>()
         if (match(LEFT_PAREN)) {
@@ -165,7 +166,13 @@ class Compiler {
                             throw error(previous(), "Autoset arguments are only allowed in initializers!")
                         }
                     }
-                    val paramName = consumeVar("Expected param name")
+                    val paramName = consumeVar("Expect param name.")
+                    val nameToken = Token.named(paramName)
+                    if (match(IS)) {
+                        val type = consumeVar("Expect type.")
+                        prependedTokens += listOf(Token.ofType(IF), nameToken, Token.ofType(ISNOT), Token.named(type),
+                                Token.ofType(PRINT), Token.ofString("SUCH ERROR WOW")) // TODO fix
+                    }
                     if (match(EQUAL)) {
                         val defaultValue = consumeValue("Expected a value as default param value!")
                         if (optionalParamsStart == -1) {
@@ -175,8 +182,7 @@ class Compiler {
                     }
                     args += paramName
                     if (initAutoset) {
-                        val nameToken = Token.named(paramName)
-                        initAutosetArgs += listOf(Token.self(), Token.ofType(DOT), nameToken,
+                        prependedTokens += listOf(Token.self(), Token.ofType(DOT), nameToken,
                                 Token.ofType(EQUAL), nameToken, Token.ofType(NEWLINE))
                     }
                 } while (match(COMMA))
@@ -204,8 +210,8 @@ class Compiler {
                 expression()
                 emitReturn { }
             } else {
-                if (initAutosetArgs.isNotEmpty()) {
-                    compileNested(initAutosetArgs, false)
+                if (prependedTokens.isNotEmpty()) {
+                    compileNested(prependedTokens, false)
                 }
                 if (hasBody) {
                     block(false)

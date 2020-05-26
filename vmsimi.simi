@@ -33,6 +33,8 @@ class Num {
     }
 }
 
+class String
+
 a = 5
 b = a + 3
 a $= b - 4 / (2 + 2 * 2)
@@ -165,3 +167,10 @@ print 2 <> 3
 for i in 1...5 {
     print i
 }
+
+class Klass {
+    def init(@ja is String = "str")
+}
+print Klass().ja
+print Klass("dva").ja
+print Klass(1).ja

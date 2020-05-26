@@ -48,6 +48,10 @@ public class Token {
     return new Token(newType, other.lexeme, other.literal, other.line, other.file);
   }
 
+  public static Token ofString(String value) {
+    return new Token(TokenType.STRING, value, new SimiValue.String(value), 0, null);
+  }
+
   @Override
   public String toString() {
     return type + " " + lexeme + " " + literal;

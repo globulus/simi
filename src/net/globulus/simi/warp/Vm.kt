@@ -12,6 +12,7 @@ internal class Vm {
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
     private var numClass: SClass? = null
+    private var strClass: SClass? = null
 
     private var fp = 0
         set(value) {
@@ -119,6 +120,8 @@ internal class Vm {
                     val klass = SClass(name)
                     if (numClass == null && name == Constants.CLASS_NUM) {
                         numClass = klass
+                    } else if (strClass == null && name == Constants.CLASS_STRING) {
+                        strClass = klass
                     }
                     push(klass)
                 }
@@ -468,6 +471,12 @@ internal class Vm {
             }
             stack[loc] = boxedNum
             return boxedNum
+        } else if (value is String) {
+            val boxedStr = Instance(strClass!!).apply {
+                fields[Constants.PRIVATE] = value
+            }
+            stack[loc] = boxedStr
+            return boxedStr
         } else {
             throw runtimeError("Unable to box $value!")
         }
