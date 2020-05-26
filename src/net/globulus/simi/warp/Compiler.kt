@@ -259,30 +259,6 @@ class Compiler {
 //        return Annotation(expr)
 //    }
 
-//    private fun forStatement(): Stmt? {
-//        val forToken = previous()
-//        var `var`: Token? = null
-//        var decompExpr: Expr? = null
-//        if (match(IDENTIFIER)) {
-//            `var` = previous()
-//        } else if (match(LEFT_BRACKET)) {
-//            `var` = Token(IDENTIFIER, "var" + System.currentTimeMillis(), null, forToken.line, forToken.file)
-//            decompExpr = objectLiteral()
-//        } else {
-//            Parser.error(peek(), "Expected identifier or object decomp in for loop.")
-//        }
-//        consume(IN, "Expected 'in'.")
-//        val iterable: Expr = expression()
-//        var prependedStmts: MutableList<Stmt?>? = null
-//        val varExpr = Variable(`var`)
-//        if (decompExpr != null) {
-//            prependedStmts = ArrayList()
-//            prependedStmts.add(Expression(Parser.getAssignExpr(this, decompExpr, forToken, varExpr)))
-//        }
-//        val body: Block = block("for", true, prependedStmts)
-//        return For(varExpr, iterable, body)
-//    }
-
     private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
         return if (match(LEFT_BRACE)) {
             beginScope()
@@ -298,9 +274,10 @@ class Compiler {
             whenSomething(false)
             false
         }
-//        if (match(TokenType.FOR)) {
-//            return forStatement()
-//        }
+        else if (match(FOR)) {
+            forStatement()
+            false
+        }
         else if (match(PRINT)) {
             printStatement()
             false
@@ -466,6 +443,57 @@ class Compiler {
         compileNested(whenTokens, isExpr)
     }
 
+    private fun forStatement() {
+        val opener = previous()
+        val id = consume(IDENTIFIER, "Expect an identifier after 'for'.")
+        consume(IN, "Expect 'in' after identifier in 'for'.")
+        val iterableTokens = consumeUntilType(LEFT_BRACE)
+        val blockTokens = consumeNextBlock(false)
+        val tokens = mutableListOf<Token>().apply {
+            val iterator = Token.named("__iterator__${System.currentTimeMillis()}")
+            val eq = Token.ofType(EQUAL)
+            val lp = Token.ofType(LEFT_PAREN)
+            val rp = Token.ofType(RIGHT_PAREN)
+            val dot = Token.ofType(DOT)
+            val nl = Token.ofType(NEWLINE)
+            add(iterator)
+            add(eq)
+            add(lp)
+            addAll(iterableTokens)
+            add(rp)
+            add(dot)
+            add(Token.named(Constants.ITERATE))
+            add(lp)
+            add(rp)
+            add(nl)
+
+            add(Token.ofType(WHILE))
+            add(iterator)
+            for ((i, blockToken) in blockTokens.withIndex()) {
+                add(blockToken)
+                if (i == 0) {
+                    add(nl)
+                    add(id)
+                    add(eq)
+                    add(iterator)
+                    add(dot)
+                    add(Token.named(Constants.NEXT))
+                    add(lp)
+                    add(rp)
+                    add(nl)
+
+                    add(Token.ofType(IF))
+                    add(id)
+                    add(Token.ofType(EQUAL_EQUAL))
+                    add(Token.ofType(NIL))
+                    add(Token.ofType(BREAK))
+                    add(nl)
+                }
+            }
+        }
+        compileNested(tokens, false)
+    }
+
     private fun printStatement() {
         expression()
         emitCode(OpCode.PRINT)
@@ -524,7 +552,7 @@ class Compiler {
         val activeLoop = loops.peek()
         // Discards scopes up to the loop level (hence + 1)
         for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
-            discardLocals(depth)
+            discardLocals(depth, emitPops = true, keepLocals = true)
         }
         val chunk = emitJump(JUMP)
         activeLoop.breakPositions += chunk.data[0] as Int
@@ -537,7 +565,7 @@ class Compiler {
         val activeLoop = loops.peek()
         // Discards scopes up to the level of loop statement (hence + 2)
         for (depth in scopeDepth downTo (activeLoop.depth + 2)) {
-            discardLocals(depth)
+            discardLocals(depth, emitPops = true, keepLocals = true)
         }
         emitJump(JUMP, loops.peek().start)
     }
@@ -676,10 +704,10 @@ class Compiler {
     }
 
     private fun comparison() {
-        addition()
+        range()
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL/*, LESS_GREATER*/)) {
             val operator = previous()
-            addition()
+            range()
             emitCode(when (operator.type) {
                 GREATER -> GT
                 GREATER_EQUAL -> GE
@@ -687,6 +715,17 @@ class Compiler {
                 LESS_EQUAL -> LE
                 else -> throw IllegalArgumentException("WTF")
             })
+        }
+    }
+
+    private fun range() {
+        addition()
+        while (match(DOT_DOT, DOT_DOT_DOT)) {
+            val operator = previous()
+            addition()
+//            emitCode(when (operator.type) {
+//                DOT_DOT -> dsfds
+//            })
         }
     }
 
@@ -752,63 +791,39 @@ class Compiler {
     }
 
     private fun call() {
-        var expr = primary()
+        primary()
         while (true) {
             if (match(LEFT_PAREN, DOLLAR_LEFT_PAREN)) {
-                expr = finishCall()
+                finishCall()
             } else if (match(DOT)) {
-                val dot = previous()
                 if (match(CLASS)) {
                     emitId("class")
                 } else {
                     primary()
                 }
-                if (lastChunk?.opCode == GET_LOCAL) {
-                    val name = lastChunk!!.data[0] as String
+                if (match(LEFT_PAREN)) {
+                    val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
-                    emitId(name)
+                    val argCount = argList()
+                    emitInvoke(name, argCount)
+                } else {
+                    if (lastChunk?.opCode == GET_LOCAL) {
+                        val name = lastChunk!!.data[0] as String
+                        rollBackLastChunk()
+                        emitId(name)
+                    }
+                    emitCode(GET_PROP)
                 }
-                emitCode(GET_PROP)
-//                var name: Expr
-//                if (peek().type == TokenType.NUMBER) {
-//                    name = Variable(consume(NUMBER, "Expected a number or id after '.'."))
-//                } else if (peek().type == TokenType.LEFT_PAREN) {
-//                    name = primary()
-//                } else if (peek().type == TokenType.CLASS) {
-//                    name = Literal(SimiValue.String(Constants.CLASS))
-//                    advance()
-//                } else {
-//                    name = Variable(consume(TokenType.IDENTIFIER, "Expected a number of id after '.'."))
-//                }
-//                val arity: Int = peekParams()
-//                expr = Get(dot, expr, name, arity)
             } else {
                 break
             }
         }
-//        return expr
     }
 
     private fun finishCall() {
         checkIfUnidentified()
-        val paren = previous()
         val argCount = argList()
         emitCall(argCount)
-//        val paren = previous()
-//        val arguments: MutableList<Expr> = ArrayList()
-//        if (!check(TokenType.RIGHT_PAREN)) {
-//            do {
-//                matchSequence(TokenType.IDENTIFIER, TokenType.EQUAL) // allows for named params, e.g substr(start=1,end=2)
-//                arguments.add(expression())
-//            } while (match(TokenType.COMMA))
-//        }
-//        consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
-//        if (callee is Variable && callee.backupSelfGet != null) {
-//            // If a variable callee has a backup get, its arity needs to be adjusted because we're dealing with a call
-//            // and not a single variable load.
-//            callee.backupSelfGet.arity = arguments.size
-//        }
-//        return Call(callee, paren, arguments)
     }
 
     private fun argList(): Int {
@@ -1279,6 +1294,15 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, argCount))
     }
 
+    private fun emitInvoke(name: String, argCount: Int) {
+        val opCode = INVOKE
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        size += byteCode.putInt(argCount)
+        pushLastChunk(Chunk(opCode, size, name, argCount, constIdx))
+    }
+
     private fun pushLastChunk(chunk: Chunk) {
         lastChunk = chunk
         chunks.push(chunk)
@@ -1337,7 +1361,7 @@ class Compiler {
     /**
      * @return The number of popping statements emitted
      */
-    private fun discardLocals(depth: Int, emitPops: Boolean = true): Int {
+    private fun discardLocals(depth: Int, emitPops: Boolean = true, keepLocals: Boolean = false): Int {
         var popCount = 0
         var i = locals.size - 1
         while (i >= 0 && locals[i].depth == depth) {
@@ -1349,7 +1373,9 @@ class Compiler {
                     emitCode(POP)
                 }
             }
-            locals.removeAt(i)
+            if (!keepLocals) {
+                locals.removeAt(i)
+            }
             i--
         }
         return popCount

@@ -1,3 +1,9 @@
 package net.globulus.simi.warp
 
-object Nil
+import net.globulus.simi.TokenType
+
+object Nil {
+    override fun toString(): String {
+        return TokenType.NIL.toCode()
+    }
+}

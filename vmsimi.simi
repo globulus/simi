@@ -104,7 +104,6 @@ br = Brioche()
 print "Brioche instance == \(br)"
 br.jam = "jelly"
 print "jelly == \(br.jam)"
-br.eat("yes", "no")
 
 class Pair {
     def init(first, second) {
@@ -126,8 +125,33 @@ class Nested {
 
 Nested().method()
 
+class RangeIterator {
+    def init(range) {
+        self.range = range
+        self.current = range.min
+    }
 
-#def f3() { func(1, 2, 3) } # Uncomment to test stack trace printing
-#def f2() { f3() }
-#def f1() { f2() }
-#f1()
+    def next() {
+        return if self.current < self.range.max {
+            self.current = self.current + 1
+            self.current - 1
+        } else {
+            nil
+        }
+    }
+}
+
+class Range {
+    def init(min, max) {
+        self.min = min
+        self.max = max
+    }
+
+    def iterate() {
+        return RangeIterator(self)
+    }
+}
+
+for i in Range(1, 5) {
+    print i
+}

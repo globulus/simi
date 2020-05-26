@@ -32,6 +32,7 @@ enum class OpCode {
     JUMP_IF_FALSE,
     JUMP_IF_NIL,
     CALL,
+    INVOKE,
     CLOSURE,
     CLOSE_UPVALUE,
     RETURN,

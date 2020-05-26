@@ -20,6 +20,10 @@ public class Token {
     this.file = file;
   }
 
+  public static Token ofType(TokenType type) {
+    return new Token(type, null, null, 0, null);
+  }
+
   public static Token self() {
     return new Token(TokenType.SELF, Constants.SELF, null, 0, null);
   }

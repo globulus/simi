@@ -79,6 +79,11 @@ internal class Vm {
                     val argCount = nextInt
                     call(peek(argCount), argCount)
                 }
+                INVOKE -> {
+                    val name = nextString
+                    val argCount = nextInt
+                    invoke(name, argCount)
+                }
                 CLOSURE -> {
                     val function = currentFunction.constants[nextInt] as Function
                     val closure = Closure(function)
@@ -275,6 +280,20 @@ internal class Vm {
         fp++
     }
 
+    private fun invoke(name: String, argCount: Int) {
+        (peek(argCount) as? Instance)?.let { receiver ->
+            (receiver.fields[name])?.let {
+                stack[sp - argCount - 1] = it
+                call(it, argCount)
+            } ?: run {
+                (receiver.klass.fields[name] as? Closure)?.let { method ->
+                    callClosure(method, argCount)
+                } ?: throw runtimeError("Undefined method $name.")
+            }
+        } ?: throw runtimeError("Can't invoke a non-instance!")
+
+    }
+
     private fun captureUpvalue(sp: Int): Upvalue {
         var prevUpvalue: Upvalue? = null
         var upvalue = openUpvalues
@@ -350,6 +369,7 @@ internal class Vm {
 
     private fun resizeStackIfNecessary() {
         if (sp == stackSize) {
+            gc()
             stackSize *= STACK_GROWTH_FACTOR
             stack = stack.copyOf(stackSize)
         }
