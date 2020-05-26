@@ -151,11 +151,20 @@ class Compiler {
         val declaration = previous()
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
+        val initAutosetArgs = mutableListOf<Token>()
         var optionalParamsStart = -1
         val defaultValues = mutableListOf<Any>()
         if (match(LEFT_PAREN)) {
             if (!check(RIGHT_PAREN)) {
                 do {
+                    var initAutoset = false
+                    if (matchSequence(SELF, DOT)) {
+                        if (kind == Parser.KIND_INIT) {
+                            initAutoset = true
+                        } else {
+                            throw error(previous(), "Autoset arguments are only allowed in initializers!")
+                        }
+                    }
                     val paramName = consumeVar("Expected param name")
                     if (match(EQUAL)) {
                         val defaultValue = consumeValue("Expected a value as default param value!")
@@ -165,16 +174,23 @@ class Compiler {
                         defaultValues += defaultValue
                     }
                     args += paramName
+                    if (initAutoset) {
+                        val nameToken = Token.named(paramName)
+                        initAutosetArgs += listOf(Token.self(), Token.ofType(DOT), nameToken,
+                                Token.ofType(EQUAL), nameToken, Token.ofType(NEWLINE))
+                    }
                 } while (match(COMMA))
             }
             consume(RIGHT_PAREN, "Expected )")
         }
 
         var isExprFunc = false
+        var hasBody = true
         if (match(EQUAL)) {
             isExprFunc = true
-        } else {
-            consume(LEFT_BRACE, "Expect '{' to start func.")
+        } else if (!match(LEFT_BRACE)) {
+            hasBody = false
+            consume(NEWLINE, "Expect '{', '=' or newline to start func.")
         }
         val curr = current
         val funcCompiler = Compiler().also {
@@ -188,7 +204,12 @@ class Compiler {
                 expression()
                 emitReturn { }
             } else {
-                block(false)
+                if (initAutosetArgs.isNotEmpty()) {
+                    compileNested(initAutosetArgs, false)
+                }
+                if (hasBody) {
+                    block(false)
+                }
                 emitReturn {
                     if (kind == Parser.KIND_INIT) {
                         emitGetLocal(Constants.SELF, null) // Emit self
