@@ -170,7 +170,12 @@ class Compiler {
             consume(RIGHT_PAREN, "Expected )")
         }
 
-        consume(LEFT_BRACE, "Expected {")
+        var isExprFunc = false
+        if (match(EQUAL)) {
+            isExprFunc = true
+        } else {
+            consume(LEFT_BRACE, "Expect '{' to start func.")
+        }
         val curr = current
         val funcCompiler = Compiler().also {
             it.enclosing = this
@@ -179,12 +184,17 @@ class Compiler {
         val f = funcCompiler.compileFunction(tokens, name, args.size, kind) {
             current = curr
             args.forEach { declareLocal(it) }
-            block(false)
-            emitReturn {
-                if (kind == Parser.KIND_INIT) {
-                    emitGetLocal(Constants.SELF, null) // Emit self
-                } else {
-                    emitCode(OpCode.NIL)
+            if (isExprFunc) {
+                expression()
+                emitReturn { }
+            } else {
+                block(false)
+                emitReturn {
+                    if (kind == Parser.KIND_INIT) {
+                        emitGetLocal(Constants.SELF, null) // Emit self
+                    } else {
+                        emitCode(OpCode.NIL)
+                    }
                 }
             }
         }.also {
