@@ -182,3 +182,8 @@ print Klass(1).ja
 
 CONST_ANT = 1
 #CONST_ANT $= 2 # Uncomment to test assignment to const
+
+def funcReturningNum(a) is Num {
+    return a
+}
+print funcReturningNum("trolo")

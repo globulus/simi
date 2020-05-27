@@ -33,6 +33,7 @@ class Compiler {
 
     private var lambdaCounter = 0
     private var implicitVarCounter = 0
+    private var returnVerificationVarCounter = 0
 
     private var currentClass: ClassCompiler? = null
 
@@ -41,6 +42,8 @@ class Compiler {
 
     private var enclosing: Compiler? = null
     private lateinit var kind: String
+    // If the function being compiled was marked with "is Type", we need to verify its return statements
+    private var verifyReturnType: String? = null
 
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
@@ -183,9 +186,8 @@ class Compiler {
                     val paramName = consumeVar("Expect param name.")
                     val nameToken = Token.named(paramName)
                     if (match(IS)) {
-                        val type = consumeVar("Expect type.")
-                        prependedTokens += listOf(Token.ofType(IF), nameToken, Token.ofType(ISNOT), Token.named(type),
-                                Token.ofType(PRINT), Token.ofString("SUCH ERROR WOW")) // TODO fix
+                        val typeToken = consume(IDENTIFIER, "Expect type.")
+                        prependedTokens += getTypeVerificationTokens(nameToken, typeToken)
                     }
                     if (match(EQUAL)) {
                         val defaultValue = consumeValue("Expected a value as default param value!")
@@ -202,6 +204,15 @@ class Compiler {
                 } while (match(COMMA))
             }
             consume(RIGHT_PAREN, "Expected )")
+        }
+
+        var returnType: String? = null
+        if (match(IS)) {
+            when (kind) {
+                Parser.KIND_LAMBDA -> throw error(previous(), "Can't specify return type of lambdas!")
+                Parser.KIND_INIT -> throw error(previous(), "Can't specify return type of init!")
+                else -> returnType = consumeVar("Expect type.")
+            }
         }
 
         var isExprFunc = false
@@ -222,6 +233,7 @@ class Compiler {
         val funcCompiler = Compiler().also {
             it.enclosing = this
             it.currentClass = currentClass
+            it.verifyReturnType = returnType
         }
         val f = funcCompiler.compileFunction(tokens, name, args.size, kind) {
             current = curr
@@ -549,6 +561,7 @@ class Compiler {
             checkIfUnidentified()
         }
         consume(NEWLINE, "Expected newline after return value.")
+        emitReturnTypeVerification()
         emitCode(OpCode.RETURN)
         // After return is emitted, we need to close the scope, so we emit the number of additional
         // instructions to interpret before we actually return from call frame
@@ -1379,13 +1392,17 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, name, argCount, constIdx))
     }
 
-    private fun pushLastChunk(chunk: Chunk) {
-        lastChunk = chunk
-        chunks.push(chunk)
+    private fun emitReturnTypeVerification() {
+        verifyReturnType?.let { type ->
+            val name = "__returnVerification_${numberOfEnclosingCompilers}_${returnVerificationVarCounter++}__"
+            declareLocal(name)
+            compileNested(getTypeVerificationTokens(Token.named(name), Token.named(type)), false)
+        }
     }
 
     private fun emitReturn(value: () -> Unit) {
         value()
+        emitReturnTypeVerification()
         emitCode(OpCode.RETURN)
         byteCode.putInt(0) // No additional instructions to skip
     }
@@ -1394,6 +1411,11 @@ class Compiler {
         emitReturn {
             emitCode(OpCode.NIL)
         }
+    }
+
+    private fun pushLastChunk(chunk: Chunk) {
+        lastChunk = chunk
+        chunks.push(chunk)
     }
 
     private fun updateDebugInfoLines(token: Token) {
@@ -1504,6 +1526,11 @@ class Compiler {
 
     private fun nextLambdaName(): String {
         return "__lambda_${numberOfEnclosingCompilers}_${lambdaCounter++}__"
+    }
+
+    private fun getTypeVerificationTokens(name: Token, type: Token): List<Token> {
+        return listOf(Token.ofType(IF), name, Token.ofType(ISNOT), type,
+                Token.ofType(PRINT), Token.ofString("SUCH ERROR WOW")) // TODO fix
     }
 
     private fun scanForImplicitArgs(opener: Token, isExpr: Boolean): List<String> {
