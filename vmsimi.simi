@@ -175,3 +175,7 @@ class Klass {
 print Klass().ja
 print Klass("dva").ja
 print Klass(1).ja
+
+(def (a1, a2){
+    print a1 + a2
+})(1, 2)

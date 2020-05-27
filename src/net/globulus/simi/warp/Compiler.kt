@@ -30,6 +30,9 @@ class Compiler {
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
     private val loops = Stack<ActiveLoop>()
 
+    private var lambdaCounter = 0
+    private var implicitVarCounter = 0
+
     private var currentClass: ClassCompiler? = null
 
     private var lastChunk: Chunk? = null
@@ -40,6 +43,16 @@ class Compiler {
 
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
+
+    private val numberOfEnclosingCompilers: Int by lazy {
+        var count = 0
+        var compiler = this.enclosing
+        while (compiler != null) {
+            count++
+            compiler = compiler.enclosing
+        }
+        count
+    }
 
     fun compile(tokens: List<Token>): Function? {
         return try {
@@ -443,7 +456,7 @@ class Compiler {
             } else {
                 var ifToken: Token? = null
                 do {
-                    val op = if (match(TokenType.IS, ISNOT, IN, NOTIN, IF)) {
+                    val op = if (match(IS, ISNOT, IN, NOTIN, IF)) {
                         previous()
                     } else {
                         Token.copying(origin, EQUAL_EQUAL)
@@ -492,7 +505,7 @@ class Compiler {
         val iterableTokens = consumeUntilType(LEFT_BRACE)
         val blockTokens = consumeNextBlock(false)
         val tokens = mutableListOf<Token>().apply {
-            val iterator = Token.named("__iterator__${System.currentTimeMillis()}")
+            val iterator = Token.named("__iterator_${numberOfEnclosingCompilers}_${implicitVarCounter++}__")
             val eq = Token.ofType(EQUAL)
             val lp = Token.ofType(LEFT_PAREN)
             val rp = Token.ofType(RIGHT_PAREN)
@@ -703,7 +716,7 @@ class Compiler {
 
     private fun equality() {
         comparison()
-        while (match(BANG_EQUAL, EQUAL_EQUAL, TokenType.IS, ISNOT, IN, NOTIN)) {
+        while (match(BANG_EQUAL, EQUAL_EQUAL, IS, ISNOT, IN, NOTIN)) {
             val operator = previous()
             comparison()
             when (operator.type) {
@@ -712,7 +725,7 @@ class Compiler {
                     emitCode(EQ)
                     emitCode(INVERT)
                 }
-                TokenType.IS -> emitCode(OpCode.IS)
+                IS -> emitCode(OpCode.IS)
                 ISNOT -> {
                     emitCode(OpCode.IS)
                     emitCode(INVERT)
@@ -924,12 +937,9 @@ class Compiler {
 //        if (match(TokenType.LEFT_BRACKET, TokenType.DOLLAR_LEFT_BRACKET)) {
 //            return objectLiteral()
 //        }
-//        if (match(TokenType.DEF)) {
-//            return block(Parser.KIND_LAMBDA, true)
-//        }
-//        if (match(TokenType.EQUAL)) {
-//            return shorthandBlock(previous())
-//        }
+        else if (match(DEF) || peekSequence(EQUAL)) {
+            function(Parser.KIND_FUNCTION, nextLambdaName())
+        }
         else if (match(IDENTIFIER)) {
             variable()
 //            val expr = Variable(previous())
@@ -1442,20 +1452,14 @@ class Compiler {
         }
     }
 
-    private val numberOfEnclosingCompilers: Int get() {
-        var count = 0
-        var compiler = this.enclosing
-        while (compiler != null) {
-            count++
-            compiler = compiler.enclosing
-        }
-        return count
-    }
-
     private fun checkIfUnidentified() {
         if (lastChunk?.opCode == CONST_ID) {
             throw error(previous(), "Unable to resolve identifier: ${lastChunk!!.data[1]}")
         }
+    }
+
+    private fun nextLambdaName(): String {
+        return "__lambda_${numberOfEnclosingCompilers}_${lambdaCounter++}__"
     }
 
     private data class Const(val index: Int,
