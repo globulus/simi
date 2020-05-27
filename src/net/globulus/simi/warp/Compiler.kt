@@ -78,7 +78,7 @@ class Compiler {
         current = 0
         this.kind = kind
         val selfName = if (kind != Parser.KIND_FUNCTION) Constants.SELF else ""
-        locals += Local(selfName, 0, 0, false) // Stores the top-level function
+        locals += Local(selfName, 0, 0, isCaptured = false) // Stores the top-level function
         beginScope()
         this.within()
         endScope()
@@ -661,6 +661,10 @@ class Compiler {
                     GET_LOCAL -> lastChunk!!.data[1] as Local
                     GET_UPVALUE -> lastChunk!!.data[0] as Int
                     else -> throw error(equals, "Assigning to undeclared var!")
+                }
+                val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
+                if (isConst) {
+                    throw error(previous(), "Can't assign to a const!")
                 }
                 if (equals.type == QUESTION_QUESTION_EQUAL) {
                     nilCoalescenceWithKnownLeft { or() }
@@ -1460,22 +1464,22 @@ class Compiler {
         val local = findLocal(compiler.enclosing!!, name)
         if (local != null) {
             local.isCaptured = true
-            return addUpvalue(compiler, local.sp, true)
+            return addUpvalue(compiler, local.sp, true, name)
         }
         val upvalue = resolveUpvalue(compiler.enclosing!!, name)
         if (upvalue != null) {
-            return addUpvalue(compiler, upvalue.sp, false)
+            return addUpvalue(compiler, upvalue.sp, false, name)
         }
         return null
     }
 
-    private fun addUpvalue(compiler: Compiler, sp: Int, isLocal: Boolean): Upvalue {
+    private fun addUpvalue(compiler: Compiler, sp: Int, isLocal: Boolean, name: String): Upvalue {
         for (upvalue in compiler.upvalues) {
             if (upvalue.sp == sp && upvalue.isLocal == isLocal) {
                 return upvalue
             }
         }
-        val upvalue = Upvalue(sp, isLocal)
+        val upvalue = Upvalue(sp, isLocal, name)
         compiler.upvalues += upvalue
         return upvalue
     }
@@ -1538,11 +1542,16 @@ class Compiler {
                              val sp: Int,
                              val depth: Int,
                              var isCaptured: Boolean
-    )
+    ) {
+        val isConst = (name == Constants.SELF || CONST_IDENTIFIER.matcher(name).matches())
+    }
 
     private data class Upvalue(val sp: Int,
-                               val isLocal: Boolean
-    )
+                               val isLocal: Boolean,
+                               val name: String
+    ) {
+        val isConst = CONST_IDENTIFIER.matcher(name).matches()
+    }
 
     private data class ActiveLoop(val start: Int, val depth: Int) {
         val breakPositions = mutableListOf<Int>()
@@ -1564,6 +1573,7 @@ class Compiler {
 
     companion object {
         private const val SCRIPT = "Script"
-        private val IMPLICIT_ARG = Pattern.compile("[_][0-9]+")
+        private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
+        private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
     }
 }
