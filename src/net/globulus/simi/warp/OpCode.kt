@@ -40,6 +40,7 @@ enum class OpCode {
     RETURN,
     CLASS,
     METHOD,
+    SELF_DEF,
     ;
 
     val byte = ordinal.toByte()

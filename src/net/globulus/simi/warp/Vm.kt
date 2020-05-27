@@ -126,6 +126,7 @@ internal class Vm {
                     push(klass)
                 }
                 METHOD -> defineMethod(nextString)
+                SELF_DEF -> push(frame.closure.function)
             }
         }
     }

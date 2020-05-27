@@ -122,6 +122,7 @@ print retFunc()
 
 def outer() {
   x = "outside"
+  print self(def)
   def inner() {
     print x
   }

@@ -606,13 +606,6 @@ class Compiler {
             emitCode(POP)
         }
         return shouldPop
-//        if (!(expr is Assign && expr.value is Expr.Block)
-//                && !(expr is Expr.Set && expr.value is Expr.Block)) {
-//            // If the left-hand side is an assign or set and right-hand side is a block, then we've already consumed the
-//            // line ending and don't have to check the lambda end.
-//            checkStatementEnd(lambda)
-//        }
-//        return Stmt.Expression(expr)
     }
 
     private fun expression(): Boolean {
@@ -886,9 +879,6 @@ class Compiler {
         else if (match(NIL)) {
             emitCode(OpCode.NIL)
         }
-//        if (match(TokenType.PASS)) {
-//            return Literal(Pass())
-//        }
 //        if (match(TokenType.NATIVE)) {
 //            return Literal(Native())
 //        }
@@ -904,7 +894,6 @@ class Compiler {
                 }
                 is SimiValue.String -> emitConst(token.literal.string.toString())
             }
-//            return Literal(previous()!!.literal)
         }
 //        if (match(TokenType.SUPER)) {
 //            val keyword = previous()
@@ -922,19 +911,15 @@ class Compiler {
 //            return Super(keyword, superclass, method, arity)
 //        }
         else if (match(SELF)) {
-            if (currentClass == null) {
-                throw error(previous(), "Cannot use 'self' outside of class.")
+            if (peekSequence(LEFT_PAREN, DEF, RIGHT_PAREN)) {
+                emitCode(SELF_DEF)
+                advance(); advance(); advance()
+            } else {
+                if (currentClass == null) {
+                    throw error(previous(), "Cannot use 'self' outside of class.")
+                }
+                variable()
             }
-            variable()
-//            val previous = previous()
-//            var specifier: Token? = null
-//            if (peekSequence(TokenType.LEFT_PAREN, TokenType.DEF, TokenType.RIGHT_PAREN)) {
-//                specifier = Token(TokenType.DEF, Constants.SELF_DEF, null, previous!!.line, previous.file)
-//                advance()
-//                advance()
-//                advance()
-//            }
-//            return Self(Token(TokenType.SELF, Constants.SELF, null, previous!!.line, previous.file), specifier)
         }
 //        if (match(TokenType.LEFT_BRACKET, TokenType.DOLLAR_LEFT_BRACKET)) {
 //            return objectLiteral()
