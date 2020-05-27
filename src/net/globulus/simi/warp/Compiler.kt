@@ -166,7 +166,7 @@ class Compiler {
     }
 
     private fun function(kind: String, providedName: String? = null): Function {
-        val declaration = previous()
+        val declaration = previous
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         val args = mutableListOf<String>()
         val prependedTokens = mutableListOf<Token>()
@@ -180,7 +180,7 @@ class Compiler {
                         if (kind == Parser.KIND_INIT) {
                             initAutoset = true
                         } else {
-                            throw error(previous(), "Autoset arguments are only allowed in initializers!")
+                            throw error(previous, "Autoset arguments are only allowed in initializers!")
                         }
                     }
                     val paramName = consumeVar("Expect param name.")
@@ -209,8 +209,8 @@ class Compiler {
         var returnType: String? = null
         if (match(IS)) {
             when (kind) {
-                Parser.KIND_LAMBDA -> throw error(previous(), "Can't specify return type of lambdas!")
-                Parser.KIND_INIT -> throw error(previous(), "Can't specify return type of init!")
+                Parser.KIND_LAMBDA -> throw error(previous, "Can't specify return type of lambdas!")
+                Parser.KIND_INIT -> throw error(previous, "Can't specify return type of init!")
                 else -> returnType = consumeVar("Expect type.")
             }
         }
@@ -268,13 +268,22 @@ class Compiler {
     }
 
     private fun classDeclaration() {
-        val opener = previous()
+        val opener = previous
         val name = consumeVar("Expect class name.")
-
-        currentClass = ClassCompiler(previous(), currentClass)
-
         declareLocal(name)
         emitClass(name)
+        currentClass = ClassCompiler(previous, currentClass)
+
+        if (match(IS)) {
+            do {
+                val superclassName = consumeVar("Expect superclass name.")
+                if (superclassName == name) {
+                    throw error(previous, "A class cannot inherit from itself!")
+                }
+                variable(superclassName)
+                emitCode(INHERIT)
+            } while (match(COMMA))
+        }
         if (match(LEFT_BRACE)) {
             while (!isAtEnd() && !check(RIGHT_BRACE)) {
                 if (match(NEWLINE)) {
@@ -283,7 +292,7 @@ class Compiler {
                 if (match(DEF)) {
                     method()
                 } else if (match(IDENTIFIER)) {
-                    val fieldName = previous().lexeme
+                    val fieldName = previous.lexeme
                     if (fieldName == Constants.INIT) {
                         method(fieldName)
                     }
@@ -392,12 +401,12 @@ class Compiler {
         }
         consume(RIGHT_BRACE, "Expect '}' after block!")
         if (isExpr && !lastLineIsExpr) {
-            throw error(previous(), "Block is not a valid expression block!")
+            throw error(previous, "Block is not a valid expression block!")
         }
     }
 
     private fun ifSomething(isExpr: Boolean) {
-        val opener = previous()
+        val opener = previous
         expression()
         val ifChunk = emitJump(JUMP_IF_FALSE)
         emitCode(POP)
@@ -445,7 +454,7 @@ class Compiler {
      * Actually creates a list of tokens that represent if-else-ifs that are then compiled internally
      */
     private fun whenSomething(isExpr: Boolean) {
-        val origin = previous()
+        val origin = previous
         val id = consume(IDENTIFIER, "Expected an identifier after 'when'")
         var first = true
         var wroteElse = false
@@ -467,16 +476,16 @@ class Compiler {
             matchAllNewlines()
             if (match(ELSE)) {
                 wroteElse = true
-                whenTokens += previous()
+                whenTokens += previous
                 whenTokens += consumeNextBlock(isExpr)
             } else if (wroteElse) {
                 // We could just break when we encountered a break, but that's make for a lousy compiler
-                throw error(previous(), "'else' must be the last clause in a 'when' block")
+                throw error(previous, "'else' must be the last clause in a 'when' block")
             } else {
                 var ifToken: Token? = null
                 do {
                     val op = if (match(IS, ISNOT, IN, NOTIN, IF)) {
-                        previous()
+                        previous
                     } else {
                         Token.copying(origin, EQUAL_EQUAL)
                     }
@@ -504,7 +513,7 @@ class Compiler {
 
                     // If we've found an or, we just take it as-is
                     if (match(OR)) {
-                        whenTokens += previous()
+                        whenTokens += previous
                     }
                 } while (!conditionAtEndBlock())
 
@@ -518,7 +527,7 @@ class Compiler {
     }
 
     private fun forStatement() {
-        val opener = previous()
+        val opener = previous
         val id = consume(IDENTIFIER, "Expect an identifier after 'for'.")
         consume(IN, "Expect 'in' after identifier in 'for'.")
         val iterableTokens = consumeUntilType(LEFT_BRACE)
@@ -554,7 +563,7 @@ class Compiler {
 
     private fun returnStatement(lambda: Boolean) {
         if (kind == Parser.KIND_INIT) {
-            throw error(previous(), "Can't return from init!")
+            throw error(previous, "Can't return from init!")
         }
         if (!match(NEWLINE)) {
             expression()
@@ -601,7 +610,7 @@ class Compiler {
 
     private fun breakStatement() {
         if (loops.isEmpty()) {
-            throw error(previous(), "Cannot 'break' outside of a loop!")
+            throw error(previous, "Cannot 'break' outside of a loop!")
         }
         val activeLoop = loops.peek()
         // Discards scopes up to the loop level (hence + 1)
@@ -614,7 +623,7 @@ class Compiler {
 
     private fun continueStatement() {
         if (loops.isEmpty()) {
-            throw error(previous(), "Cannot 'continue' outside of a loop!")
+            throw error(previous, "Cannot 'continue' outside of a loop!")
         }
         val activeLoop = loops.peek()
         // Discards scopes up to the level of loop statement (hence + 2)
@@ -649,7 +658,7 @@ class Compiler {
         or() // left-hand side
         if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
-            val equals = previous()
+            val equals = previous
             if (equals.type == EQUAL) {
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk()
@@ -658,7 +667,7 @@ class Compiler {
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
                         val name = lastChunk!!.data[2] as String
-                        warn(previous(), "Name shadowed: $name.")
+                        warn(previous, "Name shadowed: $name.")
                         declareLocal(name)
                         rollBackLastChunk()
                     } else if (lastChunk?.opCode != CONST_ID) {
@@ -677,7 +686,7 @@ class Compiler {
                 }
                 val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
                 if (isConst) {
-                    throw error(previous(), "Can't assign to a const!")
+                    throw error(previous, "Can't assign to a const!")
                 }
                 if (equals.type == QUESTION_QUESTION_EQUAL) {
                     nilCoalescenceWithKnownLeft { or() }
@@ -741,7 +750,7 @@ class Compiler {
     private fun equality() {
         comparison()
         while (match(BANG_EQUAL, EQUAL_EQUAL, IS, ISNOT, IN, NOTIN)) {
-            val operator = previous()
+            val operator = previous
             comparison()
             when (operator.type) {
                 EQUAL_EQUAL -> emitCode(EQ)
@@ -767,7 +776,7 @@ class Compiler {
     private fun comparison() {
         range()
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, LESS_GREATER)) {
-            val operator = previous()
+            val operator = previous
             range()
             if (operator.type == LESS_GREATER) {
                 emitInvoke(Constants.MATCHES, 1)
@@ -786,7 +795,7 @@ class Compiler {
     private fun range() {
         addition()
         while (match(DOT_DOT, DOT_DOT_DOT)) {
-            val operator = previous()
+            val operator = previous
             addition()
             emitInvoke(when (operator.type) {
                 DOT_DOT -> "rangeUntil"
@@ -799,7 +808,7 @@ class Compiler {
     private fun addition() {
         multiplication()
         while (match(MINUS, PLUS)) {
-            val operator = previous()
+            val operator = previous
             multiplication()
             emitCode(if (operator.type == PLUS) ADD else SUBTRACT)
         }
@@ -808,7 +817,7 @@ class Compiler {
     private fun multiplication() {
         nilCoalescence()
         while (match(SLASH, SLASH_SLASH, STAR, MOD)) {
-            val operator = previous()
+            val operator = previous
             nilCoalescence()
             emitCode(when (operator.type) {
                 SLASH -> DIVIDE
@@ -838,7 +847,7 @@ class Compiler {
 
     private fun unary() {
         if (match(NOT, MINUS, BANG_BANG)) {
-            val operator = previous()
+            val operator = previous
             unary()
             emitCode(when (operator.type) {
                 NOT -> INVERT
@@ -918,7 +927,7 @@ class Compiler {
 //            return Literal(Native())
 //        }
         else if (match(NUMBER, STRING)) {
-            val token = previous()
+            val token = previous
             when (token.literal) {
                 is SimiValue.Number -> {
                     if (token.literal.number.isInteger) {
@@ -951,7 +960,7 @@ class Compiler {
                 advance(); advance(); advance()
             } else {
                 if (currentClass == null) {
-                    throw error(previous(), "Cannot use 'self' outside of class.")
+                    throw error(previous, "Cannot use 'self' outside of class.")
                 }
                 variable()
             }
@@ -986,9 +995,8 @@ class Compiler {
         }
     }
 
-    private fun variable() {
-        val id = previous()
-        val name = id.lexeme
+    private fun variable(providedName: String? = null) {
+        val name = providedName ?: previous.lexeme
         val local = findLocal(this, name)
         if (local != null) {
             emitGetLocal(name, local)
@@ -1153,14 +1161,14 @@ class Compiler {
             match(TRUE) -> 1L
             match(NIL) -> Nil
             match(NUMBER) -> {
-                val num = previous().literal.number
+                val num = previous.literal.number
                 if (num.isInteger) {
                     num.asLong()
                 } else {
                     num.asDouble()
                 }
             }
-            match(STRING) -> previous().literal.string
+            match(STRING) -> previous.literal.string
             else -> throw error(peek(), message)
         }
     }
@@ -1179,7 +1187,7 @@ class Compiler {
 
     private fun advance(): Token {
         if (!isAtEnd()) current++
-        return previous()
+        return previous
     }
 
     private fun isAtEnd(): Boolean {
@@ -1202,9 +1210,7 @@ class Compiler {
         return true
     }
 
-    private fun previous(): Token {
-        return tokens[current - 1]
-    }
+    private val previous: Token get() = tokens[current - 1]
 
     private fun rollBack(by: Int = 1) {
         for (i in 0 until by) {
@@ -1430,7 +1436,7 @@ class Compiler {
                 break
             }
             if (local.name == name) {
-                throw error(previous(), "Variable $name is already declared in scope!")
+                throw error(previous, "Variable $name is already declared in scope!")
             }
         }
         val l = Local(name, end, scopeDepth, false)
@@ -1520,7 +1526,7 @@ class Compiler {
 
     private fun checkIfUnidentified() {
         if (lastChunk?.opCode == CONST_ID) {
-            throw error(previous(), "Unable to resolve identifier: ${lastChunk!!.data[1]}")
+            throw error(previous, "Unable to resolve identifier: ${lastChunk!!.data[1]}")
         }
     }
 

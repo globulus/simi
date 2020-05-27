@@ -125,6 +125,11 @@ internal class Vm {
                     }
                     push(klass)
                 }
+                INHERIT -> {
+                    val superclass = pop()
+                    val subclass = peek()
+                    (subclass as SClass).fields.putAll((superclass as SClass).fields)
+                }
                 METHOD -> defineMethod(nextString)
                 SELF_DEF -> push(frame.closure.function)
             }

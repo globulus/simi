@@ -39,6 +39,7 @@ enum class OpCode {
     CLOSE_UPVALUE,
     RETURN,
     CLASS,
+    INHERIT,
     METHOD,
     SELF_DEF,
     ;
