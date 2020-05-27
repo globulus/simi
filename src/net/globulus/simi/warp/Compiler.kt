@@ -275,14 +275,23 @@ class Compiler {
         currentClass = ClassCompiler(previous, currentClass)
 
         if (match(IS)) {
+            val superclasses = mutableListOf<String>()
             do {
                 val superclassName = consumeVar("Expect superclass name.")
                 if (superclassName == name) {
                     throw error(previous, "A class cannot inherit from itself!")
                 }
-                variable(superclassName)
-                emitCode(INHERIT)
+                superclasses += superclassName
             } while (match(COMMA))
+
+            currentClass?.firstSuperclass = superclasses.first()
+
+            // Reverse the superclasses so that the first one listed is the last one inherited, meaning
+            // its fields override those of lesser-ranked superclasses
+            superclasses.reversed().forEach {
+                variable(it)
+                emitCode(INHERIT)
+            }
         }
         if (match(LEFT_BRACE)) {
             while (!isAtEnd() && !check(RIGHT_BRACE)) {
@@ -938,23 +947,19 @@ class Compiler {
                 }
                 is SimiValue.String -> emitConst(token.literal.string.toString())
             }
-        }
-//        if (match(TokenType.SUPER)) {
-//            val keyword = previous()
-//            val superclass: Token?
-//            if (match(TokenType.LEFT_PAREN)) {
-//                superclass = consume(TokenType.IDENTIFIER, "Expected superclass name in parentheses!")
-//                consume(TokenType.RIGHT_PAREN, "Expected ')' after superclass specification!")
-//            } else {
-//                superclass = null
-//            }
-//            consume(TokenType.DOT, "Expect '.' after 'super'.")
-//            val method = consume(TokenType.IDENTIFIER,
-//                    "Expect superclass method name.")
-//            val arity: Int = peekParams()
-//            return Super(keyword, superclass, method, arity)
-//        }
-        else if (match(SELF)) {
+        } else if (match(TokenType.SUPER)) {
+            if (currentClass == null) {
+                throw error(previous, "Cannot use 'super' outside of class.")
+            } else if (currentClass?.firstSuperclass == null) {
+                throw error(previous, "Cannot use 'super' in a class that doesn't have a superclass.")
+            }
+            val superclass = if (match(LEFT_PAREN)) {
+                consumeVar("Expect superclass name in parentheses.")
+            } else {
+                currentClass?.firstSuperclass!!
+            }
+            emitSuper(superclass)
+        } else if (match(SELF)) {
             if (peekSequence(LEFT_PAREN, DEF, RIGHT_PAREN)) {
                 emitCode(SELF_DEF)
                 advance(); advance(); advance()
@@ -1398,6 +1403,15 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, name, argCount, constIdx))
     }
 
+    private fun emitSuper(superclass: String) {
+        val opCode = OpCode.SUPER
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(superclass)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, superclass, constIdx))
+        variable(Constants.SELF) // Put self on top of stack so that we can access the current SClass
+    }
+
     private fun emitReturnTypeVerification() {
         verifyReturnType?.let { type ->
             val name = "__returnVerification_${numberOfEnclosingCompilers}_${returnVerificationVarCounter++}__"
@@ -1600,7 +1614,9 @@ class Compiler {
 
     private class ClassCompiler(val name: Token,
                                 val enclosing: ClassCompiler?
-    )
+    ) {
+        var firstSuperclass: String? = null
+    }
 
     private class ParseError(message: String) : RuntimeException(message)
 

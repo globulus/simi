@@ -13,6 +13,7 @@ internal class Vm {
 
     private var numClass: SClass? = null
     private var strClass: SClass? = null
+    private var classClass: SClass? = null
 
     private var fp = 0
         set(value) {
@@ -36,7 +37,7 @@ internal class Vm {
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
-    private fun run(breakAtFp: Int) {
+    private fun run(breakAtFp: Int, once: Boolean = false) {
         loop@ while (true) {
             val code = nextCode
             when (code) {
@@ -122,15 +123,36 @@ internal class Vm {
                         numClass = klass
                     } else if (strClass == null && name == Constants.CLASS_STRING) {
                         strClass = klass
+                    } else if (classClass == null && name == Constants.CLASS_CLASS) {
+                        classClass = klass
                     }
                     push(klass)
                 }
                 INHERIT -> {
                     val superclass = pop()
+                    if (superclass !is SClass) {
+                        throw runtimeError("Superclass must be a class.")
+                    }
                     val subclass = peek()
-                    (subclass as SClass).fields.putAll((superclass as SClass).fields)
+                    (subclass as SClass).let {
+                        it.fields.putAll(superclass.fields)
+                        it.superclasses[superclass.name] = superclass
+                    }
                 }
                 METHOD -> defineMethod(nextString)
+                SUPER -> {
+                    val superclass = nextString
+                    val getLocal = nextCode
+                    if (getLocal != GET_LOCAL) {
+                        throw RuntimeException("WTF")
+                    }
+                    getVar(frame)
+                    val top = pop()
+                    val klass = if (top is Instance) top.klass else top as SClass
+                    klass.superclasses[superclass]?.let {
+                        push(it)
+                    } ?: throw runtimeError("Class ${klass.name} doesn't inherit from $superclass!")
+                }
                 SELF_DEF -> push(frame.closure.function)
             }
         }
@@ -253,16 +275,16 @@ internal class Vm {
     }
 
     private fun areEqual(a: Any, b: Any): Boolean {
-        return if (a == b) {
-            true
-        } else if (a is Instance) {
-            push(a)
-            push(b)
-            invoke(Constants.EQUALS, 1, false)
-            run(fp - 1)
-            !isFalsey(pop())
-        } else {
-            false
+        return when (a) {
+            b -> true
+            is Instance -> {
+                push(a)
+                push(b)
+                invoke(Constants.EQUALS, 1, false)
+                run(fp - 1)
+                !isFalsey(pop())
+            }
+            else -> false
         }
     }
 
@@ -270,7 +292,11 @@ internal class Vm {
         val b = pop() as SClass
         val a = boxIfNotInstance(0)
         pop()
-        val r = a.klass == b
+        val r = when (a) {
+            is Instance -> a.klass == b
+            is SClass -> b == classClass
+            else -> throw RuntimeException("WTF")
+        }
         push(boolToLong(r))
     }
 
@@ -328,7 +354,7 @@ internal class Vm {
             stack[sp - argCount - 1] = it
             call(it, argCount)
         } ?: run {
-            (receiver.klass.fields[name] as? Closure)?.let { method ->
+            ((receiver as? Instance)?.klass?.fields?.get(name) as? Closure)?.let { method ->
                 callClosure(method, argCount)
             } ?: run {
                 if (checkError) {
@@ -465,11 +491,11 @@ internal class Vm {
     /**
      * Check if peek(offset) is instance, if it isn't it tries to box it.
      */
-    private fun boxIfNotInstance(offset: Int): Instance {
+    private fun boxIfNotInstance(offset: Int): Fielded {
         val loc = sp - offset - 1
         val value = stack[loc]
-        if (value is Instance) {
-            return value
+        if (value is Instance || value is SClass) {
+            return value as Fielded
         }
         if (value is Long || value is Double) {
             val boxedNum = Instance(numClass!!).apply {

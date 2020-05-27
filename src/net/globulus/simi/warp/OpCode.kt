@@ -41,6 +41,7 @@ enum class OpCode {
     CLASS,
     INHERIT,
     METHOD,
+    SUPER,
     SELF_DEF,
     ;
 

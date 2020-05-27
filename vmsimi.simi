@@ -152,19 +152,31 @@ print "3 == \(pair.first + pair.second)"
 class Nested {
   def method() {
     def function() {
-      print self
+      print "self is " + self
     }
     function()
+  }
+
+  def methodToInherit() {
+    print "calling from Nested"
   }
 }
 
 Nested().method()
 
 class Subclass is Nested {
+    init {
+        print "My superclass is " + super
+    }
 
+    def methodToInherit() {
+        super.methodToInherit()
+        print "...and calling from subclass"
+    }
 }
 
-print Subclass().method()
+Subclass().method()
+Subclass().methodToInherit()
 
 print 1..3 is Range
 print 2 in 1..4
