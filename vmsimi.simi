@@ -176,6 +176,6 @@ print Klass().ja
 print Klass("dva").ja
 print Klass(1).ja
 
-(def (a1, a2){
-    print a1 + a2
+(def {
+    print _0 + _1
 })(1, 2)

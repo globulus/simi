@@ -14,6 +14,7 @@ import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.*
 import net.globulus.simi.warp.OpCode.*
 import java.util.*
+import java.util.regex.Pattern
 
 class Compiler {
     private lateinit var byteCode: MutableList<Byte>
@@ -211,6 +212,12 @@ class Compiler {
             hasBody = false
             consume(NEWLINE, "Expect '{', '=' or newline to start func.")
         }
+
+        if (kind == Parser.KIND_LAMBDA && hasBody && args.isEmpty()) {
+            // Scan for implicit args
+            args += scanForImplicitArgs(declaration, isExprFunc)
+        }
+
         val curr = current
         val funcCompiler = Compiler().also {
             it.enclosing = this
@@ -264,9 +271,9 @@ class Compiler {
                 if (match(DEF)) {
                     method()
                 } else if (match(IDENTIFIER)) {
-                    val name = previous().lexeme
-                    if (name == Constants.INIT) {
-                        method(name)
+                    val fieldName = previous().lexeme
+                    if (fieldName == Constants.INIT) {
+                        method(fieldName)
                     }
                 }
             }
@@ -885,11 +892,9 @@ class Compiler {
     private fun primary() {
         if (match(FALSE)) {
             emitInt(0)
-        }
-        else if (match(TRUE)) {
+        } else if (match(TRUE)) {
             emitInt(1)
-        }
-        else if (match(NIL)) {
+        } else if (match(NIL)) {
             emitCode(OpCode.NIL)
         }
 //        if (match(TokenType.NATIVE)) {
@@ -938,9 +943,8 @@ class Compiler {
 //            return objectLiteral()
 //        }
         else if (match(DEF) || peekSequence(EQUAL)) {
-            function(Parser.KIND_FUNCTION, nextLambdaName())
-        }
-        else if (match(IDENTIFIER)) {
+            function(Parser.KIND_LAMBDA, nextLambdaName())
+        } else if (match(IDENTIFIER)) {
             variable()
 //            val expr = Variable(previous())
 //            if (isInClassDeclr) { // Add backup self.var
@@ -958,11 +962,9 @@ class Compiler {
 //        }
         else if (match(IF)) {
             return ifSomething(true)
-        }
-        else if (match(WHEN)) {
+        } else if (match(WHEN)) {
             return whenSomething(true)
-        }
-        else {
+        } else {
             throw error(peek(), "Expect expression.")
         }
     }
@@ -1040,6 +1042,44 @@ class Compiler {
             matchAllNewlines()
             return sublist
         }
+    }
+
+    private fun consumeNextExpr(): List<Token> {
+        val start = current
+        var end = 0
+        var parenCount = 0
+        var bracketCount = 0
+        loop@ for (i in start until tokens.size) {
+            when (tokens[i].type) {
+                NEWLINE, RIGHT_BRACE -> {
+                    end = i
+                    break@loop
+                }
+                LEFT_PAREN -> parenCount++
+                LEFT_BRACKET -> bracketCount++
+                RIGHT_PAREN -> {
+                    parenCount--
+                    if (parenCount < 0) {
+                        end = i
+                        break@loop
+                    }
+                }
+                RIGHT_BRACKET -> {
+                    bracketCount--
+                    if (bracketCount < 0) {
+                        end = i
+                        break@loop
+                    }
+                }
+                COMMA -> {
+                    if (parenCount == 0 && bracketCount == 0) {
+                        end = i
+                        break@loop
+                    }
+                }
+            }
+        }
+        return tokens.subList(start, end)
     }
 
     private fun consumeUntilType(vararg types: TokenType): List<Token> {
@@ -1462,6 +1502,34 @@ class Compiler {
         return "__lambda_${numberOfEnclosingCompilers}_${lambdaCounter++}__"
     }
 
+    private fun scanForImplicitArgs(opener: Token, isExpr: Boolean): List<String> {
+        val args = mutableListOf<String>()
+        val curr = current
+        val bodyTokens = if (isExpr) {
+            consumeNextExpr()
+        } else {
+            current-- // Go back to {
+            consumeNextBlock(false)
+        }
+        current = curr
+        for (token in bodyTokens) {
+            if (token.type == IDENTIFIER) {
+                val argName = token.lexeme
+                if (IMPLICIT_ARG.matcher(argName).matches()) {
+                    args += argName
+                }
+            }
+        }
+        args.sort()
+        for (i in 0 until args.size) {
+            val expected = "_$i"
+            if (args[i] != expected) {
+                throw error(opener, "Invalid implicit arg order, found ${args[i]} instead of $expected!")
+            }
+        }
+        return args
+    }
+
     private data class Const(val index: Int,
                              val level: Int
     )
@@ -1496,5 +1564,6 @@ class Compiler {
 
     companion object {
         private const val SCRIPT = "Script"
+        private val IMPLICIT_ARG = Pattern.compile("[_][0-9]+")
     }
 }
