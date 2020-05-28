@@ -272,18 +272,23 @@ class Compiler {
         val name = consumeVar("Expect class name.")
         declareLocal(name)
         emitClass(name)
+        val superclasses = mutableListOf<String>()
         currentClass = ClassCompiler(previous, currentClass)
 
         if (match(IS)) {
-            val superclasses = mutableListOf<String>()
             do {
                 val superclassName = consumeVar("Expect superclass name.")
                 if (superclassName == name) {
                     throw error(previous, "A class cannot inherit from itself!")
                 }
-                superclasses += superclassName
+                if (superclassName != Constants.CLASS_OBJECT) { // All classes inherit from Object
+                    superclasses += superclassName
+                }
             } while (match(COMMA))
 
+            if (superclasses.isEmpty() && name != Constants.CLASS_OBJECT) {
+                superclasses += Constants.CLASS_OBJECT
+            }
             currentClass?.firstSuperclass = superclasses.first()
 
             // Reverse the superclasses so that the first one listed is the last one inherited, meaning
@@ -304,6 +309,11 @@ class Compiler {
                     val fieldName = previous.lexeme
                     if (fieldName == Constants.INIT) {
                         method(fieldName)
+                    } else if (match(EQUAL)) {
+                        expression()
+                        emitField(fieldName)
+                    } else {
+                        throw error(previous, "Invalid line in class declaration.")
                     }
                 }
             }
@@ -313,21 +323,6 @@ class Compiler {
         }
 
         currentClass = currentClass?.enclosing
-//        val mixins: MutableList<Expr> = ArrayList()
-//        var superclasses: MutableList<Expr?>? = null
-//        if (match(LEFT_PAREN)) {
-//            if (!check(RIGHT_PAREN)) {
-//                superclasses = ArrayList()
-//                do {
-//                    if (match(IN)) {
-//                        mixins.add(call())
-//                    } else {
-//                        superclasses.add(call())
-//                    }
-//                } while (match(COMMA))
-//            }
-//            consume(RIGHT_PAREN, "Expect ')' after superclasses.")
-//        }
     }
 
     private fun method(providedName: String? = null) {
@@ -1320,8 +1315,16 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
+    private fun emitField(name: String) {
+        val opCode = FIELD
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, constIdx, name))
+    }
+
     private fun emitMethod(name: String) {
-        val opCode = OpCode.METHOD
+        val opCode = METHOD
         var size = byteCode.put(opCode)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
@@ -1409,7 +1412,6 @@ class Compiler {
         val constIdx = constIndex(superclass)
         size += byteCode.putInt(constIdx)
         pushLastChunk(Chunk(opCode, size, superclass, constIdx))
-        variable(Constants.SELF) // Put self on top of stack so that we can access the current SClass
     }
 
     private fun emitReturnTypeVerification() {

@@ -1,3 +1,7 @@
+class Object {
+
+}
+
 class RangeIterator {
     init(@range) {
         self.current = range.min
@@ -150,9 +154,11 @@ pair = Pair(1, 2)
 print "3 == \(pair.first + pair.second)"
 
 class Nested {
+  ichBin = "Kuhlen"
   def method() {
     def function() {
       print "self is " + self
+      print @ichBin
     }
     function()
   }

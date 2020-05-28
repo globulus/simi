@@ -63,14 +63,7 @@ internal class Vm {
                     val obj = pop()
                     getFieldsOrThrow(obj)[prop.toString()] = value
                 }
-                GET_PROP -> {
-                    val name = pop().toString()
-                    val obj = boxIfNotInstance(0)
-                    pop()
-                    val prop = getFieldsOrThrow(obj)[name]
-                    push(prop ?: Nil)
-                    bindMethod(obj, getSClass(obj), prop, name)
-                }
+                GET_PROP -> getProp()
                 INVERT -> invert()
                 NEGATE -> negate()
                 ADD -> add()
@@ -139,16 +132,16 @@ internal class Vm {
                         it.superclasses[superclass.name] = superclass
                     }
                 }
+                FIELD -> {
+                    val value = pop()
+                    val klass = peek() as SClass
+                    klass.fields[nextString] = value
+                }
                 METHOD -> defineMethod(nextString)
                 SUPER -> {
                     val superclass = nextString
-                    val getLocal = nextCode
-                    if (getLocal != GET_LOCAL) {
-                        throw RuntimeException("WTF")
-                    }
-                    getVar(frame)
-                    val top = pop()
-                    val klass = if (top is Instance) top.klass else top as SClass
+                    val self = stack[frame.sp] // self is always at 0
+                    val klass = if (self is Instance) self.klass else self as SClass
                     klass.superclasses[superclass]?.let {
                         push(it)
                     } ?: throw runtimeError("Class ${klass.name} doesn't inherit from $superclass!")
@@ -168,6 +161,19 @@ internal class Vm {
 
     private fun getVar(frame: CallFrame) {
         push(stack[frame.sp + nextInt]!!)
+    }
+
+    private fun getProp() {
+        val name = pop().toString()
+        val obj = boxIfNotInstance(0)
+        sp--
+        val prop = when (obj) {
+            is Instance -> obj.fields[name] ?: obj.klass.fields[name]
+            is SClass -> obj.fields[name]
+            else -> throw runtimeError("Only instances can have fields!")
+        }
+        push(prop ?: Nil)
+        bindMethod(obj, getSClass(obj), prop, name)
     }
 
     private fun getOuterFrame(): CallFrame {
@@ -291,7 +297,7 @@ internal class Vm {
     private fun checkIs() {
         val b = pop() as SClass
         val a = boxIfNotInstance(0)
-        pop()
+        sp--
         val r = when (a) {
             is Instance -> a.klass == b
             is SClass -> b == classClass
@@ -484,7 +490,7 @@ internal class Vm {
             (klass.fields[name] as? Closure)?.let { it } ?: return
         }
         val bound = BoundMethod(receiver, method)
-        pop()
+        sp--
         push(bound)
     }
 
