@@ -6,6 +6,7 @@ import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.TokenType.CLASS
+import net.globulus.simi.TokenType.IMPORT
 import net.globulus.simi.TokenType.IS
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
@@ -275,7 +276,7 @@ class Compiler {
         val superclasses = mutableListOf<String>()
         currentClass = ClassCompiler(previous, currentClass)
 
-        if (match(IS)) {
+        if (match(IS)) { // Superclasses
             do {
                 val superclassName = consumeVar("Expect superclass name.")
                 if (superclassName == name) {
@@ -298,6 +299,23 @@ class Compiler {
                 emitCode(INHERIT)
             }
         }
+
+        if (match(IMPORT)) { // Mixins
+            val mixins = mutableListOf<String>()
+            do {
+                val mixinName = consumeVar("Expect mixin name.")
+                if (mixinName == name) {
+                    throw error(previous, "A class cannot mix itself in!")
+                }
+                mixins += mixinName
+            } while (match(COMMA))
+            // Reverse the mixins for the same reason we did with superclasses
+            mixins.reversed().forEach {
+                variable(it)
+                emitCode(OpCode.IMPORT)
+            }
+        }
+
         if (match(LEFT_BRACE)) {
             while (!isAtEnd() && !check(RIGHT_BRACE)) {
                 if (match(NEWLINE)) {

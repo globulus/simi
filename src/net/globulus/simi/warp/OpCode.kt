@@ -40,6 +40,7 @@ enum class OpCode {
     RETURN,
     CLASS,
     INHERIT,
+    IMPORT,
     FIELD,
     METHOD,
     SUPER,

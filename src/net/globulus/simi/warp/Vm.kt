@@ -121,22 +121,9 @@ internal class Vm {
                     }
                     push(klass)
                 }
-                INHERIT -> {
-                    val superclass = pop()
-                    if (superclass !is SClass) {
-                        throw runtimeError("Superclass must be a class.")
-                    }
-                    val subclass = peek()
-                    (subclass as SClass).let {
-                        it.fields.putAll(superclass.fields)
-                        it.superclasses[superclass.name] = superclass
-                    }
-                }
-                FIELD -> {
-                    val value = pop()
-                    val klass = peek() as SClass
-                    klass.fields[nextString] = value
-                }
+                INHERIT -> inherit()
+                IMPORT -> mixin()
+                FIELD -> addFieldToClass(nextString)
                 METHOD -> defineMethod(nextString)
                 SUPER -> {
                     val superclass = nextString
@@ -299,8 +286,8 @@ internal class Vm {
         val a = boxIfNotInstance(0)
         sp--
         val r = when (a) {
-            is Instance -> a.klass == b
-            is SClass -> b == classClass
+            is Instance -> a.klass.checkIs(b)
+            is SClass -> if (b == classClass) true else a.checkIs(b)
             else -> throw RuntimeException("WTF")
         }
         push(boolToLong(r))
@@ -436,6 +423,39 @@ internal class Vm {
             push(result)
             fp == breakAtFp
         }
+    }
+
+    private fun inherit() {
+        val superclass = pop()
+        if (superclass !is SClass) {
+            throw runtimeError("Superclass must be a class.")
+        }
+        val subclass = peek()
+        (subclass as SClass).let {
+            it.fields.putAll(superclass.fields)
+            it.superclasses[superclass.name] = superclass
+        }
+    }
+
+    private fun mixin() {
+        val mixin = pop()
+        if (mixin !is SClass) {
+            throw runtimeError("Mixin must be a class.")
+        }
+        val klass = peek()
+        (klass as SClass).let {
+            for (field in mixin.fields) {
+                if (!field.key.startsWith(Constants.IMPLICIT)) { // Add public fields only
+                    it.fields[field.key] = field.value
+                }
+            }
+        }
+    }
+
+    private fun addFieldToClass(name: String) {
+        val value = pop()
+        val klass = peek() as SClass
+        klass.fields[name] = value
     }
 
     private fun defineMethod(name: String) {
