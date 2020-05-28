@@ -2,6 +2,8 @@ class Object {
 
 }
 
+class Function
+
 class RangeIterator {
     init(@range) {
         self.current = range.min
@@ -211,3 +213,23 @@ def funcReturningNum(a) is Num {
     return a
 }
 print funcReturningNum("trolo")
+print funcReturningNum is Function
+print funcReturningNum.name + funcReturningNum.arity
+
+class OverridesGet {
+    def get(val) {
+        print val
+        when val {
+            is Num { print "is num" }
+            is String { print "is str" }
+            else { print "something else \(val)" }
+        }
+        return 1
+    }
+    def set(key, val) {
+        print "set \(key) \(val)"
+    }
+}
+overridesGet = OverridesGet()
+print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss"))
+overridesGet.key = 42

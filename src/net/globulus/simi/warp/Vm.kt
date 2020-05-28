@@ -14,6 +14,7 @@ internal class Vm {
     private var numClass: SClass? = null
     private var strClass: SClass? = null
     private var classClass: SClass? = null
+    private var funcClass: SClass? = null
 
     private var fp = 0
         set(value) {
@@ -57,12 +58,7 @@ internal class Vm {
                 GET_LOCAL -> getVar(frame)
                 SET_UPVALUE -> frame.closure.upvalues[nextInt]!!.location = WeakReference(sp - 1) // -1 because we need to point at an actual slot
                 GET_UPVALUE -> push(readUpvalue(frame.closure.upvalues[nextInt]!!))
-                SET_PROP -> {
-                    val value = pop()
-                    val prop = pop()
-                    val obj = pop()
-                    getFieldsOrThrow(obj)[prop.toString()] = value
-                }
+                SET_PROP -> setProp()
                 GET_PROP -> getProp()
                 INVERT -> invert()
                 NEGATE -> negate()
@@ -118,6 +114,8 @@ internal class Vm {
                         strClass = klass
                     } else if (classClass == null && name == Constants.CLASS_CLASS) {
                         classClass = klass
+                    } else if (funcClass == null && name == Constants.CLASS_FUNCTION) {
+                        funcClass = klass
                     }
                     push(klass)
                 }
@@ -125,6 +123,7 @@ internal class Vm {
                 IMPORT -> mixin()
                 FIELD -> addFieldToClass(nextString)
                 METHOD -> defineMethod(nextString)
+                CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
                 SUPER -> {
                     val superclass = nextString
                     val self = stack[frame.sp] // self is always at 0
@@ -150,17 +149,40 @@ internal class Vm {
         push(stack[frame.sp + nextInt]!!)
     }
 
+    private fun setProp() {
+        val value = pop()
+        val prop = pop()
+        val obj = pop()
+        if (obj is Instance && obj.klass.overridenSet != null) {
+            sp++ // Just to compensate for bindMethod's sp--
+            bindMethod(obj, obj.klass, obj.klass.overridenSet, Constants.SET)
+            push(prop)
+            push(value)
+            call(peek(2), 2)
+        } else {
+            getFieldsOrThrow(obj)[prop.toString()] = value
+        }
+    }
+
     private fun getProp() {
-        val name = pop().toString()
+        val nameValue = pop()
         val obj = boxIfNotInstance(0)
         sp--
-        val prop = when (obj) {
-            is Instance -> obj.fields[name] ?: obj.klass.fields[name]
-            is SClass -> obj.fields[name]
-            else -> throw runtimeError("Only instances can have fields!")
+        if (obj is Instance && obj.klass.overridenGet != null) {
+            sp++ // Just to compensate for bindMethod's sp--
+            bindMethod(obj, obj.klass, obj.klass.overridenGet, Constants.GET)
+            push(nameValue)
+            call(peek(1), 1)
+        } else {
+            val name = nameValue.toString()
+            val prop = when (obj) {
+                is Instance -> obj.fields[name] ?: obj.klass.fields[name]
+                is SClass -> obj.fields[name]
+                else -> throw runtimeError("Only instances can have fields!")
+            }
+            push(prop ?: Nil)
+            bindMethod(obj, getSClass(obj), prop, name)
         }
-        push(prop ?: Nil)
-        bindMethod(obj, getSClass(obj), prop, name)
     }
 
     private fun getOuterFrame(): CallFrame {
@@ -284,7 +306,7 @@ internal class Vm {
     private fun checkIs() {
         val b = pop() as SClass
         val a = boxIfNotInstance(0)
-        sp--
+        sp-- // Pop a
         val r = when (a) {
             is Instance -> a.klass.checkIs(b)
             is SClass -> if (b == classClass) true else a.checkIs(b)
@@ -535,6 +557,14 @@ internal class Vm {
             }
             stack[loc] = boxedStr
             return boxedStr
+        } else if (value is Closure) {
+            val boxedClosure = Instance(funcClass!!).apply {
+                fields[Constants.PRIVATE] = value
+                fields[Constants.NAME] = value.function.name
+                fields[Constants.ARITY] = value.function.arity
+            }
+            stack[loc] = boxedClosure
+            return boxedClosure
         } else {
             throw runtimeError("Unable to box $value!")
         }

@@ -12,6 +12,7 @@ public final class Constants {
     public static final String KEY = "key";
     public static final String VALUE = "value";
     public static final String SET = "set";
+    public static final String GET = "get";
 
     public static final String ITERATE = "iterate";
     public static final String NEXT = "next";
@@ -22,6 +23,8 @@ public final class Constants {
     public static final String TO_STRING = "toString";
     public static final String RAISE = "raise";
     public static final String CLASS = "class";
+    public static final String NAME = "name";
+    public static final String ARITY = "arity";
 
     public static final String CLASS_OBJECT = "Object";
     public static final String CLASS_FUNCTION = "Function";

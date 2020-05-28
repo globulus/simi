@@ -43,6 +43,7 @@ enum class OpCode {
     IMPORT,
     FIELD,
     METHOD,
+    CLASS_DECLR_DONE,
     SUPER,
     SELF_DEF,
     ;

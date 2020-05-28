@@ -287,7 +287,11 @@ class Compiler {
                 }
             } while (match(COMMA))
 
-            if (superclasses.isEmpty() && name != Constants.CLASS_OBJECT) {
+            if (superclasses.isEmpty()
+                    && name != Constants.CLASS_OBJECT
+                    && name != Constants.CLASS_FUNCTION
+                    && name != Constants.CLASS_EXCEPTION
+                    && name != Constants.CLASS_CLASS) {
                 superclasses += Constants.CLASS_OBJECT
             }
             currentClass?.firstSuperclass = superclasses.first()
@@ -340,6 +344,7 @@ class Compiler {
             consume(NEWLINE, "Expect newline after empty class declaration.")
         }
 
+        emitCode(CLASS_DECLR_DONE)
         currentClass = currentClass?.enclosing
     }
 
@@ -896,10 +901,16 @@ class Compiler {
             } else if (match(DOT)) {
                 if (match(CLASS)) {
                     emitId(Constants.CLASS)
+                } else if (match(LEFT_PAREN)) {
+                    expression()
+                    consume(RIGHT_PAREN, "Expect ')' after evaluated getter.")
+                    emitCode(GET_PROP)
+                    continue // Go the the next iteration to prevent INVOKE shenanigans
                 } else {
                     primary()
                 }
-                if (match(LEFT_PAREN)) {
+                
+                if (match(LEFT_PAREN)) { // Check invoke
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
                     val argCount = argList()
@@ -1016,6 +1027,9 @@ class Compiler {
     private fun variable(providedName: String? = null) {
         val name = providedName ?: previous.lexeme
         val local = findLocal(this, name)
+        if (name == "OverridesGet") {
+            val a = 5
+        }
         if (local != null) {
             emitGetLocal(name, local)
         } else {
