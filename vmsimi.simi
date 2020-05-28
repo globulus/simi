@@ -178,6 +178,7 @@ class Subclass is Nested {
     }
 
     def methodToInherit() {
+        print super.methodToInherit
         super.methodToInherit()
         print "...and calling from subclass"
     }

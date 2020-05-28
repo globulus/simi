@@ -45,6 +45,8 @@ enum class OpCode {
     METHOD,
     CLASS_DECLR_DONE,
     SUPER,
+    GET_SUPER,
+    SUPER_INVOKE,
     SELF_DEF,
     ;
 

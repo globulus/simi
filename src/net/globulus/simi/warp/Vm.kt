@@ -126,11 +126,17 @@ internal class Vm {
                 CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
                 SUPER -> {
                     val superclass = nextString
-                    val self = stack[frame.sp] // self is always at 0
-                    val klass = if (self is Instance) self.klass else self as SClass
+                    val klass = (self as? Instance)?.klass ?: self as SClass
                     klass.superclasses[superclass]?.let {
                         push(it)
                     } ?: throw runtimeError("Class ${klass.name} doesn't inherit from $superclass!")
+                }
+                GET_SUPER -> getSuper()
+                SUPER_INVOKE -> {
+                    val name = nextString
+                    val argCount = nextInt
+                    val superclass = pop() as SClass
+                    invokeFromClass(superclass, name, argCount)
                 }
                 SELF_DEF -> push(frame.closure.function)
             }
@@ -182,6 +188,16 @@ internal class Vm {
             }
             push(prop ?: Nil)
             bindMethod(obj, getSClass(obj), prop, name)
+        }
+    }
+
+    private fun getSuper() {
+        val name = pop().toString()
+        val superclass = pop() as SClass
+        val prop = superclass.fields[name]
+        push(prop ?: Nil)
+        (self as? Instance)?.let {
+            bindMethod(it, superclass, prop, name)
         }
     }
 
@@ -368,13 +384,15 @@ internal class Vm {
         (receiver.fields[name])?.let {
             stack[sp - argCount - 1] = it
             call(it, argCount)
+        } ?: invokeFromClass((receiver as? Instance)?.klass, name, argCount, checkError)
+    }
+
+    private fun invokeFromClass(klass: SClass?, name: String, argCount: Int, checkError: Boolean = true) {
+        (klass?.fields?.get(name) as? Closure)?.let { method ->
+            callClosure(method, argCount)
         } ?: run {
-            ((receiver as? Instance)?.klass?.fields?.get(name) as? Closure)?.let { method ->
-                callClosure(method, argCount)
-            } ?: run {
-                if (checkError) {
-                    throw runtimeError("Undefined method $name.")
-                }
+            if (checkError) {
+                throw runtimeError("Undefined method $name.")
             }
         }
     }
@@ -596,6 +614,7 @@ internal class Vm {
 
     private val buffer: ByteBuffer get() = frame.buffer
     private val currentFunction: Function get() = frame.closure.function
+    private val self: Any? get() = stack[frame.sp] // self is always at 0
 
     private val nextCode: OpCode get() = OpCode.from(nextByte)
     private val nextByte: Byte get() = buffer.get()

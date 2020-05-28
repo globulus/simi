@@ -895,7 +895,11 @@ class Compiler {
 
     private fun call() {
         primary()
+        // Every iteration below decrements first, so it needs to start at 2 to be > 0 for the first check
+        var superCount = if (lastChunk?.opCode == OpCode.SUPER) 2 else 1
         while (true) {
+            superCount--
+            val wasSuper = superCount > 0
             if (match(LEFT_PAREN, DOLLAR_LEFT_PAREN)) {
                 finishCall()
             } else if (match(DOT)) {
@@ -904,7 +908,7 @@ class Compiler {
                 } else if (match(LEFT_PAREN)) {
                     expression()
                     consume(RIGHT_PAREN, "Expect ')' after evaluated getter.")
-                    emitCode(GET_PROP)
+                    finishGet(wasSuper)
                     continue // Go the the next iteration to prevent INVOKE shenanigans
                 } else {
                     primary()
@@ -914,14 +918,14 @@ class Compiler {
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
                     val argCount = argList()
-                    emitInvoke(name, argCount)
+                    emitInvoke(name, argCount, wasSuper)
                 } else {
                     if (lastChunk?.opCode == GET_LOCAL) {
                         val name = lastChunk!!.data[0] as String
                         rollBackLastChunk()
                         emitId(name)
                     }
-                    emitCode(GET_PROP)
+                    finishGet(wasSuper)
                 }
             } else {
                 break
@@ -946,6 +950,17 @@ class Compiler {
         }
         consume(RIGHT_PAREN, "Expect ')' after arguments.")
         return count
+    }
+
+    private fun finishGet(wasSuper: Boolean) {
+        if (wasSuper) {
+            if (lastChunk?.opCode != CONST_ID) {
+                throw error(previous, "'super' get can only involve an identifier.")
+            }
+            emitCode(GET_SUPER)
+        } else {
+            emitCode(GET_PROP)
+        }
     }
 
     private fun primary() {
@@ -1027,9 +1042,6 @@ class Compiler {
     private fun variable(providedName: String? = null) {
         val name = providedName ?: previous.lexeme
         val local = findLocal(this, name)
-        if (name == "OverridesGet") {
-            val a = 5
-        }
         if (local != null) {
             emitGetLocal(name, local)
         } else {
@@ -1429,8 +1441,8 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, argCount))
     }
 
-    private fun emitInvoke(name: String, argCount: Int) {
-        val opCode = INVOKE
+    private fun emitInvoke(name: String, argCount: Int, wasSuper: Boolean = false) {
+        val opCode = if (wasSuper) SUPER_INVOKE else INVOKE
         var size = byteCode.put(opCode)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
