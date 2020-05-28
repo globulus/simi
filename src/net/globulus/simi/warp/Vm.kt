@@ -132,6 +132,7 @@ internal class Vm {
                     } ?: throw runtimeError("Class ${klass.name} doesn't inherit from $superclass!")
                 }
                 GET_SUPER -> getSuper()
+                SUPER_INVOKE -> invokeSuper(nextString, nextInt)
                 SELF_DEF -> push(frame.closure.function)
             }
         }
