@@ -219,6 +219,7 @@ print funcReturningNum.name + funcReturningNum.arity
 
 class OverridesGet {
     def get(val) {
+        super.a = 3
         print val
         when val {
             is Num { print "is num" }

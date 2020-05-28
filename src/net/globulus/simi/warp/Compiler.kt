@@ -286,22 +286,21 @@ class Compiler {
                     superclasses += superclassName
                 }
             } while (match(COMMA))
+        }
+        if (superclasses.isEmpty()
+                && name != Constants.CLASS_OBJECT
+                && name != Constants.CLASS_FUNCTION
+                && name != Constants.CLASS_EXCEPTION
+                && name != Constants.CLASS_CLASS) {
+            superclasses += Constants.CLASS_OBJECT
+        }
+        currentClass?.firstSuperclass = superclasses.firstOrNull()
 
-            if (superclasses.isEmpty()
-                    && name != Constants.CLASS_OBJECT
-                    && name != Constants.CLASS_FUNCTION
-                    && name != Constants.CLASS_EXCEPTION
-                    && name != Constants.CLASS_CLASS) {
-                superclasses += Constants.CLASS_OBJECT
-            }
-            currentClass?.firstSuperclass = superclasses.first()
-
-            // Reverse the superclasses so that the first one listed is the last one inherited, meaning
-            // its fields override those of lesser-ranked superclasses
-            superclasses.reversed().forEach {
-                variable(it)
-                emitCode(INHERIT)
-            }
+        // Reverse the superclasses so that the first one listed is the last one inherited, meaning
+        // its fields override those of lesser-ranked superclasses
+        superclasses.reversed().forEach {
+            variable(it)
+            emitCode(INHERIT)
         }
 
         if (match(IMPORT)) { // Mixins
@@ -686,6 +685,9 @@ class Compiler {
         if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous
+            if (lastChunk?.opCode == GET_SUPER) {
+                throw error(equals, "Setters aren't allowed with 'super'.")
+            }
             if (equals.type == EQUAL) {
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk()
@@ -693,7 +695,7 @@ class Compiler {
                     emitCode(SET_PROP)
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
-                        val name = lastChunk!!.data[2] as String
+                        val name = lastChunk!!.data[0] as String
                         warn(previous, "Name shadowed: $name.")
                         declareLocal(name)
                         rollBackLastChunk()
@@ -708,7 +710,7 @@ class Compiler {
             } else {
                 val variable: Any = when (lastChunk?.opCode) {
                     GET_LOCAL -> lastChunk!!.data[1] as Local
-                    GET_UPVALUE -> lastChunk!!.data[0] as Int
+                    GET_UPVALUE -> lastChunk!!.data[1] as Int
                     else -> throw error(equals, "Assigning to undeclared var!")
                 }
                 val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
@@ -920,7 +922,7 @@ class Compiler {
                     val argCount = argList()
                     emitInvoke(name, argCount, wasSuper)
                 } else {
-                    if (lastChunk?.opCode == GET_LOCAL) {
+                    if (lastChunk?.opCode == GET_LOCAL || lastChunk?.opCode == GET_UPVALUE) {
                         val name = lastChunk!!.data[0] as String
                         rollBackLastChunk()
                         emitId(name)
@@ -1387,7 +1389,7 @@ class Compiler {
         val index = upvalues.indexOf(upvalue)
         var size = byteCode.put(opCode)
         size += byteCode.putInt(index)
-        pushLastChunk(Chunk(opCode, size, index, upvalue, name))
+        pushLastChunk(Chunk(opCode, size, name, index, upvalue))
     }
 
     private fun emitSet(it: Any) {
