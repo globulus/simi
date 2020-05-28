@@ -132,12 +132,6 @@ internal class Vm {
                     } ?: throw runtimeError("Class ${klass.name} doesn't inherit from $superclass!")
                 }
                 GET_SUPER -> getSuper()
-                SUPER_INVOKE -> {
-                    val name = nextString
-                    val argCount = nextInt
-                    val superclass = pop() as SClass
-                    invokeFromClass(superclass, name, argCount)
-                }
                 SELF_DEF -> push(frame.closure.function)
             }
         }
@@ -166,8 +160,12 @@ internal class Vm {
             push(value)
             call(peek(2), 2)
         } else {
-            getFieldsOrThrow(obj)[prop.toString()] = value
+            setPropRaw(obj, prop, value)
         }
+    }
+
+    private fun setPropRaw(obj: Any?, prop: Any, value: Any) {
+        getFieldsOrThrow(obj)[prop.toString()] = value
     }
 
     private fun getProp() {
@@ -180,15 +178,18 @@ internal class Vm {
             push(nameValue)
             call(peek(1), 1)
         } else {
-            val name = nameValue.toString()
-            val prop = when (obj) {
-                is Instance -> obj.fields[name] ?: obj.klass.fields[name]
-                is SClass -> obj.fields[name]
-                else -> throw runtimeError("Only instances can have fields!")
-            }
-            push(prop ?: Nil)
-            bindMethod(obj, getSClass(obj), prop, name)
+            getPropRaw(obj, nameValue.toString())
         }
+    }
+
+    private fun getPropRaw(obj: Any?, name: String) {
+        val prop = when (obj) {
+            is Instance -> obj.fields[name] ?: obj.klass.fields[name]
+            is SClass -> obj.fields[name]
+            else -> throw runtimeError("Only instances can have fields!")
+        }
+        push(prop ?: Nil)
+        bindMethod(obj, getSClass(obj), prop, name)
     }
 
     private fun getSuper() {
@@ -397,6 +398,28 @@ internal class Vm {
         }
     }
 
+    private fun invokeSuper(name: String, argCount: Int) {
+        val superclass = peek(argCount) as SClass
+        if (superclass.name == Constants.CLASS_OBJECT) {
+            if (name == Constants.GET && argCount == 1) {
+                getPropRaw(self, pop() as String)
+                val result = pop()
+                sp-- // pop superclass
+                push(result)
+                return
+            } else if (name == Constants.SET && argCount == 2) {
+                val value = pop()
+                setPropRaw(self, pop(), value)
+                val result = pop()
+                sp-- // pop superclass
+                push(result)
+                return
+            }
+        }
+        invokeFromClass(superclass, name, argCount)
+        sp-- // pop superclass
+    }
+
     private fun captureUpvalue(sp: Int): Upvalue {
         var prevUpvalue: Upvalue? = null
         var upvalue = openUpvalues
@@ -527,7 +550,7 @@ internal class Vm {
         return stack[sp - offset - 1]!!
     }
 
-    private fun getFieldsOrThrow(it: Any): MutableMap<String, Any> {
+    private fun getFieldsOrThrow(it: Any?): MutableMap<String, Any> {
         return when (it) {
             is Instance -> it.fields
             is SClass -> it.fields

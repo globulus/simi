@@ -219,19 +219,22 @@ print funcReturningNum.name + funcReturningNum.arity
 
 class OverridesGet {
     def get(val) {
-        super.a = 3
-        print val
         when val {
             is Num { print "is num" }
-            is String { print "is str" }
+            is String {
+                print "is str"
+                print "super get " + super.get(val)
+             }
             else { print "something else \(val)" }
         }
         return 1
     }
     def set(key, val) {
+        super.set(key, val)
         print "set \(key) \(val)"
     }
 }
 overridesGet = OverridesGet()
-print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss"))
+print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss") + overridesGet.abc)
 overridesGet.key = 42
+overridesGet.key
