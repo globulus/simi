@@ -1,8 +1,13 @@
 package net.globulus.simi.warp.native
 
-class NativeFunction(val arity: Int,
+import net.globulus.simi.warp.OptionalParamsFunc
+
+class NativeFunction(override val arity: Int,
                      val func: (args: List<Any?>) -> Any?
-) {
+) : OptionalParamsFunc {
+    override var optionalParamsStart: Int = OptionalParamsFunc.DEFAULT_PARAMS_START
+    override var defaultValues: Array<Any>? = null
+
     override fun toString(): String {
         return "<native $arity>"
     }

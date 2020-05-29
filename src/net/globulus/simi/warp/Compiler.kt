@@ -175,43 +175,7 @@ class Compiler {
     private fun function(kind: String, providedName: String? = null): Function {
         val declaration = previous
         val name = providedName ?: consumeVar("Expected an identifier for function name")
-        val args = mutableListOf<String>()
-        val prependedTokens = mutableListOf<Token>()
-        var optionalParamsStart = -1
-        val defaultValues = mutableListOf<Any>()
-        if (match(LEFT_PAREN)) {
-            if (!check(RIGHT_PAREN)) {
-                do {
-                    var initAutoset = false
-                    if (matchSequence(SELF, DOT)) {
-                        if (kind == Parser.KIND_INIT) {
-                            initAutoset = true
-                        } else {
-                            throw error(previous, "Autoset arguments are only allowed in initializers!")
-                        }
-                    }
-                    val paramName = consumeVar("Expect param name.")
-                    val nameToken = Token.named(paramName)
-                    if (match(IS)) {
-                        val typeToken = consume(IDENTIFIER, "Expect type.")
-                        prependedTokens += getTypeVerificationTokens(nameToken, typeToken)
-                    }
-                    if (match(EQUAL)) {
-                        val defaultValue = consumeValue("Expected a value as default param value!")
-                        if (optionalParamsStart == -1) {
-                            optionalParamsStart = args.size
-                        }
-                        defaultValues += defaultValue
-                    }
-                    args += paramName
-                    if (initAutoset) {
-                        prependedTokens += listOf(Token.self(), Token.ofType(DOT), nameToken,
-                                Token.ofType(EQUAL), nameToken, Token.ofType(NEWLINE))
-                    }
-                } while (match(COMMA))
-            }
-            consume(RIGHT_PAREN, "Expected )")
-        }
+        val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         var returnType: String? = null
         if (match(IS)) {
@@ -272,6 +236,52 @@ class Compiler {
         current = funcCompiler.current
         emitClosure(f, funcCompiler)
         return f
+    }
+
+    private fun scanArgs(kind: String, allowPrepend: Boolean): ArgScanResult {
+        val args = mutableListOf<String>()
+        val prependedTokens = mutableListOf<Token>()
+        var optionalParamsStart = -1
+        val defaultValues = mutableListOf<Any>()
+        if (match(LEFT_PAREN)) {
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    var initAutoset = false
+                    if (matchSequence(SELF, DOT)) {
+                        if (!allowPrepend) {
+                            throw error(previous, "Autoset arguments aren't allowed here.")
+                        } else if (kind == Parser.KIND_INIT) {
+                            initAutoset = true
+                        } else {
+                            throw error(previous, "Autoset arguments are only allowed in initializers!")
+                        }
+                    }
+                    val paramName = consumeVar("Expect param name.")
+                    val nameToken = Token.named(paramName)
+                    if (match(IS)) {
+                        if (!allowPrepend) {
+                            throw error(previous, "Argument type specifiers aren't allowed here.")
+                        }
+                        val typeToken = consume(IDENTIFIER, "Expect type.")
+                        prependedTokens += getTypeVerificationTokens(nameToken, typeToken)
+                    }
+                    if (match(EQUAL)) {
+                        val defaultValue = consumeValue("Expected a value as default param value!")
+                        if (optionalParamsStart == -1) {
+                            optionalParamsStart = args.size
+                        }
+                        defaultValues += defaultValue
+                    }
+                    args += paramName
+                    if (initAutoset) {
+                        prependedTokens += listOf(Token.self(), Token.ofType(DOT), nameToken,
+                                Token.ofType(EQUAL), nameToken, Token.ofType(NEWLINE))
+                    }
+                } while (match(COMMA))
+            }
+            consume(RIGHT_PAREN, "Expected )")
+        }
+        return ArgScanResult(args, prependedTokens, optionalParamsStart, defaultValues)
     }
 
     private fun classDeclaration() {
@@ -364,18 +374,12 @@ class Compiler {
 
     private fun nativeMethod() {
         val name = consumeVar("Expect method name.")
-        val args = mutableListOf<String>()
-        if (match(LEFT_PAREN)) {
-            if (!check(RIGHT_PAREN)) {
-                do {
-                    args += consumeVar("Expect param name.")
-                } while (match(COMMA))
-            }
-            consume(RIGHT_PAREN, "Expected )")
-        }
+        val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
         consume(NEWLINE, "Expect newline after native method declaration.")
-        val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name.lexeme, name)
-                ?: throw error(previous, "Can't resolve native function $name.")
+        val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name.lexeme, name)?.also {
+            it.optionalParamsStart = optionalParamsStart
+            it.defaultValues = defaultValues.toTypedArray()
+        } ?: throw error(previous, "Can't resolve native function $name.")
         if (nativeFunction.arity != args.size) {
             throw error(previous, "Native function $name expects ${nativeFunction.arity} args but got ${args.size}.")
         }
@@ -1703,6 +1707,12 @@ class Compiler {
     ) {
         var firstSuperclass: String? = null
     }
+
+    private data class ArgScanResult(val args: MutableList<String>,
+                                     val prependedTokens: List<Token>,
+                                     val optionalParamsStart: Int,
+                                     val defaultValues: List<Any>
+    )
 
     private class ParseError(message: String) : RuntimeException(message)
 

@@ -1,14 +1,14 @@
 package net.globulus.simi;
 
-import com.squareup.kotlinpoet.ClassName;
-import com.squareup.kotlinpoet.KModifier;
-import com.squareup.kotlinpoet.TypeSpec;
+//import com.squareup.̣kotlinpoet.ClassName;
+//import com.squareup.kotlinpoet.KModifier;
+//import com.squareup.kotlinpoet.TypeSpec;
 import net.globulus.simi.api.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-class SimiClassImpl extends SimiObjectImpl implements SimiClass, KotlinCodifiable<TypeSpec.Builder> {
+class SimiClassImpl extends SimiObjectImpl implements SimiClass {//, KotlinCodifiable<TypeSpec.Builder> {
 
     final Type type;
     final String name;
@@ -214,21 +214,21 @@ class SimiClassImpl extends SimiObjectImpl implements SimiClass, KotlinCodifiabl
     return super.toCode(indentationLevel, ignoreFirst);
   }
 
-    @Override
-    public TypeSpec.Builder toKotlinCode(Object... args) {
-        TypeSpec.Builder builder = TypeSpec.classBuilder(name);
-        if (type != Type.FINAL) {
-            builder.addModifiers(KModifier.OPEN);
-        }
-        if (superclasses != null && !superclasses.isEmpty()) {
-            builder.superclass(new ClassName("", superclasses.get(0).name));
-            for (int i = 2; i < superclasses.size(); i++) {
-                builder.addSuperinterface(new ClassName("", superclasses.get(i).name), "");
-            }
-        }
-
-        return builder;
-    }
+//    @Override
+//    public TypeSpec.Builder toKotlinCode(Object... args) {
+//        TypeSpec.Builder builder = TypeSpec.classBuilder(name);
+//        if (type != Type.FINAL) {
+//            builder.addModifiers(KModifier.OPEN);
+//        }
+//        if (superclasses != null && !superclasses.isEmpty()) {
+//            builder.superclass(new ClassName("", superclasses.get(0).name));
+//            for (int i = 2; i < superclasses.size(); i++) {
+//                builder.addSuperinterface(new ClassName("", superclasses.get(i).name), "");
+//            }
+//        }
+//
+//        return builder;
+//    }
 
 //  @Override
 //  public SimiValue call(BlockInterpreter interpreter, List<SimiValue> arguments) {

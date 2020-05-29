@@ -1,6 +1,7 @@
 package net.globulus.simi.api
 
 import net.globulus.simi.warp.Instance
+import net.globulus.simi.warp.SClass
 import net.globulus.simi.warp.native.NativeClass
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModule
@@ -15,6 +16,15 @@ class Date : NativeModule {
                             val instance = it[0] as Instance
                             val date = Date()
                             instance.apply {
+                                fields["_"] = date
+                                fields["time"] = date.time
+                            }
+                        }
+                        "at" -> NativeFunction(1) {
+                            val klass = it[0] as SClass
+                            val time = it[1] as Long
+                            val date = Date(time)
+                            Instance(klass).apply {
                                 fields["_"] = date
                                 fields["time"] = date.time
                             }

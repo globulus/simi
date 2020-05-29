@@ -379,6 +379,15 @@ internal class Vm {
 
     private fun callClosure(closure: Closure, argCount: Int) {
         val f = closure.function
+        handleOptionalParams(f, argCount)
+        if (fp == MAX_FRAMES) {
+            throw runtimeError("Stack overflow.")
+        }
+        callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
+        fp++
+    }
+
+    private fun handleOptionalParams(f: OptionalParamsFunc, argCount: Int) {
         if (argCount != f.arity) {
             if (argCount < f.arity
                     && f.optionalParamsStart != -1
@@ -390,16 +399,12 @@ internal class Vm {
                 throw runtimeError("Expected ${f.arity} arguments but got $argCount.")
             }
         }
-        if (fp == MAX_FRAMES) {
-            throw runtimeError("Stack overflow.")
-        }
-        callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
-        fp++
     }
 
     private fun callNative(method: NativeFunction, argCount: Int) {
+        handleOptionalParams(method, argCount)
         val args = mutableListOf<Any?>()
-        for (i in sp - argCount - 1 until sp) {
+        for (i in sp - method.arity - 1 until sp) {
             args += stack[i]
         }
         val result = method.func(args) ?: Nil
@@ -410,8 +415,13 @@ internal class Vm {
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
         val receiver = boxIfNotInstance(argCount)
         (receiver.fields[name])?.let {
-            stack[sp - argCount - 1] = it
-            call(it, argCount)
+            val callee = if (it is NativeFunction) {
+                BoundNativeMethod(receiver, it)
+            } else {
+                it
+            }
+            stack[sp - argCount - 1] = callee
+            call(callee, argCount)
         } ?: invokeFromClass((receiver as? Instance)?.klass, name, argCount, checkError)
     }
 
@@ -597,18 +607,23 @@ internal class Vm {
     }
 
     private fun bindMethod(receiver: Any, klass: SClass, prop: Any?, name: String) {
-        val bound: Any = if (prop is NativeFunction) {
+        getBoundMethod(receiver, klass, prop, name)?.let {
+            sp--
+            push(it)
+        }
+    }
+
+    private fun getBoundMethod(receiver: Any, klass: SClass?, prop: Any?, name: String): Any? {
+        return if (prop is NativeFunction) {
             BoundNativeMethod(receiver, prop)
         } else {
             val method = if (prop is Closure) {
                 prop
             } else {
-                (klass.fields[name] as? Closure)?.let { it } ?: return
+                (klass?.fields?.get(name) as? Closure)?.let { it } ?: return null
             }
             BoundMethod(receiver, method)
         }
-        sp--
-        push(bound)
     }
 
     /**

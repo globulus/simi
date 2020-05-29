@@ -226,8 +226,8 @@ public class Scanner {
   }
 
   private void comment() {
-    if (match('#')) { // Multi line
-      while (!matchAll("##")) {
+    if (match('*')) { // Multi line
+      while (!matchAll("*#")) {
         if (peek() == '\n') {
           line++;
         }

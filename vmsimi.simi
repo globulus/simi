@@ -1,3 +1,8 @@
+# Comment
+#* multiline comments
+span
+multiple lines *#
+
 import "Date.jar"
 
 class Object {
@@ -45,6 +50,7 @@ class String
 
 class Date {
     native init
+    native at(time = 0)
 }
 
 a = 5
@@ -248,3 +254,5 @@ overridesGet.key
 date = Date()
 print date
 print date.time
+print Date.at().time
+print Date.at(1).time
