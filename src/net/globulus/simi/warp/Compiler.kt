@@ -14,6 +14,8 @@ import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.*
 import net.globulus.simi.warp.OpCode.*
+import net.globulus.simi.warp.native.NativeFunction
+import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
 import java.util.regex.Pattern
 
@@ -142,8 +144,12 @@ class Compiler {
         return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             classDeclaration()
             false
-        }
-        else if (match(DEF)) {
+        } else if (match(IMPORT)) {
+            if (match(IDENTIFIER)) { // match(STRING) imports were resolved at scanning phase
+                // TODO handle local import
+            }
+            false
+        } else if (match(DEF)) {
             funDeclaration()
             false
         }
@@ -326,6 +332,8 @@ class Compiler {
                 }
                 if (match(DEF)) {
                     method()
+                } else if (match(NATIVE)) {
+                    nativeMethod()
                 } else if (match(IDENTIFIER)) {
                     val fieldName = previous.lexeme
                     if (fieldName == Constants.INIT) {
@@ -352,6 +360,26 @@ class Compiler {
         val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
         function(kind, name)
         emitMethod(name)
+    }
+
+    private fun nativeMethod() {
+        val name = consumeVar("Expect method name.")
+        val args = mutableListOf<String>()
+        if (match(LEFT_PAREN)) {
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    args += consumeVar("Expect param name.")
+                } while (match(COMMA))
+            }
+            consume(RIGHT_PAREN, "Expected )")
+        }
+        consume(NEWLINE, "Expect newline after native method declaration.")
+        val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name.lexeme, name)
+                ?: throw error(previous, "Can't resolve native function $name.")
+        if (nativeFunction.arity != args.size) {
+            throw error(previous, "Native function $name expects ${nativeFunction.arity} args but got ${args.size}.")
+        }
+        emitNativeMethod(name, nativeFunction)
     }
 
 //    private fun annotation(): Stmt.Annotation? {
@@ -1375,6 +1403,16 @@ class Compiler {
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
         pushLastChunk(Chunk(opCode, size, constIdx, name))
+    }
+
+    private fun emitNativeMethod(name: String, nativeFunction: NativeFunction) {
+        val opCode = NATIVE_METHOD
+        var size = byteCode.put(opCode)
+        val nameIdx = constIndex(name)
+        size += byteCode.putInt(nameIdx)
+        val funIdx = constIndex(nativeFunction)
+        size += byteCode.putInt(funIdx)
+        pushLastChunk(Chunk(opCode, size, name, nameIdx, funIdx))
     }
 
     private fun emitGetLocal(name: String, local: Local?) {

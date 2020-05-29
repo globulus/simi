@@ -3,6 +3,9 @@ package net.globulus.simi.warp
 import net.globulus.simi.Debugger
 import net.globulus.simi.Debugger.ConsoleInterface
 import net.globulus.simi.Scanner
+import net.globulus.simi.Token
+import net.globulus.simi.TokenType
+import net.globulus.simi.warp.native.NativeModuleLoader
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -46,7 +49,7 @@ private fun run(source: String) {
     var time = System.currentTimeMillis()
     print("Scanning and resolving imports...")
     val scanner = Scanner(FILE_SIMI, source, null)
-    val tokens = scanner.scanTokens(true)
+    val tokens = scanImports(scanner.scanTokens(true), mutableListOf())
     println(" " + (System.currentTimeMillis() - time) + " ms")
     time = System.currentTimeMillis()
     println("Compiling...")
@@ -59,6 +62,51 @@ private fun run(source: String) {
         vm.interpret(it)
         println("Running... " + (System.currentTimeMillis() - time) + " ms")
     }
+}
+
+@Throws(IOException::class)
+private fun scanImports(input: List<Token>, imports: MutableList<String>): List<Token> {
+    val result = mutableListOf<Token>()
+    val len = input.size
+    var i = 0
+    while (i < len) {
+        val token = input[i]
+        if (token.type != TokenType.IMPORT) {
+            i++
+            continue
+        }
+        i++
+        val nextToken = input[i]
+        if (nextToken.type != TokenType.STRING) {
+            i++
+            continue
+        }
+        var location = nextToken.literal.string
+        if (imports.contains(location)) {
+            i++
+            continue
+        }
+        imports += location
+        if (!location.endsWith(".jar") && !location.endsWith(".simi")) {
+            location += ".simi"
+        }
+        if (!location.contains('/')) {
+            location = "./$location"
+        }
+        val path = Paths.get(location)
+        var moduleName = path.fileName.toString()
+        moduleName = moduleName.substring(0, moduleName.indexOf('.'))
+        val pathString = path.toString().toLowerCase()
+        if (pathString.endsWith(".jar")) {
+            NativeModuleLoader.load(path.toUri().toURL().toString(), moduleName, true)
+        } else if (pathString.endsWith(".simi")) {
+            val tokens = Scanner(pathString, readFile(location, false), null).scanTokens(false)
+            result.addAll(scanImports(tokens, imports))
+        }
+        i++
+    }
+    result.addAll(input)
+    return result
 }
 
 //@Throws(IOException::class)

@@ -2,6 +2,7 @@ package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
 import net.globulus.simi.warp.OpCode.*
+import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import kotlin.math.round
@@ -123,6 +124,7 @@ internal class Vm {
                 IMPORT -> mixin()
                 FIELD -> addFieldToClass(nextString)
                 METHOD -> defineMethod(nextString)
+                NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
                 CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
                 SUPER -> {
                     val superclass = nextString
@@ -136,6 +138,10 @@ internal class Vm {
                 SELF_DEF -> push(frame.closure.function)
             }
         }
+    }
+
+    private fun runLocal() {
+        run(fp - 1)
     }
 
     private fun pushConst(frame: CallFrame) {
@@ -160,6 +166,8 @@ internal class Vm {
             push(prop)
             push(value)
             call(peek(2), 2)
+            runLocal()
+            sp-- // A setter is still a statement so we need to remove the call result from the stack
         } else {
             setPropRaw(obj, prop, value)
         }
@@ -178,6 +186,7 @@ internal class Vm {
             bindMethod(obj, obj.klass, obj.klass.overridenGet, Constants.GET)
             push(nameValue)
             call(peek(1), 1)
+            runLocal()
         } else {
             getPropRaw(obj, nameValue.toString())
         }
@@ -314,7 +323,7 @@ internal class Vm {
                 push(a)
                 push(b)
                 invoke(Constants.EQUALS, 1, false)
-                run(fp - 1)
+                runLocal()
                 !isFalsey(pop())
             }
             else -> false
@@ -352,10 +361,17 @@ internal class Vm {
                 stack[sp - argCount - 1] = callee.receiver
                 callClosure(callee.method, argCount)
             }
+            is BoundNativeMethod -> {
+                stack[sp - argCount - 1] = callee.receiver
+                callNative(callee.method, argCount)
+            }
+            is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
                 stack[sp - argCount - 1] = Instance(callee)
-                (callee.fields[Constants.INIT] as? Closure)?.let {
-                    callClosure(it, argCount)
+                val init = callee.fields[Constants.INIT]
+                when (init) {
+                    is Closure -> callClosure(init, argCount)
+                    is NativeFunction -> callNative(init, argCount)
                 }
             }
         }
@@ -379,6 +395,16 @@ internal class Vm {
         }
         callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
         fp++
+    }
+
+    private fun callNative(method: NativeFunction, argCount: Int) {
+        val args = mutableListOf<Any?>()
+        for (i in sp - argCount - 1 until sp) {
+            args += stack[i]
+        }
+        val result = method.func(args) ?: Nil
+        sp -= argCount + 1
+        push(result)
     }
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
@@ -411,9 +437,7 @@ internal class Vm {
             } else if (name == Constants.SET && argCount == 2) {
                 val value = pop()
                 setPropRaw(self, pop(), value)
-                val result = pop()
                 sp-- // pop superclass
-                push(result)
                 return
             }
         }
@@ -528,6 +552,11 @@ internal class Vm {
         klass.fields[name] = method
     }
 
+    private fun defineNativeMethod(name: String, method: NativeFunction) {
+        val klass = peek() as SClass
+        klass.fields[name] = method
+    }
+
     private fun resizeStackIfNecessary() {
         if (sp == stackSize) {
             gc()
@@ -568,12 +597,16 @@ internal class Vm {
     }
 
     private fun bindMethod(receiver: Any, klass: SClass, prop: Any?, name: String) {
-        val method = if (prop is Closure) {
-            prop
+        val bound: Any = if (prop is NativeFunction) {
+            BoundNativeMethod(receiver, prop)
         } else {
-            (klass.fields[name] as? Closure)?.let { it } ?: return
+            val method = if (prop is Closure) {
+                prop
+            } else {
+                (klass.fields[name] as? Closure)?.let { it } ?: return
+            }
+            BoundMethod(receiver, method)
         }
-        val bound = BoundMethod(receiver, method)
         sp--
         push(bound)
     }
