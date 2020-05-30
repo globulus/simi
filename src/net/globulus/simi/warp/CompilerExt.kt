@@ -1,6 +1,5 @@
-package net.globulus.simi.tool
+package net.globulus.simi.warp
 
-import net.globulus.simi.warp.OpCode
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
@@ -79,3 +78,5 @@ fun ByteBuffer.readMarkedPosition(block: () -> Unit) {
         block()
     }
 }
+
+fun String.lastNameComponent() = split('.').last()

@@ -10,7 +10,7 @@ public class Token {
   public final int line;
   public final String file;
 
-  boolean hasBreakpoint = false;
+  public boolean hasBreakpoint = false;
 
   public Token(TokenType type, String lexeme, SimiValue literal, int line, String file) {
     this.type = type;

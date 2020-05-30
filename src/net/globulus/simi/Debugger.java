@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 public final class Debugger {
 
-    static final String BREAKPOINT_LEXEME = "BP";
+    public static final String BREAKPOINT_LEXEME = "BP";
 
     private static final String HELP = "\nCommands:\n" +
             "c: Print call stack\n" +

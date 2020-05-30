@@ -8,7 +8,7 @@ import net.globulus.simi.api.SimiProperty;
 import java.util.ArrayList;
 import java.util.List;
 
-class ErrorHub {
+public class ErrorHub {
 
     private List<ErrorWatcher> watchers = new ArrayList<>();
     private BlockInterpreter interpreter;
@@ -17,7 +17,7 @@ class ErrorHub {
 
     private ErrorHub() { }
 
-    static ErrorHub sharedInstance() {
+    public static ErrorHub sharedInstance() {
         return instance;
     }
 
@@ -25,7 +25,7 @@ class ErrorHub {
         this.interpreter = interpreter;
     }
 
-    void error(String exceptionClass, String file, int line, String message) {
+    public void error(String exceptionClass, String file, int line, String message) {
         report(exceptionClass, file, line, "", message);
     }
 

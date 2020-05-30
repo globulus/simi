@@ -44,6 +44,7 @@ enum class OpCode {
     FIELD,
     METHOD,
     NATIVE_METHOD,
+    INNER_CLASS,
     CLASS_DECLR_DONE,
     SUPER,
     GET_SUPER,

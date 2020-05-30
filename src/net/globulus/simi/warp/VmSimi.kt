@@ -48,8 +48,8 @@ private fun runFile(path: String) {
 private fun run(source: String) {
     var time = System.currentTimeMillis()
     print("Scanning and resolving imports...")
-    val scanner = Scanner(FILE_SIMI, source, null)
-    val tokens = scanImports(scanner.scanTokens(true), mutableListOf())
+    val lexer = Lexer(FILE_SIMI, source, null)
+    val tokens = scanImports(lexer.scanTokens(true), mutableListOf())
     println(" " + (System.currentTimeMillis() - time) + " ms")
     time = System.currentTimeMillis()
     println("Compiling...")

@@ -11,25 +11,25 @@ class Object {
 
 class Function
 
-class RangeIterator {
-    init(@range) {
-        self.current = range.min
-    }
-
-    def next() = if self.current <= self.range.max {
-            @current = @current + 1
-            @current - 1
-        } else {
-            nil
-        }
-}
-
 class Range {
     init(@min, @max)
 
-    def iterate() = RangeIterator(self)
+    def iterate() = Range.Iterator(self)
 
     def has(o) = o >= @min and o <= @max
+
+    class Iterator {
+        init(@range) {
+            self.current = range.min
+        }
+
+        def next() = if @current <= @range.max {
+                @current = @current + 1
+                @current - 1
+            } else {
+                nil
+            }
+    }
 }
 
 class Num {

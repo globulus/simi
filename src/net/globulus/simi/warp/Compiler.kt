@@ -12,7 +12,7 @@ import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
 import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
-import net.globulus.simi.tool.*
+import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModuleLoader
@@ -142,7 +142,7 @@ class Compiler {
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek())
         return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
-            classDeclaration()
+            classDeclaration(false)
             false
         } else if (match(IMPORT)) {
             if (match(IDENTIFIER)) { // match(STRING) imports were resolved at scanning phase
@@ -284,13 +284,16 @@ class Compiler {
         return ArgScanResult(args, prependedTokens, optionalParamsStart, defaultValues)
     }
 
-    private fun classDeclaration() {
+    private fun classDeclaration(inner: Boolean) {
         val opener = previous
-        val name = consumeVar("Expect class name.")
+        var name = consumeVar("Expect class name.")
+        if (inner) {
+            name = "${currentClass!!.name}.$name"
+        }
         declareLocal(name)
-        emitClass(name)
+        emitClass(name, inner)
         val superclasses = mutableListOf<String>()
-        currentClass = ClassCompiler(previous, currentClass)
+        currentClass = ClassCompiler(previous.lexeme, currentClass)
 
         if (match(IS)) { // Superclasses
             do {
@@ -340,7 +343,9 @@ class Compiler {
                 if (match(NEWLINE)) {
                     continue
                 }
-                if (match(DEF)) {
+                if (match(CLASS, CLASS_OPEN, CLASS_FINAL)) {
+                    classDeclaration(true)
+                } else if (match(DEF)) {
                     method()
                 } else if (match(NATIVE)) {
                     nativeMethod()
@@ -376,7 +381,7 @@ class Compiler {
         val name = consumeVar("Expect method name.")
         val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
         consume(NEWLINE, "Expect newline after native method declaration.")
-        val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name.lexeme, name)?.also {
+        val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name, name)?.also {
             it.optionalParamsStart = optionalParamsStart
             it.defaultValues = defaultValues.toTypedArray()
         } ?: throw error(previous, "Can't resolve native function $name.")
@@ -1385,8 +1390,8 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, f))
     }
 
-    private fun emitClass(name: String) {
-        val opCode = OpCode.CLASS
+    private fun emitClass(name: String, inner: Boolean) {
+        val opCode = if (inner) INNER_CLASS else OpCode.CLASS
         var size = byteCode.put(opCode)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
@@ -1702,7 +1707,7 @@ class Compiler {
         }
     }
 
-    private class ClassCompiler(val name: Token,
+    private class ClassCompiler(val name: String,
                                 val enclosing: ClassCompiler?
     ) {
         var firstSuperclass: String? = null

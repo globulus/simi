@@ -125,6 +125,15 @@ internal class Vm {
                 FIELD -> addFieldToClass(nextString)
                 METHOD -> defineMethod(nextString)
                 NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
+                INNER_CLASS -> {
+                    val name = nextString
+                    val klass = SClass(name)
+                    val outerClass = peek() as SClass
+                    // Inner classes have qualified names such as Range.Iterator, but we want to store the
+                    // field with the last component name only
+                    outerClass.fields[name.lastNameComponent()] = klass
+                    push(klass)
+                }
                 CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
                 SUPER -> {
                     val superclass = nextString
