@@ -252,7 +252,13 @@ internal class Vm {
         val a = pop()
         push(when (a) {
             is String -> a + b
-            else -> binaryOp(ADD, a, b)
+            else -> {
+                if (b is String) {
+                    a.toString() + b
+                } else {
+                    binaryOp(ADD, a, b)
+                }
+            }
         })
     }
 

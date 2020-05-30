@@ -87,34 +87,51 @@ test("nil coalescence assign again", 5, def {
     v ??= 6
     return v
 })
-test("while", 2, def {
-    a $= 5
-    while a > 1 {
-        print "a is \(a)"
-        if a == 4 {
-            a -= 1
+test("while", "5again43again2", def {
+    i = 5
+    s = ""
+    while i > 1 {
+        s += "" + i
+        if i == 4 {
+            i -= 1
             continue
-        } else if a == 2 {
+        } else if i == 2 {
             break
         }
-        print "again"
-        a -= 1
+        s += "again"
+        i -= 1
     }
-    return a
+    return s
+})
+test("do-while", "123", def {
+    i = 1
+    s = ""
+    do {
+        s += "\(i)"
+        i += 1
+    } while i < 4
+    return s
+})
+test("do-while one too many", "4", def {
+    i = 4
+    s = ""
+    do {
+        s += "\(i)"
+        i += 1
+    } while i < 4
+    return s
 })
 test("when", "3 or 4", def {
-    a $= 3
-    when a {
+    i = 3
+    when i {
         2 { return "2" }
         3 or 4 { return "3 or 4" }
         else { return "else" }
     }
 })
 test("if expr", 2, if 0 {
-    print "yup"
     5
 } else if 0 {
-    print "nope"
     6
 } else {
     2
@@ -132,7 +149,6 @@ test("func with 1 optional", "a6", funcWithOptionals("a"))
 test("func with 2 optionals", "func6", funcWithOptionals())
 
 def retFunc() {
-    print "in ret func"
     return 5
     print "this shouldn't be printed"
 }

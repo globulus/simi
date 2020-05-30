@@ -427,36 +427,32 @@ class Compiler {
             block(false)
             endScope()
             false
-        }
-        else if (match(IF)) {
+        } else if (match(IF)) {
             ifSomething(false)
             false
-        }
-        else if (match(WHEN)) {
+        } else if (match(WHEN)) {
             whenSomething(false)
             false
-        }
-        else if (match(FOR)) {
+        } else if (match(FOR)) {
             forStatement()
             false
-        }
-        else if (match(PRINT)) {
+        } else if (match(PRINT)) {
             printStatement()
             false
         }
         else if (match(TokenType.RETURN)) {
             returnStatement(lambda)
             false
-        }
-        else if (match(WHILE)) {
+        } else if (match(DO)) {
+            doWhileStatement()
+            false
+        } else if (match(WHILE)) {
             whileStatement()
             false
-        }
-        else if (match(BREAK)) {
+        } else if (match(BREAK)) {
             breakStatement()
             false
-        }
-        else if (match(CONTINUE)) {
+        } else if (match(CONTINUE)) {
             continueStatement()
             false
         }
@@ -671,6 +667,25 @@ class Compiler {
 //        return Stmt.Yield(keyword, value)
 //    }
 //
+
+    private fun doWhileStatement() {
+        val skipPop = emitJump(JUMP)
+        val start = byteCode.size
+        emitCode(POP)
+        patchJump(skipPop)
+        loops.push(ActiveLoop(start, scopeDepth))
+        statement(isExpr = false, lambda = true)
+        consume(WHILE, "Expect 'while' after the statement in a do-while.")
+        expression()
+        emitCode(INVERT) // Cuz we're lazy and don't want to implement JUMP_IF_TRUE
+        emitJump(JUMP_IF_FALSE, start)
+        emitCode(POP)
+        val end = byteCode.size
+        val breaksToPatch = loops.pop().breakPositions
+        for (pos in breaksToPatch) {
+            byteCode.setInt(end, pos)
+        }
+    }
 
     private fun whileStatement() {
         val start = byteCode.size
