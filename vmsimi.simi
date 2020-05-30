@@ -11,6 +11,8 @@ class Object {
 
 class Function
 
+class Class
+
 class Range {
     init(@min, @max)
 
@@ -108,7 +110,7 @@ test("when", "3 or 4", def {
         else { return "else" }
     }
 })
-test("if expr", 2, =if 0 {
+test("if expr", 2, if 0 {
     print "yup"
     5
 } else if 0 {
@@ -117,7 +119,7 @@ test("if expr", 2, =if 0 {
 } else {
     2
 })
-test("when expr", 5, =when b {
+test("when expr", 5, when b {
   2 = 2
   4 = 5
   else = 6
@@ -125,16 +127,16 @@ test("when expr", 5, =when b {
 def funcWithOptionals(what = "func", smth = 6) {
     return what + smth
 }
-test("func with 2 params", "aa", =funcWithOptionals("a", "a"))
-test("func with 1 optional", "a6", =funcWithOptionals("a"))
-test("func with 2 optionals", "func6", =funcWithOptionals())
+test("func with 2 params", "aa", funcWithOptionals("a", "a"))
+test("func with 1 optional", "a6", funcWithOptionals("a"))
+test("func with 2 optionals", "func6", funcWithOptionals())
 
 def retFunc() {
     print "in ret func"
     return 5
     print "this shouldn't be printed"
 }
-test("func with return", 5, =retFunc())
+test("func with return", 5, retFunc())
 
 def outer() {
   x = "outside"
@@ -159,12 +161,23 @@ class Brioche {
     }
 }
 test("class instantiation and invoke", "ate jam and jelly", Brioche().eat("jam", "jelly"))
+test("is", true, Brioche() is Brioche)
+test("is not", false, Brioche() is not Brioche)
+test("class is", true, Brioche is Class)
 
 class Pair {
-    init(@first, @second)
+    init(@first = 5, @second = 6)
 }
 test("class init with autoset", 3, def {
     pair = Pair(1, 2)
+    return pair.first + pair.second
+})
+test("class init with autoset one default", 7, def {
+    pair = Pair(1)
+    return pair.first + pair.second
+})
+test("class init with autoset two defaults", 11, def {
+    pair = Pair()
     return pair.first + pair.second
 })
 
@@ -177,7 +190,7 @@ class Nested {
     return function()
   }
 }
-test("nested self access", "Kuhlen", =Nested().method())
+test("nested self access", "Kuhlen", Nested().method())
 
 class Superclass {
     def methodToInherit() {
@@ -191,39 +204,39 @@ class Subclass is Superclass {
         return super.methodToInherit() + " overridden"
     }
 }
-test("super access", "my superclass is Superclass", =Subclass().superClassStr)
+test("super access", "my superclass is Superclass", Subclass().superClassStr)
 test("method overriding with super invoke", "superclass method overridden", Subclass().methodToInherit())
+test("is with superclass", true, Subclass() is Superclass)
+test("class is with superclass", true, Subclass is Superclass)
 
+test("Range operator", true, 1..3 is Range)
+test("in", true, 2 in 1..4)
+test("not in", true, 2 not in 3..4)
+test("rangeUntil", true, 4 not in 1..4)
+test("rangeTo", true, 4 in 1...4)
+test("for loop", "1 2 3 4 5 ", def {
+    s = ""
+    for i in 1...5 {
+        s += "\(i) "
+    }
+    return s
+})
 
-#print 1..3 is Range
-#print 2 in 1..4
-#print 2 <> 2
-#print 2 <> 3
-#
-#for i in 1...5 {
-#    print i
-#}
-#
-#class Klass {
-#    init(@ja is String = "str")
-#}
-#print Klass().ja
-#print Klass("dva").ja
-#print Klass(1).ja
-#
-#(def {
-#    print _0 + _1
-#})(1, 2)
-#
+test("lambda with two implicit params", 3, def {
+    return _0 + _1
+}(1, 2))
+test("shorthand lambda with three implicit params", 3, (=_0+_1+_2)(1, 1, 1))
+
+test("native init", true, Date() != nil)
+test("static native function", 1, Date.at(1).time)
+test("static native function default arg", 0, Date.at(0).time)
+
+def funcForBoxing
+test("function boxing", "funcForBoxing0", funcForBoxing.name + funcForBoxing.arity)
+test("function is", true, funcForBoxing is Function)
+
 #CONST_ANT = 1
 ##CONST_ANT $= 2 # Uncomment to test assignment to const
-#
-#def funcReturningNum(a) is Num {
-#    return a
-#}
-#print funcReturningNum("trolo")
-#print funcReturningNum is Function
-#print funcReturningNum.name + funcReturningNum.arity
 #
 #class OverridesGet {
 #    def get(val) {
@@ -247,8 +260,4 @@ test("method overriding with super invoke", "superclass method overridden", Subc
 #overridesGet.key = 42
 #overridesGet.key
 #
-#date = Date()
-#print date
-#print date.time
-#print Date.at().time
-#print Date.at(1).time
+

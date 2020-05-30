@@ -325,8 +325,12 @@ internal class Vm {
     }
 
     private fun areEqual(a: Any, b: Any): Boolean {
+        if (b == Nil) {
+            return a == Nil
+        }
         return when (a) {
             b -> true
+            Nil -> b == Nil
             is Function -> {
                 if (b is Closure) {
                     a == b.function
