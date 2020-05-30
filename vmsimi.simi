@@ -53,58 +53,62 @@ class Date {
     native at(time = 0)
 }
 
+def test(title, expected, proc) {
+    r = proc()
+    print "Testing \(title): " + if r == expected "SUCCESS" else "FAIL got \(r) expected \(expected)"
+}
+
 a = 5
 b = a + 3
 a $= b - 4 / (2 + 2 * 2)
 b /= 2
-print "a is \(a) == 7.33"
-print "b is \(b) == 4"
-
-
-print "if test \"a\" =="
-if a < 2 or a < 10 {
-    print "a"
+test("a is", 7.333333333333333, a)
+test("b is", 4, b)
+test("if", "a", =if a < 2 or a < 10 {
+    "a"
 } else if b == 4 {
-    print "b"
+    "b"
 } else {
-    print "both are false"
-}
-
-print "testing nil coalescence 5 =="
-a $= nil
-print a ?? 5
-
-print "testing nil coalescence assign 5 == "
-a ??= 5
-print a
-print "and testing nil coalescence assign some more 5 == "
-a ??= 6
-print a
-
-a $= 5
-while a > 1 {
-    print "a is \(a)"
-    if a == 4 {
+    "both are false"
+})
+test("nil coalescence", 5, def {
+    v = nil
+    return v ?? 5
+})
+test("nil coalescence assign", 5, def {
+    v = nil
+    v ??= 5
+    return v
+})
+test("nil coalescence assign again", 5, def {
+    v = 5
+    v ??= 6
+    return v
+})
+test("while", 2, def {
+    a $= 5
+    while a > 1 {
+        print "a is \(a)"
+        if a == 4 {
+            a -= 1
+            continue
+        } else if a == 2 {
+            break
+        }
+        print "again"
         a -= 1
-        continue
-    } else if a == 2 {
-        break
     }
-    print "again"
-    a -= 1
-}
-print "while test 2 == \(a)"
-
-print "when test 3 or 4 == "
-a $= 3
-when a {
-    2 { print "2" }
-    3 or 4 { print "3 or 4" }
-    else { print "else" }
-}
-
-print "if expr test 2 =="
-print if 0 {
+    return a
+})
+test("when", "3 or 4", def {
+    a $= 3
+    when a {
+        2 { return "2" }
+        3 or 4 { return "3 or 4" }
+        else { return "else" }
+    }
+})
+test("if expr", 2, =if 0 {
     print "yup"
     5
 } else if 0 {
@@ -112,147 +116,139 @@ print if 0 {
     6
 } else {
     2
+})
+test("when expr", 5, =when b {
+  2 = 2
+  4 = 5
+  else = 6
+})
+def funcWithOptionals(what = "func", smth = 6) {
+    return what + smth
 }
+test("func with 2 params", "aa", =funcWithOptionals("a", "a"))
+test("func with 1 optional", "a6", =funcWithOptionals("a"))
+test("func with 2 optionals", "func6", =funcWithOptionals())
 
-print "when expr test 5 == "
-print when a {
-    2 = 2
-    3 = 5
-    else = 6
-}
-
-print "func test func6 == "
-def func(what = "func", smth = 6) {
-    b = 3
-    print what + smth
-    a $= 2
-    print "a inside is \(a)"
-}
-func()
-
-print "return func test 5 == "
 def retFunc() {
     print "in ret func"
     return 5
     print "this shouldn't be printed"
 }
-print retFunc()
+test("func with return", 5, =retFunc())
 
 def outer() {
   x = "outside"
-  print self(def)
   def inner() {
-    print x
+    return x
   }
   return inner
 }
-closure = outer()
-closure()
+test("closure", "outside", def {
+    closure = outer()
+    return closure()
+})
+
+def selfReturning() {
+    return self(def)
+}
+test("self(def)", selfReturning, selfReturning)
 
 class Brioche {
     def eat(a, b) {
-        print "ate \(a) and \(b)"
+        return "ate \(a) and \(b)"
     }
-    def spit() {}
 }
-print "Brioche == \(Brioche)"
-br = Brioche()
-print "Brioche instance == \(br)"
-br.jam = "jelly"
-print "jelly == \(br.jam)"
+test("class instantiation and invoke", "ate jam and jelly", Brioche().eat("jam", "jelly"))
 
 class Pair {
     init(@first, @second)
 }
-pair = Pair(1, 2)
-print "3 == \(pair.first + pair.second)"
+test("class init with autoset", 3, def {
+    pair = Pair(1, 2)
+    return pair.first + pair.second
+})
 
 class Nested {
   ichBin = "Kuhlen"
   def method() {
     def function() {
-      print "self is " + self
-      print @ichBin
+      return @ichBin
     }
-    function()
-  }
-
-  def methodToInherit() {
-    print "calling from Nested"
+    return function()
   }
 }
+test("nested self access", "Kuhlen", =Nested().method())
 
-Nested().method()
-
-class Subclass is Nested {
-    init {
-        print "My superclass is " + super
+class Superclass {
+    def methodToInherit() {
+        return "superclass method"
     }
+}
+class Subclass is Superclass {
+    superClassStr = "my superclass is " + super
 
     def methodToInherit() {
-        print super.methodToInherit
-        super.methodToInherit()
-        print "...and calling from subclass"
+        return super.methodToInherit() + " overridden"
     }
 }
+test("super access", "my superclass is Superclass", =Subclass().superClassStr)
+test("method overriding with super invoke", "superclass method overridden", Subclass().methodToInherit())
 
-Subclass().method()
-Subclass().methodToInherit()
 
-print 1..3 is Range
-print 2 in 1..4
-print 2 <> 2
-print 2 <> 3
-
-for i in 1...5 {
-    print i
-}
-
-class Klass {
-    init(@ja is String = "str")
-}
-print Klass().ja
-print Klass("dva").ja
-print Klass(1).ja
-
-(def {
-    print _0 + _1
-})(1, 2)
-
-CONST_ANT = 1
-#CONST_ANT $= 2 # Uncomment to test assignment to const
-
-def funcReturningNum(a) is Num {
-    return a
-}
-print funcReturningNum("trolo")
-print funcReturningNum is Function
-print funcReturningNum.name + funcReturningNum.arity
-
-class OverridesGet {
-    def get(val) {
-        when val {
-            is Num { print "is num" }
-            is String {
-                print "is str"
-                print "super get " + super.get(val)
-             }
-            else { print "something else \(val)" }
-        }
-        return 1
-    }
-    def set(key, val) {
-        super.set(key, val)
-        print "set \(key) \(val)"
-    }
-}
-overridesGet = OverridesGet()
-print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss") + overridesGet.abc)
-overridesGet.key = 42
-overridesGet.key
-
-date = Date()
-print date
-print date.time
-print Date.at().time
-print Date.at(1).time
+#print 1..3 is Range
+#print 2 in 1..4
+#print 2 <> 2
+#print 2 <> 3
+#
+#for i in 1...5 {
+#    print i
+#}
+#
+#class Klass {
+#    init(@ja is String = "str")
+#}
+#print Klass().ja
+#print Klass("dva").ja
+#print Klass(1).ja
+#
+#(def {
+#    print _0 + _1
+#})(1, 2)
+#
+#CONST_ANT = 1
+##CONST_ANT $= 2 # Uncomment to test assignment to const
+#
+#def funcReturningNum(a) is Num {
+#    return a
+#}
+#print funcReturningNum("trolo")
+#print funcReturningNum is Function
+#print funcReturningNum.name + funcReturningNum.arity
+#
+#class OverridesGet {
+#    def get(val) {
+#        when val {
+#            is Num { print "is num" }
+#            is String {
+#                print "is str"
+#                print "super get " + super.get(val)
+#             }
+#            else { print "something else \(val)" }
+#        }
+#        return 1
+#    }
+#    def set(key, val) {
+#        super.set(key, val)
+#        print "set \(key) \(val)"
+#    }
+#}
+#overridesGet = OverridesGet()
+#print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss") + overridesGet.abc)
+#overridesGet.key = 42
+#overridesGet.key
+#
+#date = Date()
+#print date
+#print date.time
+#print Date.at().time
+#print Date.at(1).time

@@ -88,7 +88,7 @@ class Compiler {
         beginScope()
         this.within()
         endScope()
-        printChunks(name)
+//        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
@@ -140,7 +140,7 @@ class Compiler {
     }
 
     private fun declaration(isExpr: Boolean): Boolean {
-        updateDebugInfoLines(peek())
+        updateDebugInfoLines(peek)
         return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
             classDeclaration(false)
             false
@@ -176,6 +176,11 @@ class Compiler {
         val declaration = previous
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
+
+        // the init method also initializes all the fields declard in the class
+        if (kind == Parser.KIND_INIT) {
+            prependedTokens += currentClass!!.initAdditionalTokens
+        }
 
         var returnType: String? = null
         if (match(IS)) {
@@ -339,6 +344,7 @@ class Compiler {
         }
 
         if (match(LEFT_BRACE)) {
+            var hasInit = false
             while (!isAtEnd() && !check(RIGHT_BRACE)) {
                 if (match(NEWLINE)) {
                     continue
@@ -350,18 +356,28 @@ class Compiler {
                 } else if (match(NATIVE)) {
                     nativeMethod()
                 } else if (match(IDENTIFIER)) {
-                    val fieldName = previous.lexeme
+                    val fieldToken = previous
+                    val fieldName = fieldToken.lexeme
                     if (fieldName == Constants.INIT) {
                         method(fieldName)
+                        hasInit = true
                     } else if (match(EQUAL)) {
-                        expression()
-                        emitField(fieldName)
+                        currentClass?.initAdditionalTokens?.apply {
+                            addAll(listOf(Token.self(), Token.ofType(DOT), fieldToken, previous))
+                            addAll(consumeNextExpr())
+                            add(consume(NEWLINE, "Expect newline after class field declaration."))
+                        }
                     } else {
                         throw error(previous, "Invalid line in class declaration.")
                     }
                 }
             }
             consume(RIGHT_BRACE, "\"Expect '}' after class body.\"")
+
+            // If the class declares fields but not an init, we need to synthesize one
+            if (currentClass?.initAdditionalTokens?.isNotEmpty() == true && !hasInit) {
+                method(Constants.INIT)
+            }
         } else {
             consume(NEWLINE, "Expect newline after empty class declaration.")
         }
@@ -632,7 +648,9 @@ class Compiler {
             expression()
             checkIfUnidentified()
         }
-        consume(NEWLINE, "Expected newline after return value.")
+        if (peek.type != RIGHT_BRACE) {
+            consume(NEWLINE, "Expect newline after return value.")
+        }
         emitReturnTypeVerification()
         emitCode(OpCode.RETURN)
         // After return is emitted, we need to close the scope, so we emit the number of additional
@@ -1074,7 +1092,7 @@ class Compiler {
         } else if (match(WHEN)) {
             return whenSomething(true)
         } else {
-            throw error(peek(), "Expect expression.")
+            throw error(peek, "Expect expression.")
         }
     }
 
@@ -1114,12 +1132,12 @@ class Compiler {
             return
         }
         if (lambda) {
-            val token = peek()
+            val token = peek
             if (token.type == COMMA || token.type == RIGHT_PAREN || token.type == RIGHT_BRACKET) {
                 return
             }
         }
-        throw error(peek(), "Unterminated lambda expression!")
+        throw error(peek, "Unterminated lambda expression!")
     }
 
     private fun consumeNextBlock(isExpr: Boolean): List<Token> {
@@ -1152,7 +1170,7 @@ class Compiler {
         }
     }
 
-    private fun consumeNextExpr(): List<Token> {
+    private fun scanNextExpr(): List<Token> {
         val start = current
         var end = 0
         var parenCount = 0
@@ -1188,6 +1206,12 @@ class Compiler {
             }
         }
         return tokens.subList(start, end)
+    }
+
+    private fun consumeNextExpr(): List<Token> {
+        val tokens = scanNextExpr()
+        current += tokens.size
+        return tokens
     }
 
     private fun consumeUntilType(vararg types: TokenType): List<Token> {
@@ -1231,7 +1255,7 @@ class Compiler {
 
     private fun consume(type: TokenType, message: String): Token {
         if (check(type)) return advance()
-        throw error(peek(), message)
+        throw error(peek, message)
     }
 
     private fun consumeVar(message: String): String {
@@ -1252,7 +1276,7 @@ class Compiler {
                 }
             }
             match(STRING) -> previous.literal.string
-            else -> throw error(peek(), message)
+            else -> throw error(peek, message)
         }
     }
 
@@ -1261,7 +1285,7 @@ class Compiler {
             if (isAtEnd() && tokenType == EOF) {
                 return true
             }
-            if (peek().type == tokenType) {
+            if (peek.type == tokenType) {
                 return true
             }
         }
@@ -1274,12 +1298,10 @@ class Compiler {
     }
 
     private fun isAtEnd(): Boolean {
-        return current == tokens.size || peek().type == EOF
+        return current == tokens.size || peek.type == EOF
     }
 
-    private fun peek(): Token {
-        return tokens[current]
-    }
+    private val peek: Token get() = tokens[current]
 
     private fun peekSequence(vararg tokenTypes: TokenType): Boolean {
         if (current + tokenTypes.size >= tokens.size) {
@@ -1392,14 +1414,6 @@ class Compiler {
 
     private fun emitClass(name: String, inner: Boolean) {
         val opCode = if (inner) INNER_CLASS else OpCode.CLASS
-        var size = byteCode.put(opCode)
-        val constIdx = constIndex(name)
-        size += byteCode.putInt(constIdx)
-        pushLastChunk(Chunk(opCode, size, constIdx, name))
-    }
-
-    private fun emitField(name: String) {
-        val opCode = FIELD
         var size = byteCode.put(opCode)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
@@ -1652,7 +1666,7 @@ class Compiler {
         val args = mutableListOf<String>()
         val curr = current
         val bodyTokens = if (isExpr) {
-            consumeNextExpr()
+            scanNextExpr()
         } else {
             current-- // Go back to {
             consumeNextBlock(false)
@@ -1711,10 +1725,11 @@ class Compiler {
                                 val enclosing: ClassCompiler?
     ) {
         var firstSuperclass: String? = null
+        var initAdditionalTokens = mutableListOf<Token>()
     }
 
     private data class ArgScanResult(val args: MutableList<String>,
-                                     val prependedTokens: List<Token>,
+                                     val prependedTokens: MutableList<Token>,
                                      val optionalParamsStart: Int,
                                      val defaultValues: List<Any>
     )

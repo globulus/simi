@@ -41,7 +41,6 @@ enum class OpCode {
     CLASS,
     INHERIT,
     IMPORT,
-    FIELD,
     METHOD,
     NATIVE_METHOD,
     INNER_CLASS,

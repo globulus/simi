@@ -122,7 +122,6 @@ internal class Vm {
                 }
                 INHERIT -> inherit()
                 IMPORT -> mixin()
-                FIELD -> addFieldToClass(nextString)
                 METHOD -> defineMethod(nextString)
                 NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
                 INNER_CLASS -> {
@@ -328,6 +327,14 @@ internal class Vm {
     private fun areEqual(a: Any, b: Any): Boolean {
         return when (a) {
             b -> true
+            is Function -> {
+                if (b is Closure) {
+                    a == b.function
+                } else {
+                    false
+                }
+            }
+            is Closure -> areEqual(a.function, b)
             is Instance -> {
                 push(a)
                 push(b)
@@ -376,6 +383,9 @@ internal class Vm {
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
+                if (callee.name == "Subclass") {
+                    val a = 5
+                }
                 stack[sp - argCount - 1] = Instance(callee)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
@@ -423,6 +433,9 @@ internal class Vm {
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
         val receiver = boxIfNotInstance(argCount)
+        if (name == "methodToInherit"){
+            val a = 5
+        }
         (receiver.fields[name])?.let {
             val callee = if (it is NativeFunction) {
                 BoundNativeMethod(receiver, it)
@@ -557,12 +570,6 @@ internal class Vm {
                 }
             }
         }
-    }
-
-    private fun addFieldToClass(name: String) {
-        val value = pop()
-        val klass = peek() as SClass
-        klass.fields[name] = value
     }
 
     private fun defineMethod(name: String) {
