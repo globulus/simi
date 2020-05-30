@@ -3,7 +3,7 @@
 span
 multiple lines *#
 
-import "Date.jar"
+import native "Date"
 
 class Object {
 
