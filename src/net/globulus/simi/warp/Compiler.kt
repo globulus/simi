@@ -46,7 +46,7 @@ class Compiler {
     private var enclosing: Compiler? = null
     private lateinit var kind: String
     // If the function being compiled was marked with "is Type", we need to verify its return statements
-    private var verifyReturnType: String? = null
+    private var verifyReturnType: DynamicTypeCheck? = null
 
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
@@ -133,9 +133,10 @@ class Compiler {
     /**
      * @return Number of discarded vars == number of emitted POPs
      */
-    private fun endScope(emitPops: Boolean = true): Int {
-        val popCount = discardLocals(scopeDepth, emitPops)
+    private fun endScope(emitPops: Boolean = true, keepLocals: Boolean = false): Int {
+        val popCount = discardLocals(scopeDepth, emitPops, keepLocals)
         scopeDepth--
+        assert(scopeDepth > -1)
         return popCount
     }
 
@@ -182,12 +183,12 @@ class Compiler {
             prependedTokens += currentClass!!.initAdditionalTokens
         }
 
-        var returnType: String? = null
+        var returnType: DynamicTypeCheck? = null
         if (match(IS)) {
             when (kind) {
                 Parser.KIND_LAMBDA -> throw error(previous, "Can't specify return type of lambdas!")
                 Parser.KIND_INIT -> throw error(previous, "Can't specify return type of init!")
-                else -> returnType = consumeVar("Expect type.")
+                else -> returnType = consumeDynamicTypeCheck("Expect type.")
             }
         }
 
@@ -267,8 +268,8 @@ class Compiler {
                         if (!allowPrepend) {
                             throw error(previous, "Argument type specifiers aren't allowed here.")
                         }
-                        val typeToken = consume(IDENTIFIER, "Expect type.")
-                        prependedTokens += getTypeVerificationTokens(nameToken, typeToken)
+                        val type = consumeDynamicTypeCheck("Expect type.")
+                        prependedTokens += getTypeVerificationTokens(nameToken, type)
                     }
                     if (match(EQUAL)) {
                         val defaultValue = consumeValue("Expected a value as default param value!")
@@ -314,7 +315,6 @@ class Compiler {
         if (superclasses.isEmpty()
                 && name != Constants.CLASS_OBJECT
                 && name != Constants.CLASS_FUNCTION
-                && name != Constants.CLASS_EXCEPTION
                 && name != Constants.CLASS_CLASS) {
             superclasses += Constants.CLASS_OBJECT
         }
@@ -637,6 +637,7 @@ class Compiler {
 
     private fun printStatement() {
         expression()
+        checkIfUnidentified()
         emitCode(OpCode.PRINT)
     }
 
@@ -663,7 +664,7 @@ class Compiler {
         // instructions to interpret before we actually return from call frame
         val pos = byteCode.size
         byteCode.putInt(0)
-        val popCount = endScope()
+        val popCount = discardLocals(scopeDepth, emitPops = true, keepLocals = true)
         byteCode.setInt(popCount, pos)
     }
 
@@ -894,7 +895,7 @@ class Compiler {
     }
 
     private fun rescue(irsoa: Boolean) {
-       range()
+       range(irsoa)
         while (match(QUESTION_BANG)) {
             val operator = previous
             val elseChunk = emitJump(JUMP_IF_EXCEPTION)
@@ -904,7 +905,7 @@ class Compiler {
                 emitCode(DUPLICATE)
             }
             val isRealExpr = expressionOrExpressionBlock(listOf(Constants.IT)) {
-                range()
+                range(irsoa)
                 true
             }
             if (!isRealExpr) {
@@ -914,11 +915,11 @@ class Compiler {
         }
     }
 
-    private fun range() {
-        addition()
+    private fun range(irsoa: Boolean) {
+        addition(irsoa)
         while (match(DOT_DOT, DOT_DOT_DOT)) {
             val operator = previous
-            addition()
+            addition(irsoa)
             emitInvoke(when (operator.type) {
                 DOT_DOT -> "rangeUntil"
                 DOT_DOT_DOT -> "rangeTo"
@@ -927,20 +928,20 @@ class Compiler {
         }
     }
 
-    private fun addition() {
-        multiplication()
+    private fun addition(irsoa: Boolean) {
+        multiplication(irsoa)
         while (match(MINUS, PLUS)) {
             val operator = previous
-            multiplication()
+            multiplication(irsoa)
             emitCode(if (operator.type == PLUS) ADD else SUBTRACT)
         }
     }
 
-    private fun multiplication() {
-        nilCoalescence()
+    private fun multiplication(irsoa: Boolean) {
+        nilCoalescence(irsoa)
         while (match(SLASH, SLASH_SLASH, STAR, MOD)) {
             val operator = previous
-            nilCoalescence()
+            nilCoalescence(irsoa)
             emitCode(when (operator.type) {
                 SLASH -> DIVIDE
                 SLASH_SLASH -> DIVIDE_INT
@@ -951,10 +952,10 @@ class Compiler {
         }
     }
 
-    private fun nilCoalescence() {
-        unary()
+    private fun nilCoalescence(irsoa: Boolean) {
+        unary(irsoa)
         while (match(QUESTION_QUESTION)) {
-            nilCoalescenceWithKnownLeft { unary() }
+            nilCoalescenceWithKnownLeft { unary(irsoa) }
         }
     }
 
@@ -967,10 +968,10 @@ class Compiler {
         patchJump(endChunk)
     }
 
-    private fun unary() {
+    private fun unary(irsoa: Boolean) {
         if (match(NOT, MINUS, BANG_BANG)) {
             val operator = previous
-            unary()
+            unary(irsoa)
             emitCode(when (operator.type) {
                 NOT -> INVERT
                 MINUS -> NEGATE
@@ -984,12 +985,12 @@ class Compiler {
             Ivic(unary())
         } */
         else {
-            call()
+            call(irsoa)
         }
     }
 
-    private fun call() {
-        primary()
+    private fun call(irsoa: Boolean) {
+        primary(irsoa)
         // Every iteration below decrements first, so it needs to start at 2 to be > 0 for the first check
         var superCount = if (lastChunk?.opCode == OpCode.SUPER) 2 else 1
         while (true) {
@@ -1006,7 +1007,7 @@ class Compiler {
                     finishGet(wasSuper)
                     continue // Go the the next iteration to prevent INVOKE shenanigans
                 } else {
-                    primary()
+                    primary(false)
                 }
                 
                 if (match(LEFT_PAREN)) { // Check invoke
@@ -1058,7 +1059,7 @@ class Compiler {
         }
     }
 
-    private fun primary() {
+    private fun primary(irsoa: Boolean) {
         if (match(FALSE)) {
             emitInt(0)
         } else if (match(TRUE)) {
@@ -1111,6 +1112,9 @@ class Compiler {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(IDENTIFIER)) {
             variable()
+            if (irsoa) {
+                checkIfUnidentified()
+            }
 //            val expr = Variable(previous())
 //            if (isInClassDeclr) { // Add backup self.var
 //                val selfToken = Token.self()
@@ -1316,6 +1320,18 @@ class Compiler {
             match(STRING) -> previous.literal.string
             else -> throw error(peek, message)
         }
+    }
+
+    private fun consumeDynamicTypeCheck(message: String): DynamicTypeCheck {
+        val type = consumeVar(message)
+        var canNil = false
+        var canException = false
+        if (match(QUESTION)) {
+            canNil = true
+        } else if (match(BANG)) {
+            canException = true
+        }
+        return DynamicTypeCheck(type, canNil, canException)
     }
 
     private fun check(vararg tokenTypes: TokenType): Boolean {
@@ -1563,7 +1579,7 @@ class Compiler {
         verifyReturnType?.let { type ->
             val name = "__returnVerification_${numberOfEnclosingCompilers}_${returnVerificationVarCounter++}__"
             declareLocal(name)
-            compileNested(getTypeVerificationTokens(Token.named(name), Token.named(type)), false)
+            compileNested(getTypeVerificationTokens(Token.named(name), type), false)
         }
     }
 
@@ -1705,9 +1721,22 @@ class Compiler {
         return "__lambda_${numberOfEnclosingCompilers}_${lambdaCounter++}__"
     }
 
-    private fun getTypeVerificationTokens(name: Token, type: Token): List<Token> {
-        return listOf(Token.ofType(IF), name, Token.ofType(ISNOT), type,
-                Token.ofType(PRINT), Token.ofString("SUCH ERROR WOW")) // TODO fix
+    private fun getTypeVerificationTokens(name: Token, type: DynamicTypeCheck): List<Token> {
+        val list = mutableListOf(Token.ofType(IF), Token.ofType(LEFT_PAREN), name,
+                Token.ofType(ISNOT), Token.named(type.type))
+        if (type.canException) {
+            list += listOf(Token.ofType(AND), name, Token.ofType(ISNOT),
+                    Token.named(Constants.CLASS_EXCEPTION), Token.ofType(RIGHT_PAREN))
+        } else {
+            list += Token.ofType(RIGHT_PAREN)
+        }
+        if (!type.canNil) {
+            list += listOf(Token.ofType(OR), name, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL))
+        }
+        list += listOf(Token.ofType(TokenType.RETURN), Token.named(Constants.EXCEPTION_TYPE_MISMATCH),
+                Token.ofType(LEFT_PAREN), Token.ofType(RIGHT_PAREN), Token.ofType(NEWLINE)
+        ) // TODO fix
+        return list
     }
 
     private fun scanForImplicitArgs(opener: Token, isExpr: Boolean): List<String> {
@@ -1780,6 +1809,11 @@ class Compiler {
                                      val prependedTokens: MutableList<Token>,
                                      val optionalParamsStart: Int,
                                      val defaultValues: List<Any>
+    )
+
+    private data class DynamicTypeCheck(val type: String,
+                                        val canNil: Boolean,
+                                        val canException: Boolean
     )
 
     private class ParseError(message: String) : RuntimeException(message)

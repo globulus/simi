@@ -17,6 +17,14 @@ class Exception {
     init(@message)
 }
 
+class TypeMismatchException is Exception {
+    init {
+        @message = "tme"
+    }
+#        super.init("Type mismatch")
+#    }
+}
+
 class Range {
     init(@min, @max)
 
@@ -61,7 +69,7 @@ class Date {
 
 def test(title, expected, proc) {
     r = proc()
-    print "Testing \(title): " + if r == expected "SUCCESS" else "FAIL got \(r) expected \(expected)"
+    print "Testing \(title): " + (if r == expected "SUCCESS" else "FAIL got \(r) expected \(expected)")
 }
 
 a = 5
@@ -130,7 +138,7 @@ test("when", "3 or 4", def {
     when i {
         2 { return "2" }
         3 or 4 { return "3 or 4" }
-        else { return "else" }
+        else { return "else " + i }
     }
 })
 test("if expr", 2, if 0 {
@@ -281,6 +289,16 @@ def rescueFunctionWithoutValueAssign {
 }
 test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithoutValueAssign())
 
+def funcWithArgTypeCheck(a0 is String, a1 is String?, a2 is String!) {
+    return 1
+}
+test("arg type check proper type passed", 1, funcWithArgTypeCheck("", "", ""))
+test("arg type check first nil", "tme", funcWithArgTypeCheck(nil, "", "").message) # TODO rework the checks
+test("arg type check first Exception", "tme", funcWithArgTypeCheck(Exception("a"), "", "").message)
+test("arg type check second nil", "tme", funcWithArgTypeCheck("", nil, "").message)
+test("arg type check second Exception", "tme", funcWithArgTypeCheck("", Exception("a"), "").message)
+test("arg type check third nil", "tme", funcWithArgTypeCheck("", "", nil).message)
+test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception("a")))
 
 #CONST_ANT = 1
 ##CONST_ANT $= 2 # Uncomment to test assignment to const

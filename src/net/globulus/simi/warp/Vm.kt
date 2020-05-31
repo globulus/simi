@@ -353,9 +353,15 @@ internal class Vm {
             is Instance -> {
                 push(a)
                 push(b)
+                val currentFp = fp
                 invoke(Constants.EQUALS, 1, false)
-                runLocal()
-                !isFalsey(pop())
+                if (fp == currentFp) { // invoke didn't succeed as the method wasn't found
+                    sp -= 2 // pop the args
+                    false
+                } else {
+                    runLocal()
+                    !isFalsey(pop())
+                }
             }
             else -> false
         }
@@ -366,6 +372,7 @@ internal class Vm {
         val a = boxIfNotInstance(0)
         sp-- // Pop a
         val r = when (a) {
+            Nil -> false
             is Instance -> a.klass.checkIs(b)
             is SClass -> if (b == classClass) true else a.checkIs(b)
             else -> throw RuntimeException("WTF")
@@ -661,10 +668,11 @@ internal class Vm {
     private fun boxIfNotInstance(offset: Int): Fielded {
         val loc = sp - offset - 1
         val value = stack[loc]
-        if (value is Instance || value is SClass) {
+        if (value == Nil) {
+            return Nil
+        } else if (value is Instance || value is SClass) {
             return value as Fielded
-        }
-        if (value is Long || value is Double) {
+        } else if (value is Long || value is Double) {
             val boxedNum = Instance(numClass!!).apply {
                 fields[Constants.PRIVATE] = value
             }
