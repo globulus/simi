@@ -16,6 +16,7 @@ internal class Vm {
     private var strClass: SClass? = null
     private var classClass: SClass? = null
     private var funcClass: SClass? = null
+    private var exceptionClass: SClass? = null
 
     private var fp = 0
         set(value) {
@@ -55,6 +56,7 @@ internal class Vm {
                     sp -= nextInt
                     push(value)
                 }
+                DUPLICATE -> push(peek())
                 SET_LOCAL -> setVar(frame)
                 GET_LOCAL -> getVar(frame)
                 SET_UPVALUE -> frame.closure.upvalues[nextInt]!!.location = WeakReference(sp - 1) // -1 because we need to point at an actual slot
@@ -77,6 +79,7 @@ internal class Vm {
                 JUMP -> buffer.position(nextInt)
                 JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
                 JUMP_IF_NIL -> jumpIf { it == Nil }
+                JUMP_IF_EXCEPTION -> jumpIf { it is Instance && it.klass.checkIs(exceptionClass!!) }
                 CALL -> {
                     val argCount = nextInt
                     call(peek(argCount), argCount)
@@ -102,7 +105,7 @@ internal class Vm {
                 }
                 CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
-                    if (doReturn(breakAtFp)) {
+                    if (doReturn(nextString, breakAtFp)) {
                         break@loop
                     }
                 }
@@ -117,6 +120,8 @@ internal class Vm {
                         classClass = klass
                     } else if (funcClass == null && name == Constants.CLASS_FUNCTION) {
                         funcClass = klass
+                    } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
+                        exceptionClass = klass
                     }
                     push(klass)
                 }
@@ -393,9 +398,6 @@ internal class Vm {
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
-                if (callee.name == "Subclass") {
-                    val a = 5
-                }
                 stack[sp - argCount - 1] = Instance(callee)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
@@ -443,9 +445,6 @@ internal class Vm {
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
         val receiver = boxIfNotInstance(argCount)
-        if (name == "methodToInherit"){
-            val a = 5
-        }
         (receiver.fields[name])?.let {
             val callee = if (it is NativeFunction) {
                 BoundNativeMethod(receiver, it)
@@ -531,20 +530,24 @@ internal class Vm {
     /**
      * @return true if the program should terminate
      */
-    private fun doReturn(breakAtFp: Int): Boolean {
+    private fun doReturn(from: String, breakAtFp: Int): Boolean {
         val result = pop()
-        val returningFrame = frame
-        closeUpvalues(returningFrame.sp)
-        val numberOfPops = nextInt
-        for (i in 0 until numberOfPops) {
-            val code = nextCode
-            when (code) { // TODO move somewhere else, reuse existing code
-                POP -> sp--
-                CLOSE_UPVALUE -> closeUpvalue()
-                else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
+        val frameToReturnFrom = if (from.isEmpty()) frame.name else from
+        var returningFrame: CallFrame
+        do {
+            returningFrame = frame
+            closeUpvalues(returningFrame.sp)
+            val numberOfPops = nextInt
+            for (i in 0 until numberOfPops) {
+                val code = nextCode
+                when (code) { // TODO move somewhere else, reuse existing code
+                    POP -> sp--
+                    CLOSE_UPVALUE -> closeUpvalue()
+                    else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
+                }
             }
-        }
-        fp--
+            fp--
+        } while (returningFrame.name != frameToReturnFrom)
         return if (fp == 0) { // Returning from top-level func
             sp = 0
             true

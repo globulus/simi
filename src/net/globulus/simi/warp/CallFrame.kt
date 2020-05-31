@@ -6,6 +6,7 @@ class CallFrame(val closure: Closure,
                 val sp: Int
 ) {
     val buffer: ByteBuffer = ByteBuffer.wrap(closure.function.code)
+    val name = closure.function.name
 
     private fun getCurrentLine(): Int {
         var line = 0

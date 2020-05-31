@@ -88,7 +88,7 @@ class Compiler {
         beginScope()
         this.within()
         endScope()
-//        printChunks(name)
+        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
@@ -456,9 +456,6 @@ class Compiler {
             continueStatement()
             false
         }
-//        if (match(TokenType.RESCUE)) {
-//            return rescueStatement()
-//        }
 //        if (match(TokenType.YIELD)) {
 //            return yieldStatement(lambda)
 //        }
@@ -500,18 +497,22 @@ class Compiler {
 
     private fun compileIfBody(opener: Token, isExpr: Boolean) {
         if (isExpr) {
-            val isRealExpr = expressionOrExpressionBlock() // Assignments can be statements, we can't know till we parse
+            val isRealExpr = expressionOrExpressionBlock { expression() } // Assignments can be statements, we can't know till we parse
             if (!isRealExpr) {
-                throw error(opener, "An if expression must have a ")
+                throw error(opener, "An if expression must have a return value.")
             }
         } else {
             statement(isExpr = false, lambda = true)
         }
     }
 
-    private fun expressionOrExpressionBlock(): Boolean {
+    private fun expressionOrExpressionBlock(localVarsToBind: List<String> = emptyList(),
+                                            expressionFun: () -> Boolean): Boolean {
         return if (match(LEFT_BRACE)) {
             beginScope()
+            for (name in localVarsToBind) {
+                declareLocal(name)
+            }
             block(true)
             val popCount = endScope(false)
             if (lastChunk?.opCode != POP) {
@@ -521,7 +522,10 @@ class Compiler {
             emitPopUnder(popCount)
             true
         } else {
-            expression()
+            for (name in localVarsToBind) {
+                emitCode(POP) // Pop any leftover vars that weren't bound because we don't have a block
+            }
+            expressionFun()
         }
     }
 
@@ -640,6 +644,13 @@ class Compiler {
         if (kind == Parser.KIND_INIT) {
             throw error(previous, "Can't return from init!")
         }
+        val from = if (match(LEFT_PAREN)) {
+            val name = consumeVar("Expect function name for return specifier.")
+            consume(RIGHT_PAREN, "Expect ')' after return specifier.")
+            name
+        } else {
+            null
+        }
         if (!match(NEWLINE)) {
             expression()
             checkIfUnidentified()
@@ -647,8 +658,7 @@ class Compiler {
         if (peek.type != RIGHT_BRACE) {
             consume(NEWLINE, "Expect newline after return value.")
         }
-        emitReturnTypeVerification()
-        emitCode(OpCode.RETURN)
+        emitReturn(false, from) { }
         // After return is emitted, we need to close the scope, so we emit the number of additional
         // instructions to interpret before we actually return from call frame
         val pos = byteCode.size
@@ -729,15 +739,6 @@ class Compiler {
         emitJump(JUMP, loops.peek().start)
     }
 
-//    private fun rescueStatement(): Stmt? {
-//        val keyword = previous()
-//        val block: Block = block("rescue", true)
-//        if (block.params.size != 1) {
-//            Parser.error(keyword, "Rescue block expects exactly 1 parameter!")
-//        }
-//        return Rescue(keyword, block)
-//    }
-
     private fun expressionStatement(lambda: Boolean): Boolean {
         val shouldPop = expression()
         if (shouldPop) {
@@ -751,7 +752,7 @@ class Compiler {
     }
 
     private fun assignment(): Boolean {
-        or() // left-hand side
+        or(false) // left-hand side
         if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
                         SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous
@@ -761,7 +762,7 @@ class Compiler {
             if (equals.type == EQUAL) {
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk()
-                    or()
+                    or(true)
                     emitCode(SET_PROP)
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
@@ -775,7 +776,7 @@ class Compiler {
                         declareLocal(lastChunk!!.data[1] as String)
                         rollBackLastChunk()
                     }
-                    or() // push the value on the stack
+                    or(true) // push the value on the stack
                 }
             } else {
                 val variable: Any = when (lastChunk?.opCode) {
@@ -788,12 +789,12 @@ class Compiler {
                     throw error(previous, "Can't assign to a const!")
                 }
                 if (equals.type == QUESTION_QUESTION_EQUAL) {
-                    nilCoalescenceWithKnownLeft { or() }
+                    nilCoalescenceWithKnownLeft { or(true) }
                 } else {
                     if (equals.type == DOLLAR_EQUAL) {
                         rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
                     }
-                    or() // right-hand side
+                    or(true) // right-hand side
                     if (equals.type != DOLLAR_EQUAL) {
                         emitCode(when (equals.type) {
                             PLUS_EQUAL -> ADD
@@ -824,33 +825,34 @@ class Compiler {
         return true
     }
 
-    private fun or() {
-        and()
+    // irsoa = is right side of assignment
+    private fun or(irsoa: Boolean) {
+        and(irsoa)
         while (match(OR)) {
             val elseChunk = emitJump(JUMP_IF_FALSE)
             val endChunk = emitJump(JUMP)
             patchJump(elseChunk)
             emitCode(POP)
-            and()
+            and(irsoa)
             patchJump(endChunk)
         }
     }
 
-    private fun and() {
-        equality()
+    private fun and(irsoa: Boolean) {
+        equality(irsoa)
         while (match(AND)) {
             val endChunk = emitJump(JUMP_IF_FALSE)
             emitCode(POP)
-            equality()
+            equality(irsoa)
             patchJump(endChunk)
         }
     }
 
-    private fun equality() {
-        comparison()
+    private fun equality(irsoa: Boolean) {
+        comparison(irsoa)
         while (match(BANG_EQUAL, EQUAL_EQUAL, IS, ISNOT, IN, NOTIN)) {
             val operator = previous
-            comparison()
+            comparison(irsoa)
             when (operator.type) {
                 EQUAL_EQUAL -> emitCode(EQ)
                 BANG_EQUAL -> {
@@ -872,11 +874,11 @@ class Compiler {
         }
     }
 
-    private fun comparison() {
-        range()
+    private fun comparison(irsoa: Boolean) {
+        rescue(irsoa)
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, LESS_GREATER)) {
             val operator = previous
-            range()
+            rescue(irsoa)
             if (operator.type == LESS_GREATER) {
                 emitInvoke(Constants.MATCHES, 1)
             } else {
@@ -888,6 +890,27 @@ class Compiler {
                     else -> throw IllegalArgumentException("WTF")
                 })
             }
+        }
+    }
+
+    private fun rescue(irsoa: Boolean) {
+       range()
+        while (match(QUESTION_BANG)) {
+            val operator = previous
+            val elseChunk = emitJump(JUMP_IF_EXCEPTION)
+            val endChunk = emitJump(JUMP)
+            patchJump(elseChunk)
+            if (irsoa) {
+                emitCode(DUPLICATE)
+            }
+            val isRealExpr = expressionOrExpressionBlock(listOf(Constants.IT)) {
+                range()
+                true
+            }
+            if (!isRealExpr) {
+                throw error(operator, "A rescue expression must return a value.")
+            }
+            patchJump(endChunk)
         }
     }
 
@@ -1545,10 +1568,20 @@ class Compiler {
     }
 
     private fun emitReturn(value: () -> Unit) {
+        emitReturn(true, null, value)
+    }
+
+    private fun emitReturn(emitSkipZero: Boolean, from: String?, value: () -> Unit) {
         value()
         emitReturnTypeVerification()
-        emitCode(OpCode.RETURN)
-        byteCode.putInt(0) // No additional instructions to skip
+        val opCode = OpCode.RETURN
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(from ?: "")
+        size += byteCode.putInt(constIdx)
+        if (emitSkipZero) {
+            byteCode.putInt(0) // No additional instructions to skip
+        }
+        pushLastChunk(Chunk(opCode, size, constIdx))
     }
 
     private fun emitReturnNil() {

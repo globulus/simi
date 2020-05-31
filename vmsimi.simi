@@ -13,6 +13,10 @@ class Function
 
 class Class
 
+class Exception {
+    init(@message)
+}
+
 class Range {
     init(@min, @max)
 
@@ -250,6 +254,33 @@ test("static native function default arg", 0, Date.at(0).time)
 def funcForBoxing
 test("function boxing", "funcForBoxing0", funcForBoxing.name + funcForBoxing.arity)
 test("function is", true, funcForBoxing is Function)
+
+class SomeException is Exception
+someExceptionMessage = "Some exception"
+def funcReturningException = SomeException(someExceptionMessage)
+test("returning exception", someExceptionMessage, funcReturningException().message)
+test("rescue alternative value", "alternative", funcReturningException() ?! "alternative")
+def rescueFunctionWithValueAssign {
+    value = funcReturningException() ?! {
+        s = "exception \(it.message)"
+        return s
+        nil
+    }
+    print "nothing happened"
+    return 1
+}
+test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithValueAssign())
+def rescueFunctionWithoutValueAssign {
+    funcReturningException() ?! {
+        s = "exception \(it.message)"
+        return s
+        nil
+    }
+    print "nothing happened"
+    return 1
+}
+test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithoutValueAssign())
+
 
 #CONST_ANT = 1
 ##CONST_ANT $= 2 # Uncomment to test assignment to const

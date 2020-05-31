@@ -8,6 +8,7 @@ enum class OpCode {
     NIL,
     POP,
     POP_UNDER, // Keeps the top value and pops N values beneath it
+    DUPLICATE, // Duplicates the value at the top of the stack
     SET_LOCAL,
     GET_LOCAL,
     SET_UPVALUE,
@@ -33,6 +34,7 @@ enum class OpCode {
     JUMP,
     JUMP_IF_FALSE,
     JUMP_IF_NIL,
+    JUMP_IF_EXCEPTION,
     CALL,
     INVOKE,
     CLOSURE,

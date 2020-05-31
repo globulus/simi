@@ -77,6 +77,8 @@ class Lexer(private val fileName: String,
                     } else {
                         addToken(QUESTION_QUESTION)
                     }
+                } else if (match('!')) {
+                    addToken(QUESTION_BANG)
                 } else {
                     addToken(QUESTION)
                 }
@@ -446,7 +448,6 @@ class Lexer(private val fileName: String,
                 "not" to NOT,
                 "or" to OR,
                 "print" to PRINT,
-                "rescue" to RESCUE,
                 "return" to RETURN,
                 Constants.SELF to SELF,
                 Constants.SUPER to SUPER,
