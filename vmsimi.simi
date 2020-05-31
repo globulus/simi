@@ -19,10 +19,8 @@ class Exception {
 
 class TypeMismatchException is Exception {
     init {
-        @message = "tme"
+        super.init("tme")
     }
-#        super.init("Type mismatch")
-#    }
 }
 
 class Range {

@@ -353,14 +353,13 @@ internal class Vm {
             is Instance -> {
                 push(a)
                 push(b)
-                val currentFp = fp
-                invoke(Constants.EQUALS, 1, false)
-                if (fp == currentFp) { // invoke didn't succeed as the method wasn't found
-                    sp -= 2 // pop the args
-                    false
-                } else {
+                val foundMethod = invoke(Constants.EQUALS, 1, false)
+                if (foundMethod) {
                     runLocal()
                     !isFalsey(pop())
+                } else {
+                    sp -= 2 // pop the args
+                    false
                 }
             }
             else -> false
@@ -450,9 +449,9 @@ internal class Vm {
         push(result)
     }
 
-    private fun invoke(name: String, argCount: Int, checkError: Boolean = true) {
+    private fun invoke(name: String, argCount: Int, checkError: Boolean = true): Boolean {
         val receiver = boxIfNotInstance(argCount)
-        (receiver.fields[name])?.let {
+        return (receiver.fields[name])?.let {
             val callee = if (it is NativeFunction) {
                 BoundNativeMethod(receiver, it)
             } else {
@@ -460,15 +459,19 @@ internal class Vm {
             }
             stack[sp - argCount - 1] = callee
             call(callee, argCount)
+            true
         } ?: invokeFromClass((receiver as? Instance)?.klass, name, argCount, checkError)
     }
 
-    private fun invokeFromClass(klass: SClass?, name: String, argCount: Int, checkError: Boolean = true) {
-        (klass?.fields?.get(name) as? Closure)?.let { method ->
+    private fun invokeFromClass(klass: SClass?, name: String, argCount: Int, checkError: Boolean = true): Boolean {
+        return (klass?.fields?.get(name) as? Closure)?.let { method ->
             callClosure(method, argCount)
+            true
         } ?: run {
             if (checkError) {
                 throw runtimeError("Undefined method $name.")
+            } else {
+                false
             }
         }
     }
@@ -489,8 +492,9 @@ internal class Vm {
                 return
             }
         }
+        set(argCount, self!!) // bind the super method to self
         invokeFromClass(superclass, name, argCount)
-        sp-- // pop superclass
+        runLocal()
     }
 
     private fun captureUpvalue(sp: Int): Upvalue {
@@ -624,6 +628,10 @@ internal class Vm {
 
     private fun peek(offset: Int = 0): Any {
         return stack[sp - offset - 1]!!
+    }
+
+    private fun set(offset: Int, value: Any) {
+        stack[sp - offset - 1] = value
     }
 
     private fun getFieldsOrThrow(it: Any?): MutableMap<String, Any> {
