@@ -305,6 +305,40 @@ def funcWithReturnTypeCheckIncorrect is String {
 }
 test("return type check incorrect type", "tme", funcWithReturnTypeCheckIncorrect().message)
 
+do {
+    print "in do block"
+    print "yup yup"
+}
+
+do {
+    print "another do"
+} else {
+    print "nope"
+}
+
+do {
+    print "3rd do"
+    break
+    print "nope"
+} else {
+    print "yup, nil == " + it
+}
+
+do {
+    break 10
+    print "nope"
+    print "nono"
+}
+print "jajaj"
+
+do {
+    print "hohoho"
+    i = funcReturningException() ?! { break it }
+    print "nope"
+} else {
+    print "exception \(it)"
+}
+
 #CONST_ANT = 1
 ##CONST_ANT $= 2 # Uncomment to test assignment to const
 #

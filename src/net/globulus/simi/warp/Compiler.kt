@@ -443,7 +443,7 @@ class Compiler {
             returnStatement(lambda)
             true
         } else if (match(DO)) {
-            doWhileStatement()
+            doSomething()
             false
         } else if (match(WHILE)) {
             whileStatement()
@@ -518,11 +518,15 @@ class Compiler {
             }
             block(true)
             val popCount = endScope(false)
-            if (lastChunk?.opCode != POP) {
-                throw IllegalStateException("Compiler error - last chunk should be POP at this point!")
-            }
-            rollBackLastChunk()
+            val rolledBackChunk = rollBackAndSaveLastChunk()
             emitPopUnder(popCount)
+            if (rolledBackChunk.chunk.opCode != POP) {
+                pushLastChunk(rolledBackChunk.chunk)
+                if (rolledBackChunk.chunk.opCode == JUMP) {
+                    rolledBackChunk.chunk.data[0] = byteCode.size + 1 // + 1 because the opcode will go first
+                }
+                byteCode.addAll(rolledBackChunk.data)
+            }
             true
         } else {
             for (name in localVarsToBind) {
@@ -655,13 +659,7 @@ class Compiler {
         } else {
             null
         }
-        if (!match(NEWLINE)) {
-            expression()
-            checkIfUnidentified()
-        }
-        if (peek.type != RIGHT_BRACE) {
-            consume(NEWLINE, "Expect newline after return value.")
-        }
+        consumeReturnValue(false)
         emitReturn(false, from) { }
         // After return is emitted, we need to close the scope, so we emit the number of additional
         // instructions to interpret before we actually return from call frame
@@ -682,6 +680,20 @@ class Compiler {
 //    }
 //
 
+    private fun doSomething() {
+        // First we need to determine if it's a do, do-else or do-while
+        val curr = current
+        if (peek.type == LEFT_BRACE) {
+            val tokens = consumeNextBlock(false)
+            if (match(WHILE)) { // TODO improve performance by reusing the scanned tokens above
+                current = curr
+                doWhileStatement()
+            } else {
+                doBlock(tokens)
+            }
+        }
+    }
+
     private fun doWhileStatement() {
         val skipPop = emitJump(JUMP)
         val start = byteCode.size
@@ -695,9 +707,36 @@ class Compiler {
         emitJump(JUMP_IF_FALSE, start)
         emitCode(POP)
         val end = byteCode.size
-        val breaksToPatch = loops.pop().breakPositions
+        val breaksToPatch = loops.pop().breaks
         for (pos in breaksToPatch) {
-            byteCode.setInt(end, pos)
+            pos.data[1] = end
+            byteCode.setInt(end, pos.data[0] as Int)
+        }
+    }
+
+    private fun doBlock(tokens: List<Token>) {
+        loops.push(DoBlock(scopeDepth))
+        compileNested(tokens, false)
+        emitCode(OpCode.NIL) // need to push this to have something to pop below if no breaks were reached
+        val end: Int
+        if (match(ELSE)) {
+            consume(LEFT_BRACE, "Expect '{' to start else clause of do-else block.")
+            val elseSkip = emitJump(JUMP)
+            end = byteCode.size
+            emitCode(DUPLICATE) // because some weird thing is happening with local declaration, don't have time to debug right now
+            beginScope()
+            declareLocal(Constants.IT)
+            block(false)
+            endScope(true)
+            patchJump(elseSkip)
+        } else {
+            end = byteCode.size
+            emitCode(POP) // pop whatever was pushed by a break
+        }
+        val breaksToPatch = loops.pop().breaks
+        for (pos in breaksToPatch) {
+            pos.data[1] = end
+            byteCode.setInt(end, pos.data[0] as Int)
         }
     }
 
@@ -710,25 +749,31 @@ class Compiler {
         statement(isExpr = false, lambda = true)
         emitJump(JUMP, start)
         val end = patchJump(skipChunk)
-        val breaksToPatch = loops.pop().breakPositions
+        val breaksToPatch = loops.pop().breaks
+        // Set to jump 1 after end to skip the final POP as it already happened in the loop body
+        val skip = end + 1
         for (pos in breaksToPatch) {
-            // Set to jump 1 after end to skip the final POP as it already happened in the loop body
-            byteCode.setInt(end + 1, pos)
+            pos.data[1] = skip
+            byteCode.setInt(skip, pos.data[0] as Int)
         }
         emitCode(POP)
     }
 
     private fun breakStatement() {
         if (loops.isEmpty()) {
-            throw error(previous, "Cannot 'break' outside of a loop!")
+            throw error(previous, "Cannot 'break' outside of a loop or do block!")
         }
         val activeLoop = loops.peek()
         // Discards scopes up to the loop level (hence + 1)
         for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
             discardLocals(depth, emitPops = true, keepLocals = true)
         }
+        if (activeLoop is DoBlock) { // do block breaks can return values
+            emitCode(POP) // pop the nil that we put on earlier in case nobody breaks directly
+            consumeReturnValue(true)
+        }
         val chunk = emitJump(JUMP)
-        activeLoop.breakPositions += chunk.data[0] as Int
+        activeLoop.breaks += chunk
     }
 
     private fun continueStatement() {
@@ -736,6 +781,11 @@ class Compiler {
             throw error(previous, "Cannot 'continue' outside of a loop!")
         }
         val activeLoop = loops.peek()
+        if (activeLoop is DoBlock) {
+            // TODO this can be improved so that we look up the nearest loop and continue it, but
+            // the whole thing might be confusing from the user's perspective.
+            throw error(previous, "Cannot 'continue' in a 'do' block!")
+        }
         // Discards scopes up to the level of loop statement (hence + 2)
         for (depth in scopeDepth downTo (activeLoop.depth + 2)) {
             discardLocals(depth, emitPops = true, keepLocals = true)
@@ -1325,6 +1375,20 @@ class Compiler {
         }
     }
 
+    private fun consumeReturnValue(emitNil: Boolean) {
+        if (match(NEWLINE)) {
+            if (emitNil) {
+                emitCode(OpCode.NIL)
+            }
+        } else {
+            expression()
+            checkIfUnidentified()
+            if (peek.type != RIGHT_BRACE) {
+                consume(NEWLINE, "Expect newline after return value.")
+            }
+        }
+    }
+
     private fun consumeDynamicTypeCheck(message: String): DynamicTypeCheck {
         val type = consumeVar(message)
         var canNil = false
@@ -1384,6 +1448,17 @@ class Compiler {
         rollBack(lastChunk!!.size)
         chunks.pop()
         lastChunk = if (chunks.isEmpty()) null else chunks.last
+    }
+
+    private fun rollBackAndSaveLastChunk(): RolledBackChunk {
+        val chunk = lastChunk!!
+        val size = byteCode.size
+        val data = mutableListOf<Byte>()
+        for (i in size - chunk.size until size) {
+            data += byteCode[i]
+        }
+        rollBackLastChunk()
+        return RolledBackChunk(chunk, data)
     }
 
     private fun error(token: Token, message: String): ParseError {
@@ -1534,8 +1609,9 @@ class Compiler {
     private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
         var size = byteCode.put(opCode)
         val offset = byteCode.size
-        size += byteCode.putInt(location ?: 0)
-        val chunk = Chunk(opCode, size, offset)
+        val skip = location ?: 0
+        size += byteCode.putInt(skip)
+        val chunk = Chunk(opCode, size, offset, skip)
         pushLastChunk(chunk)
         return chunk
 
@@ -1550,7 +1626,7 @@ class Compiler {
         val offset = chunk.data[0] as Int
         val skip = byteCode.size
         byteCode.setInt(skip, offset)
-        chunk.size += skip - offset
+        chunk.data[1] = skip
         return skip
     }
 
@@ -1612,6 +1688,7 @@ class Compiler {
     }
 
     private fun pushLastChunk(chunk: Chunk) {
+        chunk.pos = byteCode.size - chunk.size
         lastChunk = chunk
         chunks.push(chunk)
     }
@@ -1637,20 +1714,12 @@ class Compiler {
     }
 
     private fun findLocal(compiler: Compiler, name: String): Local? {
-//        var compiler: Compiler? = this
-//        while (compiler != null) {
-            for (i in compiler.locals.size - 1 downTo 0) {
-                val local = compiler.locals[i]
-                if (local.name == name) {
-//                    return if (compiler == this) {
-                        return local
-//                    } else {
-//                        local.copyForLevel(compiler.numberOfEnclosingCompilers)
-//                    }
-                }
+        for (i in compiler.locals.size - 1 downTo 0) {
+            val local = compiler.locals[i]
+            if (local.name == name) {
+                    return local
             }
-//            compiler = compiler.enclosing
-//        }
+        }
         return null
     }
 
@@ -1791,15 +1860,21 @@ class Compiler {
         val isConst = CONST_IDENTIFIER.matcher(name).matches()
     }
 
-    private data class ActiveLoop(val start: Int, val depth: Int) {
-        val breakPositions = mutableListOf<Int>()
+    private open class ActiveLoop(val start: Int, val depth: Int) {
+        val breaks = mutableListOf<Chunk>()
     }
+
+    private class DoBlock(depth: Int) : ActiveLoop(-1, depth) // start is unimportant because you can't continue from do
 
     private class Chunk(val opCode: OpCode,
                         var size: Int,
-                        vararg val data: Any) {
+                        val data: MutableList<Any>) {
+        constructor(opCode: OpCode, size: Int, vararg data: Any) : this(opCode, size, data.toMutableList())
+
+        var pos = 0
+
         override fun toString(): String {
-            return "$opCode, size: $size b, data: ${data.joinToString()}"
+            return "${"%5d".format(pos)}: $opCode, size: $size b, data: ${data.joinToString()}"
         }
     }
 
@@ -1819,6 +1894,10 @@ class Compiler {
     private data class DynamicTypeCheck(val type: String,
                                         val canNil: Boolean,
                                         val canException: Boolean
+    )
+
+    private class RolledBackChunk(val chunk: Chunk,
+                                  val data: List<Byte>
     )
 
     private class ParseError(message: String) : RuntimeException(message)
