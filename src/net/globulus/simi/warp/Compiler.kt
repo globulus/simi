@@ -439,10 +439,9 @@ class Compiler {
         } else if (match(PRINT)) {
             printStatement()
             false
-        }
-        else if (match(TokenType.RETURN)) {
+        } else if (match(TokenType.RETURN)) {
             returnStatement(lambda)
-            false
+            true
         } else if (match(DO)) {
             doWhileStatement()
             false
@@ -451,10 +450,10 @@ class Compiler {
             false
         } else if (match(BREAK)) {
             breakStatement()
-            false
+            true
         } else if (match(CONTINUE)) {
             continueStatement()
-            false
+            true
         }
 //        if (match(TokenType.YIELD)) {
 //            return yieldStatement(lambda)
@@ -506,6 +505,10 @@ class Compiler {
         }
     }
 
+    /**
+     * @param expressionFun The block that parses the containing expression. This is necessary as we don't
+     * know how deep we are in the precedence hierarchy
+     */
     private fun expressionOrExpressionBlock(localVarsToBind: List<String> = emptyList(),
                                             expressionFun: () -> Boolean): Boolean {
         return if (match(LEFT_BRACE)) {
@@ -1577,9 +1580,11 @@ class Compiler {
 
     private fun emitReturnTypeVerification() {
         verifyReturnType?.let { type ->
+            verifyReturnType = null // to prevent infinite recursion due to checks when returning TypeMismatchException
             val name = "__returnVerification_${numberOfEnclosingCompilers}_${returnVerificationVarCounter++}__"
             declareLocal(name)
             compileNested(getTypeVerificationTokens(Token.named(name), type), false)
+            verifyReturnType = type // assign it back as there could be multiple returns in a body
         }
     }
 

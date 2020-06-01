@@ -554,6 +554,7 @@ internal class Vm {
                 when (code) { // TODO move somewhere else, reuse existing code
                     POP -> sp--
                     CLOSE_UPVALUE -> closeUpvalue()
+                    POP_UNDER -> sp -= nextInt + 1 // + 1 is to pop the value on the stack as well
                     else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
                 }
             }

@@ -270,7 +270,6 @@ def rescueFunctionWithValueAssign {
     value = funcReturningException() ?! {
         s = "exception \(it.message)"
         return s
-        nil
     }
     print "nothing happened"
     return 1
@@ -280,7 +279,6 @@ def rescueFunctionWithoutValueAssign {
     funcReturningException() ?! {
         s = "exception \(it.message)"
         return s
-        nil
     }
     print "nothing happened"
     return 1
@@ -297,6 +295,15 @@ test("arg type check second nil", "tme", funcWithArgTypeCheck("", nil, "").messa
 test("arg type check second Exception", "tme", funcWithArgTypeCheck("", Exception("a"), "").message)
 test("arg type check third nil", "tme", funcWithArgTypeCheck("", "", nil).message)
 test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception("a")))
+
+def funcWithReturnTypeCheckCorrect is String {
+    return ""
+}
+test("return type check proper type", "", funcWithReturnTypeCheckCorrect())
+def funcWithReturnTypeCheckIncorrect is String {
+    return 1
+}
+test("return type check incorrect type", "tme", funcWithReturnTypeCheckIncorrect().message)
 
 #CONST_ANT = 1
 ##CONST_ANT $= 2 # Uncomment to test assignment to const
