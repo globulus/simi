@@ -339,8 +339,6 @@ do {
     print "exception \(it)"
 }
 
-#CONST_ANT = 1
-##CONST_ANT $= 2 # Uncomment to test assignment to const
 #
 #class OverridesGet {
 #    def get(val) {

@@ -158,14 +158,18 @@ class Lexer(private val fileName: String,
                 addToken(NEWLINE)
             }
             ';' -> addToken(NEWLINE)
-            else -> if (isStringDelim(c)) {
-                string(c, true)
-            } else if (isDigit(c)) {
-                number()
-            } else if (isAlpha(c)) {
-                identifier()
-            } else if (c !in WHITESPACES) {
-                throw error("Unexpected character.")
+            else -> {
+                if (matchAll("_=")) {
+                    addToken(UNDERSCORE_EQUAL)
+                } else if (isStringDelim(c)) {
+                    string(c, true)
+                } else if (isDigit(c)) {
+                    number()
+                } else if (isAlpha(c)) {
+                    identifier()
+                } else if (c !in WHITESPACES) {
+                    throw error("Unexpected character.")
+                }
             }
         }
     }

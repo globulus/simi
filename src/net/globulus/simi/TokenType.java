@@ -13,7 +13,7 @@ public enum TokenType implements Codifiable {
 
   // One or two character tokens.
   BANG, BANG_BANG, BANG_EQUAL,
-  EQUAL, EQUAL_EQUAL,
+  EQUAL, UNDERSCORE_EQUAL, EQUAL_EQUAL,
   GREATER, GREATER_EQUAL,
   LESS, LESS_EQUAL,
   LESS_GREATER,
@@ -56,6 +56,10 @@ public enum TokenType implements Codifiable {
         return ",";
       case DOT:
         return ".";
+      case DOT_DOT:
+        return "..";
+      case DOT_DOT_DOT:
+        return "...";
       case COLON:
         return ":";
       case NEWLINE:
@@ -68,6 +72,8 @@ public enum TokenType implements Codifiable {
         return "!=";
       case EQUAL:
         return "=";
+      case UNDERSCORE_EQUAL:
+        return "_=";
       case EQUAL_EQUAL:
         return "==";
       case GREATER:
@@ -116,6 +122,8 @@ public enum TokenType implements Codifiable {
         return "$=";
       case QUESTION:
         return "?";
+      case QUESTION_BANG:
+        return "?!";
       case QUESTION_QUESTION:
         return "??";
       case QUESTION_QUESTION_EQUAL:

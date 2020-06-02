@@ -807,13 +807,14 @@ class Compiler {
 
     private fun assignment(): Boolean {
         or(false) // left-hand side
-        if (match(EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL,
-                        SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
+        if (match(EQUAL, UNDERSCORE_EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL,
+                        SLASH_EQUAL, SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous
             if (lastChunk?.opCode == GET_SUPER) {
                 throw error(equals, "Setters aren't allowed with 'super'.")
             }
-            if (equals.type == EQUAL) {
+            if (equals.type == EQUAL || equals.type == UNDERSCORE_EQUAL) {
+                val isConst = (equals.type == UNDERSCORE_EQUAL)
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk()
                     or(true)
@@ -821,13 +822,13 @@ class Compiler {
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
                         val name = lastChunk!!.data[0] as String
-                        warn(previous, "Name shadowed: $name.")
-                        declareLocal(name)
-                        rollBackLastChunk()
+                        throw error(previous, "Name shadowed: $name.")
+//                        declareLocal(name, isConst)
+//                        rollBackLastChunk()
                     } else if (lastChunk?.opCode != CONST_ID) {
                         throw error(equals, "Expected an ID for var declaration!")
                     } else {
-                        declareLocal(lastChunk!!.data[1] as String)
+                        declareLocal(lastChunk!!.data[1] as String, isConst)
                         rollBackLastChunk()
                     }
                     or(true) // push the value on the stack
@@ -1697,7 +1698,7 @@ class Compiler {
         debugInfoLines.putIfAbsent(token.line, byteCode.size)
     }
 
-    private fun declareLocal(name: String): Local {
+    private fun declareLocal(name: String, isConst: Boolean = false): Local {
         val end = locals.size
         for (i in end - 1 downTo 0) {
             val local = locals[i]
@@ -1709,6 +1710,9 @@ class Compiler {
             }
         }
         val l = Local(name, end, scopeDepth, false)
+        if (isConst) {
+            l.isConst = true
+        }
         locals += l
         return l
     }
@@ -1753,22 +1757,26 @@ class Compiler {
         val local = findLocal(compiler.enclosing!!, name)
         if (local != null) {
             local.isCaptured = true
-            return addUpvalue(compiler, local.sp, true, name)
+            return addUpvalue(compiler, local.sp, true, name, local.isConst)
         }
         val upvalue = resolveUpvalue(compiler.enclosing!!, name)
         if (upvalue != null) {
-            return addUpvalue(compiler, upvalue.sp, false, name)
+            return addUpvalue(compiler, upvalue.sp, false, name, upvalue.isConst)
         }
         return null
     }
 
-    private fun addUpvalue(compiler: Compiler, sp: Int, isLocal: Boolean, name: String): Upvalue {
+    private fun addUpvalue(compiler: Compiler,
+                           sp: Int,
+                           isLocal: Boolean,
+                           name: String,
+                           isConst: Boolean): Upvalue {
         for (upvalue in compiler.upvalues) {
             if (upvalue.sp == sp && upvalue.isLocal == isLocal) {
                 return upvalue
             }
         }
-        val upvalue = Upvalue(sp, isLocal, name)
+        val upvalue = Upvalue(sp, isLocal, name, isConst)
         compiler.upvalues += upvalue
         return upvalue
     }
@@ -1850,15 +1858,14 @@ class Compiler {
                              val depth: Int,
                              var isCaptured: Boolean
     ) {
-        val isConst = (name == Constants.SELF || CONST_IDENTIFIER.matcher(name).matches())
+        var isConst = (name == Constants.SELF || CONST_IDENTIFIER.matcher(name).matches())
     }
 
     private data class Upvalue(val sp: Int,
                                val isLocal: Boolean,
-                               val name: String
-    ) {
-        val isConst = CONST_IDENTIFIER.matcher(name).matches()
-    }
+                               val name: String,
+                               val isConst: Boolean
+    )
 
     private open class ActiveLoop(val start: Int, val depth: Int) {
         val breaks = mutableListOf<Chunk>()
