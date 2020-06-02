@@ -333,11 +333,19 @@ print "jajaj"
 
 do {
     print "hohoho"
-    i = funcReturningException() ?! { break it }
+    i = funcReturningException() ?! {
+        c = 5
+        print c
+        break it
+        }
     print "nope"
 } else {
     print "exception \(it)"
 }
+
+class_ Final
+
+class Sc is Final
 
 #
 #class OverridesGet {

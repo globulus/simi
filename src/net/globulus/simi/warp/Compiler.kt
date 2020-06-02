@@ -292,12 +292,18 @@ class Compiler {
 
     private fun classDeclaration(inner: Boolean) {
         val opener = previous
+        val kind = when (opener.type) {
+            CLASS_FINAL -> SClass.Kind.FINAL
+            CLASS -> SClass.Kind.REGULAR
+            CLASS_OPEN -> SClass.Kind.OPEN
+            else -> throw IllegalStateException("WTF")
+        }
         var name = consumeVar("Expect class name.")
         if (inner) {
             name = "${currentClass!!.name}.$name"
         }
         declareLocal(name)
-        emitClass(name, inner)
+        emitClass(name, inner, kind)
         val superclasses = mutableListOf<String>()
         currentClass = ClassCompiler(previous.lexeme, currentClass)
 
@@ -723,11 +729,11 @@ class Compiler {
             consume(LEFT_BRACE, "Expect '{' to start else clause of do-else block.")
             val elseSkip = emitJump(JUMP)
             end = byteCode.size
-            emitCode(DUPLICATE) // because some weird thing is happening with local declaration, don't have time to debug right now
             beginScope()
             declareLocal(Constants.IT)
             block(false)
             endScope(true)
+//            emitCode(POP) // to handle the DUPLICATE above
             patchJump(elseSkip)
         } else {
             end = byteCode.size
@@ -1545,12 +1551,13 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, f))
     }
 
-    private fun emitClass(name: String, inner: Boolean) {
+    private fun emitClass(name: String, inner: Boolean, kind: SClass.Kind) {
         val opCode = if (inner) INNER_CLASS else OpCode.CLASS
         var size = byteCode.put(opCode)
+        size += byteCode.put(kind.byte)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
-        pushLastChunk(Chunk(opCode, size, constIdx, name))
+        pushLastChunk(Chunk(opCode, size, kind, constIdx, name))
     }
 
     private fun emitMethod(name: String) {

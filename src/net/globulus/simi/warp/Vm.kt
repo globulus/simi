@@ -110,8 +110,9 @@ internal class Vm {
                     }
                 }
                 CLASS -> {
+                    val kind = SClass.Kind.from(nextByte)
                     val name = nextString
-                    val klass = SClass(name)
+                    val klass = SClass(name, kind)
                     if (numClass == null && name == Constants.CLASS_NUM) {
                         numClass = klass
                     } else if (strClass == null && name == Constants.CLASS_STRING) {
@@ -130,8 +131,9 @@ internal class Vm {
                 METHOD -> defineMethod(nextString)
                 NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
                 INNER_CLASS -> {
+                    val kind = SClass.Kind.from(nextByte)
                     val name = nextString
-                    val klass = SClass(name)
+                    val klass = SClass(name, kind)
                     val outerClass = peek() as SClass
                     // Inner classes have qualified names such as Range.Iterator, but we want to store the
                     // field with the last component name only
@@ -574,6 +576,9 @@ internal class Vm {
         val superclass = pop()
         if (superclass !is SClass) {
             throw runtimeError("Superclass must be a class.")
+        }
+        if (superclass.kind == SClass.Kind.FINAL) {
+            throw runtimeError("Can't inherit from a final superclass ${superclass.name}")
         }
         val subclass = peek()
         (subclass as SClass).let {
