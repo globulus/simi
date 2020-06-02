@@ -170,7 +170,7 @@ class Compiler {
 
     private fun funDeclaration() {
         val function = function(Parser.KIND_FUNCTION)
-        declareLocal(function.name)
+        declareLocal(function.name, true)
     }
 
     private fun function(kind: String, providedName: String? = null): Function {
@@ -302,7 +302,7 @@ class Compiler {
         if (inner) {
             name = "${currentClass!!.name}.$name"
         }
-        declareLocal(name)
+        declareLocal(name, true)
         emitClass(name, inner, kind)
         val superclasses = mutableListOf<String>()
         currentClass = ClassCompiler(previous.lexeme, currentClass)
