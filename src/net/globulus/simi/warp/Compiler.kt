@@ -723,26 +723,24 @@ class Compiler {
     private fun doBlock(tokens: List<Token>) {
         loops.push(DoBlock(scopeDepth))
         compileNested(tokens, false)
-        emitCode(OpCode.NIL) // need to push this to have something to pop below if no breaks were reached
-        val end: Int
+        val breakJumpLoc: Int
         if (match(ELSE)) {
             consume(LEFT_BRACE, "Expect '{' to start else clause of do-else block.")
             val elseSkip = emitJump(JUMP)
-            end = byteCode.size
+            emitCode(OpCode.NIL) // need to push this to have something to pop below if no breaks were reached
+            breakJumpLoc = byteCode.size
             beginScope()
             declareLocal(Constants.IT)
             block(false)
             endScope(true)
-//            emitCode(POP) // to handle the DUPLICATE above
             patchJump(elseSkip)
         } else {
-            end = byteCode.size
-            emitCode(POP) // pop whatever was pushed by a break
+            breakJumpLoc = byteCode.size
         }
         val breaksToPatch = loops.pop().breaks
         for (pos in breaksToPatch) {
-            pos.data[1] = end
-            byteCode.setInt(end, pos.data[0] as Int)
+            pos.data[1] = breakJumpLoc
+            byteCode.setInt(breakJumpLoc, pos.data[0] as Int)
         }
     }
 
@@ -770,13 +768,15 @@ class Compiler {
             throw error(previous, "Cannot 'break' outside of a loop or do block!")
         }
         val activeLoop = loops.peek()
-        // Discards scopes up to the loop level (hence + 1)
-        for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
-            discardLocals(depth, emitPops = true, keepLocals = true)
-        }
         if (activeLoop is DoBlock) { // do block breaks can return values
-            emitCode(POP) // pop the nil that we put on earlier in case nobody breaks directly
             consumeReturnValue(true)
+            val popCount = locals.count { it.depth >= activeLoop.depth + 1 }
+            emitPopUnder(popCount)
+        } else {
+            // Discards scopes up to the loop level (hence + 1)
+            for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
+                discardLocals(depth, emitPops = true, keepLocals = true)
+            }
         }
         val chunk = emitJump(JUMP)
         activeLoop.breaks += chunk
@@ -808,7 +808,34 @@ class Compiler {
     }
 
     private fun expression(): Boolean {
-        return assignment()
+        return rescue()
+    }
+
+    private fun rescue(): Boolean {
+        val isExpr = assignment()
+        if (match(QUESTION_BANG)) {
+            val operator = previous
+            val elseChunk = emitJump(JUMP_IF_EXCEPTION)
+            if (isExpr) {
+                emitCode(POP) // pop the expr value since rescue always returns false, meaning expressionStatement won't pop
+            }
+            val endChunk = emitJump(JUMP)
+            patchJump(elseChunk)
+            if (!match(LEFT_BRACE)) {
+                throw error(previous, "Expect '{' to start rescue block.")
+            }
+            beginScope()
+            declareLocal(Constants.IT)
+            if (!isExpr) {
+                emitCode(DUPLICATE) // copy the value at the top of the stack, last assigned
+            }
+            block(false)
+            endScope()
+            patchJump(endChunk)
+            return false
+        } else {
+            return isExpr
+        }
     }
 
     private fun assignment(): Boolean {
@@ -831,8 +858,10 @@ class Compiler {
                         throw error(previous, "Name shadowed: $name.")
 //                        declareLocal(name, isConst)
 //                        rollBackLastChunk()
+                    } else if (lastChunk?.opCode == GET_LOCAL) {
+                        throw error(equals, "Variable redeclared!")
                     } else if (lastChunk?.opCode != CONST_ID) {
-                        throw error(equals, "Expected an ID for var declaration!")
+                        throw error(equals, "Expect an ID for var declaration!")
                     } else {
                         declareLocal(lastChunk!!.data[1] as String, isConst)
                         rollBackLastChunk()
@@ -936,10 +965,10 @@ class Compiler {
     }
 
     private fun comparison(irsoa: Boolean) {
-        rescue(irsoa)
+        range(irsoa)
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, LESS_GREATER)) {
             val operator = previous
-            rescue(irsoa)
+            range(irsoa)
             if (operator.type == LESS_GREATER) {
                 emitInvoke(Constants.MATCHES, 1)
             } else {
@@ -951,27 +980,6 @@ class Compiler {
                     else -> throw IllegalArgumentException("WTF")
                 })
             }
-        }
-    }
-
-    private fun rescue(irsoa: Boolean) {
-       range(irsoa)
-        while (match(QUESTION_BANG)) {
-            val operator = previous
-            val elseChunk = emitJump(JUMP_IF_EXCEPTION)
-            val endChunk = emitJump(JUMP)
-            patchJump(elseChunk)
-            if (irsoa) {
-                emitCode(DUPLICATE)
-            }
-            val isRealExpr = expressionOrExpressionBlock(listOf(Constants.IT)) {
-                range(irsoa)
-                true
-            }
-            if (!isRealExpr) {
-                throw error(operator, "A rescue expression must return a value.")
-            }
-            patchJump(endChunk)
         }
     }
 

@@ -265,7 +265,7 @@ class SomeException is Exception
 someExceptionMessage = "Some exception"
 def funcReturningException = SomeException(someExceptionMessage)
 test("returning exception", someExceptionMessage, funcReturningException().message)
-test("rescue alternative value", "alternative", funcReturningException() ?! "alternative")
+test("rescue alternative value", "alternative", =funcReturningException() ?! { return "alternative"} )
 def rescueFunctionWithValueAssign {
     value = funcReturningException() ?! {
         s = "exception \(it.message)"
@@ -305,47 +305,62 @@ def funcWithReturnTypeCheckIncorrect is String {
 }
 test("return type check incorrect type", "tme", funcWithReturnTypeCheckIncorrect().message)
 
-do {
-    print "in do block"
-    print "yup yup"
+def basicDoBlockTest {
+    s = ""
+    do {
+        s += "in do block"
+        s += " yup yup"
+    }
+    return s
 }
-
-do {
-    print "another do"
-} else {
-    print "nope"
+test("basic do block", "in do block yup yup", basicDoBlockTest())
+def basicDoElseBlockTest {
+    s = ""
+    do {
+        s += "another do"
+    } else {
+        s += "nope"
+    }
+    return s
 }
+test("basic do block", "another do", basicDoElseBlockTest())
 
-do {
-    print "3rd do"
-    break
-    print "nope"
-} else {
-    print "yup, nil == " + it
-}
-
-do {
-    break 10
-    print "nope"
-    print "nono"
-}
-print "jajaj"
-
-do {
-    print "hohoho"
-    i = funcReturningException() ?! {
-        c = 5
-        print c
-        break it
+def doElseBreakIt {
+    s = ""
+    do {
+        ab = 2
+        q = funcReturningException() ?! {
+            c = 6
+            s += it
+            s += c
+            break it
         }
-    print "nope"
-} else {
-    print "exception \(it)"
+        s += "nope"
+    } else {
+        c = 6
+        s += c
+        s += "exception \(it)"
+        s += c
+    }
+    return s
 }
+test("do else break it", "SomeException instance66exception SomeException instance6", doElseBreakIt())
 
-class_ Final
-
-class Sc is Final
+def doElseBreakNil {
+    s = ""
+    do {
+        s += "3rd do"
+        break
+        s += "nope"
+    } else {
+        c = 6
+        s += "yup, nil == " + it
+        s += c
+        s += it
+    }
+    return s
+}
+test("do else break nil", "3rd doyup, nil == nil6nil", doElseBreakNil())
 
 #
 #class OverridesGet {
