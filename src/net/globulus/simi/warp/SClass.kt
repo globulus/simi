@@ -2,7 +2,7 @@ package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
 
-class SClass(val name: String) : Fielded {
+class SClass(val name: String, val kind: Kind) : Fielded {
     override val fields: MutableMap<String, Any> = mutableMapOf()
     val superclasses: MutableMap<String, SClass> = mutableMapOf()
 
@@ -43,5 +43,15 @@ class SClass(val name: String) : Fielded {
 
     override fun toString(): String {
         return name
+    }
+
+    enum class Kind {
+        FINAL, REGULAR, OPEN;
+
+        val byte = ordinal.toByte()
+
+        companion object {
+            fun from(byte: Byte) = values()[byte.toInt()]
+        }
     }
 }
