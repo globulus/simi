@@ -51,6 +51,8 @@ enum class OpCode {
     GET_SUPER,
     SUPER_INVOKE,
     SELF_DEF,
+    OBJECT,
+    LIST,
     ;
 
     val byte = ordinal.toByte()

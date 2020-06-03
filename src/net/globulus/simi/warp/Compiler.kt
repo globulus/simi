@@ -1148,11 +1148,7 @@ class Compiler {
             emitInt(1)
         } else if (match(NIL)) {
             emitCode(OpCode.NIL)
-        }
-//        if (match(TokenType.NATIVE)) {
-//            return Literal(Native())
-//        }
-        else if (match(NUMBER, STRING)) {
+        } else if (match(NUMBER, STRING)) {
             val token = previous
             when (token.literal) {
                 is SimiValue.Number -> {
@@ -1186,11 +1182,9 @@ class Compiler {
                 }
                 variable()
             }
-        }
-//        if (match(TokenType.LEFT_BRACKET, TokenType.DOLLAR_LEFT_BRACKET)) {
-//            return objectLiteral()
-//        }
-        else if (match(DEF) || peekSequence(EQUAL)) {
+        } else if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {
+            objectLiteral(irsoa)
+        } else if (match(DEF) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(IDENTIFIER)) {
             val name = previous.lexeme
@@ -1204,8 +1198,7 @@ class Compiler {
                     checkIfUnidentified()
                 }
             }
-        }
-        else if (match(LEFT_PAREN)) {
+        } else if (match(LEFT_PAREN)) {
             expression()
             consume(RIGHT_PAREN, "Expect ')' after expression.")
         }
@@ -1234,6 +1227,37 @@ class Compiler {
                 emitId(name)
             }
         }
+    }
+
+    private fun objectLiteral(irsoa: Boolean) {
+        val opener = previous
+        var count = 0
+        var isList: Boolean? = null
+        if (!check(RIGHT_BRACKET)) {
+            matchAllNewlines()
+            do {
+                matchAllNewlines()
+                if (isList == null) { // we still need to determine if it's a list or an object
+                    isList = !(peekSequence(IDENTIFIER, EQUAL) || peekSequence(STRING, EQUAL))
+                }
+                if (isList) {
+                    expression()
+                } else {
+                    emitConst(if (match(STRING)) {
+                        previous.literal.string.toString()
+                    } else {
+                       consumeVar("Expect identifier or string as object key.")
+                    })
+                    consume(EQUAL, "Expect '=' between object key and value pair.")
+                    expression()
+                }
+                matchAllNewlines()
+                count++
+            } while (match(COMMA))
+            matchAllNewlines()
+        }
+        consume(RIGHT_BRACKET, "Expect ']' at the end of object.")
+        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList!!, count)
     }
 
 //    private fun objectLiteral(): Expr {
@@ -1716,6 +1740,14 @@ class Compiler {
         emitReturn {
             emitCode(OpCode.NIL)
         }
+    }
+
+    private fun emitObjectLiteral(isMutable: Boolean, isList: Boolean, propCount: Int) {
+        val opCode = if (isList) LIST else OBJECT
+        var size = byteCode.put(opCode)
+        size += byteCode.put(if (isMutable) 1.toByte() else 0.toByte())
+        size += byteCode.putInt(propCount)
+        pushLastChunk(Chunk(opCode, size, isMutable, propCount))
     }
 
     private fun pushLastChunk(chunk: Chunk) {

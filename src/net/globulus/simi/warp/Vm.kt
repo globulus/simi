@@ -12,12 +12,6 @@ internal class Vm {
     private var stackSize = INITIAL_STACK_SIZE
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
 
-    private var numClass: SClass? = null
-    private var strClass: SClass? = null
-    private var classClass: SClass? = null
-    private var funcClass: SClass? = null
-    private var exceptionClass: SClass? = null
-
     private var fp = 0
         set(value) {
             field = value
@@ -123,6 +117,10 @@ internal class Vm {
                         funcClass = klass
                     } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
                         exceptionClass = klass
+                    } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
+                        objectClass = klass
+                    } else if (listClass == null && name == Constants.CLASS_LIST) {
+                        listClass = klass
                     }
                     push(klass)
                 }
@@ -151,6 +149,7 @@ internal class Vm {
                 GET_SUPER -> getSuper()
                 SUPER_INVOKE -> invokeSuper(nextString, nextInt)
                 SELF_DEF -> push(frame.closure.function)
+                OBJECT, LIST -> objectOrList(code == LIST, nextByte == 1.toByte(), nextInt)
             }
         }
     }
@@ -406,7 +405,7 @@ internal class Vm {
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
-                stack[sp - argCount - 1] = Instance(callee)
+                stack[sp - argCount - 1] = Instance(callee, callee.kind == SClass.Kind.OPEN)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
                     is Closure -> callClosure(init, argCount)
@@ -497,6 +496,22 @@ internal class Vm {
         set(argCount, self!!) // bind the super method to self
         invokeFromClass(superclass, name, argCount)
         runLocal()
+    }
+
+    private fun objectOrList(isList: Boolean, isMutable: Boolean, propCount: Int) {
+        push(Instance(if (isList) listClass!! else objectClass!!, isMutable).apply {
+            var i = propCount - 1
+            while (i >= 0) {
+                val value = pop()
+                val key = if (isList) {
+                    i.toString()
+                } else {
+                    pop() as String
+                }
+                fields[key] = value
+                i--
+            }
+        })
     }
 
     private fun captureUpvalue(sp: Int): Upvalue {
@@ -687,19 +702,19 @@ internal class Vm {
         } else if (value is Instance || value is SClass) {
             return value as Fielded
         } else if (value is Long || value is Double) {
-            val boxedNum = Instance(numClass!!).apply {
+            val boxedNum = Instance(numClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
             }
             stack[loc] = boxedNum
             return boxedNum
         } else if (value is String) {
-            val boxedStr = Instance(strClass!!).apply {
+            val boxedStr = Instance(strClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
             }
             stack[loc] = boxedStr
             return boxedStr
         } else if (value is Closure) {
-            val boxedClosure = Instance(funcClass!!).apply {
+            val boxedClosure = Instance(funcClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
                 fields[Constants.NAME] = value.function.name
                 fields[Constants.ARITY] = value.function.arity
@@ -750,5 +765,13 @@ internal class Vm {
         private const val INITIAL_STACK_SIZE = 1024
         private const val STACK_GROWTH_FACTOR = 4
         private const val MAX_FRAMES = 64
+
+        internal var numClass: SClass? = null
+        internal var strClass: SClass? = null
+        internal var classClass: SClass? = null
+        internal var funcClass: SClass? = null
+        internal var exceptionClass: SClass? = null
+        internal var objectClass: SClass? = null
+        internal var listClass: SClass? = null
     }
 }

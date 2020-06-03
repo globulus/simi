@@ -23,6 +23,8 @@ class TypeMismatchException is Exception {
     }
 }
 
+class IllegalArgumentException is Exception
+
 class Range {
     init(@min, @max)
 
@@ -59,6 +61,11 @@ class Num {
 }
 
 class String
+
+class List {
+    native get(key)
+    native set(key, value)
+}
 
 class Date {
     native init
@@ -380,6 +387,11 @@ def testImplicitSelf {
     return SelfTesting().w()
 }
 test("implicit self", "5623", testImplicitSelf())
+
+obj = [a = 1, b = 3, c = 5]
+print obj
+lst = $[1, 2, 3, 4, 5]
+print lst
 
 #
 #class OverridesGet {
