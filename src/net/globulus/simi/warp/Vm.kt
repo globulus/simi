@@ -180,7 +180,9 @@ internal class Vm {
             push(prop)
             push(value)
             call(peek(2), 2)
-            runLocal()
+            if (obj.klass.overridenSet !is NativeFunction) { // native functions are invoked automatically
+                runLocal()
+            }
             sp-- // A setter is still a statement so we need to remove the call result from the stack
         } else {
             setPropRaw(obj, prop, value)
@@ -200,7 +202,9 @@ internal class Vm {
             bindMethod(obj, obj.klass, obj.klass.overridenGet, Constants.GET)
             push(nameValue)
             call(peek(1), 1)
-            runLocal()
+            if (obj.klass.overridenGet !is NativeFunction) { // native functions are invoked automatically
+                runLocal()
+            }
         } else {
             getPropRaw(obj, nameValue.toString())
         }

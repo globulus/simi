@@ -14,12 +14,12 @@ class Date : NativeModule {
                     return when (funcName) {
                         "get" -> NativeFunction(1) {
                             val instance = it[0] as Instance
-                            val key = it[1] as Int
+                            val key = it[1] as Long
                             instance.fields[key.toString()]
                         }
                         "set" -> NativeFunction(2) {
                             val instance = it[0] as Instance
-                            val key = it[1] as Int
+                            val key = it[1] as Long
                             val value = it[2] as Any
                             instance.fields[key.toString()] = value
                             null

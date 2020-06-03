@@ -1,25 +1,42 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
+import net.globulus.simi.warp.native.NativeFunction
 
 class SClass(val name: String, val kind: Kind) : Fielded {
     override val fields: MutableMap<String, Any> = mutableMapOf()
     val superclasses: MutableMap<String, SClass> = mutableMapOf()
 
-    var overridenGet: Closure? = null
+    var overridenGet: Any? = null
         private set
-    var overridenSet: Closure? = null
+    var overridenSet: Any? = null
         private set
 
     fun finalizeDeclr() {
-        val getMethod = fields[Constants.GET] as? Closure
-        overridenGet = if (getMethod?.function?.arity == 1) {
+        val getMethod = when (val getField = fields[Constants.GET]) {
+            is Closure, is NativeFunction -> getField
+            else -> null
+        }
+        val getArity = when (getMethod) {
+            is Closure -> getMethod.function.arity
+            is NativeFunction -> getMethod.arity
+            else -> null
+        }
+        overridenGet = if (getArity == 1) {
             getMethod
         } else {
             superclasses.values.firstOrNull { it.overridenGet != null }?.overridenGet
         }
-        val setMethod = fields[Constants.SET] as? Closure
-        overridenSet = if (setMethod?.function?.arity == 2) {
+        val setMethod = when (val setField = fields[Constants.SET]) {
+            is Closure, is NativeFunction -> setField
+            else -> null
+        }
+        val setArity = when (setMethod) {
+            is Closure -> setMethod.function.arity
+            is NativeFunction -> setMethod.arity
+            else -> null
+        }
+        overridenSet = if (setArity == 2) {
             setMethod
         } else {
             superclasses.values.firstOrNull { it.overridenSet != null }?.overridenSet

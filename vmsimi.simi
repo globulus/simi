@@ -392,6 +392,8 @@ obj = [a = 1, b = 3, c = 5]
 print obj
 lst = $[1, 2, 3, 4, 5]
 print lst
+lst.2 = 10
+print lst
 
 #
 #class OverridesGet {
