@@ -65,6 +65,7 @@ class String
 class List {
     native get(key)
     native set(key, value)
+    native iterate
 }
 
 class Date {
@@ -394,7 +395,9 @@ lst = $[1, 2, 3, 4, 5]
 print lst
 lst.2 = 10
 print lst
-obj.a = 3
+for i in lst {
+    print i
+}
 
 #
 #class OverridesGet {

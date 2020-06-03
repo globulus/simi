@@ -1131,6 +1131,13 @@ class Compiler {
     }
 
     private fun finishGet(wasSuper: Boolean) {
+//        if (lastChunk?.opCode == CONST_ID || lastChunk?.opCode == CONST) {
+//            if ((lastChunk?.data?.get(1) as? String)?.startsWith(Constants.PRIVATE) == true) {
+//                chunks.pop()
+//                val chunkBeforeLast = chunks.peekLast()
+//                chunks.push(lastChunk!!)
+//            }
+//        }
         if (wasSuper) {
             if (lastChunk?.opCode != CONST_ID) {
                 throw error(previous, "'super' get can only involve an identifier.")

@@ -4,10 +4,11 @@ import net.globulus.simi.Constants
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
+import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import kotlin.math.round
 
-internal class Vm {
+class Vm {
     private var sp = 0
     private var stackSize = INITIAL_STACK_SIZE
     private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
@@ -30,13 +31,17 @@ internal class Vm {
         callClosure(closure, 0)
         try {
             run(0)
-            printStack()
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
     private fun run(breakAtFp: Int, once: Boolean = false) {
         loop@ while (true) {
-            val code = nextCode
+            val code: OpCode
+            try {
+                code = nextCode
+            } catch (e: BufferUnderflowException) {
+                break@loop
+            }
             when (code) {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
@@ -174,7 +179,7 @@ internal class Vm {
         val value = pop()
         val prop = pop()
         val obj = pop()
-        if (obj is Instance && !obj.mutable && obj != self) {
+        if (obj is Instance && !obj.mutable && obj != self) { // obj != self because @a = 3 must still work from inside of object's methods
             throw runtimeError("Attempting to set on an immutable object!")
         }
         if (obj is Instance && obj.klass.overridenSet != null) {
@@ -183,9 +188,6 @@ internal class Vm {
             push(prop)
             push(value)
             call(peek(2), 2)
-            if (obj.klass.overridenSet !is NativeFunction) { // native functions are invoked automatically
-                runLocal()
-            }
             sp-- // A setter is still a statement so we need to remove the call result from the stack
         } else {
             setPropRaw(obj, prop, value)
@@ -205,9 +207,6 @@ internal class Vm {
             bindMethod(obj, obj.klass, obj.klass.overridenGet, Constants.GET)
             push(nameValue)
             call(peek(1), 1)
-            if (obj.klass.overridenGet !is NativeFunction) { // native functions are invoked automatically
-                runLocal()
-            }
         } else {
             getPropRaw(obj, nameValue.toString())
         }
@@ -363,7 +362,6 @@ internal class Vm {
                 push(b)
                 val foundMethod = invoke(Constants.EQUALS, 1, false)
                 if (foundMethod) {
-                    runLocal()
                     !isFalsey(pop())
                 } else {
                     sp -= 2 // pop the args
@@ -430,6 +428,7 @@ internal class Vm {
         }
         callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
         fp++
+        runLocal()
     }
 
     private fun handleOptionalParams(f: OptionalParamsFunc, argCount: Int) {
@@ -472,14 +471,21 @@ internal class Vm {
     }
 
     private fun invokeFromClass(klass: SClass?, name: String, argCount: Int, checkError: Boolean = true): Boolean {
-        return (klass?.fields?.get(name) as? Closure)?.let { method ->
-            callClosure(method, argCount)
-            true
-        } ?: run {
-            if (checkError) {
-                throw runtimeError("Undefined method $name.")
-            } else {
-                false
+        return when (val method = klass?.fields?.get(name)) {
+            is Closure -> {
+                callClosure(method, argCount)
+                true
+            }
+            is NativeFunction -> {
+                callNative(method, argCount)
+                true
+            }
+            else -> {
+                if (checkError) {
+                    throw runtimeError("Undefined method $name.")
+                } else {
+                    false
+                }
             }
         }
     }
@@ -502,7 +508,6 @@ internal class Vm {
         }
         set(argCount, self!!) // bind the super method to self
         invokeFromClass(superclass, name, argCount)
-        runLocal()
     }
 
     private fun objectOrList(isList: Boolean, isMutable: Boolean, propCount: Int) {
@@ -518,6 +523,7 @@ internal class Vm {
                 fields[key] = value
                 i--
             }
+            fields[Constants.COUNT] = propCount
         })
     }
 
@@ -617,7 +623,7 @@ internal class Vm {
         val klass = peek()
         (klass as SClass).let {
             for (field in mixin.fields) {
-                if (!field.key.startsWith(Constants.IMPLICIT)) { // Add public fields only
+                if (!field.key.startsWith(Constants.PRIVATE)) { // Add public fields only
                     it.fields[field.key] = field.value
                 }
             }
@@ -773,12 +779,19 @@ internal class Vm {
         private const val STACK_GROWTH_FACTOR = 4
         private const val MAX_FRAMES = 64
 
-        internal var numClass: SClass? = null
-        internal var strClass: SClass? = null
-        internal var classClass: SClass? = null
-        internal var funcClass: SClass? = null
-        internal var exceptionClass: SClass? = null
-        internal var objectClass: SClass? = null
-        internal var listClass: SClass? = null
+        var numClass: SClass? = null
+            internal set
+        var strClass: SClass? = null
+            internal set
+        var classClass: SClass? = null
+            internal set
+        var funcClass: SClass? = null
+            internal set
+        var exceptionClass: SClass? = null
+            internal set
+        var objectClass: SClass? = null
+            internal set
+        var listClass: SClass? = null
+            internal set
     }
 }

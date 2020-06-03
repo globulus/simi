@@ -1,7 +1,9 @@
 package net.globulus.simi.api
 
+import net.globulus.simi.Constants
 import net.globulus.simi.warp.Instance
 import net.globulus.simi.warp.SClass
+import net.globulus.simi.warp.Vm
 import net.globulus.simi.warp.native.NativeClass
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModule
@@ -12,17 +14,33 @@ class Date : NativeModule {
             "List" to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
-                        "get" -> NativeFunction(1) {
+                        Constants.GET -> NativeFunction(1) {
                             val instance = it[0] as Instance
                             val key = it[1] as Long
                             instance.fields[key.toString()]
                         }
-                        "set" -> NativeFunction(2) {
+                        Constants.SET -> NativeFunction(2) {
                             val instance = it[0] as Instance
                             val key = it[1] as Long
                             val value = it[2] as Any
                             instance.fields[key.toString()] = value
                             null
+                        }
+                        Constants.ITERATE -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            val count = instance.fields[Constants.COUNT] as Int
+                            var i = 0
+                            Instance(Vm.objectClass!!, false).apply {
+                                fields[Constants.NEXT] = NativeFunction(0) {
+                                    if (i == count) {
+                                        null
+                                    } else {
+                                        val value = instance.fields[i.toString()]
+                                        i++
+                                        value
+                                    }
+                                }
+                            }
                         }
                         else -> null
                     }

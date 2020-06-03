@@ -26,6 +26,7 @@ public final class Constants {
     public static final String NAME = "name";
     public static final String ARITY = "arity";
     public static final String IT = "it";
+    public static final String COUNT = "count";
 
     public static final String CLASS_OBJECT = "Object";
     public static final String CLASS_FUNCTION = "Function";
