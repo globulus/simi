@@ -362,6 +362,25 @@ def doElseBreakNil {
 }
 test("do else break nil", "3rd doyup, nil == nil6nil", doElseBreakNil())
 
+def testImplicitSelf {
+    class SelfTesting {
+        q = 5
+        def r = 3
+        def _p = 2
+        def w {
+            s = "" + q
+            q = 6
+            s += q
+            s += _p()
+            c = r()
+            s += c
+            return s
+        }
+    }
+    return SelfTesting().w()
+}
+test("implicit self", "5623", testImplicitSelf())
+
 #
 #class OverridesGet {
 #    def get(val) {

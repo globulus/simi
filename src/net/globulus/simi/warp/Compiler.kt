@@ -39,6 +39,7 @@ class Compiler {
     private var returnVerificationVarCounter = 0
 
     private var currentClass: ClassCompiler? = null
+    private val compiledClasses = mutableMapOf<String, ClassCompiler>()
 
     private var lastChunk: Chunk? = null
     private val chunks: Deque<Chunk> = LinkedList()
@@ -290,7 +291,10 @@ class Compiler {
         return ArgScanResult(args, prependedTokens, optionalParamsStart, defaultValues)
     }
 
-    private fun classDeclaration(inner: Boolean) {
+    /**
+     * @return The name of the class
+     */
+    private fun classDeclaration(inner: Boolean): String {
         val opener = previous
         val kind = when (opener.type) {
             CLASS_FINAL -> SClass.Kind.FINAL
@@ -299,6 +303,7 @@ class Compiler {
             else -> throw IllegalStateException("WTF")
         }
         var name = consumeVar("Expect class name.")
+        val returnName = name // it's different because inner classes have the name prepended
         if (inner) {
             name = "${currentClass!!.name}.$name"
         }
@@ -324,6 +329,7 @@ class Compiler {
                 && name != Constants.CLASS_CLASS) {
             superclasses += Constants.CLASS_OBJECT
         }
+        currentClass?.superclasses = superclasses
         currentClass?.firstSuperclass = superclasses.firstOrNull()
 
         // Reverse the superclasses so that the first one listed is the last one inherited, meaning
@@ -356,14 +362,18 @@ class Compiler {
                     continue
                 }
                 if (match(CLASS, CLASS_OPEN, CLASS_FINAL)) {
-                    classDeclaration(true)
+                    val className = classDeclaration(true)
+                    currentClass?.declaredFields?.add(className)
                 } else if (match(DEF)) {
-                    method()
+                    val methodName = method()
+                    currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
-                    nativeMethod()
+                    val methodName = nativeMethod()
+                    currentClass?.declaredFields?.add(methodName)
                 } else if (match(IDENTIFIER)) {
                     val fieldToken = previous
                     val fieldName = fieldToken.lexeme
+                    currentClass?.declaredFields?.add(fieldName)
                     if (fieldName == Constants.INIT) {
                         method(fieldName)
                         hasInit = true
@@ -389,17 +399,20 @@ class Compiler {
         }
 
         emitCode(CLASS_DECLR_DONE)
+        compiledClasses[name] = currentClass!!
         currentClass = currentClass?.enclosing
+        return returnName
     }
 
-    private fun method(providedName: String? = null) {
+    private fun method(providedName: String? = null): String {
         val name = providedName ?: consumeVar("Expect method name.")
         val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
         function(kind, name)
         emitMethod(name)
+        return name
     }
 
-    private fun nativeMethod() {
+    private fun nativeMethod(): String {
         val name = consumeVar("Expect method name.")
         val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
         consume(NEWLINE, "Expect newline after native method declaration.")
@@ -411,6 +424,7 @@ class Compiler {
             throw error(previous, "Native function $name expects ${nativeFunction.arity} args but got ${args.size}.")
         }
         emitNativeMethod(name, nativeFunction)
+        return name
     }
 
 //    private fun annotation(): Stmt.Annotation? {
@@ -1058,7 +1072,7 @@ class Compiler {
     }
 
     private fun call(irsoa: Boolean) {
-        primary(irsoa)
+        primary(irsoa, true)
         // Every iteration below decrements first, so it needs to start at 2 to be > 0 for the first check
         var superCount = if (lastChunk?.opCode == OpCode.SUPER) 2 else 1
         while (true) {
@@ -1075,7 +1089,7 @@ class Compiler {
                     finishGet(wasSuper)
                     continue // Go the the next iteration to prevent INVOKE shenanigans
                 } else {
-                    primary(false)
+                    primary(irsoa = false, checkImplicitSelf = false)
                 }
                 
                 if (match(LEFT_PAREN)) { // Check invoke
@@ -1127,7 +1141,7 @@ class Compiler {
         }
     }
 
-    private fun primary(irsoa: Boolean) {
+    private fun primary(irsoa: Boolean, checkImplicitSelf: Boolean) {
         if (match(FALSE)) {
             emitInt(0)
         } else if (match(TRUE)) {
@@ -1179,16 +1193,17 @@ class Compiler {
         else if (match(DEF) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(IDENTIFIER)) {
-            variable()
-            if (irsoa) {
-                checkIfUnidentified()
+            val name = previous.lexeme
+            if (checkImplicitSelf && validateImplicitSelf(currentClass, name)) {
+                variable(Constants.SELF)
+                emitId(name)
+                finishGet(false)
+            } else {
+                variable(name)
+                if (irsoa) {
+                    checkIfUnidentified()
+                }
             }
-//            val expr = Variable(previous())
-//            if (isInClassDeclr) { // Add backup self.var
-//                val selfToken = Token.self()
-//                expr.backupSelfGet = Get(selfToken, Self(selfToken, null), expr, 0)
-//            }
-//            return expr
         }
         else if (match(LEFT_PAREN)) {
             expression()
@@ -1864,6 +1879,23 @@ class Compiler {
         return args
     }
 
+    /**
+     * Searches the current class being compiled for the field name and sees if it's maybe an implicit self.
+     */
+    private fun validateImplicitSelf(klass: ClassCompiler?, name: String): Boolean {
+        klass?.let {
+            if (name in it.declaredFields) {
+                return true
+            }
+            for (superclass in it.superclasses) {
+                if (validateImplicitSelf(compiledClasses[superclass], name)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     private data class Const(val index: Int,
                              val level: Int
     )
@@ -1904,7 +1936,9 @@ class Compiler {
                                 val enclosing: ClassCompiler?
     ) {
         var firstSuperclass: String? = null
+        var superclasses = emptyList<String>()
         var initAdditionalTokens = mutableListOf<Token>()
+        val declaredFields = mutableListOf<String>()
     }
 
     private data class ArgScanResult(val args: MutableList<String>,
