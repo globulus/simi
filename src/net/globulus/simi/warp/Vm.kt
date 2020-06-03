@@ -174,6 +174,9 @@ internal class Vm {
         val value = pop()
         val prop = pop()
         val obj = pop()
+        if (obj is Instance && !obj.mutable && obj != self) {
+            throw runtimeError("Attempting to set on an immutable object!")
+        }
         if (obj is Instance && obj.klass.overridenSet != null) {
             sp++ // Just to compensate for bindMethod's sp--
             bindMethod(obj, obj.klass, obj.klass.overridenSet, Constants.SET)
