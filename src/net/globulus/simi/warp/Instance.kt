@@ -11,7 +11,11 @@ open class Instance(val klass: SClass, val mutable: Boolean) : Fielded {
             Vm.objectClass -> {
                 StringBuilder()
                         .append(if (mutable) TokenType.DOLLAR_LEFT_BRACKET.toCode() else TokenType.LEFT_BRACKET.toCode())
-                        .append(fields.entries.joinToString { "${it.key} ${TokenType.EQUAL.toCode()} ${it.value}" })
+                        .append(fields.entries
+                                // for raw objects, just show their respective fields, ignoring the Object class methods
+                                .filter { Vm.objectClass?.fields?.containsKey(it.key) == false }
+                                .joinToString { "${it.key} ${TokenType.EQUAL.toCode()} ${it.value}" }
+                        )
                         .append(TokenType.RIGHT_BRACKET.toCode())
                         .toString()
             }
