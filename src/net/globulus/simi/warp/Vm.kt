@@ -501,7 +501,6 @@ class Vm {
                 fields[key] = value
                 i--
             }
-            fields[Constants.COUNT] = propCount
         })
     }
 

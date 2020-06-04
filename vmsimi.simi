@@ -441,61 +441,30 @@ def testImplicitSelf {
 }
 test("implicit self", "5623", testImplicitSelf())
 
-
-obj = [a = 1, b = 3, c = 5]
-print obj
-lst = $[1, 2, 3, 4, 5]
-print lst
-lst.2 = 10
-print lst
-for i in lst {
-    print i
-}
-
-def returnsObj = obj
-efg = obj.d ?? obj.0
-efg1 = obj.e ?? obj.1
-efg2 = obj.c ?? obj.2
-print efg
-print efg1
-print efg2
-efg11 = obj.d ?? obj.0
-efg111 = obj.e ?? obj.1
-efg2111 = obj.c ?? obj.2
-print efg11
-print efg111
-print efg2111
-[d, e, c] = obj
-print d
-print e
-print c
+test("obj literal", 5, =[a = 1, b = 3, c = 5].c)
+test("mut list literal", "$[1, 2, 3, 4, 5]", ="" + $[1, 2, 3, 4, 5])
+test("mut list value change", 10, def {
+    lst = $[1, 2, 3, 4, 5]
+    lst.2 = 10
+    return lst.2
+})
+test("list for iteration", "123", def {
+    s = ""
+    for i in [1, 2, 3] {
+        s += i
+    }
+    return s
+})
+test("obj decomp", "nilnil5", def {
+    obj = [a = 1, b = 3, c = 5]
+    [d, e, c] = obj
+    s = "" + d
+    s += e
+    s += c
+    return s
+})
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure
 }
-
-#
-#class OverridesGet {
-#    def get(val) {
-#        when val {
-#            is Num { print "is num" }
-#            is String {
-#                print "is str"
-#                print "super get " + super.get(val)
-#             }
-#            else { print "something else \(val)" }
-#        }
-#        return 1
-#    }
-#    def set(key, val) {
-#        super.set(key, val)
-#        print "set \(key) \(val)"
-#    }
-#}
-#overridesGet = OverridesGet()
-#print "3 == " + (overridesGet.(OverridesGet) + overridesGet.1 + overridesGet.("ssss") + overridesGet.abc)
-#overridesGet.key = 42
-#overridesGet.key
-#
-
