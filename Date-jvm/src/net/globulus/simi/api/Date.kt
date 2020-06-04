@@ -2,6 +2,7 @@ package net.globulus.simi.api
 
 import net.globulus.simi.Constants
 import net.globulus.simi.warp.Instance
+import net.globulus.simi.warp.ListInstance
 import net.globulus.simi.warp.SClass
 import net.globulus.simi.warp.Vm
 import net.globulus.simi.warp.native.NativeClass
@@ -14,20 +15,29 @@ class Date : NativeModule {
             "List" to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
+                        Constants.INIT -> NativeFunction(0) {
+                            ListInstance(true, null)
+                        }
                         Constants.GET -> NativeFunction(1) {
-                            val instance = it[0] as Instance
+                            val instance = it[0] as ListInstance
                             val key = it[1] as Long
-                            instance.fields[key.toString()]
+                            instance[key.toInt()]
                         }
                         Constants.SET -> NativeFunction(2) {
-                            val instance = it[0] as Instance
+                            val instance = it[0] as ListInstance
                             val key = it[1] as Long
                             val value = it[2] as Any
-                            instance.fields[key.toString()] = value
+                            instance[key.toInt()] = value
+                            null
+                        }
+                        "add" -> NativeFunction(1) {
+                            val instance = it[0] as ListInstance
+                            val value = it[1] as Any
+                            instance += value
                             null
                         }
                         Constants.ITERATE -> NativeFunction(0) {
-                            val instance = it[0] as Instance
+                            val instance = it[0] as ListInstance
                             val count = instance.fields[Constants.COUNT] as Int
                             var i = 0
                             Instance(Vm.objectClass!!, false).apply {
@@ -35,7 +45,7 @@ class Date : NativeModule {
                                     if (i == count) {
                                         null
                                     } else {
-                                        val value = instance.fields[i.toString()]
+                                        val value = instance[i]
                                         i++
                                         value
                                     }
@@ -49,7 +59,7 @@ class Date : NativeModule {
             "Date" to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
-                        "init" -> NativeFunction(0) {
+                        Constants.INIT -> NativeFunction(0) {
                             val instance = it[0] as Instance
                             val date = Date()
                             instance.apply {

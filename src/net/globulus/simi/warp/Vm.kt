@@ -47,7 +47,6 @@ class Vm {
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> push(nextString)
                 CONST -> pushConst(frame)
-//                CONST_OUTER -> pushConst(getOuterFrame())
                 NIL -> push(Nil)
                 POP -> sp--
                 POP_UNDER -> {
@@ -108,27 +107,7 @@ class Vm {
                         break@loop
                     }
                 }
-                CLASS -> {
-                    val kind = SClass.Kind.from(nextByte)
-                    val name = nextString
-                    val klass = SClass(name, kind)
-                    if (numClass == null && name == Constants.CLASS_NUM) {
-                        numClass = klass
-                    } else if (strClass == null && name == Constants.CLASS_STRING) {
-                        strClass = klass
-                    } else if (classClass == null && name == Constants.CLASS_CLASS) {
-                        classClass = klass
-                    } else if (funcClass == null && name == Constants.CLASS_FUNCTION) {
-                        funcClass = klass
-                    } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
-                        exceptionClass = klass
-                    } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
-                        objectClass = klass
-                    } else if (listClass == null && name == Constants.CLASS_LIST) {
-                        listClass = klass
-                    }
-                    push(klass)
-                }
+                CLASS -> declareClass(SClass.Kind.from(nextByte), nextString)
                 INHERIT -> inherit()
                 IMPORT -> mixin()
                 METHOD -> defineMethod(nextString)
@@ -154,7 +133,8 @@ class Vm {
                 GET_SUPER -> getSuper()
                 SUPER_INVOKE -> invokeSuper(nextString, nextInt)
                 SELF_DEF -> push(frame.closure.function)
-                OBJECT, LIST -> objectOrList(code == LIST, nextByte == 1.toByte(), nextInt)
+                OBJECT -> objectLiteral(nextByte == 1.toByte(), nextInt)
+                LIST -> listLiteral(nextByte == 1.toByte(), nextInt)
             }
         }
     }
@@ -387,7 +367,7 @@ class Vm {
 
     private fun jumpIf(predicate: (Any) -> Boolean) {
         val offset = nextInt
-        if (predicate(peek())) {
+        if (offset != Compiler.CALL_DEFAULT_JUMP_LOCATION && predicate(peek())) {
             buffer.position(offset)
         }
     }
@@ -510,21 +490,26 @@ class Vm {
         invokeFromClass(superclass, name, argCount)
     }
 
-    private fun objectOrList(isList: Boolean, isMutable: Boolean, propCount: Int) {
-        push(Instance(if (isList) listClass!! else objectClass!!, isMutable).apply {
+    private fun objectLiteral(isMutable: Boolean, propCount: Int) {
+        push(Instance(objectClass!!, isMutable).apply {
             var i = propCount - 1
             while (i >= 0) {
                 val value = pop()
-                val key = if (isList) {
-                    i.toString()
-                } else {
-                    pop() as String
-                }
+                val key = pop() as String
                 fields[key] = value
                 i--
             }
             fields[Constants.COUNT] = propCount
         })
+    }
+
+    private fun listLiteral(isMutable: Boolean, propCount: Int) {
+        val items = mutableListOf<Any>()
+        for (i in 0 until propCount) {
+            items += pop()
+        }
+        items.reverse()
+        push(ListInstance(isMutable, items))
     }
 
     private fun captureUpvalue(sp: Int): Upvalue {
@@ -598,6 +583,26 @@ class Vm {
             push(result)
             fp == breakAtFp
         }
+    }
+
+    private fun declareClass(kind: SClass.Kind, name: String) {
+        val klass = SClass(name, kind)
+        if (numClass == null && name == Constants.CLASS_NUM) {
+            numClass = klass
+        } else if (strClass == null && name == Constants.CLASS_STRING) {
+            strClass = klass
+        } else if (classClass == null && name == Constants.CLASS_CLASS) {
+            classClass = klass
+        } else if (funcClass == null && name == Constants.CLASS_FUNCTION) {
+            funcClass = klass
+        } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
+            exceptionClass = klass
+        } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
+            objectClass = klass
+        } else if (listClass == null && name == Constants.CLASS_LIST) {
+            listClass = klass
+        }
+        push(klass)
     }
 
     private fun inherit() {

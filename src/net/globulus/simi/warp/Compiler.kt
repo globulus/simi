@@ -42,7 +42,7 @@ class Compiler {
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
 
     private var lastChunk: Chunk? = null
-    private val chunks: Deque<Chunk> = LinkedList()
+    private val chunks = mutableListOf<Chunk>()
 
     private var enclosing: Compiler? = null
     private lateinit var kind: String
@@ -637,6 +637,9 @@ class Compiler {
         val id = consume(IDENTIFIER, "Expect an identifier after 'for'.")
         consume(IN, "Expect 'in' after identifier in 'for'.")
         val iterableTokens = consumeUntilType(LEFT_BRACE)
+        if (peek.type != LEFT_BRACE) {
+            throw error(opener, "A for loop must include a block.")
+        }
         val blockTokens = consumeNextBlock(false)
         val tokens = mutableListOf<Token>().apply {
             val iterator = Token.named("__iterator_${numberOfEnclosingCompilers}_${implicitVarCounter++}__")
@@ -826,21 +829,28 @@ class Compiler {
     }
 
     private fun rescue(): Boolean {
-        val isExpr = assignment()
+        val chunkScanStart = chunks.size
+        val shouldPop = assignment()
         if (match(QUESTION_BANG)) {
-            val operator = previous
+            val chunkScanEnd = chunks.size
             val elseChunk = emitJump(JUMP_IF_EXCEPTION)
-            if (isExpr) {
+            if (shouldPop) {
                 emitCode(POP) // pop the expr value since rescue always returns false, meaning expressionStatement won't pop
             }
             val endChunk = emitJump(JUMP)
             patchJump(elseChunk)
+            for (i in chunkScanStart until chunkScanEnd) {
+                val chunk = chunks[i]
+                if (chunk.opCode == JUMP_IF_EXCEPTION) {
+                    patchJump(chunk)
+                }
+            }
             if (!match(LEFT_BRACE)) {
                 throw error(previous, "Expect '{' to start rescue block.")
             }
             beginScope()
             declareLocal(Constants.IT)
-            if (!isExpr) {
+            if (!shouldPop) {
                 emitCode(DUPLICATE) // copy the value at the top of the stack, last assigned
             }
             block(false)
@@ -848,7 +858,7 @@ class Compiler {
             patchJump(endChunk)
             return false
         } else {
-            return isExpr
+            return shouldPop
         }
     }
 
@@ -1507,8 +1517,8 @@ class Compiler {
 
     private fun rollBackLastChunk() {
         rollBack(lastChunk!!.size)
-        chunks.pop()
-        lastChunk = if (chunks.isEmpty()) null else chunks.last
+        chunks.removeAt(chunks.size - 1)
+        lastChunk = if (chunks.isEmpty()) null else chunks.last()
     }
 
     private fun rollBackAndSaveLastChunk(): RolledBackChunk {
@@ -1697,6 +1707,7 @@ class Compiler {
         var size = byteCode.put(opCode)
         size += byteCode.putInt(argCount)
         pushLastChunk(Chunk(opCode, size, argCount))
+        emitJump(JUMP_IF_EXCEPTION, CALL_DEFAULT_JUMP_LOCATION)
     }
 
     private fun emitInvoke(name: String, argCount: Int, wasSuper: Boolean = false) {
@@ -1706,6 +1717,7 @@ class Compiler {
         size += byteCode.putInt(constIdx)
         size += byteCode.putInt(argCount)
         pushLastChunk(Chunk(opCode, size, name, argCount, constIdx))
+        emitJump(JUMP_IF_EXCEPTION, CALL_DEFAULT_JUMP_LOCATION)
     }
 
     private fun emitSuper(superclass: String) {
@@ -1760,7 +1772,7 @@ class Compiler {
     private fun pushLastChunk(chunk: Chunk) {
         chunk.pos = byteCode.size - chunk.size
         lastChunk = chunk
-        chunks.push(chunk)
+        chunks += chunk
     }
 
     private fun updateDebugInfoLines(token: Token) {
@@ -1790,7 +1802,7 @@ class Compiler {
         for (i in compiler.locals.size - 1 downTo 0) {
             val local = compiler.locals[i]
             if (local.name == name) {
-                    return local
+                return local
             }
         }
         return null
@@ -1856,9 +1868,8 @@ class Compiler {
             println("  ".repeat(tabLevel - 1) + "in $name")
         }
         val tabs = "  ".repeat(tabLevel)
-        while (chunks.isNotEmpty()) {
-            println(tabs + chunks.last)
-            chunks.removeLast()
+        for (chunk in chunks) {
+            println(tabs + chunk)
         }
     }
 
@@ -1998,6 +2009,7 @@ class Compiler {
     private class ParseError(message: String) : RuntimeException(message)
 
     companion object {
+        const val CALL_DEFAULT_JUMP_LOCATION = -1
         private const val SCRIPT = "Script"
         private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")

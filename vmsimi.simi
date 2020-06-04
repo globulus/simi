@@ -63,8 +63,10 @@ class Num {
 class String
 
 class List {
+    native init
     native get(key)
     native set(key, value)
+    native add(value)
     native iterate
 }
 
@@ -73,9 +75,17 @@ class Date {
     native at(time = 0)
 }
 
+SUCCESS = "SUCCESS"
+testResults = $[total = 0, failureCount = 0, failures = List()]
 def test(title, expected, proc) {
     r = proc()
-    print "Testing \(title): " + (if r == expected "SUCCESS" else "FAIL got \(r) expected \(expected)")
+    testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
+    msg = "Testing \(title): " + testResult
+    testResults.total = testResults.total + 1
+    if testResult != SUCCESS {
+        testResults.failureCount = testResults.failureCount + 1
+        testResults.failures.add(msg)
+    }
 }
 
 a = 5
@@ -292,6 +302,24 @@ def rescueFunctionWithoutValueAssign {
     return 1
 }
 test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithoutValueAssign())
+def funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
+def rescueFunctionWithTwoExceptions() {
+    s = ""
+    s += funcReturningExceptionIfTrue(0) + funcReturningExceptionIfTrue(0) ?! {
+        s += "error"
+    }
+    s += funcReturningExceptionIfTrue(1) + funcReturningExceptionIfTrue(0) ?! {
+        s += "error"
+    }
+    s += funcReturningExceptionIfTrue(0) + funcReturningExceptionIfTrue(1) ?! {
+        s += "error"
+    }
+    s += funcReturningExceptionIfTrue(1) + funcReturningExceptionIfTrue(1) ?! {
+        s += "error"
+    }
+    return s
+}
+test("rescue function with multiple exception calls", "2errorerrorerror", rescueFunctionWithTwoExceptions())
 
 def funcWithArgTypeCheck(a0 is String, a1 is String?, a2 is String!) {
     return 1
@@ -389,6 +417,7 @@ def testImplicitSelf {
 }
 test("implicit self", "5623", testImplicitSelf())
 
+
 obj = [a = 1, b = 3, c = 5]
 print obj
 lst = $[1, 2, 3, 4, 5]
@@ -397,6 +426,11 @@ lst.2 = 10
 print lst
 for i in lst {
     print i
+}
+
+print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
+for failure in testResults.failures {
+    print failure
 }
 
 #
