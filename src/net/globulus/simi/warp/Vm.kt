@@ -145,11 +145,7 @@ class Vm {
     }
 
     private fun getVar(frame: CallFrame) {
-        val loc = nextInt
-        if (loc == 50) {
-            val a = 5
-        }
-        push(stack[frame.sp + loc]!!)
+        push(stack[frame.sp + nextInt]!!)
     }
 
     private fun setProp() {
@@ -191,12 +187,15 @@ class Vm {
 
     private fun getPropRaw(obj: Any?, name: String) {
         val prop = when (obj) {
+            Nil -> null
             is Instance -> obj.fields[name] ?: obj.klass.fields[name]
             is SClass -> obj.fields[name]
             else -> throw runtimeError("Only instances can have fields!")
         }
         push(prop ?: Nil)
-        bindMethod(obj, getSClass(obj), prop, name)
+        if (prop != null) {
+            bindMethod(obj, getSClass(obj), prop, name)
+        }
     }
 
     private fun getSuper() {

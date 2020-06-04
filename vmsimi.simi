@@ -446,6 +446,11 @@ print d
 print e
 print c
 
+for [k, v] in [[1, "a"], [2, "b"], [3, "c"]] {
+    print k
+    print v
+}
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure

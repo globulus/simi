@@ -20,8 +20,11 @@ class Date : NativeModule {
                         }
                         Constants.GET -> NativeFunction(1) {
                             val instance = it[0] as ListInstance
-                            val key = it[1] as Long
-                            instance[key.toInt()]
+                            when (val key = it[1]) {
+                                is Long -> instance[key.toInt()]
+                                is String -> instance.fields[key]
+                                else -> null
+                            }
                         }
                         Constants.SET -> NativeFunction(2) {
                             val instance = it[0] as ListInstance

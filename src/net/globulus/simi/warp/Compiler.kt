@@ -634,7 +634,19 @@ class Compiler {
 
     private fun forStatement() {
         val opener = previous
-        val id = consume(IDENTIFIER, "Expect an identifier after 'for'.")
+        var firstId: Token = opener // initializing to opener because compiler is too dumb to figure out it's inited in all branches
+        val ids = if (match(IDENTIFIER)) {
+            firstId = previous
+            listOf(firstId)
+        } else if (match(LEFT_BRACKET)) {
+            val start = current - 1
+            scanForObjectDecomp(false)?.let {
+                firstId = tokens[start + 1] // there's a [ at start, so we look for the next one
+                tokens.subList(start, current)
+            } ?: throw error(previous, "Expect object decomposition in for loop.")
+        } else {
+            throw error(previous, "Expect identifier or object decomp after 'for'.")
+        }
         consume(IN, "Expect 'in' after identifier in 'for'.")
         val iterableTokens = consumeUntilType(LEFT_BRACE)
         if (peek.type != LEFT_BRACE) {
@@ -655,8 +667,10 @@ class Compiler {
             for ((i, blockToken) in blockTokens.withIndex()) {
                 add(blockToken)
                 if (i == 0) {
-                    addAll(listOf(nl, id, eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl,
-                            Token.ofType(IF), id, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL),
+                    add(nl)
+                    addAll(ids)
+                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl,
+                            Token.ofType(IF), firstId, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL),
                             Token.ofType(BREAK), nl
                     ))
                 }
@@ -1213,7 +1227,7 @@ class Compiler {
             if (irsoa) { // object decomp can't be on the left-hand side
                 objectLiteral()
             } else {
-                scanForObjectDecomp()?.let {
+                scanForObjectDecomp(true)?.let {
                     objectDecomp(it)
                 } ?: run {
                     objectLiteral()
@@ -1300,7 +1314,7 @@ class Compiler {
     /**
      * @return list of identifiers found in the decomp, or null if it isn't a valid decomp
      */
-    private fun scanForObjectDecomp(): List<String>? {
+    private fun scanForObjectDecomp(needsEquals: Boolean): List<String>? {
         if (peek.type == RIGHT_BRACKET) {
             return null // object decomp can't be empty
         }
@@ -1315,7 +1329,7 @@ class Compiler {
             }
         } while (match(COMMA))
         return if (match(RIGHT_BRACKET)) {
-            if (match(EQUAL)) {
+            if (needsEquals && match(EQUAL) || !needsEquals) {
                 ids
             } else {
                 current = curr
