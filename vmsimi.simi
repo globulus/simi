@@ -451,6 +451,12 @@ for [k, v] in [[1, "a"], [2, "b"], [3, "c"]] {
     print v
 }
 
+for g in nil {
+    print "nope"
+} else {
+    print "for else"
+}
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure

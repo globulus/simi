@@ -653,6 +653,13 @@ class Compiler {
             throw error(opener, "A for loop must include a block.")
         }
         val blockTokens = consumeNextBlock(false)
+        var elseBlockTokens: List<Token>? = null
+        if (match(ELSE)) {
+            if (peek.type != LEFT_BRACE) {
+                throw error(peek, "The for loop else must include a block.")
+            }
+            elseBlockTokens = consumeNextBlock(false)
+        }
         val tokens = mutableListOf<Token>().apply {
             val iterator = Token.named(nextImplicitVarName("iterator"))
             val eq = Token.ofType(EQUAL)
@@ -660,23 +667,30 @@ class Compiler {
             val rp = Token.ofType(RIGHT_PAREN)
             val dot = Token.ofType(DOT)
             val nl = Token.ofType(NEWLINE)
+            val ifToken = Token.ofType(IF)
+            val eqEq = Token.ofType(EQUAL_EQUAL)
+            val nil = Token.ofType(NIL)
             val checkTokens = mutableListOf<Token>()
             for ((i, id) in ids.withIndex()) {
                 if (i > 0) {
                     checkTokens.add(Token.ofType(AND))
                 }
-                checkTokens.addAll(listOf(id, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL)))
+                checkTokens.addAll(listOf(id, eqEq, nil))
             }
             addAll(listOf(iterator, eq, lp)); addAll(iterableTokens); addAll(listOf(rp, dot,
-                Token.named(Constants.ITERATE), lp, rp, nl,
-                Token.ofType(WHILE), iterator
-                ))
+                Token.named(Constants.ITERATE), lp, rp, nl))
+            if (elseBlockTokens != null) {
+                addAll(listOf(ifToken, iterator, eqEq, nil))
+                addAll(elseBlockTokens)
+                add(Token.ofType(ELSE))
+            }
+            addAll(listOf(Token.ofType(WHILE), iterator))
             for ((i, blockToken) in blockTokens.withIndex()) {
                 add(blockToken)
                 if (i == 0) {
                     add(nl)
                     addAll(assignmentTokens)
-                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl, Token.ofType(IF)))
+                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl, ifToken))
                     addAll(checkTokens)
                     add(Token.ofType(BREAK))
                     add(nl)

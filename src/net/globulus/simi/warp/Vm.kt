@@ -434,6 +434,10 @@ class Vm {
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true): Boolean {
         val receiver = boxIfNotInstance(argCount)
+        if (receiver == Nil) {
+            sp -= argCount // just remove the args, the receiver at slot sp - args - 1 is already Nil
+            return true
+        }
         return (receiver.fields[name])?.let {
             val callee = if (it is NativeFunction) {
                 BoundNativeMethod(receiver, it)
