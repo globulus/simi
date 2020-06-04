@@ -9,9 +9,9 @@ class Object {
 
 }
 
-class Function
+class_ Function
 
-class Class
+class_ Class
 
 class Exception {
     init(@message)
@@ -46,7 +46,7 @@ class Range {
     }
 }
 
-class Num {
+class_ Num {
 
     def rangeTo(lim) = Range(@_, lim)
 
@@ -63,9 +63,9 @@ class Num {
     def iterate = rangeTo(self).iterate()
 }
 
-class String
+class_ String
 
-class List {
+class_ List {
     native init
     native get(key)
     native set(key, value)
@@ -462,6 +462,14 @@ test("obj decomp", "nilnil5", def {
     s += e
     s += c
     return s
+})
+
+test("custom toString", "10", def {
+    class ToString {
+        init(@val)
+        def toString = "\(@val)"
+    }
+    return "" + ToString(10)
 })
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"

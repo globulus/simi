@@ -168,7 +168,7 @@ class Vm {
     }
 
     private fun setPropRaw(obj: Any?, prop: Any, value: Any) {
-        getFieldsOrThrow(obj)[prop.toString()] = value
+        getFieldsOrThrow(obj)[stringify(prop)] = value
     }
 
     private fun getProp() {
@@ -181,7 +181,7 @@ class Vm {
             push(nameValue)
             call(peek(1), 1)
         } else {
-            getPropRaw(obj, nameValue.toString())
+            getPropRaw(obj, stringify(nameValue))
         }
     }
 
@@ -199,7 +199,7 @@ class Vm {
     }
 
     private fun getSuper() {
-        val name = pop().toString()
+        val name = stringify(pop())
         val superclass = pop() as SClass
         val prop = superclass.fields[name]
         push(prop ?: Nil)
@@ -239,10 +239,10 @@ class Vm {
         val b = unbox(pop())
         val a = unbox(pop())
         push(when (a) {
-            is String -> a + b
+            is String -> a + stringify(b)
             else -> {
                 if (b is String) {
-                    a.toString() + b
+                    stringify(a) + b
                 } else {
                     binaryOp(ADD, a, b)
                 }
@@ -753,6 +753,26 @@ class Vm {
             }
         } else {
             o
+        }
+    }
+
+    private fun stringify(o: Any): String {
+        return when (o) {
+            is Instance -> {
+                when (o.klass) {
+                    objectClass -> o.toString()
+                    else -> {
+                        when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
+                            is Closure, is NativeFunction -> {
+                                call(getBoundMethod(o, o.klass, toStringField, Constants.TO_STRING)!!, 0)
+                                pop() as String
+                            }
+                            else -> o.toString()
+                        }
+                    }
+                }
+            }
+            else -> o.toString()
         }
     }
 
