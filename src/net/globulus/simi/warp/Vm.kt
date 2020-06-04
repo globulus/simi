@@ -213,7 +213,7 @@ class Vm {
     }
 
     private fun isFalsey(o: Any): Boolean {
-        return when (o) {
+        return when (unbox(o)) {
             Nil -> true
             is Long -> o == 0L
             is Double -> o == 0.0
@@ -222,12 +222,12 @@ class Vm {
     }
 
     private fun invert() {
-        val a = pop()
+        val a = unbox(pop())
         push(if (isFalsey(a)) 1L else 0L)
     }
 
     private fun negate() {
-        val a = pop()
+        val a = unbox(pop())
         if (a is Long) {
             push(-a)
         } else if (a is Double) {
@@ -236,8 +236,8 @@ class Vm {
     }
 
     private fun add() {
-        val b = pop()
-        val a = pop()
+        val b = unbox(pop())
+        val a = unbox(pop())
         push(when (a) {
             is String -> a + b
             else -> {
@@ -260,11 +260,13 @@ class Vm {
         if (a == Nil || b == Nil) {
             return Nil
         }
-        return if (a is Long && b is Long) {
-            binaryOpTwoLongs(opCode, a, b)
+        val realA = unbox(a)
+        val realB = unbox(b)
+        return if (realA is Long && realB is Long) {
+            binaryOpTwoLongs(opCode, realA, realB)
         } else {
-            val d1 = if (a is Double) a else (a as Long).toDouble()
-            val d2 = if (b is Double) b else (b as Long).toDouble()
+            val d1 = if (realA is Double) realA else (realA as Long).toDouble()
+            val d2 = if (realB is Double) realB else (realB as Long).toDouble()
             binaryOpTwoDoubles(opCode, d1, d2)
         }
     }
@@ -741,6 +743,17 @@ class Vm {
             return boxedClosure
         } else {
             throw runtimeError("Unable to box $value!")
+        }
+    }
+
+    private fun unbox(o: Any): Any {
+        return if (o is Instance) {
+            when (o.klass) {
+                numClass, strClass -> o.fields[Constants.PRIVATE]!!
+                else -> o
+            }
+        } else {
+            o
         }
     }
 

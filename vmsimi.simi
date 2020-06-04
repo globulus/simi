@@ -47,6 +47,7 @@ class Range {
 }
 
 class Num {
+
     def rangeTo(lim) = Range(@_, lim)
 
     def rangeUntil(lim) = Range(@_, lim - 1)
@@ -58,6 +59,8 @@ class Num {
     } else {
         nil
     }
+
+    def iterate = rangeTo(self).iterate()
 }
 
 class String
@@ -265,6 +268,27 @@ test("for loop", "1 2 3 4 5 ", def {
     }
     return s
 })
+test("for loop with obj decomp", "1a2b3c", def {
+    s = ""
+    for [k, v] in [[1, "a"], [2, "b"], [3, "c"]] {
+        s += k + v
+    }
+    return s
+})
+test("for else with else triggering", "for else", def {
+    for g in nil {
+        return "nope"
+    } else {
+        return "for else"
+    }
+})
+test("for else with else not triggering", "yep", def {
+    for g in 1 {
+        return "yep"
+    } else {
+        return "for else"
+    }
+})
 
 test("lambda with two implicit params", 3, def {
     return _0 + _1
@@ -445,17 +469,6 @@ print efg2111
 print d
 print e
 print c
-
-for [k, v] in [[1, "a"], [2, "b"], [3, "c"]] {
-    print k
-    print v
-}
-
-for g in nil {
-    print "nope"
-} else {
-    print "for else"
-}
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
