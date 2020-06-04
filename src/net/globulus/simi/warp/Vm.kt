@@ -4,7 +4,6 @@ import net.globulus.simi.Constants
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
-import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import kotlin.math.round
 
@@ -28,20 +27,14 @@ class Vm {
     fun interpret(input: Function) {
         val closure = Closure(input)
         push(closure)
-        callClosure(closure, 0)
         try {
-            run(0)
+            callClosure(closure, 0)
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
     private fun run(breakAtFp: Int, once: Boolean = false) {
         loop@ while (true) {
-            val code: OpCode
-            try {
-                code = nextCode
-            } catch (e: BufferUnderflowException) {
-                break@loop
-            }
+            val code = nextCode
             when (code) {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
@@ -152,7 +145,11 @@ class Vm {
     }
 
     private fun getVar(frame: CallFrame) {
-        push(stack[frame.sp + nextInt]!!)
+        val loc = nextInt
+        if (loc == 50) {
+            val a = 5
+        }
+        push(stack[frame.sp + loc]!!)
     }
 
     private fun setProp() {

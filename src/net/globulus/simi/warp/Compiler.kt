@@ -642,7 +642,7 @@ class Compiler {
         }
         val blockTokens = consumeNextBlock(false)
         val tokens = mutableListOf<Token>().apply {
-            val iterator = Token.named("__iterator_${numberOfEnclosingCompilers}_${implicitVarCounter++}__")
+            val iterator = Token.named(nextImplicitVarName("iterator"))
             val eq = Token.ofType(EQUAL)
             val lp = Token.ofType(LEFT_PAREN)
             val rp = Token.ofType(RIGHT_PAREN)
@@ -817,11 +817,15 @@ class Compiler {
     }
 
     private fun expressionStatement(lambda: Boolean): Boolean {
-        val shouldPop = expression()
-        if (shouldPop) {
-            emitCode(POP)
+        return try {
+            val shouldPop = expression()
+            if (shouldPop) {
+                emitCode(POP)
+            }
+            shouldPop
+        } catch (e: StatementDeepDown) {
+            false
         }
-        return shouldPop
     }
 
     private fun expression(): Boolean {
@@ -841,6 +845,8 @@ class Compiler {
             patchJump(elseChunk)
             for (i in chunkScanStart until chunkScanEnd) {
                 val chunk = chunks[i]
+                // All jump if exception chunks were emitted following calls/invokes, and need to be patched to go
+                // to this specific place. Otherwise, they remain dormant with jump location of -1.
                 if (chunk.opCode == JUMP_IF_EXCEPTION) {
                     patchJump(chunk)
                 }
@@ -863,7 +869,7 @@ class Compiler {
     }
 
     private fun assignment(): Boolean {
-        or(false) // left-hand side
+        firstNonAssignment(false) // left-hand side
         if (match(EQUAL, UNDERSCORE_EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL,
                         SLASH_EQUAL, SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
             val equals = previous
@@ -874,7 +880,7 @@ class Compiler {
                 val isConst = (equals.type == UNDERSCORE_EQUAL)
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk()
-                    or(true)
+                    firstNonAssignment(true)
                     emitCode(SET_PROP)
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
@@ -890,7 +896,7 @@ class Compiler {
                         declareLocal(lastChunk!!.data[1] as String, isConst)
                         rollBackLastChunk()
                     }
-                    or(true) // push the value on the stack
+                    firstNonAssignment(true) // push the value on the stack
                 }
             } else {
                 val variable: Any = when (lastChunk?.opCode) {
@@ -903,12 +909,12 @@ class Compiler {
                     throw error(previous, "Can't assign to a const!")
                 }
                 if (equals.type == QUESTION_QUESTION_EQUAL) {
-                    nilCoalescenceWithKnownLeft { or(true) }
+                    nilCoalescenceWithKnownLeft { firstNonAssignment(true) }
                 } else {
                     if (equals.type == DOLLAR_EQUAL) {
                         rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
                     }
-                    or(true) // right-hand side
+                    firstNonAssignment(true) // right-hand side
                     if (equals.type != DOLLAR_EQUAL) {
                         emitCode(when (equals.type) {
                             PLUS_EQUAL -> ADD
@@ -940,6 +946,10 @@ class Compiler {
     }
 
     // irsoa = is right side of assignment
+    private fun firstNonAssignment(irsoa: Boolean) { // first expression type that's not an assignment
+        or(irsoa)
+    }
+
     private fun or(irsoa: Boolean) {
         and(irsoa)
         while (match(OR)) {
@@ -1199,8 +1209,18 @@ class Compiler {
                 }
                 variable()
             }
-        } else if (match(LEFT_BRACKET, DOLLAR_LEFT_BRACKET)) {
-            objectLiteral(irsoa)
+        } else if (match(LEFT_BRACKET)) {
+            if (irsoa) { // object decomp can't be on the left-hand side
+                objectLiteral()
+            } else {
+                scanForObjectDecomp()?.let {
+                    objectDecomp(it)
+                } ?: run {
+                    objectLiteral()
+                }
+            }
+        } else if (match(DOLLAR_LEFT_BRACKET)) {
+            objectLiteral()
         } else if (match(DEF) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(IDENTIFIER)) {
@@ -1223,9 +1243,9 @@ class Compiler {
 //            return Unary(previous(), primary())
 //        }
         else if (match(IF)) {
-            return ifSomething(true)
+            ifSomething(true)
         } else if (match(WHEN)) {
-            return whenSomething(true)
+            whenSomething(true)
         } else {
             throw error(peek, "Expect expression.")
         }
@@ -1246,7 +1266,7 @@ class Compiler {
         }
     }
 
-    private fun objectLiteral(irsoa: Boolean) {
+    private fun objectLiteral() {
         val opener = previous
         var count = 0
         var isList: Boolean? = null
@@ -1277,33 +1297,53 @@ class Compiler {
         emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList!!, count)
     }
 
-//    private fun objectLiteral(): Expr {
-//        val opener = previous()
-//        val props: MutableList<Expr> = ArrayList()
-//        if (!check(TokenType.RIGHT_BRACKET)) {
-//            matchAllNewlines()
-//            do {
-//                matchAllNewlines()
-//                props.add(assignment())
-//                matchAllNewlines()
-//            } while (match(TokenType.COMMA))
-//            matchAllNewlines()
-//        }
-//        consume(TokenType.RIGHT_BRACKET, "Expect ']' at the end of object.")
-//        return ObjectLiteral(opener, props)
-//    }
-
-    private fun checkStatementEnd(lambda: Boolean) {
-        if (match(NEWLINE, RIGHT_BRACE, EOF)) {
-            return
+    /**
+     * @return list of identifiers found in the decomp, or null if it isn't a valid decomp
+     */
+    private fun scanForObjectDecomp(): List<String>? {
+        if (peek.type == RIGHT_BRACKET) {
+            return null // object decomp can't be empty
         }
-        if (lambda) {
-            val token = peek
-            if (token.type == COMMA || token.type == RIGHT_PAREN || token.type == RIGHT_BRACKET) {
-                return
+        val ids = mutableListOf<String>()
+        val curr = current
+        do {
+            if (match(IDENTIFIER)) {
+                ids += previous.lexeme
+            } else {
+                current = curr
+                return null
             }
+        } while (match(COMMA))
+        return if (match(RIGHT_BRACKET)) {
+            if (match(EQUAL)) {
+                ids
+            } else {
+                current = curr
+                null
+            }
+        } else {
+            current = curr
+            null
         }
-        throw error(peek, "Unterminated lambda expression!")
+    }
+
+    private fun objectDecomp(ids: List<String>) {
+        val tempVarName = nextImplicitVarName("objDecomp")
+        declareLocal(tempVarName)
+        firstNonAssignment(true)
+        consume(NEWLINE, "Expect newline after object decomposition.")
+        val tokens = mutableListOf<Token>()
+        val eq = Token.ofType(EQUAL)
+        val tempVarToken = Token.named(tempVarName)
+        val dot = Token.ofType(DOT)
+        val nilCoal = Token.ofType(QUESTION_QUESTION)
+        val nl = Token.ofType(NEWLINE)
+        for ((i, id) in ids.withIndex()) {
+            val idToken = Token.named(id)
+            tokens.addAll(listOf(idToken, eq, tempVarToken, dot, idToken, nilCoal, tempVarToken, dot, Token.ofLong(i.toLong()), nl))
+        }
+        compileNested(tokens, false)
+        throw StatementDeepDown() // unwind all the way to the top and prevent emitting of expressionStatement POP
     }
 
     private fun consumeNextBlock(isExpr: Boolean): List<Token> {
@@ -1883,6 +1923,10 @@ class Compiler {
         return "__lambda_${numberOfEnclosingCompilers}_${lambdaCounter++}__"
     }
 
+    private fun nextImplicitVarName(opener: String): String {
+        return "__${opener}_${numberOfEnclosingCompilers}_${implicitVarCounter++}__"
+    }
+
     private fun getTypeVerificationTokens(name: Token, type: DynamicTypeCheck): List<Token> {
         val list = mutableListOf(Token.ofType(IF), Token.ofType(LEFT_PAREN), name,
                 Token.ofType(ISNOT), Token.named(type.type))
@@ -2007,6 +2051,8 @@ class Compiler {
     )
 
     private class ParseError(message: String) : RuntimeException(message)
+
+    private class StatementDeepDown : RuntimeException("")
 
     companion object {
         const val CALL_DEFAULT_JUMP_LOCATION = -1

@@ -52,6 +52,10 @@ public class Token {
     return new Token(TokenType.STRING, value, new SimiValue.String(value), 0, null);
   }
 
+  public static Token ofLong(Long value) {
+    return new Token(TokenType.NUMBER, "" + value, new SimiValue.Number(value), 0, null);
+  }
+
   @Override
   public String toString() {
     return type + " " + lexeme + " " + literal;

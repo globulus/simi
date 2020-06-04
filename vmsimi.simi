@@ -428,6 +428,24 @@ for i in lst {
     print i
 }
 
+def returnsObj = obj
+efg = obj.d ?? obj.0
+efg1 = obj.e ?? obj.1
+efg2 = obj.c ?? obj.2
+print efg
+print efg1
+print efg2
+efg11 = obj.d ?? obj.0
+efg111 = obj.e ?? obj.1
+efg2111 = obj.c ?? obj.2
+print efg11
+print efg111
+print efg2111
+[d, e, c] = obj
+print d
+print e
+print c
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure
