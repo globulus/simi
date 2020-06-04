@@ -634,15 +634,15 @@ class Compiler {
 
     private fun forStatement() {
         val opener = previous
-        var firstId: Token = opener // initializing to opener because compiler is too dumb to figure out it's inited in all branches
+        val assignmentTokens = mutableListOf<Token>()
         val ids = if (match(IDENTIFIER)) {
-            firstId = previous
-            listOf(firstId)
+            assignmentTokens += previous
+            listOf(previous)
         } else if (match(LEFT_BRACKET)) {
             val start = current - 1
             scanForObjectDecomp(false)?.let {
-                firstId = tokens[start + 1] // there's a [ at start, so we look for the next one
-                tokens.subList(start, current)
+                assignmentTokens += tokens.subList(start, current)
+                it.map { id -> Token.named(id) }
             } ?: throw error(previous, "Expect object decomposition in for loop.")
         } else {
             throw error(previous, "Expect identifier or object decomp after 'for'.")
@@ -660,6 +660,13 @@ class Compiler {
             val rp = Token.ofType(RIGHT_PAREN)
             val dot = Token.ofType(DOT)
             val nl = Token.ofType(NEWLINE)
+            val checkTokens = mutableListOf<Token>()
+            for ((i, id) in ids.withIndex()) {
+                if (i > 0) {
+                    checkTokens.add(Token.ofType(AND))
+                }
+                checkTokens.addAll(listOf(id, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL)))
+            }
             addAll(listOf(iterator, eq, lp)); addAll(iterableTokens); addAll(listOf(rp, dot,
                 Token.named(Constants.ITERATE), lp, rp, nl,
                 Token.ofType(WHILE), iterator
@@ -668,11 +675,11 @@ class Compiler {
                 add(blockToken)
                 if (i == 0) {
                     add(nl)
-                    addAll(ids)
-                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl,
-                            Token.ofType(IF), firstId, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL),
-                            Token.ofType(BREAK), nl
-                    ))
+                    addAll(assignmentTokens)
+                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl, Token.ofType(IF)))
+                    addAll(checkTokens)
+                    add(Token.ofType(BREAK))
+                    add(nl)
                 }
             }
         }
