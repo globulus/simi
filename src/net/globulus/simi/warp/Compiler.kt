@@ -145,7 +145,6 @@ class Compiler {
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek)
         return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
-            resetAnnotationCounter()
             classDeclaration(false)
             false
         } else if (match(IMPORT)) {
@@ -300,6 +299,7 @@ class Compiler {
      * @return The name of the class
      */
     private fun classDeclaration(inner: Boolean): String {
+        resetAnnotationCounter()
         val opener = previous
         val kind = when (opener.type) {
             CLASS_FINAL -> SClass.Kind.FINAL
@@ -367,21 +367,17 @@ class Compiler {
                     continue
                 }
                 if (match(CLASS, CLASS_OPEN, CLASS_FINAL)) {
-                    resetAnnotationCounter()
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
                 } else if (match(DEF)) {
-                    resetAnnotationCounter()
                     val methodName = method()
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
-                    resetAnnotationCounter()
                     val methodName = nativeMethod()
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(BANG)) {
                     annotation()
                 } else if (match(IDENTIFIER)) {
-                    resetAnnotationCounter()
                     val fieldToken = previous
                     val fieldName = fieldToken.lexeme
                     currentClass?.declaredFields?.add(fieldName)
@@ -393,6 +389,10 @@ class Compiler {
                             addAll(listOf(Token.self(), Token.ofType(DOT), fieldToken, previous))
                             addAll(consumeNextExpr())
                             add(consume(NEWLINE, "Expect newline after class field declaration."))
+                            if (annotationCounter > 0) {
+                                emitAnnotateField(fieldName)
+                                resetAnnotationCounter()
+                            }
                         }
                     } else {
                         throw error(previous, "Invalid line in class declaration.")
@@ -416,6 +416,7 @@ class Compiler {
     }
 
     private fun method(providedName: String? = null): String {
+        resetAnnotationCounter()
         val name = providedName ?: consumeVar("Expect method name.")
         val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
         function(kind, name)
@@ -424,6 +425,7 @@ class Compiler {
     }
 
     private fun nativeMethod(): String {
+        resetAnnotationCounter()
         val name = consumeVar("Expect method name.")
         val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
         consume(NEWLINE, "Expect newline after native method declaration.")
@@ -1729,6 +1731,14 @@ class Compiler {
         val funIdx = constIndex(nativeFunction)
         size += byteCode.putInt(funIdx)
         pushLastChunk(Chunk(opCode, size, name, nameIdx, funIdx))
+    }
+
+    private fun emitAnnotateField(name: String) {
+        val opCode = ANNOTATE_FIELD
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
     private fun emitGetLocal(name: String, local: Local?) {

@@ -139,6 +139,11 @@ class Vm {
                     }
                     annotationBuffer += annotation
                 }
+                ANNOTATE_FIELD -> {
+                    val fieldName = nextString
+                    val klass = peek() as SClass
+                    applyAnnotations(klass, fieldName)
+                }
                 GET_ANNOTATIONS -> {
                     (pop() as? SClass)?.let {
                         push(it.annotations.toSimiObject())
@@ -775,11 +780,12 @@ class Vm {
         }
     }
 
-    private fun stringify(o: Any): String {
+    internal fun stringify(o: Any): String {
         return when (o) {
             is Instance -> {
                 when (o.klass) {
-                    objectClass -> o.toString()
+                    objectClass -> o.stringify(this)
+                    listClass -> o.stringify(this)
                     else -> {
                         when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
                             is Closure, is NativeFunction -> {

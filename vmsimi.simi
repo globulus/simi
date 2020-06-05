@@ -472,10 +472,19 @@ test("custom toString", "10", def {
     return "" + ToString(10)
 })
 
-test("annotations", "[AnnotatedClass = [[a = class annot], [a = 2nd class annot]], a = [[a = fun annot]], b = [[a = 2nd fun annot]]]", def {
+test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructor annot], field = [Annotation field annot], a = [[a = fun annot]], b = [[a = 2nd fun annot]]]", def {
+    class AnnotationClass {
+        init(@msg)
+
+        def toString = "Annotation \(@msg)"
+    }
+
     ![a = "class annot"]
-    ![a = "2nd class annot"]
+    !AnnotationClass("constructor annot")
     class AnnotatedClass {
+        !AnnotationClass("field annot")
+        field = 5
+
         ![a = "fun annot"]
         def a() {
             print "55"
