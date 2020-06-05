@@ -149,6 +149,19 @@ class Vm {
                         push(it.annotations.toSimiObject())
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
+                GU -> {
+                    (pop() as? String)?.let {
+                        val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
+                        val func = Compiler().compile(tokens)
+                        if (func != null) {
+                            val closure = Closure(func)
+                            push(closure)
+                            callClosure(closure, 0)
+                        } else {
+                            throw runtimeError("Invalid gu expression.") // TODO make compiler return an exception instead of println that we can push to the stack here
+                        }
+                    } ?: throw runtimeError("'gu' must have a string argument.")
+                }
             }
         }
     }

@@ -179,7 +179,7 @@ class Compiler {
     }
 
     private fun function(kind: String, providedName: String? = null): Function {
-        val declaration = previous
+        val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
@@ -1118,18 +1118,16 @@ class Compiler {
     }
 
     private fun unary(irsoa: Boolean) {
-        if (match(NOT, MINUS)) {
+        if (match(NOT, MINUS, TokenType.GU)) {
             val operator = previous
             unary(irsoa)
             emitCode(when (operator.type) {
                 NOT -> INVERT
                 MINUS -> NEGATE
+                TokenType.GU -> OpCode.GU
                 else -> throw IllegalArgumentException("WTF")
             })
         }
-//        if (match(GU)) {
-//            return Gu(unary())
-//        }
         /*return if (match(IVIC)) {
             Ivic(unary())
         } */
@@ -1202,13 +1200,6 @@ class Compiler {
     }
 
     private fun finishGet(wasSuper: Boolean) {
-//        if (lastChunk?.opCode == CONST_ID || lastChunk?.opCode == CONST) {
-//            if ((lastChunk?.data?.get(1) as? String)?.startsWith(Constants.PRIVATE) == true) {
-//                chunks.pop()
-//                val chunkBeforeLast = chunks.peekLast()
-//                chunks.push(lastChunk!!)
-//            }
-//        }
         if (wasSuper) {
             if (lastChunk?.opCode != CONST_ID) {
                 throw error(previous, "'super' get can only involve an identifier.")
@@ -1289,11 +1280,7 @@ class Compiler {
         } else if (match(LEFT_PAREN)) {
             expression()
             consume(RIGHT_PAREN, "Expect ')' after expression.")
-        }
-//        if (match(TokenType.QUESTION)) {
-//            return Unary(previous(), primary())
-//        }
-        else if (match(IF)) {
+        } else if (match(IF)) {
             ifSomething(true)
         } else if (match(WHEN)) {
             whenSomething(true)
@@ -1434,7 +1421,7 @@ class Compiler {
         var bracketCount = 0
         loop@ for (i in start until tokens.size) {
             when (tokens[i].type) {
-                NEWLINE, RIGHT_BRACE -> {
+                NEWLINE, RIGHT_BRACE, EOF -> {
                     end = i
                     break@loop
                 }

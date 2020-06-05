@@ -498,6 +498,8 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
     return "" + AnnotatedClass!
 })
 
+test("gu", 6, gu "2 + 2 * 2")
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure
