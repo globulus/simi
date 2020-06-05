@@ -80,3 +80,18 @@ fun ByteBuffer.readMarkedPosition(block: () -> Unit) {
 }
 
 fun String.lastNameComponent() = split('.').last()
+
+fun Map<String, Any>.toSimiObject(): Instance {
+    val instance = Instance(Vm.objectClass!!, false)
+    for ((k, v) in entries) {
+        instance.fields[k] = when (v) {
+            is Array<*> -> v.toSimiList()
+            else -> v
+        }
+    }
+    return instance
+}
+
+fun Array<*>.toSimiList(): ListInstance {
+    return ListInstance(false, (this as? Array<Any>)?.toMutableList())
+}

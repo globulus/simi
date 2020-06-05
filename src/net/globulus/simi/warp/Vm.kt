@@ -24,6 +24,8 @@ class Vm {
 
     private var openUpvalues: Upvalue? = null
 
+    private val annotationBuffer = mutableListOf<Any>()
+
     fun interpret(input: Function) {
         val closure = Closure(input)
         push(closure)
@@ -112,8 +114,10 @@ class Vm {
                     val outerClass = peek() as SClass
                     // Inner classes have qualified names such as Range.Iterator, but we want to store the
                     // field with the last component name only
-                    outerClass.fields[name.lastNameComponent()] = klass
+                    val innerName = name.lastNameComponent()
+                    outerClass.fields[innerName] = klass
                     push(klass)
+                    applyAnnotations(outerClass, innerName)
                 }
                 CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
                 SUPER -> {
@@ -128,6 +132,18 @@ class Vm {
                 SELF_DEF -> push(frame.closure.function)
                 OBJECT -> objectLiteral(nextByte == 1.toByte(), nextInt)
                 LIST -> listLiteral(nextByte == 1.toByte(), nextInt)
+                ANNOTATE -> {
+                    val annotation = pop()
+                    if (annotation == Nil) {
+                        throw runtimeError("Nil annotation!")
+                    }
+                    annotationBuffer += annotation
+                }
+                GET_ANNOTATIONS -> {
+                    (pop() as? SClass)?.let {
+                        push(it.annotations.toSimiObject())
+                    } ?: throw runtimeError("Getting annotations only works on a Class!")
+                }
             }
         }
     }
@@ -155,9 +171,9 @@ class Vm {
         if (obj is Instance && !obj.mutable && obj != self) { // obj != self because @a = 3 must still work from inside of object's methods
             throw runtimeError("Attempting to set on an immutable object!")
         }
-        if (obj is Instance && obj.klass.overridenSet != null) {
+        if (obj is Instance && obj.klass.overriddenSet != null) {
             sp++ // Just to compensate for bindMethod's sp--
-            bindMethod(obj, obj.klass, obj.klass.overridenSet, Constants.SET)
+            bindMethod(obj, obj.klass, obj.klass.overriddenSet, Constants.SET)
             push(prop)
             push(value)
             call(peek(2), 2)
@@ -175,9 +191,9 @@ class Vm {
         val nameValue = pop()
         val obj = boxIfNotInstance(0)
         sp--
-        if (obj is Instance && obj.klass.overridenGet != null) {
+        if (obj is Instance && obj.klass.overriddenGet != null) {
             sp++ // Just to compensate for bindMethod's sp--
-            bindMethod(obj, obj.klass, obj.klass.overridenGet, Constants.GET)
+            bindMethod(obj, obj.klass, obj.klass.overriddenGet, Constants.GET)
             push(nameValue)
             call(peek(1), 1)
         } else {
@@ -604,6 +620,7 @@ class Vm {
             listClass = klass
         }
         push(klass)
+        applyAnnotations(klass, klass.name)
     }
 
     private fun inherit() {
@@ -640,11 +657,13 @@ class Vm {
         val method = pop() as Closure
         val klass = peek() as SClass
         klass.fields[name] = method
+        applyAnnotations(klass, name)
     }
 
     private fun defineNativeMethod(name: String, method: NativeFunction) {
         val klass = peek() as SClass
         klass.fields[name] = method
+        applyAnnotations(klass, name)
     }
 
     private fun resizeStackIfNecessary() {
@@ -773,6 +792,13 @@ class Vm {
                 }
             }
             else -> o.toString()
+        }
+    }
+
+    private fun applyAnnotations(klass: SClass, name: String) {
+        if (annotationBuffer.isNotEmpty()) {
+            klass.annotations[name] = annotationBuffer.toTypedArray()
+            annotationBuffer.clear()
         }
     }
 

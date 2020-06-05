@@ -37,6 +37,7 @@ class Compiler {
     private var lambdaCounter = 0
     private var implicitVarCounter = 0
     private var returnVerificationVarCounter = 0
+    private var annotationCounter = 0 // counts the number of emitted annotations to see if they're placed properly
 
     private var currentClass: ClassCompiler? = null
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
@@ -144,20 +145,23 @@ class Compiler {
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek)
         return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
+            resetAnnotationCounter()
             classDeclaration(false)
             false
         } else if (match(IMPORT)) {
+            checkAnnotationCounter()
             if (match(IDENTIFIER)) { // match(STRING) imports were resolved at scanning phase
                 // TODO handle local import
             }
             false
         } else if (match(DEF)) {
+            checkAnnotationCounter()
             funDeclaration()
             false
+        } else if (match(BANG)) {
+            annotation()
+            false
         }
-//        if (match(TokenType.BANG)) {
-//            return annotation()
-//        }
 //        if (match(TokenType.IMPORT)) {
 //            val keyword = previous()
 //            if (match(TokenType.IDENTIFIER)) {
@@ -165,6 +169,7 @@ class Compiler {
 //            }
 //        }
         else {
+            checkAnnotationCounter()
             statement(isExpr, lambda = false)
         }
     }
@@ -362,15 +367,21 @@ class Compiler {
                     continue
                 }
                 if (match(CLASS, CLASS_OPEN, CLASS_FINAL)) {
+                    resetAnnotationCounter()
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
                 } else if (match(DEF)) {
+                    resetAnnotationCounter()
                     val methodName = method()
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
+                    resetAnnotationCounter()
                     val methodName = nativeMethod()
                     currentClass?.declaredFields?.add(methodName)
+                } else if (match(BANG)) {
+                    annotation()
                 } else if (match(IDENTIFIER)) {
+                    resetAnnotationCounter()
                     val fieldToken = previous
                     val fieldName = fieldToken.lexeme
                     currentClass?.declaredFields?.add(fieldName)
@@ -427,19 +438,18 @@ class Compiler {
         return name
     }
 
-//    private fun annotation(): Stmt.Annotation? {
-//        var expr: Expr? = null
-//        if (peek().type == LEFT_BRACKET) {
-//            advance()
-//            expr = objectLiteral()
-//        } else if (peek().type == IDENTIFIER) {
-//            expr = call()
-//        } else {
-//            Parser.error(peek(), "Annotation expect either an object literal or a constructor invocation!")
-//        }
-//        checkStatementEnd(false)
-//        return Annotation(expr)
-//    }
+    private fun annotation() {
+        if (match(LEFT_BRACKET)) {
+            objectLiteral()
+        } else if (peek.type == IDENTIFIER) {
+            call(true)
+        } else {
+            throw error(peek, "Annotation must include either an object literal or a constructor invocaton!")
+        }
+        consume(NEWLINE, "Expect newline after annotation.")
+        emitCode(ANNOTATE)
+        annotationCounter++
+    }
 
     private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
         return if (match(LEFT_BRACE)) {
@@ -1106,7 +1116,7 @@ class Compiler {
     }
 
     private fun unary(irsoa: Boolean) {
-        if (match(NOT, MINUS, BANG_BANG)) {
+        if (match(NOT, MINUS)) {
             val operator = previous
             unary(irsoa)
             emitCode(when (operator.type) {
@@ -1128,6 +1138,10 @@ class Compiler {
 
     private fun call(irsoa: Boolean) {
         primary(irsoa, true)
+        if (match(BANG)) { // ! is at same precedence level as calls as opposed to being unary
+            // also, sequential ! calls don't make sense, but following it with a getter does
+            emitCode(GET_ANNOTATIONS)
+        }
         // Every iteration below decrements first, so it needs to start at 2 to be > 0 for the first check
         var superCount = if (lastChunk?.opCode == OpCode.SUPER) 2 else 1
         while (true) {
@@ -1146,7 +1160,7 @@ class Compiler {
                 } else {
                     primary(irsoa = false, checkImplicitSelf = false)
                 }
-                
+
                 if (match(LEFT_PAREN)) { // Check invoke
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
@@ -1761,12 +1775,6 @@ class Compiler {
         val chunk = Chunk(opCode, size, offset, skip)
         pushLastChunk(chunk)
         return chunk
-
-//        size += byteCode.emitMarkingPosition {
-//            emitCode(OpCode.POP)
-//            statement(true)
-//        }
-//        chunk.size = size
     }
 
     private fun patchJump(chunk: Chunk): Int {
@@ -1951,6 +1959,16 @@ class Compiler {
     private fun checkIfUnidentified() {
         if (lastChunk?.opCode == CONST_ID) {
             throw error(previous, "Unable to resolve identifier: ${lastChunk!!.data[1]}")
+        }
+    }
+
+    private fun resetAnnotationCounter() {
+        annotationCounter = 0
+    }
+
+    private fun checkAnnotationCounter() {
+        if (annotationCounter > 0) {
+            throw error(previous, "Unable to annotate this line.")
         }
     }
 

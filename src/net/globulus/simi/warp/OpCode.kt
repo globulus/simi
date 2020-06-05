@@ -53,6 +53,8 @@ enum class OpCode {
     SELF_DEF,
     OBJECT,
     LIST,
+    ANNOTATE,
+    GET_ANNOTATIONS,
     ;
 
     val byte = ordinal.toByte()
