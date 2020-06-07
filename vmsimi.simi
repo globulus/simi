@@ -510,3 +510,18 @@ print "Testing complete, failed \(testResults.failureCount) / \(testResults.tota
 for failure in testResults.failures {
     print failure
 }
+
+fiber Fiber() {
+    print "1st run"
+    yield
+    print "2nd run"
+    yield
+    print "3rd run"
+}
+
+val = await Fiber
+print val
+val $= await Fiber
+print val
+val $= await Fiber
+print val

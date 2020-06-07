@@ -16,7 +16,7 @@ class Vm {
         fiber = input
         push(input)
         try {
-            await()
+            await(true)
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
@@ -68,20 +68,8 @@ class Vm {
                     val argCount = nextInt
                     invoke(name, argCount)
                 }
-                CLOSURE -> {
-                    val function = currentFunction.constants[nextInt] as Function
-                    val closure = Closure(function)
-                    push(closure)
-                    for (i in 0 until function.upvalueCount) {
-                        val isLocal = nextByte == 1.toByte()
-                        val sp = nextInt
-                        closure.upvalues[i] = if (isLocal) {
-                            captureUpvalue(fiber.frame.sp + sp)
-                        } else {
-                            fiber.frame.closure.upvalues[sp]
-                        }
-                    }
-                }
+                CLOSURE -> closure(false)
+                FIBER -> closure(true)
                 CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
                     if (doReturn(nextString, breakAtFp)) {
@@ -136,18 +124,30 @@ class Vm {
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu()
-                AWAIT -> await()
+                AWAIT -> await(false)
+                YIELD -> {
+                    val caller = fiber.caller
+                    if (caller == null) {
+                        throw runtimeError("Can't yield from root script.")
+                    } else {
+                        fiber = caller
+                    }
+                    fiber.sp-- // pop the fiber from the caller stack
+                    push(Nil) // TODO change so that yield returns a value
+                }
             }
         }
     }
 
-    private fun await() {
+    private fun await(isRoot: Boolean) {
+        val caller = if (isRoot) null else fiber
         fiber = peek() as Fiber
+        fiber.caller = caller
         if (fiber.state == Fiber.State.NEW) {
             fiber.state = Fiber.State.STARTED
             callClosure(fiber.closure, 0)
         } else {
-            throw IllegalStateException("not there yet")
+//            throw IllegalStateException("not there yet")
         }
     }
 
@@ -386,6 +386,25 @@ class Vm {
         val offset = nextInt
         if (offset != Compiler.CALL_DEFAULT_JUMP_LOCATION && predicate(peek())) {
             buffer.position(offset)
+        }
+    }
+
+    private fun closure(asFiber: Boolean) {
+        val function = currentFunction.constants[nextInt] as Function
+        val closure = Closure(function)
+        if (asFiber) {
+            push(Fiber(closure))
+        } else {
+            push(closure)
+        }
+        for (i in 0 until function.upvalueCount) {
+            val isLocal = nextByte == 1.toByte()
+            val sp = nextInt
+            closure.upvalues[i] = if (isLocal) {
+                captureUpvalue(fiber.frame.sp + sp)
+            } else {
+                fiber.frame.closure.upvalues[sp]
+            }
         }
     }
 

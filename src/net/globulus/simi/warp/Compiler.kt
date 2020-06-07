@@ -5,6 +5,7 @@ import net.globulus.simi.Parser
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
+import net.globulus.simi.TokenType.AWAIT
 import net.globulus.simi.TokenType.CLASS
 import net.globulus.simi.TokenType.IMPORT
 import net.globulus.simi.TokenType.IS
@@ -152,6 +153,10 @@ class Compiler {
             checkAnnotationCounter()
             funDeclaration()
             false
+        } else if (match(TokenType.FIBER)) {
+            checkAnnotationCounter()
+            fiber()
+            false
         } else if (match(BANG)) {
             annotation()
             false
@@ -171,6 +176,11 @@ class Compiler {
     private fun funDeclaration() {
         val function = function(Parser.KIND_FUNCTION)
         declareLocal(function.name, true)
+    }
+
+    private fun fiber() {
+        val fiber = function(Parser.KIND_FIBER)
+        declareLocal(fiber.name, true)
     }
 
     private fun function(kind: String, providedName: String? = null): Function {
@@ -240,7 +250,7 @@ class Compiler {
             }
         }
         current = funcCompiler.current
-        emitClosure(f, funcCompiler)
+        emitClosure(f, funcCompiler, kind == Parser.KIND_FIBER)
         return f
     }
 
@@ -468,6 +478,9 @@ class Compiler {
             false
         } else if (match(TokenType.RETURN)) {
             returnStatement(lambda)
+            true
+        } else if (match(TokenType.YIELD)) {
+            emitCode(OpCode.YIELD) // TODO make like return stmt
             true
         } else if (match(DO)) {
             doSomething()
@@ -989,7 +1002,19 @@ class Compiler {
 
     // irsoa = is right side of assignment
     private fun firstNonAssignment(irsoa: Boolean) { // first expression type that's not an assignment
-        or(irsoa)
+        if (irsoa) {
+            awaitOrOr()
+        } else {
+            or(irsoa)
+        }
+    }
+
+    private fun awaitOrOr() {
+        val emitAwait = match(AWAIT)
+        or(true)
+        if (emitAwait) {
+            emitCode(OpCode.AWAIT)
+        }
     }
 
     private fun or(irsoa: Boolean) {
@@ -1674,8 +1699,8 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, c))
     }
 
-    private fun emitClosure(f: Function, funcCompiler: Compiler) {
-        val opCode = CLOSURE
+    private fun emitClosure(f: Function, funcCompiler: Compiler, isFiber: Boolean) {
+        val opCode = if (isFiber) OpCode.FIBER else CLOSURE
         var size = byteCode.put(opCode)
         val constIdx = constIndex(f)
         size += byteCode.putInt(constIdx)

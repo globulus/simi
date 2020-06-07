@@ -17,7 +17,11 @@ class Fiber(val closure: Closure) {
     internal lateinit var frame: CallFrame
     internal val callFrames = arrayOfNulls<CallFrame>(Vm.MAX_FRAMES)
 
-    internal lateinit var caller: Fiber
+    internal var caller: Fiber? = null
+
+    override fun toString(): String {
+        return "<fiber ${closure.function.name}>"
+    }
 
     internal enum class State {
         NEW, STARTED
