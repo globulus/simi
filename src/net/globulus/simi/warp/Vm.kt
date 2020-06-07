@@ -8,29 +8,15 @@ import java.nio.ByteBuffer
 import kotlin.math.round
 
 class Vm {
-    private var sp = 0
-    private var stackSize = INITIAL_STACK_SIZE
-    private var stack = arrayOfNulls<Any>(INITIAL_STACK_SIZE)
-
-    private var fp = 0
-        set(value) {
-            field = value
-            if (value > 0) {
-                frame = callFrames[value - 1]!!
-            }
-        }
-    private lateinit var frame: CallFrame
-    private val callFrames = arrayOfNulls<CallFrame>(MAX_FRAMES)
-
+    private lateinit var fiber: Fiber
     private var openUpvalues: Upvalue? = null
-
     private val annotationBuffer = mutableListOf<Any>()
 
-    fun interpret(input: Function) {
-        val closure = Closure(input)
-        push(closure)
+    fun interpret(input: Fiber) {
+        fiber = input
+        push(input)
         try {
-            callClosure(closure, 0)
+            await()
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
@@ -41,19 +27,19 @@ class Vm {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> push(nextString)
-                CONST -> pushConst(frame)
+                CONST -> pushConst(fiber.frame)
                 NIL -> push(Nil)
-                POP -> sp--
+                POP -> fiber.sp--
                 POP_UNDER -> {
                     val value = pop()
-                    sp -= nextInt
+                    fiber.sp -= nextInt
                     push(value)
                 }
                 DUPLICATE -> push(peek())
-                SET_LOCAL -> setVar(frame)
-                GET_LOCAL -> getVar(frame)
-                SET_UPVALUE -> frame.closure.upvalues[nextInt]!!.location = WeakReference(sp - 1) // -1 because we need to point at an actual slot
-                GET_UPVALUE -> push(readUpvalue(frame.closure.upvalues[nextInt]!!))
+                SET_LOCAL -> setVar(fiber.frame)
+                GET_LOCAL -> getVar(fiber.frame)
+                SET_UPVALUE -> fiber.frame.closure.upvalues[nextInt]!!.location = WeakReference(fiber.sp - 1) // -1 because we need to point at an actual slot
+                GET_UPVALUE -> push(readUpvalue(fiber.frame.closure.upvalues[nextInt]!!))
                 SET_PROP -> setProp()
                 GET_PROP -> getProp()
                 INVERT -> invert()
@@ -63,9 +49,9 @@ class Vm {
                 EQ -> checkEquality(code)
                 IS -> checkIs()
                 HAS -> {
-                    val b = stack[sp - 1]
-                    stack[sp - 1] = stack[sp - 2]
-                    stack[sp - 2] = b
+                    val b = fiber.stack[fiber.sp - 1]
+                    fiber.stack[fiber.sp - 1] = fiber.stack[fiber.sp - 2]
+                    fiber.stack[fiber.sp - 2] = b
                     invoke(Constants.HAS, 1)
                 }
                 PRINT -> println(pop())
@@ -90,9 +76,9 @@ class Vm {
                         val isLocal = nextByte == 1.toByte()
                         val sp = nextInt
                         closure.upvalues[i] = if (isLocal) {
-                            captureUpvalue(frame.sp + sp)
+                            captureUpvalue(fiber.frame.sp + sp)
                         } else {
-                            frame.closure.upvalues[sp]
+                            fiber.frame.closure.upvalues[sp]
                         }
                     }
                 }
@@ -129,7 +115,7 @@ class Vm {
                 }
                 GET_SUPER -> getSuper()
                 SUPER_INVOKE -> invokeSuper(nextString, nextInt)
-                SELF_DEF -> push(frame.closure.function)
+                SELF_DEF -> push(fiber.frame.closure.function)
                 OBJECT -> objectLiteral(nextByte == 1.toByte(), nextInt)
                 LIST -> listLiteral(nextByte == 1.toByte(), nextInt)
                 ANNOTATE -> {
@@ -150,12 +136,23 @@ class Vm {
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu()
+                AWAIT -> await()
             }
         }
     }
 
+    private fun await() {
+        fiber = peek() as Fiber
+        if (fiber.state == Fiber.State.NEW) {
+            fiber.state = Fiber.State.STARTED
+            callClosure(fiber.closure, 0)
+        } else {
+            throw IllegalStateException("not there yet")
+        }
+    }
+
     private fun runLocal() {
-        run(fp - 1)
+        run(fiber.fp - 1)
     }
 
     private fun pushConst(frame: CallFrame) {
@@ -163,11 +160,11 @@ class Vm {
     }
 
     private fun setVar(frame: CallFrame) {
-        stack[frame.sp + nextInt] = pop()
+        fiber.stack[fiber.frame.sp + nextInt] = pop()
     }
 
     private fun getVar(frame: CallFrame) {
-        push(stack[frame.sp + nextInt]!!)
+        push(fiber.stack[fiber.frame.sp + nextInt]!!)
     }
 
     private fun setProp() {
@@ -178,12 +175,12 @@ class Vm {
             throw runtimeError("Attempting to set on an immutable object!")
         }
         if (obj is Instance && obj.klass.overriddenSet != null) {
-            sp++ // Just to compensate for bindMethod's sp--
+            fiber.sp++ // Just to compensate for bindMethod's fiber.sp--
             bindMethod(obj, obj.klass, obj.klass.overriddenSet, Constants.SET)
             push(prop)
             push(value)
             call(peek(2), 2)
-            sp-- // A setter is still a statement so we need to remove the call result from the stack
+            fiber.sp-- // A setter is still a statement so we need to remove the call result from the fiber.stack
         } else {
             setPropRaw(obj, prop, value)
         }
@@ -196,9 +193,9 @@ class Vm {
     private fun getProp() {
         val nameValue = pop()
         val obj = boxIfNotInstance(0)
-        sp--
+        fiber.sp--
         if (obj is Instance && obj.klass.overriddenGet != null) {
-            sp++ // Just to compensate for bindMethod's sp--
+            fiber.sp++ // Just to compensate for bindMethod's fiber.sp--
             bindMethod(obj, obj.klass, obj.klass.overriddenGet, Constants.GET)
             push(nameValue)
             call(peek(1), 1)
@@ -231,7 +228,7 @@ class Vm {
     }
 
     private fun getOuterFrame(): CallFrame {
-        return callFrames[nextInt]!!
+        return fiber.callFrames[nextInt]!!
     }
 
     private fun isFalsey(o: Any): Boolean {
@@ -364,7 +361,7 @@ class Vm {
                 if (foundMethod) {
                     !isFalsey(pop())
                 } else {
-                    sp -= 2 // pop the args
+                    fiber.sp -= 2 // pop the args
                     false
                 }
             }
@@ -375,7 +372,7 @@ class Vm {
     private fun checkIs() {
         val b = pop() as SClass
         val a = boxIfNotInstance(0)
-        sp-- // Pop a
+        fiber.sp-- // Pop a
         val r = when (a) {
             Nil -> false
             is Instance -> a.klass.checkIs(b)
@@ -393,24 +390,24 @@ class Vm {
     }
 
     private fun closeUpvalue() {
-        closeUpvalues(sp - 1)
-        sp--
+        closeUpvalues(fiber.sp - 1)
+        fiber.sp--
     }
 
     private fun call(callee: Any, argCount: Int) {
         when (callee) {
             is Closure -> callClosure(callee, argCount)
             is BoundMethod -> {
-                stack[sp - argCount - 1] = callee.receiver
+                fiber.stack[fiber.sp - argCount - 1] = callee.receiver
                 callClosure(callee.method, argCount)
             }
             is BoundNativeMethod -> {
-                stack[sp - argCount - 1] = callee.receiver
+                fiber.stack[fiber.sp - argCount - 1] = callee.receiver
                 callNative(callee.method, argCount)
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
-                stack[sp - argCount - 1] = Instance(callee, callee.kind == SClass.Kind.OPEN)
+                fiber.stack[fiber.sp - argCount - 1] = Instance(callee, callee.kind == SClass.Kind.OPEN)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
                     is Closure -> callClosure(init, argCount)
@@ -423,11 +420,11 @@ class Vm {
     private fun callClosure(closure: Closure, argCount: Int) {
         val f = closure.function
         handleOptionalParams(f, argCount)
-        if (fp == MAX_FRAMES) {
+        if (fiber.fp == MAX_FRAMES) {
             throw runtimeError("Stack overflow.")
         }
-        callFrames[fp] = CallFrame(closure, sp - f.arity - 1)
-        fp++
+        fiber.callFrames[fiber.fp] = CallFrame(closure, fiber.sp - f.arity - 1)
+        fiber.fp++
         runLocal()
     }
 
@@ -448,18 +445,18 @@ class Vm {
     private fun callNative(method: NativeFunction, argCount: Int) {
         handleOptionalParams(method, argCount)
         val args = mutableListOf<Any?>()
-        for (i in sp - method.arity - 1 until sp) {
-            args += stack[i]
+        for (i in fiber.sp - method.arity - 1 until fiber.sp) {
+            args += fiber.stack[i]
         }
         val result = method.func(args) ?: Nil
-        sp -= argCount + 1
+        fiber.sp -= argCount + 1
         push(result)
     }
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true): Boolean {
         val receiver = boxIfNotInstance(argCount)
         if (receiver == Nil) {
-            sp -= argCount // just remove the args, the receiver at slot sp - args - 1 is already Nil
+            fiber.sp -= argCount // just remove the args, the receiver at slot fiber.sp - args - 1 is already Nil
             return true
         }
         return (receiver.fields[name])?.let {
@@ -468,7 +465,7 @@ class Vm {
             } else {
                 it
             }
-            stack[sp - argCount - 1] = callee
+            fiber.stack[fiber.sp - argCount - 1] = callee
             call(callee, argCount)
             true
         } ?: invokeFromClass((receiver as? Instance)?.klass, name, argCount, checkError)
@@ -500,13 +497,13 @@ class Vm {
             if (name == Constants.GET && argCount == 1) {
                 getPropRaw(self, pop() as String)
                 val result = pop()
-                sp-- // pop superclass
+                fiber.sp-- // pop superclass
                 push(result)
                 return
             } else if (name == Constants.SET && argCount == 2) {
                 val value = pop()
                 setPropRaw(self, pop(), value)
-                sp-- // pop superclass
+                fiber.sp-- // pop superclass
                 return
             }
         }
@@ -589,7 +586,7 @@ class Vm {
     }
 
     private fun readUpvalueFromStack(upvalue: Upvalue): Any {
-        return stack[upvalue.sp]!!
+        return fiber.stack[upvalue.sp]!!
     }
 
     /**
@@ -597,30 +594,30 @@ class Vm {
      */
     private fun doReturn(from: String, breakAtFp: Int): Boolean {
         val result = pop()
-        val frameToReturnFrom = if (from.isEmpty()) frame.name else from
+        val frameToReturnFrom = if (from.isEmpty()) fiber.frame.name else from
         var returningFrame: CallFrame
         do {
-            returningFrame = frame
+            returningFrame = fiber.frame
             closeUpvalues(returningFrame.sp)
             val numberOfPops = nextInt
             for (i in 0 until numberOfPops) {
                 val code = nextCode
                 when (code) { // TODO move somewhere else, reuse existing code
-                    POP -> sp--
+                    POP -> fiber.sp--
                     CLOSE_UPVALUE -> closeUpvalue()
-                    POP_UNDER -> sp -= nextInt + 1 // + 1 is to pop the value on the stack as well
+                    POP_UNDER -> fiber.sp -= nextInt + 1 // + 1 is to pop the value on the fiber.stack as well
                     else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
                 }
             }
-            fp--
+            fiber.fp--
         } while (returningFrame.name != frameToReturnFrom)
-        return if (fp == 0) { // Returning from top-level func
-            sp = 0
+        return if (fiber.fp == 0) { // Returning from top-level func
+            fiber.sp = 0
             true
         } else {
-            sp = returningFrame.sp
+            fiber.sp = returningFrame.sp
             push(result)
-            fp == breakAtFp
+            fiber.fp == breakAtFp
         }
     }
 
@@ -689,30 +686,30 @@ class Vm {
     }
 
     private fun resizeStackIfNecessary() {
-        if (sp == stackSize) {
+        if (fiber.sp == fiber.stackSize) {
             gc()
-            stackSize *= STACK_GROWTH_FACTOR
-            stack = stack.copyOf(stackSize)
+            fiber.stackSize *= STACK_GROWTH_FACTOR
+            fiber.stack = fiber.stack.copyOf(fiber.stackSize)
         }
     }
 
     private fun push(o: Any) {
         resizeStackIfNecessary()
-        stack[sp] = o
-        sp++
+        fiber.stack[fiber.sp] = o
+        fiber.sp++
     }
 
     private fun pop(): Any {
-        sp--
-        return stack[sp]!!
+        fiber.sp--
+        return fiber.stack[fiber.sp]!!
     }
 
     private fun peek(offset: Int = 0): Any {
-        return stack[sp - offset - 1]!!
+        return fiber.stack[fiber.sp - offset - 1]!!
     }
 
     private fun set(offset: Int, value: Any) {
-        stack[sp - offset - 1] = value
+        fiber.stack[fiber.sp - offset - 1] = value
     }
 
     private fun getFieldsOrThrow(it: Any?): MutableMap<String, Any> {
@@ -733,7 +730,7 @@ class Vm {
 
     private fun bindMethod(receiver: Any, klass: SClass, prop: Any?, name: String) {
         getBoundMethod(receiver, klass, prop, name)?.let {
-            sp--
+            fiber.sp--
             push(it)
         }
     }
@@ -755,8 +752,8 @@ class Vm {
      * Check if peek(offset) is instance, if it isn't it tries to box it.
      */
     private fun boxIfNotInstance(offset: Int): Fielded {
-        val loc = sp - offset - 1
-        val value = stack[loc]
+        val loc = fiber.sp - offset - 1
+        val value = fiber.stack[loc]
         if (value == Nil) {
             return Nil
         } else if (value is Instance || value is SClass) {
@@ -765,13 +762,13 @@ class Vm {
             val boxedNum = Instance(numClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
             }
-            stack[loc] = boxedNum
+            fiber.stack[loc] = boxedNum
             return boxedNum
         } else if (value is String) {
             val boxedStr = Instance(strClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
             }
-            stack[loc] = boxedStr
+            fiber.stack[loc] = boxedStr
             return boxedStr
         } else if (value is Closure) {
             val boxedClosure = Instance(funcClass!!, false).apply {
@@ -779,7 +776,7 @@ class Vm {
                 fields[Constants.NAME] = value.function.name
                 fields[Constants.ARITY] = value.function.arity
             }
-            stack[loc] = boxedClosure
+            fiber.stack[loc] = boxedClosure
             return boxedClosure
         } else {
             throw runtimeError("Unable to box $value!")
@@ -826,14 +823,14 @@ class Vm {
     }
 
     private fun gc() {
-        for (i in sp until stackSize) {
-            stack[i] = null
+        for (i in fiber.sp until fiber.stackSize) {
+            fiber.stack[i] = null
         }
         System.gc()
     }
 
     private fun printStack() {
-        println(stack.copyOfRange(0, sp).joinToString(" "))
+        println(fiber.stack.copyOfRange(0, fiber.sp).joinToString(" "))
     }
 
     private fun runtimeError(message: String): Exception {
@@ -844,14 +841,14 @@ class Vm {
     }
 
     private fun printCallStack() {
-        for (i in fp - 1 downTo 0) {
-            println(callFrames[i])
+        for (i in fiber.fp - 1 downTo 0) {
+            println(fiber.callFrames[i])
         }
     }
 
-    private val buffer: ByteBuffer get() = frame.buffer
-    private val currentFunction: Function get() = frame.closure.function
-    private val self: Any? get() = stack[frame.sp] // self is always at 0
+    private val buffer: ByteBuffer get() = fiber.frame.buffer
+    private val currentFunction: Function get() = fiber.frame.closure.function
+    private val self: Any? get() = fiber.stack[fiber.frame.sp] // self is always at 0
 
     private val nextCode: OpCode get() = OpCode.from(nextByte)
     private val nextByte: Byte get() = buffer.get()
@@ -861,9 +858,9 @@ class Vm {
     private val nextString: String get() = currentFunction.constants[nextInt] as String
 
     companion object {
-        private const val INITIAL_STACK_SIZE = 1024
+        internal const val INITIAL_STACK_SIZE = 1024
         private const val STACK_GROWTH_FACTOR = 4
-        private const val MAX_FRAMES = 64
+        internal const val MAX_FRAMES = 64
 
         var numClass: SClass? = null
             internal set

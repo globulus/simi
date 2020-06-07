@@ -58,7 +58,7 @@ private fun run(source: String) {
         println((System.currentTimeMillis() - time).toString() + " ms")
         time = System.currentTimeMillis()
         val vm = Vm()
-        vm.interpret(co)
+        vm.interpret(Fiber(Closure(co)))
         println("Running... " + (System.currentTimeMillis() - time) + " ms")
     } catch (e: Exception) { // handles lexer and compiler errors
         println(e.message)
