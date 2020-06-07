@@ -499,6 +499,12 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
 })
 
 test("gu", 6, gu "2 + 2 * 2")
+test("gu with lexer exception", "lex", def {
+    return gu "2 ++ 2" ?! { return "lex" }
+})
+test("gu with compile exception", "comp", def {
+    return gu "for 2 in 3" ?! { return "comp" }
+})
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {

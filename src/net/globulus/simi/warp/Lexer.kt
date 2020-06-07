@@ -1,6 +1,9 @@
 package net.globulus.simi.warp
 
-import net.globulus.simi.*
+import net.globulus.simi.Constants
+import net.globulus.simi.Debugger
+import net.globulus.simi.Token
+import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.api.SimiValue
 
@@ -21,9 +24,7 @@ class Lexer(private val fileName: String,
         while (!isAtEnd) {
             // We are at the beginning of the next lexeme.
             start = current
-            try {
-                scanToken()
-            } catch (ignored: Exception) { }
+            scanToken()
         }
         if (addEof) {
             tokens.add(Token(EOF, "", null, line, fileName))
@@ -419,9 +420,10 @@ class Lexer(private val fileName: String,
     }
 
     private fun error(message: String): Exception {
-        ErrorHub.sharedInstance().error(Constants.EXCEPTION_SCANNER, fileName, line, message)
-        return RuntimeException(message)
+        return LexError("[\"$fileName\" line $line] Error: $message")
     }
+
+    class LexError(message: String) : RuntimeException(message)
 
     data class LexerOutput(val tokens: List<Token>,
                            val simiImports: List<String>,

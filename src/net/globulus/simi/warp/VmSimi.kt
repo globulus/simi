@@ -44,22 +44,24 @@ private fun runFile(path: String) {
 
 @Throws(IOException::class)
 private fun run(source: String) {
-    var time = System.currentTimeMillis()
-    print("Scanning and resolving imports...")
-    val lexer = Lexer(FILE_SIMI, source, null)
-    val tokens = mutableListOf<Token>()
-    scanImports(lexer.scanTokens(true), tokens, mutableListOf())
-    println(" " + (System.currentTimeMillis() - time) + " ms")
-    time = System.currentTimeMillis()
-    println("Compiling...")
-    val compiler = Compiler()
-    val co = compiler.compile(tokens)
-    println((System.currentTimeMillis() - time).toString() + " ms")
-    co?.let {
+    try {
+        var time = System.currentTimeMillis()
+        print("Scanning and resolving imports...")
+        val lexer = Lexer(FILE_SIMI, source, null)
+        val tokens = mutableListOf<Token>()
+        scanImports(lexer.scanTokens(true), tokens, mutableListOf())
+        println(" " + (System.currentTimeMillis() - time) + " ms")
+        time = System.currentTimeMillis()
+        println("Compiling...")
+        val compiler = Compiler()
+        val co = compiler.compile(tokens)
+        println((System.currentTimeMillis() - time).toString() + " ms")
         time = System.currentTimeMillis()
         val vm = Vm()
-        vm.interpret(it)
+        vm.interpret(co)
         println("Running... " + (System.currentTimeMillis() - time) + " ms")
+    } catch (e: Exception) { // handles lexer and compiler errors
+        println(e.message)
     }
 }
 

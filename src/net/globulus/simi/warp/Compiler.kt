@@ -63,15 +63,10 @@ class Compiler {
         count
     }
 
-    fun compile(tokens: List<Token>): Function? {
-        return try {
-            compileFunction(tokens, SCRIPT, 0, SCRIPT) {
-                compileInternal(false)
-                emitReturnNil()
-            }
-        } catch (e: ParseError) {
-            println(e.message)
-            null
+    fun compile(tokens: List<Token>): Function {
+        return compileFunction(tokens, SCRIPT, 0, SCRIPT) {
+            compileInternal(false)
+            emitReturnNil()
         }
     }
 
@@ -90,7 +85,7 @@ class Compiler {
         beginScope()
         this.within()
         endScope()
-        printChunks(name)
+//        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
@@ -1610,9 +1605,8 @@ class Compiler {
         return RolledBackChunk(chunk, data)
     }
 
-    private fun error(token: Token, message: String): ParseError {
-//        ErrorHub.sharedInstance().error(Constants.EXCEPTION_PARSER, token, message)
-        return ParseError(bundleTokenWithMessage(token, message) + TokenPatcher.patch(tokens, token))
+    private fun error(token: Token, message: String): CompileError {
+        return CompileError(bundleTokenWithMessage(token, message) + TokenPatcher.patch(tokens, token))
     }
 
     private fun warn(token: Token, message: String) {
@@ -2100,7 +2094,7 @@ class Compiler {
                                   val data: List<Byte>
     )
 
-    private class ParseError(message: String) : RuntimeException(message)
+    private class CompileError(message: String) : RuntimeException(message)
 
     private class StatementDeepDown : RuntimeException("")
 
