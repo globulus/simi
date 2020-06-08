@@ -89,7 +89,7 @@ class Compiler {
         beginScope()
         this.within()
         endScope()
-        printChunks(name)
+//        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 

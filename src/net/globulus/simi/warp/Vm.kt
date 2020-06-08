@@ -9,7 +9,7 @@ import kotlin.math.round
 
 class Vm {
     private lateinit var fiber: Fiber
-    private var openUpvalues: Upvalue? = null
+    private var openUpvalues = mutableMapOf<String, Upvalue>()
     private val annotationBuffer = mutableListOf<Any>()
 
     fun interpret(input: Fiber) {
@@ -152,9 +152,11 @@ class Vm {
     private fun moveArgsFromCaller(argCount: Int) {
         fiber.caller?.let {
             for (i in 0 until argCount) {
+                // copy args to the top (+1 for closure) of the fiber stack
                 fiber.stack[i + 1] = it.stack[it.sp - argCount + i]
             }
-            it.sp -= argCount
+            it.sp -= argCount // remove args from caller stack
+            // if this is the first invocation and the the fiber stack is empty, bump its sp
             if (fiber.sp < argCount + 1) {
                 fiber.sp = argCount + 1
             }
@@ -162,7 +164,7 @@ class Vm {
     }
 
     private fun yield(value: Any) {
-        closeUpvalues(fiber.frame.sp)
+        closeUpvalues(fiber.frame.sp, fiber.name)
         fiber = fiber.caller!!
         fiber.sp-- // pop the fiber from the caller stack
         push(value)
@@ -428,7 +430,7 @@ class Vm {
     }
 
     private fun closeUpvalue() {
-        closeUpvalues(fiber.sp - 1)
+        closeUpvalues(fiber.sp - 1, fiber.name)
         fiber.sp--
     }
 
@@ -595,30 +597,36 @@ class Vm {
 
     private fun captureUpvalue(sp: Int, fiberName: String): Upvalue {
         var prevUpvalue: Upvalue? = null
-        var upvalue = openUpvalues
+        var upvalue = openUpvalues[fiberName]
         while (upvalue != null && upvalue.sp > sp) {
             prevUpvalue = upvalue
             upvalue = upvalue.next
         }
-        if (upvalue != null && upvalue.sp == sp && upvalue.fiberName == fiberName) {
+        if (upvalue != null && upvalue.sp == sp) {
             return upvalue
         }
         val createdUpvalue = Upvalue(WeakReference(sp), fiberName, false, upvalue)
         if (prevUpvalue == null) {
-            openUpvalues = createdUpvalue
+            openUpvalues[fiberName] = createdUpvalue
         } else {
             prevUpvalue.next = createdUpvalue
         }
         return createdUpvalue
     }
 
-    private fun closeUpvalues(last: Int) {
-        while (openUpvalues != null && openUpvalues!!.sp >= last) {
-            val upvalue = openUpvalues?.apply {
+    private fun closeUpvalues(last: Int, fiberName: String) {
+        var openUpvalue = openUpvalues[fiberName]
+        while (openUpvalue != null && openUpvalue.sp >= last) {
+            val upvalue = openUpvalue.apply {
                 closed = true
                 location = WeakReference(readUpvalueFromStack(this))
             }
-            openUpvalues = upvalue?.next
+            openUpvalue = upvalue.next
+        }
+        if (openUpvalue != null) {
+            openUpvalues[fiberName] = openUpvalue
+        } else {
+            openUpvalues.remove(fiberName)
         }
     }
 
@@ -655,7 +663,7 @@ class Vm {
         var returningFrame: CallFrame
         do {
             returningFrame = fiber.frame
-            closeUpvalues(returningFrame.sp)
+            closeUpvalues(returningFrame.sp, fiber.name)
             val numberOfPops = nextInt
             for (i in 0 until numberOfPops) {
                 val code = nextCode
