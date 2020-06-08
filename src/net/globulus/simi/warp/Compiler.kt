@@ -48,6 +48,7 @@ class Compiler {
 
     private var enclosing: Compiler? = null
     private lateinit var kind: String
+    private lateinit var fiberName: String
     // If the function being compiled was marked with "is Type", we need to verify its return statements
     private var verifyReturnType: DynamicTypeCheck? = null
 
@@ -65,7 +66,9 @@ class Compiler {
     }
 
     fun compile(tokens: List<Token>): Function {
-        return compileFunction(tokens, SCRIPT, 0, SCRIPT) {
+        val name = SCRIPT + System.currentTimeMillis()
+        return compileFunction(tokens, name, 0, name) {
+            fiberName = name
             compileInternal(false)
             emitReturnNil()
         }
@@ -86,7 +89,7 @@ class Compiler {
         beginScope()
         this.within()
         endScope()
-//        printChunks(name)
+        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
     }
 
@@ -223,6 +226,7 @@ class Compiler {
             it.verifyReturnType = returnType
         }
         val f = funcCompiler.compileFunction(tokens, name, args.size, kind) {
+            fiberName = if (kind == Parser.KIND_FIBER) name else this@Compiler.fiberName
             current = curr
             args.forEach { declareLocal(it) }
             if (isExprFunc) {
@@ -1731,6 +1735,7 @@ class Compiler {
             val upvalue = funcCompiler.upvalues[i]
             size += byteCode.put((if (upvalue.isLocal) 1 else 0).toByte())
             size += byteCode.putInt(upvalue.sp)
+            size += byteCode.putInt(constIndex(upvalue.fiberName))
         }
         pushLastChunk(Chunk(opCode, size, constIdx, f))
     }
@@ -1964,14 +1969,15 @@ class Compiler {
         if (compiler.enclosing == null) {
             return null
         }
-        val local = findLocal(compiler.enclosing!!, name)
+        val enclosing = compiler.enclosing!!
+        val local = findLocal(enclosing, name)
         if (local != null) {
             local.isCaptured = true
-            return addUpvalue(compiler, local.sp, true, name, local.isConst)
+            return addUpvalue(compiler, local.sp, true, name, local.isConst, enclosing.fiberName)
         }
-        val upvalue = resolveUpvalue(compiler.enclosing!!, name)
+        val upvalue = resolveUpvalue(enclosing, name)
         if (upvalue != null) {
-            return addUpvalue(compiler, upvalue.sp, false, name, upvalue.isConst)
+            return addUpvalue(compiler, upvalue.sp, false, name, upvalue.isConst, enclosing.fiberName)
         }
         return null
     }
@@ -1980,13 +1986,15 @@ class Compiler {
                            sp: Int,
                            isLocal: Boolean,
                            name: String,
-                           isConst: Boolean): Upvalue {
+                           isConst: Boolean,
+                           fiberName: String
+    ): Upvalue {
         for (upvalue in compiler.upvalues) {
-            if (upvalue.sp == sp && upvalue.isLocal == isLocal) {
+            if (upvalue.sp == sp && upvalue.isLocal == isLocal && upvalue.fiberName == fiberName) {
                 return upvalue
             }
         }
-        val upvalue = Upvalue(sp, isLocal, name, isConst)
+        val upvalue = Upvalue(sp, isLocal, name, isConst, fiberName)
         compiler.upvalues += upvalue
         return upvalue
     }
@@ -2104,7 +2112,8 @@ class Compiler {
     private data class Upvalue(val sp: Int,
                                val isLocal: Boolean,
                                val name: String,
-                               val isConst: Boolean
+                               val isConst: Boolean,
+                               val fiberName: String
     )
 
     private open class ActiveLoop(val start: Int, val depth: Int) {

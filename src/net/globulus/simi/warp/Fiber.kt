@@ -21,6 +21,8 @@ class Fiber(val closure: Closure) {
 
     internal var caller: Fiber? = null
 
+    val name: String = closure.function.name
+
     override fun toString(): String {
         return "<fiber ${closure.function.name}>"
     }

@@ -132,32 +132,37 @@ class Vm {
 
     private fun await(isRoot: Boolean, argCount: Int) {
         val caller = if (isRoot) null else fiber
-//        val args = mutableListOf<Any>()
-//        for (i in 0 until argCount) {
-//            args += pop()
-//        }
         fiber = peek(argCount) as Fiber
-//        for ((i, arg) in args.withIndex()) {
-//            fiber.stack[i + 1] = arg
-//        }
-//        if (fiber.sp < argCount + 1) {
-//            fiber.sp = argCount + 1
-//        }
         fiber.caller = caller
         try {
             if (isRoot || fiber.state == Fiber.State.NEW) {
                 fiber.state = Fiber.State.STARTED
                 if (!isRoot) {
-                    push(fiber)
+                    push(fiber.closure)
                 }
+                moveArgsFromCaller(argCount)
                 callClosure(fiber.closure, argCount)
             } else {
+                moveArgsFromCaller(argCount)
                 run(0)
             }
         } catch (yield: Yield) { }
     }
 
+    private fun moveArgsFromCaller(argCount: Int) {
+        fiber.caller?.let {
+            for (i in 0 until argCount) {
+                fiber.stack[i + 1] = it.stack[it.sp - argCount + i]
+            }
+            it.sp -= argCount
+            if (fiber.sp < argCount + 1) {
+                fiber.sp = argCount + 1
+            }
+        }
+    }
+
     private fun yield(value: Any) {
+        closeUpvalues(fiber.frame.sp)
         fiber = fiber.caller!!
         fiber.sp-- // pop the fiber from the caller stack
         push(value)
@@ -413,8 +418,9 @@ class Vm {
         for (i in 0 until function.upvalueCount) {
             val isLocal = nextByte == 1.toByte()
             val sp = nextInt
+            val fiberName = nextString
             closure.upvalues[i] = if (isLocal) {
-                captureUpvalue(fiber.frame.sp + sp)
+                captureUpvalue(fiber.frame.sp + sp, fiberName)
             } else {
                 fiber.frame.closure.upvalues[sp]
             }
@@ -587,17 +593,17 @@ class Vm {
         } ?: throw runtimeError("'gu' must have a string argument.")
     }
 
-    private fun captureUpvalue(sp: Int): Upvalue {
+    private fun captureUpvalue(sp: Int, fiberName: String): Upvalue {
         var prevUpvalue: Upvalue? = null
         var upvalue = openUpvalues
         while (upvalue != null && upvalue.sp > sp) {
             prevUpvalue = upvalue
             upvalue = upvalue.next
         }
-        if (upvalue != null && upvalue.sp == sp) {
+        if (upvalue != null && upvalue.sp == sp && upvalue.fiberName == fiberName) {
             return upvalue
         }
-        val createdUpvalue = Upvalue(WeakReference(sp), false, upvalue)
+        val createdUpvalue = Upvalue(WeakReference(sp), fiberName, false, upvalue)
         if (prevUpvalue == null) {
             openUpvalues = createdUpvalue
         } else {
@@ -626,14 +632,16 @@ class Vm {
 
     private fun readUpvalueFromStack(upvalue: Upvalue): Any {
         var currentFiber: Fiber? = fiber
-        while (currentFiber != null) {
-            if (upvalue.sp < currentFiber.sp) {
-                val value = currentFiber.stack[upvalue.sp]
+        while (currentFiber != null && currentFiber.name != upvalue.fiberName) {
+            currentFiber = currentFiber.caller
+        }
+        currentFiber?.let {
+            if (upvalue.sp < it.sp) {
+                val value = it.stack[upvalue.sp]
                 if (value != null) {
                     return value
                 }
             }
-            currentFiber = currentFiber.caller
         }
         throw runtimeError("Unable to read upvalue from stack.")
     }

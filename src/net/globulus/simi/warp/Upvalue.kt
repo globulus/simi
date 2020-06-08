@@ -3,6 +3,7 @@ package net.globulus.simi.warp
 import java.lang.ref.WeakReference
 
 class Upvalue(var location: WeakReference<Any>,
+              val fiberName: String,
               var closed: Boolean,
               var next: Upvalue?
 ) {
