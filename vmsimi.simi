@@ -511,17 +511,28 @@ for failure in testResults.failures {
     print failure
 }
 
-fiber Fiber() {
-    print "1st run"
-    yield
-    print "2nd run"
-    yield
-    print "3rd run"
+def foreach(it, fun) {
+    for i in it {
+        fun(i)
+    }
 }
 
-val = await Fiber
+fiber Fiber() {
+    foreach(1..10, def {
+        yield _0
+    })
+}
+
+fajber = Fiber()
+val = await fajber()
 print val
-val $= await Fiber
+val $= await fajber()
 print val
-val $= await Fiber
+val $= await fajber()
+print val
+val $= await fajber()
+print val
+val $= await fajber()
+print val
+val $= await fajber()
 print val

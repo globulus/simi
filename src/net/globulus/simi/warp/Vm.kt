@@ -16,7 +16,7 @@ class Vm {
         fiber = input
         push(input)
         try {
-            await(true)
+            await(true, 0)
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
@@ -124,31 +124,44 @@ class Vm {
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu()
-                AWAIT -> await(false)
-                YIELD -> {
-                    val caller = fiber.caller
-                    if (caller == null) {
-                        throw runtimeError("Can't yield from root script.")
-                    } else {
-                        fiber = caller
-                    }
-                    fiber.sp-- // pop the fiber from the caller stack
-                    push(Nil) // TODO change so that yield returns a value
-                }
+                AWAIT -> await(false, nextInt)
+                YIELD -> yield(pop())
             }
         }
     }
 
-    private fun await(isRoot: Boolean) {
+    private fun await(isRoot: Boolean, argCount: Int) {
         val caller = if (isRoot) null else fiber
-        fiber = peek() as Fiber
+//        val args = mutableListOf<Any>()
+//        for (i in 0 until argCount) {
+//            args += pop()
+//        }
+        fiber = peek(argCount) as Fiber
+//        for ((i, arg) in args.withIndex()) {
+//            fiber.stack[i + 1] = arg
+//        }
+//        if (fiber.sp < argCount + 1) {
+//            fiber.sp = argCount + 1
+//        }
         fiber.caller = caller
-        if (fiber.state == Fiber.State.NEW) {
-            fiber.state = Fiber.State.STARTED
-            callClosure(fiber.closure, 0)
-        } else {
-//            throw IllegalStateException("not there yet")
-        }
+        try {
+            if (isRoot || fiber.state == Fiber.State.NEW) {
+                fiber.state = Fiber.State.STARTED
+                if (!isRoot) {
+                    push(fiber)
+                }
+                callClosure(fiber.closure, argCount)
+            } else {
+                run(0)
+            }
+        } catch (yield: Yield) { }
+    }
+
+    private fun yield(value: Any) {
+        fiber = fiber.caller!!
+        fiber.sp-- // pop the fiber from the caller stack
+        push(value)
+        throw Yield()
     }
 
     private fun runLocal() {
@@ -393,7 +406,7 @@ class Vm {
         val function = currentFunction.constants[nextInt] as Function
         val closure = Closure(function)
         if (asFiber) {
-            push(Fiber(closure))
+            push(FiberTemplate(closure))
         } else {
             push(closure)
         }
@@ -414,24 +427,31 @@ class Vm {
     }
 
     private fun call(callee: Any, argCount: Int) {
+        val spRelativeToArgCount = fiber.sp - argCount - 1
         when (callee) {
             is Closure -> callClosure(callee, argCount)
             is BoundMethod -> {
-                fiber.stack[fiber.sp - argCount - 1] = callee.receiver
+                fiber.stack[spRelativeToArgCount] = callee.receiver
                 callClosure(callee.method, argCount)
             }
             is BoundNativeMethod -> {
-                fiber.stack[fiber.sp - argCount - 1] = callee.receiver
+                fiber.stack[spRelativeToArgCount] = callee.receiver
                 callNative(callee.method, argCount)
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
-                fiber.stack[fiber.sp - argCount - 1] = Instance(callee, callee.kind == SClass.Kind.OPEN)
+                fiber.stack[spRelativeToArgCount] = Instance(callee, callee.kind == SClass.Kind.OPEN)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
                     is Closure -> callClosure(init, argCount)
                     is NativeFunction -> callNative(init, argCount)
                 }
+            }
+            is FiberTemplate -> {
+                if (argCount != 0) {
+                    throw runtimeError("A fiber can only be instantiated with 0 arguments.")
+                }
+                fiber.stack[spRelativeToArgCount] = Fiber(callee.closure)
             }
         }
     }
@@ -605,7 +625,17 @@ class Vm {
     }
 
     private fun readUpvalueFromStack(upvalue: Upvalue): Any {
-        return fiber.stack[upvalue.sp]!!
+        var currentFiber: Fiber? = fiber
+        while (currentFiber != null) {
+            if (upvalue.sp < currentFiber.sp) {
+                val value = currentFiber.stack[upvalue.sp]
+                if (value != null) {
+                    return value
+                }
+            }
+            currentFiber = currentFiber.caller
+        }
+        throw runtimeError("Unable to read upvalue from stack.")
     }
 
     /**
@@ -632,6 +662,10 @@ class Vm {
         } while (returningFrame.name != frameToReturnFrom)
         return if (fiber.fp == 0) { // Returning from top-level func
             fiber.sp = 0
+            if (fiber.caller != null) {
+                fiber.state = Fiber.State.NEW
+                yield(result)
+            }
             true
         } else {
             fiber.sp = returningFrame.sp
@@ -876,8 +910,10 @@ class Vm {
     private val nextDouble: Double get() = buffer.double
     private val nextString: String get() = currentFunction.constants[nextInt] as String
 
+    private class Yield : RuntimeException("Yield")
+
     companion object {
-        internal const val INITIAL_STACK_SIZE = 1024
+        internal const val INITIAL_STACK_SIZE = 256
         private const val STACK_GROWTH_FACTOR = 4
         internal const val MAX_FRAMES = 64
 

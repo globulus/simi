@@ -480,7 +480,7 @@ class Compiler {
             returnStatement(lambda)
             true
         } else if (match(TokenType.YIELD)) {
-            emitCode(OpCode.YIELD) // TODO make like return stmt
+            yieldStatement()
             true
         } else if (match(DO)) {
             doSomething()
@@ -747,16 +747,11 @@ class Compiler {
         byteCode.setInt(popCount, pos)
     }
 
-//    private fun yieldStatement(lambda: Boolean): Stmt? {
-//        val keyword = previous()
-//        var value: Expr? = null
-//        if (!check(NEWLINE)) {
-//            value = expression()
-//        }
-//        checkStatementEnd(lambda)
-//        return Stmt.Yield(keyword, value)
-//    }
-//
+    private fun yieldStatement() {
+        // TODO add check if we're in top-level fiber
+        consumeReturnValue(true)
+        emitCode(OpCode.YIELD)
+    }
 
     private fun doSomething() {
         // First we need to determine if it's a do, do-else or do-while
@@ -1013,7 +1008,35 @@ class Compiler {
         val emitAwait = match(AWAIT)
         or(true)
         if (emitAwait) {
-            emitCode(OpCode.AWAIT)
+            if (lastChunk?.opCode == JUMP_IF_EXCEPTION) { // probably preceeded by a call
+                val preLastChunk = chunks[chunks.size - 2]
+                if (preLastChunk.opCode in listOf(CALL, INVOKE, SUPER_INVOKE)) {
+                    val jieChunk = lastChunk!!
+                    rollBackLastChunk()
+                    val callChunk = lastChunk!!
+                    rollBackLastChunk()
+                    val argCount = when (callChunk.opCode) {
+                        CALL -> callChunk.data[0] as Int
+                        INVOKE -> {
+                            emitId(callChunk.data[0] as String)
+                            emitCode(GET_PROP)
+                            callChunk.data[1] as Int
+                        }
+                        SUPER_INVOKE -> {
+                            emitId(callChunk.data[0] as String)
+                            emitCode(GET_SUPER)
+                            callChunk.data[1] as Int
+                        }
+                        else -> throw IllegalStateException("WTF")
+                    }
+                    emitAwait(argCount)
+                    pushLastChunk(jieChunk) // the rescue jump is still valid
+                } else {
+                    throw error(previous, "WTF")
+                }
+            } else {
+                throw error(previous, "Invalid 'await' syntax.")
+            }
         }
     }
 
@@ -1799,6 +1822,13 @@ class Compiler {
         byteCode.setInt(skip, offset)
         chunk.data[1] = skip
         return skip
+    }
+
+    private fun emitAwait(argCount: Int) {
+        val opCode = OpCode.AWAIT
+        var size = byteCode.put(opCode)
+        size += byteCode.putInt(argCount)
+        pushLastChunk(Chunk(opCode, size, argCount))
     }
 
     private fun emitCall(argCount: Int) {

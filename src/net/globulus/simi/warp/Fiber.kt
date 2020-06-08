@@ -1,5 +1,7 @@
 package net.globulus.simi.warp
 
+class FiberTemplate(val closure: Closure)
+
 class Fiber(val closure: Closure) {
     internal var state = State.NEW
 
