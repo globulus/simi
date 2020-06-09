@@ -27,7 +27,7 @@ class Vm {
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> push(nextString)
-                CONST -> pushConst(fiber.frame)
+                CONST -> pushConst()
                 NIL -> push(Nil)
                 POP -> fiber.sp--
                 POP_UNDER -> {
@@ -36,8 +36,8 @@ class Vm {
                     push(value)
                 }
                 DUPLICATE -> push(peek())
-                SET_LOCAL -> setVar(fiber.frame)
-                GET_LOCAL -> getVar(fiber.frame)
+                SET_LOCAL -> setVar()
+                GET_LOCAL -> getVar()
                 SET_UPVALUE -> fiber.frame.closure.upvalues[nextInt]!!.location = WeakReference(fiber.sp - 1) // -1 because we need to point at an actual slot
                 GET_UPVALUE -> push(readUpvalue(fiber.frame.closure.upvalues[nextInt]!!))
                 SET_PROP -> setProp()
@@ -54,7 +54,7 @@ class Vm {
                     fiber.stack[fiber.sp - 2] = b
                     invoke(Constants.HAS, 1)
                 }
-                PRINT -> println(pop())
+                PRINT -> println(stringify(pop()))
                 JUMP -> buffer.position(nextInt)
                 JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
                 JUMP_IF_NIL -> jumpIf { it == Nil }
@@ -78,14 +78,19 @@ class Vm {
                 }
                 CLASS -> declareClass(SClass.Kind.from(nextByte), nextString)
                 INHERIT -> inherit()
-                IMPORT -> mixin()
+                MIXIN -> mixin()
                 METHOD -> defineMethod(nextString)
                 NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
                 INNER_CLASS -> {
                     val kind = SClass.Kind.from(nextByte)
                     val name = nextString
-                    val klass = SClass(name, kind)
-                    val outerClass = peek() as SClass
+                    val klass = SClass(name, kind, true)
+                    var outerClass: SClass
+                    var outerCount = 0
+                    do {
+                        outerClass = peek(outerCount) as SClass
+                        outerCount++
+                    } while (outerClass.isInner)
                     // Inner classes have qualified names such as Range.Iterator, but we want to store the
                     // field with the last component name only
                     val innerName = name.lastNameComponent()
@@ -125,6 +130,17 @@ class Vm {
                 }
                 GU -> gu()
                 YIELD -> yield(pop())
+                IMPORT -> {
+                    (pop() as? SClass)?.let { klass ->
+                        val count = nextInt
+                        for (i in 0 until count) {
+                            val key = nextString
+                            klass.fields[key]?.let { value ->
+                                push(value)
+                            } ?: throw runtimeError("Can't find field $key in $klass!")
+                        }
+                    } ?: throw runtimeError("On-site imports can only be used with classes!")
+                }
             }
         }
     }
@@ -174,15 +190,15 @@ class Vm {
         run(fiber.fp - 1)
     }
 
-    private fun pushConst(frame: CallFrame) {
+    private fun pushConst() {
         push(currentFunction.constants[nextInt])
     }
 
-    private fun setVar(frame: CallFrame) {
+    private fun setVar() {
         fiber.stack[fiber.frame.sp + nextInt] = pop()
     }
 
-    private fun getVar(frame: CallFrame) {
+    private fun getVar() {
         push(fiber.stack[fiber.frame.sp + nextInt]!!)
     }
 
@@ -693,7 +709,7 @@ class Vm {
     }
 
     private fun declareClass(kind: SClass.Kind, name: String) {
-        val klass = SClass(name, kind)
+        val klass = SClass(name, kind, false)
         if (numClass == null && name == Constants.CLASS_NUM) {
             numClass = klass
         } else if (strClass == null && name == Constants.CLASS_STRING) {
@@ -874,6 +890,7 @@ class Vm {
                     else -> {
                         when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
                             is Closure, is NativeFunction -> {
+                                push(o) // need to push as bound method will replace this index with itself
                                 call(getBoundMethod(o, o.klass, toStringField, Constants.TO_STRING)!!, 0)
                                 pop() as String
                             }

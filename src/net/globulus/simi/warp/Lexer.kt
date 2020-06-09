@@ -229,12 +229,14 @@ class Lexer(private val fileName: String,
                 val stringOpener = matchWhiteSpacesUntilStringOpener()
                 start = current - 1
                 nativeImports += string(stringOpener,false)
+                return
             } else {
                 val curr = current
                 try {
                     val stringOpener = matchWhiteSpacesUntilStringOpener()
                     start = current - 1
                     simiImports += string(stringOpener,false)
+                    return
                 } catch (e: Exception) {
                     current = curr
                 }

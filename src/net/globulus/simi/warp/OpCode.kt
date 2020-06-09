@@ -42,7 +42,7 @@ enum class OpCode {
     RETURN,
     CLASS,
     INHERIT,
-    IMPORT,
+    MIXIN,
     METHOD,
     NATIVE_METHOD,
     INNER_CLASS,
@@ -59,6 +59,7 @@ enum class OpCode {
     GU,
     FIBER,
     YIELD,
+    IMPORT,
     ;
 
     val byte = ordinal.toByte()

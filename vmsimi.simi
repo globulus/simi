@@ -557,6 +557,22 @@ test("two fibers", 8, def {
     return res
 })
 
+test("onsite import", "innerA innerB", def {
+    class_ ModuleClass {
+        class InnerA {
+            def toString = "innerA"
+        }
+        class InnerB {
+            def toString = "innerB"
+        }
+    }
+    def moduleTest {
+        import ModuleClass for InnerA, InnerB
+        return InnerA() + " " + InnerB()
+    }
+    return moduleTest()
+})
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure

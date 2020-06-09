@@ -97,15 +97,7 @@ class Compiler {
      */
     private fun compileInternal(isExpr: Boolean) {
         while (!isAtEnd()) {
-//            if (match(TokenType.IMPORT)) {
-//                val keyword: Token = previous()
-//                if (match(TokenType.IDENTIFIER)) {
-//                    statements.add(Stmt.Import(keyword, Expr.Variable(previous())))
-//                } else { // String imports are handled during scanning phase
-//                    continue
-//                }
-//            }
-            if (match(NEWLINE, PASS)) {
+            if (match(NEWLINE)) {
                 continue
             }
             if (isExpr) {
@@ -147,9 +139,7 @@ class Compiler {
             false
         } else if (match(IMPORT)) {
             checkAnnotationCounter()
-            if (match(IDENTIFIER)) { // match(STRING) imports were resolved at scanning phase
-                // TODO handle local import
-            }
+            import()
             false
         } else if (match(DEF)) {
             checkAnnotationCounter()
@@ -364,7 +354,7 @@ class Compiler {
             // Reverse the mixins for the same reason we did with superclasses
             mixins.reversed().forEach {
                 variable(it)
-                emitCode(OpCode.IMPORT)
+                emitCode(OpCode.MIXIN)
             }
         }
 
@@ -446,6 +436,22 @@ class Compiler {
         }
         emitNativeMethod(name, nativeFunction)
         return name
+    }
+
+    private fun import() {
+        // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
+        val module = consumeVar("Expect identifier for on-site import.")
+        variable(module)
+        checkIfUnidentified()
+        consume(FOR, "Expect 'for' to specify imported fields.")
+        val vars = mutableListOf<String>()
+        do {
+            val imported = consumeVar("Expect identifier to specify imported field.")
+            vars += imported
+            declareLocal(imported, true)
+        } while (match(COMMA))
+        consume(NEWLINE, "Expect newline after on-site import.")
+        emitImport(vars)
     }
 
     private fun annotation() {
@@ -1713,6 +1719,16 @@ class Compiler {
         val funIdx = constIndex(nativeFunction)
         size += byteCode.putInt(funIdx)
         pushLastChunk(Chunk(opCode, size, name, nameIdx, funIdx))
+    }
+
+    private fun emitImport(vars: List<String>) {
+        val opCode = OpCode.IMPORT
+        var size = byteCode.put(opCode)
+        size += byteCode.putInt(vars.size)
+        for (imported in vars) {
+            size += byteCode.putInt(constIndex(imported))
+        }
+        pushLastChunk(Chunk(opCode, size, vars.size, vars.joinToString()))
     }
 
     private fun emitAnnotateField(name: String) {

@@ -3,7 +3,7 @@ package net.globulus.simi.warp
 import net.globulus.simi.Constants
 import net.globulus.simi.warp.native.NativeFunction
 
-class SClass(val name: String, val kind: Kind) : Fielded {
+class SClass(val name: String, val kind: Kind, val isInner: Boolean) : Fielded {
     override val fields = mutableMapOf<String, Any>()
     val superclasses = mutableMapOf<String, SClass>()
     val annotations = mutableMapOf<String, Array<Any>>()
