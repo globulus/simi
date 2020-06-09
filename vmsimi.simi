@@ -529,6 +529,33 @@ test("fiber yield from foreach", "121232453564785906", def {
     s += await fajber(9, 0)
     return s
 })
+def foreach(it, fun) {
+    for i in it {
+        fun(i)
+    }
+}
+test("two fibers", 8, def {
+    fiber F1(p) {
+        foreach(p..5, def (i){
+            yield i
+        })
+    }
+
+    fiber F2(p) {
+        sum = 0
+        f1 = F1()
+        while sum < 5 {
+            sum += p
+            sum += await f1(1)
+            yield sum
+        }
+    }
+
+    f2 = F2()
+    res = await f2(1)
+    res += await f2(2)
+    return res
+})
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {

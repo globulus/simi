@@ -1342,7 +1342,7 @@ class Compiler {
         if (local != null) {
             emitGetLocal(name, local)
         } else {
-            val upvalue = resolveUpvalue(this, name)
+            val upvalue = resolveUpvalue(this, name)?.first
             if (upvalue != null) {
                 emitGetUpvalue(name, upvalue)
             } else {
@@ -1965,7 +1965,7 @@ class Compiler {
         return popCount
     }
 
-    private fun resolveUpvalue(compiler: Compiler, name: String): Upvalue? {
+    private fun resolveUpvalue(compiler: Compiler, name: String): Pair<Upvalue, Int>? {
         if (compiler.enclosing == null) {
             return null
         }
@@ -1975,9 +1975,9 @@ class Compiler {
             local.isCaptured = true
             return addUpvalue(compiler, local.sp, true, name, local.isConst, enclosing.fiberName)
         }
-        val upvalue = resolveUpvalue(enclosing, name)
-        if (upvalue != null) {
-            return addUpvalue(compiler, upvalue.sp, false, name, upvalue.isConst, enclosing.fiberName)
+        val pair = resolveUpvalue(enclosing, name)
+        if (pair != null) {
+            return addUpvalue(compiler, pair.second, false, name, pair.first.isConst, enclosing.fiberName)
         }
         return null
     }
@@ -1988,15 +1988,15 @@ class Compiler {
                            name: String,
                            isConst: Boolean,
                            fiberName: String
-    ): Upvalue {
-        for (upvalue in compiler.upvalues) {
+    ): Pair<Upvalue, Int> {
+        for ((index, upvalue) in compiler.upvalues.withIndex()) {
             if (upvalue.sp == sp && upvalue.isLocal == isLocal && upvalue.fiberName == fiberName) {
-                return upvalue
+                return upvalue to index
             }
         }
         val upvalue = Upvalue(sp, isLocal, name, isConst, fiberName)
         compiler.upvalues += upvalue
-        return upvalue
+        return upvalue to compiler.upvalues.size - 1
     }
 
     private fun printChunks(name: String) {
