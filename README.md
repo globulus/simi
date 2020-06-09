@@ -99,8 +99,8 @@ What Šimi offers:
 #### Keywords
 Šimi has 26 reserved keywords:
 ```ruby
-and break class continue def else elsif false for gu if import
-in is native nil or pass print rescue return self super true while yield
+and break class continue def do else false fiber for gu if import
+in is ivic native nil not or print return self super true when while yield
 ```
 
 Check out the [Keyword glossary](#keyword-glossary) for a quick rundown of their use cases.
@@ -110,16 +110,20 @@ Check out the [Keyword glossary](#keyword-glossary) for a quick rundown of their
 # This is a single line comment
 print b # They span until the end of the line
 
-## And here is
+#* And here is
 a multiline comment
-spanning multple lines ##
+spanning multple lines *#
 ```
 
 #### Identifiers
-Identifiers start with a letter, or _, and then may contain any combination of letters, numbers, or underscores. Identifiers are case sensitive. Note that identifiers that start with _ have special meanings in some instances.
+Identifiers start with a letter, or _, and then may contain any combination of letters, numbers, or underscores. Identifiers are case-sensitive. Note that identifiers that start with _ have special meanings in some instances.
 
 #### Newlines
-Line breaks separate Šimi statements and as such are meaningful. E.g, a block that has a newline after ":" must be completed with an *end*. Similarly, an assignment statement must be terminated with a newline. If your line is very long, you can break it into multiple lines by ending each line with a backslash (\\) for readability purposes.
+Line breaks separate Šimi statements and as such are meaningful. E.g, an assignment statement must be terminated with a newline.
+
+If your line is very long, you can break it into multiple lines by ending each line with a backslash (\\) for readability purposes.
+
+On the other hand, if you wish to pack multiple short statements onto a single line, you can separate them with a semicolon (;). To the lexer, a newline and a semicolon are the same token.
 ```ruby
 a = 5 # This is a line
 # Here are two lines, the first one nicely formatted by using \
@@ -129,80 +133,98 @@ arr = [1, 2, 3]\
     .where(def i = i <= 5)\
     .map(def i = i * 2)\
     .sorted(def (l, r) = r.compareTo(l))
-print arr
+print arr; print a # And here are two print statements separated by ;
 ```
-
-#### pass
-The *pass* keyword is used to denote an empty expression, and is put where a statement or expression is syntactically required, but nothing should actually happen.
-```ruby
-# It can also be used for specifying empty methods that are meant to be overriden
-def next() = pass
-```
-It is also used to denote that a block should be auto-filled by the interpreter (e.g, for [inits and setters](#classes)).
 
 #### Code blocks
 A block of code starts with a left brace *{*, followed by one or multiple statements, terminated with a right brace *}*.
 ```ruby
 if a < 5 { print a } # Single line block
-else { # Multiline block, terminated with a }
+else { # Multiline block
     a += 3
     print b
 }
 ```
 
-Later you'll learn that there's a way to define an [*expression function* with *=*](#implicit-return).
+#### Scoping
 
-> You can actually specify a single-line block with just a colon *:*. This is a remnant of original Šimi syntax, which used colon-*end* pairs to denote blocks. The current guideline is to only use colons in [when expressions](#if-and-when-expressions) if the right-hand side boils down to a short expression. For all the other purposes, **always use braces to denote even single-line blocks**.
+Šimi uses lexical scoping, i.e a variable is valid in the block it was declared in and its parent blocks:
+```ruby
+a = 5
+{
+    print a # Works, a is visible in a nested block
+    b = 6
+    print b # Yup, b is visible here as well
+}
+print a # Works
+print b # Compile error, b is not declared in this scope
 
-#### Variables and constants
-In Šimi, you needn't declare the variable before using it, a simple assignment expression both declares and defines a variable.
+```
 
-By default, all variables in Šimi are constants, i.e their value can't change once it's been assigned (and it's assigned right at the declaration). If you wish to alter the value of the variable, you need to use the *$=* operator instead of *=*. This serves two purposes:
-1. It allows for clear and easy scoping: you can think of the = operator as a *declaration*, and of $= as *assignment*:
+**Name shadowing is prohibited and results in a compile error.** This is to prevent errors...
+```ruby
+a = 5
+{
+    a = 6 # Compile error, a was already declared in an outer block
+}
+```
+
+#### Variables
+In Šimi, variables are declared with the *=* operator:
+```ruby
+a = 5
+b = "string"
+c = true
+```
+
+To assign a new value to a variable, you need to use *$=* operator instead of *=*:
+```ruby
+a = 5
+a $= 6 # The value of a was changed
+a = 5 # Compile error, variable redeclared
+```
+
+> The reasoning behind is that most variables you declare are effectively constants, i.e they're just temporary placeholders for a value. This premise is present in languages such as Swift and Kotlin, where "let" and "val" are preferred over "var", until you find out that a variable's value indeed needs to change. In Šimi, assignment is even more explicit with $=.
+
+Compound operators (+=, -=, etc.) are invoked with $= by default. Also, $= cannot be used with set expressions as they're mutating by default.
+
+##### Constants
+
+Some variables are real constants and using $= with them will result in a compiler error. These are:
+1. Variables whose name is in CAPS_SNAKE_CASE.
+2. Declared classes, functions and fibers, regardless of their case.
+3. Variables declared with *_=* instead of *=*. The *_=* operator was primarily introduced to allow the SINGLETON OBJECTS LINK to be declared as constants.
 
 ```ruby
-# Here are some constants
-a = 5
-b = "str"
-c = [name = "Peter", surname = "Parker"]
+THIS_IS_A_CONST = 5
+THIS_IS_A_CONST $= "error"
 
-def f1() {
-    print a # 5
-    a = 10 # declares new variable a inside the given scope
-    print a # 10
+def func() {
+    return 2
 }
-f1()
+func $= "this is also an error"
 
-print a # 5, as the value didn't change within the function
-
-def f2() {
-    a $= 20 # now we're changing the value of a from outside the scope
-    print a # 20
-}
-f2()
-print a # 20
+realConst _= 10
+realConst $= "again, a compile time error"
 ```
-2. It also forces the programmer to be aware of the fact that they're changing the value of a variable defined outside the current scope, and that immutability may not be preserved.
-
-Compound operators (+=, -=, etc.) are invoked with $= by default. Also, $= cannot be used with set expressions.
 
 ### Values
 
-Šimi supports exactly 5 values, making it extremely easy to infer types and know how does a certain part of code work:
-1. Number - equivalent to a *double* in other languages, represents 64-bit floating-point number. Also serves as the boolean type, with *true* mapping to 1, and *false* mapping to 0.
+Šimi supports exactly 5 values, making it extremely easy to infer types and know how does a certain part of code works:
+1. Number - represents 64-bit number, either integer or floating-point. Also serves as the boolean type, with *true* mapping to 1, and *false* mapping to 0.
 2. String - represents a (multiline) piece of text, enclosed in either single or double quotes.
-3. Function - a parametrized block of code that can be invoked. Functions are first-class citizens in Šimi and can be passed around as normal values.
+3. Function - a parametrized block of code that can be called. Functions are first-class citizens in Šimi and can be passed around as normal values.
 4. Object - the most powerful Šimi construct, represents a mutable or immutable array/list, set, dictionary/map/hash, or a class instance.
 5. Nil - represents an absence of value. Invoking operations on nils generally results in a nil, unless the [nil check operator is used](#---nil-check).
 
 #### Numbers
-At surface, Šimi doesn't make a distinction between integers and floating point numbers, but instead has one number type, 8 bytes long, which doubles as a boolean type where 0 represents a false value.
+At surface, Šimi doesn't make a distinction between integers and floating-point numbers, but instead has one number type, 8 bytes long, which also doubles as a boolean type where 0 represents a false value.
 
-Internally, Šimi uses *either* a 64-bit interger (long) or a 64-bit floating-point (double) to store the numerical value passed to it, depening on if the supplied value is an integer or not. This allows for precision when dealing with both integer and decimal values, and requires attentiveness when creating Number instances via native calls. When two numbers are involved in an operation, the result will be integer of both values are internally integers, otherwise it'll be a decimal number.
+Internally, Šimi uses *either* a 64-bit integer (long), or a 64-bit floating-point (double) to store the numerical value passed to it, depending on if the supplied value is an integer or not. This allows for precision when dealing with both integer and decimal values, and requires attentiveness when creating Number instances via native calls. When an operation involves two numbers, the result will be integer of both values are internally integers, otherwise it'll be a decimal number.
 
-When numbers are used as objects, they're boxed into an instance of open Stdlib class Number, which contains useful methods for converting numbers to strings, rounding, etc.
+When using numbers as objects, they're boxed into an instance of open Core class *Num*, which contains useful methods for converting numbers to strings, rounding, etc.
 
-Numbers are pass-by-value, and boxed numbers are pass-by-copy.
+Numbers are pass-by-value, and boxed numbers are pass-by-reference.
 
 #### Strings
 Strings are arrays of characters. They can be enclosed either in single or double quotes. You can freely put any characters inside a string, including newlines. Regular escape characters can be included.
@@ -212,7 +234,9 @@ string = "this is a
  string with tabs"
 anotherString = 'this is another "string"'
 ```
+
 String interpolation is supported by enclosing the nested expressions into *\\(SOMETHING)*:
+
 ```ruby
 a = 2
 b = 3
@@ -220,9 +244,9 @@ print "a doubled is \(a * 2) and b minus 1 halved is \((b - 1) / 2)"
 # Prints: a doubled is 4 and b minus 1 halved is 1
 ```
 
-When used as objects, strings are boxed into an instance of open Stdlib class String, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
+When used as objects, strings are boxed into an instance of open Core class *String*, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.
 
-Strings are pass-by-value, and boxed strings are pass-by-copy.
+Strings are pass-by-value, and boxed strings are pass-by-reference.
 
 The String class contains a native *builder()* method that allows you to concatenate a large number of string components without sacrificing the performance that results from copying a lot of strings:
 ```ruby
@@ -239,10 +263,10 @@ class Range {
 ```
 
 ##### Boxed numbers and strings
-Boxed numbers and strings are objects with two fields, a class being Number or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
+Boxed numbers and strings are objects with two fields, a class being Num or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
 # Implementation of times() method from Number class
-def times() = ife(@_ < 0, =Range(@_, 0), =Range(0, @_)).iterate()
+def times = ife(@_ < 0, =Range(@_, 0), =Range(0, @_)).iterate()
 ```
 
 #### Functions
@@ -555,6 +579,11 @@ print compositeObj
 ```
 
 #### Value conversions
+
+Despite being a dynamic language, Šimi doesn't do implicit type conversions. The only thing similar to an implicit conversion is concatenating a value to a string, in case of which this value will be *stringified*. The same is true when a value is printed using the *print* statement.
+
+Stringification works in such a way that
+
 * Numbers can be converted to Strings via the toString() method.
 * Conversely, Strings can be converted to Numbers by using the toNumber() method, but be aware that invoking this method may produce NumberFormatException that needs to be handled via the *rescue* block.
 * Objects (and all their derivations) have a toString() method that prints a human-readable representation of the object.
@@ -744,7 +773,9 @@ class FixedSizeArray {
 
 #### Using classes as modules
 
-Classes can be used to define namespaces and prevent naming collisions when working on a larger project. Just define a (preferrably final) class and define classes, methods and fields that you want to modularize inside it:
+TODO more to a separate section named MODULARITY
+
+Classes can be used to define namespaces and prevent naming collisions when working on a larger project. Just define a (preferably final) class and define classes, methods and fields that you want to modularize inside it:
 ```ruby
 class_ ModuleClass {
 
@@ -771,14 +802,27 @@ a = ModuleClass.ModuleClassA()
 anotherA = AnotherModuleClass.ModuleClassA()
 ```
 
-You can also use the *import* statement to statically import all the public values of the supplied class into the current environment:
+##### On-site import
+
+You can also use the *import* statement to statically bind values of the supplied class into the current scope. The syntax is as following:
 ```ruby
-print ModuleClassA # nil
+import CLASS for FIELD1, FIELD2, FIELD3...
+```
+The interpreter will take the class fields and assign them to same-named local variables. Note that all the fields must be present, otherwise an error will be raised - the variables binding these fields will never be nil.
 
-import ModuleClass # Import all ModuleClass values into the current environment
-
-print ModuleClassA # works
-print ModuleClassA <> ModuleClass.ModuleClassA # true
+```ruby
+class_ ModuleClass {
+    class InnerA {
+        def toString = "innerA"
+    }
+    class InnerB {
+        def toString = "innerB"
+    }
+}
+def moduleTest {
+    import ModuleClass for InnerA, InnerB
+    return InnerA() + " " + InnerB()
+}
 ```
 
 ### Operators
@@ -800,8 +844,8 @@ print ModuleClassA <> ModuleClass.ModuleClassA # true
 
 not, and, or
 
-* *not* is unary, *and* and *or* are binary
-* *and* and *or* are short-circuit operators (and-then and or-else)
+* *not* is unary, *and* and *or* are binary.
+* *and* and *or* are short-circuit operators (and-then and or-else).
 
 #### Comparison
 
@@ -809,9 +853,12 @@ not, and, or
 
 * On objects, == implicitly calls the *equals()* method. By default, it checks if two object *references* are the same. If you wish to compare you class instances based on values, override this method in your class. If you need to check equivalence based on values, check out the *matches()* method.
 * The matching operator <> implicitly invokes *matches()* method. The default implementation of this method checks objects by their keys and values, basically checking their equivalence. You can, of course, override this method to accept any combination of arguments and perform different matching, e.g matching strings based on regular expressions.
-* Remaining operators (<, <=, > and >=) can only be used with Numbers.
+* <, <=, > and >= can only be used with Numbers.
+
+> I'm aware that using "!=" for "not equal" seems out of place, especially since "not" is a separate keyword and "!" is used in other capacities elsewhere in the language, but it just seems natural coming from C.
 
 #### is and is not
+*is* checks if a value is of a certain type.
 You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:
 ```ruby
 a = [1, 2, 3, 4]

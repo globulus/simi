@@ -87,6 +87,8 @@ class Vm {
                     val klass = SClass(name, kind, true)
                     var outerClass: SClass
                     var outerCount = 0
+                    // Inner classes also live on the stack (which might be a mistake), so we need to find the actual
+                    // outer class up the stack to attach this inner class to
                     do {
                         outerClass = peek(outerCount) as SClass
                         outerCount++
