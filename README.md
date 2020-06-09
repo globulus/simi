@@ -857,9 +857,35 @@ not, and, or
 
 > I'm aware that using "!=" for "not equal" seems out of place, especially since "not" is a separate keyword and "!" is used in other capacities elsewhere in the language, but it just seems natural coming from C.
 
+#### Range
+
+*Range* is a Core class that is used quite often, so it has its own dedicated set of operators that operate on numbers.
+
+* *..* (two dots) creates a range from left hand side *until* right hand side - up to, but not including:
+```ruby
+1..10 # 1, 2, 3, 4, 5, 6, 7, 8, 9
+```
+* *...* (three dots) creates a range from left hand side *to* right hand side - up to, and including:
+```ruby
+1...10 # 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+```
+
+Internally, these operators are mere syntax sugar that compiles as invocations of Num.rangeTo and Num.rangeUntil methods, respectively.
+
 #### is and is not
-*is* checks if a value is of a certain type.
-You can check if an Object is instance of a class by using the *is* operator. It can also be used to check types:
+You can check if a value is of a certain type with the *is* operator. Its inverted version is *is not*. The right hand side must be a class. Here's a breakdown of how the operator behaves based on left hand side.
+* *nil is Anything* always returns false.
+* For numbers: var is Num
+* For Strings: var is String
+* For functions: var is Function
+* For fibers: var is Fiber
+* For classes: var is Class
+* For objects: var is Object
+* For lists: var is List
+* To check is an object is an instance of a class or any of its subclasses: var is SomeClass.
+* You can also use *is* to see if a class is a subclass of another class: SomeClass is PotentialSuperClass.
+    * > This part is debatable, as *is* is supposed to check *what type a value is*, but then again, it flows well with the *is* keyword for subclassing. It might be removed in the future, or replaced with *>* (although that one isn't without issues either).
+
 ```ruby
 a = [1, 2, 3, 4]
 a is Object # true
@@ -870,10 +896,12 @@ b is String # false
 car = Car("Audi", "A6", 2016)
 car is Car # true
 car is not Object # false
+
+TODO expand
 ```
 
 #### in and not in
-The *in* operator implicitly calls the *has()* method, that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
+The *in* operator implicitly calls the *has()* method. that's defined for Objects and Strings, but not for numbers. For strings, it checks presence of a substring. For Objects, it checks presence of a value for arrays, and key for keyed objects. It can be overriden in subclasses, for example in the Range class:
 ```ruby
 class Range {
 
@@ -938,15 +966,15 @@ When it comes to literal values, determining the truth is easy:
 
 while everything else (including empty strings and objects) is true.
 
-#### if-elsif-else
-Not much to say here, Šimi offers the usual if-elsif-...-elsif-else structure for code branching.
+#### if-else if-else
+Not much to say here, Šimi offers the usual if-else if-...-else -else structure for code branching.
 ```ruby
 if a < b {
   c = d
   print c
-} elsif a < c {
+} else if a < c {
  print "a < c"
-} elsif a < d {
+} else if a < d {
   a = e
   print e
 } else {
@@ -955,11 +983,11 @@ if a < b {
 ```
 
 #### when
-A syntax sugar for a lot of elsifs when you're checking against the same value:
+If you're comparing a lot of branches against the same value, it's more convenient to use a *when* statement.
 * It supports *is*, *is not*, *in* and *not in* operators; otherwise it assumes that the operator is *==*.
 * *if* can be used as an operator to denote that its right-hand side should be evaluated as-is (useful for function calls).
 * You can use the *or* operator to check against multiple conditions in a single branch.
-* *When* statement can be made exhaustive by adding an *else* block at the end.
+* *when* statement can be made exhaustive by adding an *else* block at the end.
 ```ruby
 when a {
     5 {
@@ -983,19 +1011,19 @@ when a {
 }
 ```
 
+Note that *when* is a syntax sugar, i.e it compiles the same way as if-else if-else blocks would.
+
 #### *if* and *when* expressions
 
-*if-elsif-else* branches (and, by default, its alternate form of *when*) can be used as expressions. The difference from their statement forms are twofold:
-1. You can't *return*, *yield*, *break* or *continue* from inside their bodies.
-2. The last obtained value in each block is returned as its value.
+*if-else if-else* branches (and, by default, its alternate form of *when*) can be used as expressions. The last line in the block (or the only value if it's a block-less statement) must be an expression, or a return/yield/break/continue - otherwise, a compiler will report an error.
 
 ```ruby
 a = if someCondition {
     3
-} elsif otherConditions {
+} else if otherConditions {
     print "something"
-    c
-} elsif yetMoreConditions {
+    return "I'm outta this function"
+} else if yetMoreConditions {
     print "doing this"
     doThis()
 } else {
@@ -1003,31 +1031,46 @@ a = if someCondition {
 }
 ```
 
+The *when* equivalent different only as it allows to use *=* for the single-line expression block:
+
+```ruby
+a = when b {
+    3 or 4 = 10 # See how easy and fast this is to type?
+    6 or 7 = 20
+    is String = 30
+    is List {
+        d = a * 3 + 15
+        d + 20 # The last line in the block must still be an expression
+    }
+    else = 50
+}
+```
+
+
 Naturally, functions with an implicit return of their single expression work with *if* and *when* expressions as well:
 
 ```ruby
 def extractValue(obj) = when obj {
-    is A: obj.aValue()
-    is B or is C: obj.bOrCValue()
-    else: obj.otherValue()
+    is A = obj.aValue()
+    is B or is C = obj.bOrCValue()
+    else = obj.otherValue()
 }
 ```
 
-Let's rewrite the *when* example above as an expression:
+Let's rewrite the *when* example from the previous section as an expression:
 
 ```ruby
 print when a {
-    5: "a is 5"
-    10 or 13 or 15: "a is 10 or 13 or 15"
-    is String: "a is String"
-    not in Range(12, 16): print "not between 12 and 16"
-    if isValidString(a) or is Number: "is valid string or a number"
-    else: "reached the default branch"
+    5 = "a is 5"
+    10 or 13 or 15 = "a is 10 or 13 or 15"
+    is String = "a is String"
+    not in Range(12, 16) = print "not between 12 and 16"
+    if isValidString(a) or is Number = "is valid string or a number"
+    else = "reached the default branch"
 }
 ```
 
-> Note the usage of the colon to denote a short expression block. This is, of course, purely optional.
-
+TODO REMOVE IFE
 If you prefer a shorter solution, the Stdlib contains a global function named **ife**, which works exactly as the ternary operator in some other languages (?:) does - if the first parameter is true, the second parameter is returned, otherwise the third parameter is returned. The syntax of the ife function is more readable and forces the user to make use of short, concise expressions for all three parameters.
 
 ```ruby
@@ -1061,50 +1104,129 @@ while a < 10 {
 }
 ```
 
-#### for-in loop
-Šimi offers a *for-in* loop for looping over iterables (and virtually everything in Šimi is iterable). The first parameter is the value alias, while the second one is an expression that has to evaluate either to an *iterator* or an *iterable*. The block of the loop will be executed as long as the iterator supplies non-nil values (see section below).
+#### do-while loop
+The *do-while* loop also executes while its condition is true, but its condition is checked at the end, meaning that it's body is always going to execute at least once.
 ```ruby
-for i in 6.times() {  # Prints 0 1 2 3 4 5 6
+a = 10
+do {
+  print a # This will still get printed because condition is evaluated at the end
+  a *= 2
+} while a < 3
+```
+
+
+#### for-in-else loop
+Šimi offers a *for-in* loop for looping over iterables (and virtually everything in Šimi is iterable). The first parameter is the value alias, while the second one is an expression that has to evaluate either to an *iterable*. The block of the loop will be executed as long as the iterator supplies non-nil values (see section below).
+```ruby
+for i in 6 {  # Prints 0 1 2 3 4 5
  print i
 }
 for c in "abcdef" { # Prints a b c d e f
  print c
 }
 
-# Iterating over array iterates over its values
+# Iterating over a list iterates over its values
 for value in [10, 20, 30, 40] { # Prints 10 20 30 40
  print value
 }
 
 object = [a = 1, b = "str", c = Pen(color = "blue")]
 # Iterating over keyed objects over its keys
-for key in object: print key # Prints a, b, c
+for key in object {
+ print key # Prints a, b, c
+}
 # Object decomposition syntax can be used with for loop as well
 for [key, value] in object.zip() {  # Prints a = 1, b = str, etc.
  print key + " = " + value
 }
 ```
-If the expression can't evaluate to an iterator or an iterable, an exception will be thrown.
 
-#### Iterators and iterables
+If the expression is *nil*, the loop won't run. However, it it isn't nil and doesn't resolve to an iterator, a runtime error will be thrown.
+
+There are situations in which you want to know that a loop didn't run because its iterator was nil. In such cases, append an *else* block after the for loop:
+
+```ruby
+for i in something {
+    # do your thing
+} else {
+    print "something was nil, the loop didn't run!"
+}
+```
+
+#### Iterables and iterators
 The contract for these two interfaces is very simple:
-* An *iterator* is an object that has the method *next()*, which returns either a value or nil. If the iterator returns nil, it is considered to have reached its end and that it doesn't other elements.
 * An *iterable* is an object that has the method *iterate()*, which returns an iterator. By convention, every invocation of that method should produce a new iterator, pointing at the start of the iterable object.
+* An *iterator* is an object that has the method *next()*, which returns either a value or nil. If the iterator returns nil, it is considered to have reached its end and that it doesn't other elements.
 
-Virtually everything in Šimi is iterable:
+Virtually everything in Šimi is iterable: TODO revisit
 1. The Number class has methods times(), to() and downto(), which return Ranges (which are iterable).
 2. The String class exposes a native iterator which goes over the characters of the string.
 3. The Object class exposes a native iterator that works returns values for arrays, and keys for objects. There's also a native zip() method, that returns an array of \[key = ..., value = ...] objects for each key and value in the object.
 4. Classes may choose to implement their own iterators, as can be seen in the Stdlib Range class.
 
 #### break and continue
-The *break* and *continue* keywords work as in other languages, and must be placed inside loops, otherwise the interpreter will throw an exception.
+The *break* and *continue* keywords work as in other languages - break terminates the active loop, while continue jumps to its top. They must be placed in loops.
+
+#### do-else
+
+A *do* block is a breakable block of code - you can think of it as a mini function that has its own scope, but not its own call frame.
+```ruby
+do {
+    a = 5
+    b = 6
+    if a + b > 12 {
+        break
+    }
+    print a
+}
+```
+
+If you follow the *do* block with an *else* block, the code after *else* will be executed *if the do block breaks*. If the *do* block reaches its end normally, the *else* block is discarded.
+```ruby
+do {
+    a = 5
+    if a < 3 {
+        break
+    }
+    print "this won't be printed"
+} else {
+    print "do block exited early"
+}
+print "continuing normally"
+```
+
+It gets better than that - you can use breaks to *pass values* to the else block. Every else block implicitly has a local variable named *it*, which is bound to the value of the break (default is, of course, nil).
+```ruby
+do {
+    a = 5
+    if a < 30 {
+        break 10
+    }
+    a += 17
+    if a > 3 {
+        break 20
+    } else {
+        break # equal to break nil
+    }
+    print "this won't be printed"
+} else {
+    print when it { # "it" is implictly bound and available in the else block
+        10 = "ten"
+        20 = "twenty"
+        else = "something else \(it)"
+    }
+}
+```
+
+The *do-else* construct shines to syphon multiple TODO LINK rescue clauses to the same handler.
+
+> do-else expressions, or using dos as procs, might not be far away...
 
 #### return and yield
 
 Control flow in functions is done via *return* and *yield* statements.
 
-The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was invoked, and can either pass or not pass a value:
+The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was called, and can either pass or not pass a value:
  ```ruby
  def f(x) {
     if x < 5 {
@@ -1115,6 +1237,8 @@ The *return* statement behaves as it does in other languages - the control immed
  print f(2) # 0
  print f(6) # 6
  ```
+
+ A *return* always returns from the current function, be it a lambda or not. Some languages make a distinction there, but Šimi does not.
 
  The *yield* statement is very similar to return, but the function block stores where it left off, and subsequent invocations resume the flow from that point:
 ```ruby
@@ -1187,58 +1311,39 @@ The [Stdlib Async class](stdlib/Async.simi) used to do the same thing, but is no
 ### Exception handling
 
 #### Exceptions
-All exceptions thrown in Šimi do (and should) extend the base class *Exception*. The default constructor takes a string message, and the class exposes a native method *raise()* that is used for throwing an error.
+All exceptions in Šimi do (and should) extend the base class *Exception*. The default constructor allows you to define a string message for your exception. Its generally advisable to create your own exception subclass as opposed to discerning exceptions based on their message.
 
-#### The *rescue* block
-Šimi compresses the usual try-catch-...-catch-else-finally exception handling structure into a single concept, that of a *rescue block*.
+#### Returning exceptions
 
+In Šimi, Exceptions **are returned, and not thrown/raised**. If a certain piece of code wishes to indicate that an exception has occurred, it should return an instance of the Exception class or any of its subclasses. It's a simple as that, and also dead-easy to understand how does control flow in the function where the exception occurred - it immediately returns to its call site.
+
+Just as you probably guessed, this *does not* unwind the call stack in search of the nearest catch block, as there's no such thing in Šimi. Instead, exceptions are handled via **rescue blocks**.
+
+#### Rescue blocks
+
+A rescue block sits at the end of a statement and waits for an exception to be returned from any of the calls or getters. If this happens, it immediately executes the code within its block. After that (or otherwise, if no exceptions are returned in the statement) life goes on as it did before.
+
+A rescue blocks starts with *?!* (you can read this as "if exception"), followed by a block. This is a hard block, and not an expression one, and you can thing of it as sitting *below* the statement it rescues, and not inline with it.
+
+If an exception is returned, it will be bound inside the rescue block as *it*, so that you may access it.
+
+TODO SOME EXAMPLES
+
+If you need a common handler for a lot of rescue blocks, pair it with a do-else, *break it* in all the rescue blocks and see the magic unfold:
 ```ruby
-def abs(value) {
-  if value is not Number {
-    InvalidParameterException("Expected a number!").raise()
-  }
-  return value.abs()
-}
-
-def testAbs() {
-  value = "string"
-  print "This is printed"
-  absValue = abs(value) # The exception is thrown here!
-  print "This will be skipped"
-  rescue ex {
-    if ex {
-        print "Exception occurred: " + ex.message
-    } else {
-        print "An exception did not happen"
+do {
+    someCallThatMightProduceExceptionA() ?! { break it }
+    a = thisMight.returnExceptionB + thisMightReturnSomeOtherException() ?! { break it }
+} else {
+    print when it {
+        is ExceptionA = "exception A occurred \(it.message)"
+        is ExceptionB = "exception A occurred \(it.message)"
+        else = "something else \(it)"
     }
-    print "This is always executed"
-  }
-  print "Resuming the block normally..."
 }
 ```
-The rescue block works as following:
-* If an exception is raised anywhere in the code, the interpreter will start skipping statements until it hits a rescue block, where it will enter, passing the raised exception as the parameter of the rescue block. Program execution will then resume normally at the end of the rescue block.
-* If no rescue blocks are found by the time interpreter executes the next global statement, the program will crash.
-* If a rescue block is encountered during normal program execution, it is executed with a *nil* parameter.
 
-You can think of all the code above a rescue block as a part of try block, with the catch/except and else blocks being the if/else of the rescue block. The finally part is unecessary as all the statements above the rescue block are a part of the same scope as the statements below it. Check out the example above, rewritten in **Python**:
-
-```python
-def testAbs():
-  value = "string"
-  print "This is printed"
-  try:
-    absValue = abs(value) # The exception is thrown here!
-    print "This will be skipped"
-  except InvalidParameterException:
-    print "Exception occurred: " + ex.message
-  else:
-    print "An exception did not happen"
-  finally:
-    print "This is always executed"
-    print "Resuming the block normally..."
-```
-As you can see, the *rescue* statement is more concise and leads to less nesting, while allowing to you explore all the possible execution paths.
+The *it* in the rescue block (the exception) is transferred via *break* to the *else* block, where it's also bound to the local *it*.
 
 ### Enums
 
