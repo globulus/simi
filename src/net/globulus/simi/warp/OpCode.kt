@@ -58,7 +58,6 @@ enum class OpCode {
     GET_ANNOTATIONS,
     GU,
     FIBER,
-    AWAIT,
     YIELD,
     ;
 

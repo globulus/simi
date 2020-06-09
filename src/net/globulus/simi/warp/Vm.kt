@@ -124,7 +124,6 @@ class Vm {
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu()
-                AWAIT -> await(false, nextInt)
                 YIELD -> yield(pop())
             }
         }
@@ -460,6 +459,9 @@ class Vm {
                     throw runtimeError("A fiber can only be instantiated with 0 arguments.")
                 }
                 fiber.stack[spRelativeToArgCount] = Fiber(callee.closure)
+            }
+            is Fiber -> {
+                await(false, argCount)
             }
         }
     }

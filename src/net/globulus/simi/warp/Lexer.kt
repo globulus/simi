@@ -433,7 +433,6 @@ class Lexer(private val fileName: String,
     companion object {
         val keywords = mapOf(
                 "and" to AND,
-                "await" to AWAIT,
                 "break" to BREAK,
                 "class" to CLASS,
                 "class_" to CLASS_FINAL,

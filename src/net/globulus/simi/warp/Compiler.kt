@@ -5,7 +5,6 @@ import net.globulus.simi.Parser
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
-import net.globulus.simi.TokenType.AWAIT
 import net.globulus.simi.TokenType.CLASS
 import net.globulus.simi.TokenType.IMPORT
 import net.globulus.simi.TokenType.IS
@@ -983,17 +982,6 @@ class Compiler {
                 }
                 emitSet(variable)
             }
-//            if (match(TokenType.YIELD)) {
-//                val keyword = previous()
-//                val call = call()
-//                if (call is Call) {
-//                    return Yield(expr, equals, keyword, call)
-//                } else {
-//                    throw error(keyword, "yield expressions must involve a call!")
-//                }
-//            }
-            /*val value = assignment()*/
-//            return Parser.getAssignExpr(this, expr, equals, value)
             return false
         }
         return true
@@ -1001,47 +989,7 @@ class Compiler {
 
     // irsoa = is right side of assignment
     private fun firstNonAssignment(irsoa: Boolean) { // first expression type that's not an assignment
-        if (irsoa) {
-            awaitOrOr()
-        } else {
-            or(irsoa)
-        }
-    }
-
-    private fun awaitOrOr() {
-        val emitAwait = match(AWAIT)
-        or(true)
-        if (emitAwait) {
-            if (lastChunk?.opCode == JUMP_IF_EXCEPTION) { // probably preceeded by a call
-                val preLastChunk = chunks[chunks.size - 2]
-                if (preLastChunk.opCode in listOf(CALL, INVOKE, SUPER_INVOKE)) {
-                    val jieChunk = lastChunk!!
-                    rollBackLastChunk()
-                    val callChunk = lastChunk!!
-                    rollBackLastChunk()
-                    val argCount = when (callChunk.opCode) {
-                        CALL -> callChunk.data[0] as Int
-                        INVOKE -> {
-                            emitId(callChunk.data[0] as String)
-                            emitCode(GET_PROP)
-                            callChunk.data[1] as Int
-                        }
-                        SUPER_INVOKE -> {
-                            emitId(callChunk.data[0] as String)
-                            emitCode(GET_SUPER)
-                            callChunk.data[1] as Int
-                        }
-                        else -> throw IllegalStateException("WTF")
-                    }
-                    emitAwait(argCount)
-                    pushLastChunk(jieChunk) // the rescue jump is still valid
-                } else {
-                    throw error(previous, "WTF")
-                }
-            } else {
-                throw error(previous, "Invalid 'await' syntax.")
-            }
-        }
+        or(irsoa)
     }
 
     private fun or(irsoa: Boolean) {
@@ -1827,13 +1775,6 @@ class Compiler {
         byteCode.setInt(skip, offset)
         chunk.data[1] = skip
         return skip
-    }
-
-    private fun emitAwait(argCount: Int) {
-        val opCode = OpCode.AWAIT
-        var size = byteCode.put(opCode)
-        size += byteCode.putInt(argCount)
-        pushLastChunk(Chunk(opCode, size, argCount))
     }
 
     private fun emitCall(argCount: Int) {
