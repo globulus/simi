@@ -582,12 +582,11 @@ print compositeObj
 
 Despite being a dynamic language, Šimi doesn't do implicit type conversions. The only thing similar to an implicit conversion is concatenating a value to a string, in case of which this value will be *stringified*. The same is true when a value is printed using the *print* statement.
 
-Stringification works in such a way that
+Stringification works in the following way:
+* For numbers and *nil*, you get what you expect.
+* All other objects have a default, natively implemented toString() method, that can be overridden.
 
-* Numbers can be converted to Strings via the toString() method.
-* Conversely, Strings can be converted to Numbers by using the toNumber() method, but be aware that invoking this method may produce NumberFormatException that needs to be handled via the *rescue* block.
-* Objects (and all their derivations) have a toString() method that prints a human-readable representation of the object.
-* If you wish to have a custom representation of a class, override the toString() method in it.
+* Strings can be converted to Numbers by using the toNumber() method, but be aware that invoking this method may produce NumberFormatException that needs to be handled via the *rescue* block.
 
 ### Classes
 Šimi is a fully object-oriented languages, with classes being used to define reusable object templates. A class consists of a name, list of superclasses, and a body that contains constants and methods:
@@ -873,7 +872,7 @@ not, and, or
 Internally, these operators are mere syntax sugar that compiles as invocations of Num.rangeTo and Num.rangeUntil methods, respectively.
 
 #### is and is not
-You can check if a value is of a certain type with the *is* operator. Its inverted version is *is not*. The right hand side must be a class. Here's a breakdown of how the operator behaves based on left hand side.
+You can check if a value is of a certain type with the *is* operator. Its inverted version is *is not*. The right hand side must be a class. Since everything in Šimi is an object (or can be boxed into one), you can dynamically check the type of anything on the left hand side:
 * *nil is Anything* always returns false.
 * For numbers: var is Num
 * For Strings: var is String
@@ -1114,7 +1113,6 @@ do {
 } while a < 3
 ```
 
-
 #### for-in-else loop
 Šimi offers a *for-in* loop for looping over iterables (and virtually everything in Šimi is iterable). The first parameter is the value alias, while the second one is an expression that has to evaluate either to an *iterable*. The block of the loop will be executed as long as the iterator supplies non-nil values (see section below).
 ```ruby
@@ -1240,73 +1238,63 @@ The *return* statement behaves as it does in other languages - the control immed
 
  A *return* always returns from the current function, be it a lambda or not. Some languages make a distinction there, but Šimi does not.
 
- The *yield* statement is very similar to return, but the function block stores where it left off, and subsequent invocations resume the flow from that point:
+ The *yield* statement is very similar to *return*, but it's only applicable to [fibers](#fibers). Please check the Fibers section for more info.
+
+### Fibers
+
+Fibers are Šimi **coroutines** - autonomous, suspendable runtimes that can pass data between themselves. You can think of a fiber as a suspendable function, one that can execute itself to a certain point, switch the execution back to its caller, and then *resume where it left off* on the next call. It suspends and resumes can both pass data.
+
+Any Šimi program is always running inside an implicit, main fiber (which you can't yield out of).
+
+Let's illustrate all of this with an example.
+
+The first step towards your first fiber is to write a *fiber class*:
 ```ruby
-def testYieldFun() {
-    print "before yield"
-    for i in 3.times() {
-        if i < 2 {
-            yield "yield " + i
-        } else {
-            return "return in yield"
-        }
-    }
+fiber MyFiber(a, b, c) {
+    foreach(a..b, def (i) { # foreach is a function that iterates through first arg and calls second arg with the iteration value
+        yield i + c
+    })
 }
-print "Calling yield test"
-print testYieldFun()
-print "Calling again..."
-print testYieldFun()
-print "Calling yet again..."
-print testYieldFun()
-print "Now it should restart"
-print testYieldFun()
 ```
-The output of this code is:
-```
-Calling yield test
-before yield # Function is invoked the first time, and it starts at beginning
-yield 0 # The value of i is 0, and the function remembers that it "returned" from here
-Calling again... # The second invocation will resume where the function left off...
-yield 1 # ...and we pick up at the next iteration of the loop, with i == 1
-Calling yet again... # Resuming after another yield
-return in yield # This time i == 2, so a return is called
-Now it should restart # That's exactly right
-before yield # ...and we see that it does restart
-yield 0
-```
-Yielding allows for coding of generators, and serves as a lightweight basis for concurrency, allowing a code to do multiple "returns" without having to resort to using callbacks.
 
-#### Async programming with yield expressions
-
-*yield* can also be used as a part of assignments to avoid [callback hell.](http://blog.mclain.ca/assets/images/callbackhell.png) Basically, the function you're in will yield its execution to the other function, which needs to be async (i.e, its last parameter must be a single-parameter function) and resume once the callback is invoked. This allows for a flat code hierarchy that's easier to read and maintain, while in fact, behind the scenes, callbacks are being invoked and code is executed asynchronously:
+The syntax looks awfully like that of functions, because ultimately all a fiber does, code-wise, is wrap a single function (do note the keyword *fiber* as opposed to *def*). However, in order to use a Fiber, you have to instantiate it:
 ```ruby
-def testYieldExpr() {
-    # The async function can take any number of parameters, but its
-    # last one must be a function that accepts 1 param
-    asyncFunc = def (a, callback) {
-        if a % 2 {
-            callback(10)
-        } else {
-            callback(20)
-        }
-    }
-
-    test = def {
-        print "Before yield expr test"
-        a = yield asyncFunc(5)
-        # After the asyncFunc callback is invoked, its value will
-        # be assigned to a, and the code beneath will be executed
-        print "10 == " + a
-        # You can have multiple yield expressions in a single function
-        b = yield asyncFunc(10)
-        print "20 == " + b
-        print "After all"
-    }
-    test()
-}
-testYieldExpr()
+myFiber = MyFiber()
 ```
-The [Stdlib Async class](stdlib/Async.simi) used to do the same thing, but is now deprecated.
+
+Fibers are always instantiated with a parameter-less call to their fiber class. Trying to pass more than zero arguments here is a runtime error.
+
+After a fiber has been initialized, you can call it just like any other function, by passing the expected number of arguments to it:
+```ruby
+print myFiber(0, 3, 1)
+print myFiber(5, 3, 5)
+print myFiber(6, 3, 10)
+print myFiber(8, 3, 20)
+print myFiber(5, 10, 0)
+```
+
+The output of the above is:
+```ruby
+1
+6
+12
+nil
+5
+```
+
+Why is that so? Let's examine the execution step-by step:
+1. The fiber is invoked with params 0, 3, and 1. This creates a Range(0, 2) and starts iterating through it.
+2. *yield* works just like *return*, except the fiber remembers where it left of. This yield return 0 (for i) + 1 (for c) for a sum of 1.
+3. The next call kicks off after the last yield, which is still inside the loop, meaning that the changes to a and b don't matter. The change to c does, so the result is 1 (for i) + 5 (for c) which equals 6.
+4. It's exactly the same for the next iteration - i = 2 + c = 10 == 12.
+5. On the next invocation, the loop ends as we've exhausted the range, and the *implicit return nil* is executed at the end of the function.
+6. Since the fiber returned on the previous invocation, it's reset, and the new invocation starts a new iteration through Range(5, 9).
+
+Here are a few takeaway points:
+* A *yield* always suspends the nearest fiber, just like return returns from the nearest function. This means that, when a fiber suspends, its entire call stack suspends as well - and resumes where it left off, no matter how many nested function calls it had.
+* If a fiber returns, its reset and the next invocation will resume from the start.
+* You can pass new arguments to the fiber with each invocation, but it's the structure of the fiber code that determines if they have an effect or not.
+* Naturally, you can call fibers from other fibers (remember how your entire program is already in a fiber).
 
 ### Exception handling
 
