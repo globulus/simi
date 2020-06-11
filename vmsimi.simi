@@ -573,6 +573,33 @@ test("onsite import", "innerA innerB", def {
     return moduleTest()
 })
 
+test("proc do", 5, def {
+    i = 10
+    p = do {
+        if i < 20 {
+            break 20
+        }
+        5
+    }
+    i $= p() + 5
+    j = p()
+    return j
+})
+test("proc do else", 20, def {
+    i = 10
+    p = do {
+        if i < 20 {
+            break 20
+        }
+        5
+    } else {
+        25
+    }
+    i $= p() + 5
+    j = p()
+    return j
+})
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure

@@ -40,6 +40,7 @@ enum class OpCode {
     CLOSURE,
     CLOSE_UPVALUE,
     RETURN,
+    PROC,
     CLASS,
     INHERIT,
     MIXIN,

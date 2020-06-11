@@ -20,8 +20,8 @@ class Vm {
         } catch (ignored: IllegalStateException) { } // Silently abort the program
     }
 
-    private fun run(breakAtFp: Int, once: Boolean = false) {
-        loop@ while (true) {
+    private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
+        loop@ while (predicate?.invoke() != false) {
             val code = nextCode
             when (code) {
                 CONST_INT -> push(nextLong)
@@ -70,6 +70,7 @@ class Vm {
                 }
                 CLOSURE -> closure(false)
                 FIBER -> closure(true)
+                PROC -> push(Proc(nextInt, nextInt))
                 CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
                     if (doReturn(nextString, breakAtFp)) {
@@ -480,6 +481,18 @@ class Vm {
             }
             is Fiber -> {
                 await(false, argCount)
+            }
+            is Proc -> {
+                if (argCount != 0) {
+                    throw runtimeError("A proc can only be called with 0 arguments.")
+                }
+                fiber.sp-- // pop the proc off the stack
+                with(fiber.frame.buffer) {
+                    val current = position() // store current position
+                    position(callee.start) // jump to proc start
+                    run(fiber.fp) { position() != callee.end } // run until code reaches end
+                    position(current) // jump back to the call site
+                }
             }
         }
     }

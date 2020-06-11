@@ -796,19 +796,29 @@ class Compiler {
         }
     }
 
-    private fun doBlock(tokens: List<Token>) {
+    private fun doBlock(tokens: List<Token>?) {
         loops.push(DoBlock(scopeDepth))
-        compileNested(tokens, false)
+        val isExpr = tokens == null
+        if (isExpr) {
+            expressionOrExpressionBlock { expression() }
+        } else {
+            compileNested(tokens!!, false)
+        }
         val breakJumpLoc: Int
         if (match(ELSE)) {
             consume(LEFT_BRACE, "Expect '{' to start else clause of do-else block.")
             val elseSkip = emitJump(JUMP)
             emitCode(OpCode.NIL) // need to push this to have something to pop below if no breaks were reached
             breakJumpLoc = byteCode.size
-            beginScope()
-            declareLocal(Constants.IT)
-            block(false)
-            endScope(true)
+            if (isExpr) {
+                current-- // roll back to include the { for the expressionOrExpressionBlock call
+                expressionOrExpressionBlock(listOf(Constants.IT)) { expression() }
+            } else {
+                beginScope()
+                declareLocal(Constants.IT)
+                block(isExpr)
+                endScope(true)
+            }
             patchJump(elseSkip)
         } else {
             breakJumpLoc = byteCode.size
@@ -1266,6 +1276,8 @@ class Compiler {
             objectLiteral()
         } else if (match(DEF) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
+        } else if (match(DO)) {
+            proc()
         } else if (match(IDENTIFIER)) {
             val name = previous.lexeme
             if (checkImplicitSelf && validateImplicitSelf(currentClass, name)) {
@@ -1303,6 +1315,15 @@ class Compiler {
                 emitId(name)
             }
         }
+    }
+
+    private fun proc() {
+        val skipChunk = emitJump(JUMP) // unconditional jump to skip over the proc body during declaration
+        val start = byteCode.size
+        doBlock(null)
+        val end = byteCode.size
+        patchJump(skipChunk)
+        emitProc(start, end)
     }
 
     private fun objectLiteral() {
@@ -1850,6 +1871,14 @@ class Compiler {
         emitReturn {
             emitCode(OpCode.NIL)
         }
+    }
+
+    private fun emitProc(start: Int, end: Int) {
+        val opCode = PROC
+        var size = byteCode.put(opCode)
+        size += byteCode.putInt(start)
+        size += byteCode.putInt(end)
+        pushLastChunk(Chunk(opCode, size, start, end))
     }
 
     private fun emitObjectLiteral(isMutable: Boolean, isList: Boolean, propCount: Int) {

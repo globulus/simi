@@ -1218,7 +1218,64 @@ do {
 
 The *do-else* construct shines to syphon multiple TODO LINK rescue clauses to the same handler.
 
-> do-else expressions, or using dos as procs, might not be far away...
+#### Procs with do-else
+
+> This language feature is in experimental stage and isn't a part of the final definition.
+
+*do-else* blocks can be used as *procs* - local functions that *aren't closures*, i.e they full share the same scope within which they were declared. You can think of a proc as a zero-argument subroutine - calling it jumps to its start, it does its thing, and when it reaches its end it jumps back to the call site. The important trait of a prop is that, since it is not a closure, it can alter its surrounding scope.
+
+You define a proc by assigning a *do-else* block to a variable. The block(s) must be expression blocks, i.e their last value is taken as the block's return value, just as it did with TODO LINK TO if and when expressions.
+
+Then, you can invoke a proc by calling it as any other function (with zero args, of course).
+```ruby
+i = 10
+p = do { # Defines a proc
+    print i
+    if i == 10 {
+        20
+    } else {
+        5
+    }
+}
+i $= p() # Call the proc, i will be 20
+j = p() # Call the proc, j will be 5
+```
+
+Just like a do block, a proc can return a value early with *break*:
+```ruby
+i = 10
+p = do { # Defines a proc
+    print i
+    if i == 10 {
+        break 20
+    }
+    i += 10
+    if i < 30 {
+        break 50
+    }
+    10 # the default return value
+}
+i $= p() # Call the proc, i will be 20
+j = p() # Call the proc, j will be 10
+```
+
+A proc can also have an *else* part, in case of which it behaves like a *do-else* block:
+1. If the do part reaches its end without breaking, its last line is returned.
+2. If the do part breaks, its break value is bound to *it* in the else block, and the last line of the else block is returned.
+Note that you **can't return from an *else* block early**!
+```ruby
+i = 10
+p = do {
+    if i < 20 {
+        break 20
+    }
+    5
+} else {
+    25
+}
+i $= p() + 5 # i will be 30
+j = p() # j will be 25
+```
 
 #### return and yield
 

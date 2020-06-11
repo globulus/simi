@@ -26,7 +26,7 @@ object TokenPatcher {
                     totalLenByLineStart = sb.length
                 } else if (line == targetLine + 1) {
                     sb.append("\n")
-                            .append(" ".repeat(highlightPosition))
+                            .append(if (highlightPosition == -1) "" else " ".repeat(highlightPosition))
                             .append("^")
                 }
             }
