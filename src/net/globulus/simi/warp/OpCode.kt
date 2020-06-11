@@ -60,7 +60,6 @@ enum class OpCode {
     GU,
     FIBER,
     YIELD,
-    IMPORT,
     ;
 
     val byte = ordinal.toByte()

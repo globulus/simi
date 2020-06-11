@@ -6,7 +6,6 @@ import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.TokenType.CLASS
-import net.globulus.simi.TokenType.IMPORT
 import net.globulus.simi.TokenType.IS
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
@@ -41,6 +40,9 @@ class Compiler {
 
     private var currentClass: ClassCompiler? = null
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
+
+    private val activeModules = Stack<String>()
+    private val compiledModules = mutableListOf<String>()
 
     private var lastChunk: Chunk? = null
     private val chunks = mutableListOf<Chunk>()
@@ -141,11 +143,15 @@ class Compiler {
             checkAnnotationCounter()
             import()
             false
+        } else if (match(MODULE)) {
+            checkAnnotationCounter()
+            module()
+            false
         } else if (match(DEF)) {
             checkAnnotationCounter()
             funDeclaration()
             false
-        } else if (match(TokenType.FIBER)) {
+        } else if (match(TokenType.FIB)) {
             checkAnnotationCounter()
             fiber()
             false
@@ -177,7 +183,10 @@ class Compiler {
 
     private fun function(kind: String, providedName: String? = null): Function {
         val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
-        val name = providedName ?: consumeVar("Expected an identifier for function name")
+        var name = providedName ?: consumeVar("Expected an identifier for function name")
+        if (kind == Parser.KIND_FUNCTION || kind == Parser.KIND_FIBER) {
+            name = combineModuleName(name)
+        }
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         // the init method also initializes all the fields declard in the class
@@ -309,6 +318,8 @@ class Compiler {
         val returnName = name // it's different because inner classes have the name prepended
         if (inner) {
             name = "${currentClass!!.name}.$name"
+        } else {
+            name = combineModuleName(name)
         }
         declareLocal(name, true)
         emitClass(name, inner, kind)
@@ -441,17 +452,28 @@ class Compiler {
     private fun import() {
         // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
         val module = consumeVar("Expect identifier for on-site import.")
-        variable(module)
-        checkIfUnidentified()
+        checkModuleCompiled(previous, module)
         consume(FOR, "Expect 'for' to specify imported fields.")
-        val vars = mutableListOf<String>()
         do {
             val imported = consumeVar("Expect identifier to specify imported field.")
-            vars += imported
             declareLocal(imported, true)
+            variable("$module.$imported")
+            checkIfUnidentified()
         } while (match(COMMA))
         consume(NEWLINE, "Expect newline after on-site import.")
-        emitImport(vars)
+    }
+
+    private fun module() {
+        val name = combineModuleName(consumeVar("Expect identifier for module."))
+        compiledModules += name
+        activeModules.push(name)
+        consume(LEFT_BRACE, "Expect '{' to start module.")
+        do {
+            matchAllNewlines()
+            declaration(false)
+            matchAllNewlines()
+        } while (!match(RIGHT_BRACE))
+        activeModules.pop()
     }
 
     private fun annotation() {
@@ -1644,6 +1666,14 @@ class Compiler {
         return "[\"${token.file}\" line ${token.line}] At ${token.type}: $message\n"
     }
 
+    private fun combineModuleName(name: String): String {
+        return if (activeModules.isEmpty()) {
+            name
+        } else {
+            "${activeModules.peek()}.$name"
+        }
+    }
+
     private fun constIndex(c: Any): Int {
         return constTable[c] ?: run {
             constTable[c] = constCount++
@@ -1740,16 +1770,6 @@ class Compiler {
         val funIdx = constIndex(nativeFunction)
         size += byteCode.putInt(funIdx)
         pushLastChunk(Chunk(opCode, size, name, nameIdx, funIdx))
-    }
-
-    private fun emitImport(vars: List<String>) {
-        val opCode = OpCode.IMPORT
-        var size = byteCode.put(opCode)
-        size += byteCode.putInt(vars.size)
-        for (imported in vars) {
-            size += byteCode.putInt(constIndex(imported))
-        }
-        pushLastChunk(Chunk(opCode, size, vars.size, vars.joinToString()))
     }
 
     private fun emitAnnotateField(name: String) {
@@ -1994,6 +2014,17 @@ class Compiler {
         for (chunk in chunks) {
             println(tabs + chunk)
         }
+    }
+
+    private fun checkModuleCompiled(token: Token, name: String) {
+        var compiler: Compiler? = this
+        while (compiler != null) {
+            if (name in compiler.compiledModules) {
+                return
+            }
+            compiler = compiler.enclosing
+        }
+        throw error(token, "Undefined module $name.")
     }
 
     private fun checkIfUnidentified() {

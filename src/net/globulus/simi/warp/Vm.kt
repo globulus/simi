@@ -133,17 +133,6 @@ class Vm {
                 }
                 GU -> gu()
                 YIELD -> yield(pop())
-                IMPORT -> {
-                    (pop() as? SClass)?.let { klass ->
-                        val count = nextInt
-                        for (i in 0 until count) {
-                            val key = nextString
-                            klass.fields[key]?.let { value ->
-                                push(value)
-                            } ?: throw runtimeError("Can't find field $key in $klass!")
-                        }
-                    } ?: throw runtimeError("On-site imports can only be used with classes!")
-                }
             }
         }
     }
