@@ -99,7 +99,7 @@ What Šimi offers:
 #### Keywords
 Šimi has 26 reserved keywords:
 ```ruby
-and break class continue def do else false fiber for gu if import
+and break class continue def do else false fib for gu if import
 in is ivic native nil not or print return self super true when while yield
 ```
 
@@ -1307,14 +1307,14 @@ Let's illustrate all of this with an example.
 
 The first step towards your first fiber is to write a *fiber class*:
 ```ruby
-fiber MyFiber(a, b, c) {
+fib MyFiber(a, b, c) {
     foreach(a..b, def (i) { # foreach is a function that iterates through first arg and calls second arg with the iteration value
         yield i + c
     })
 }
 ```
 
-The syntax looks awfully like that of functions, because ultimately all a fiber does, code-wise, is wrap a single function (do note the keyword *fiber* as opposed to *def*). However, in order to use a Fiber, you have to instantiate it:
+The syntax looks awfully like that of functions, because ultimately all a fiber does, code-wise, is wrap a single function (do note the keyword *fib* as opposed to *def*). However, in order to use a Fiber, you have to instantiate it:
 ```ruby
 myFiber = MyFiber()
 ```
@@ -1425,9 +1425,61 @@ print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
 ```
 Overall, that should satisfy most, if not all the needs that a developer has when leveraging enums in their code. If you go as far as creating enums that have both value objects and functions associated with them, the legibility of *Enum.of()* usage starts to deteriorate and would better be served with a dedicated language construct. Also make sure to check out its implementation in Stdlib to learn more on metaprogramming in Šimi!
 
-### Importing code
+### Code organization and modularity
 
-Šimi's *import* keyword is used to import code from external files into the current file. Importing is resolved in the pre-processing phase, in which all the imports are recursively resolved until all are taken care of. Each file will be imported only once.
+It's natural for a growing codebase to be dispersed among multiple files. Similarly, if you're building a library for other people to use, it will come in its own file(s).
+
+#### Importing external code
+
+Šimi allows you to import code from external files with the *external import*:
+```ruby
+import "Date"
+import "../otherlib/Lib"
+```
+
+Imports are resolved between lexing and compiling phases - each Šimi code file specified will be lexed and added upstream for compiling, with its external imports resolved recursively. Each file will be imported only once.
+
+Files specified for external import are assumed to be Šimi files (.simi), so you needn't specify the extension. If the full path to the file isn't provided, it's assumed to live in the same directory as the file it's being imported to.
+
+After all the files have been lexed and all the imports resolved, the entire imported codebase will be compiled as a single file.
+
+Native dependencies are imported with *import native* - check out the TODO LINK native API guide for that.
+
+#### Modules
+
+Since the compiler doesn't know which code came from which file, it compiles all of it as a part of a single scope. For larger codebases, especially ones that have a multitude of dependencies, this can lead to name collisions. To solve this, Šimi introduces namespaces via *modules*:
+```ruby
+module MyModule {
+    class Class1
+    
+    class Class2 {
+        ...
+    }
+    
+    def someFunc() {
+        ...
+    }
+    
+    fib SomeFib() {
+        ...
+    }
+    
+    Constant = [a = 2, b = 3]
+    
+    module Submodule {
+        def otherFunc = 5
+    }
+}
+```
+
+Modules are defined with the *module* keyword. Within their bodies, they can contain declarations of classes, functions, fibers and constants - just like classes can. However, since modules aren't instantiated, their functions and fibers aren't bound, i.e they won't have *self* defined. Also, module constants are assigned at compile-time, unlike class fields which are assigned during instantiation (in the *init* method). Modules can contain other nested modules.
+
+It's important to note that modules are *a compile-time construct* - they don't exist at runtime. The name *MyModule* doesn't exist and trying to use it will throw a compile error.
+
+Modules are only here to introduce implicit name mangling - anything declared inside a module has MODULE_NAME:: prepended to its name, meaning that the realm dsfjslfsdj
+
+
+
 
 You may import two types of files into your Šimi code:
 1. Other Šimi files (must end in ".simi"). Simply put, the entire content of the other file will be loaded in front of the content of the caller file.

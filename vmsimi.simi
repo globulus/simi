@@ -557,7 +557,7 @@ test("two fibers", 8, def {
     return res
 })
 
-test("onsite import", "innerA innerB", def {
+test("onsite import", "innerA innerB 3 3", def {
     module ModuleClass {
         class InnerA {
             def toString = "innerA"
@@ -565,10 +565,14 @@ test("onsite import", "innerA innerB", def {
         class InnerB {
             def toString = "innerB"
         }
+        module InnerModule {
+            def InnerModuleDef = InnerModuleClass()
+            class InnerModuleClass
+        }
     }
     def moduleTest {
-        import ModuleClass for InnerA, InnerB
-        return InnerA() + " " + InnerB()
+        import ModuleClass for InnerA, InnerB, InnerModule
+        return InnerA() + " " + InnerB() + " " + InnerModuleDef() + " " + ModuleClass::InnerModule::InnerModuleDef()
     }
     return moduleTest()
 })
@@ -604,3 +608,15 @@ print "Testing complete, failed \(testResults.failureCount) / \(testResults.tota
 for failure in testResults.failures {
     print failure
 }
+
+fib MyFiber(a, b, c) {
+    foreach(a..b, def (i) {
+        yield i + c
+    })
+}
+myFiber = MyFiber()
+print myFiber(0, 3, 1)
+print myFiber(5, 3, 5)
+print myFiber(6, 3, 10)
+print myFiber(8, 3, 20)
+print myFiber(5, 10, 0)

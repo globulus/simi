@@ -41,9 +41,6 @@ class Compiler {
     private var currentClass: ClassCompiler? = null
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
 
-    private val activeModules = Stack<String>()
-    private val compiledModules = mutableListOf<String>()
-
     private var lastChunk: Chunk? = null
     private val chunks = mutableListOf<Chunk>()
 
@@ -453,19 +450,44 @@ class Compiler {
         // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
         val module = consumeVar("Expect identifier for on-site import.")
         checkModuleCompiled(previous, module)
-        consume(FOR, "Expect 'for' to specify imported fields.")
-        do {
-            val imported = consumeVar("Expect identifier to specify imported field.")
-            declareLocal(imported, true)
-            variable("$module.$imported")
-            checkIfUnidentified()
-        } while (match(COMMA))
+        if (match(FOR)) {
+            do {
+                importModuleItem(module, consumeVar("Expect identifier to specify imported field."))
+            } while (match(COMMA))
+        } else {
+            importAll(module)
+        }
         consume(NEWLINE, "Expect newline after on-site import.")
+    }
+
+    private fun importAll(module: String) {
+        for (name in compiledModules[module]!!) {
+            importModuleItem(module, name)
+        }
+    }
+
+    private fun importModuleItem(module: String, name: String) {
+        val simpleName: String
+        val combinedName: String
+        if ("$module$NAMESPACE_OPERATOR" in name) {
+            combinedName = name
+            simpleName = name.substring(name.lastIndexOf(NAMESPACE_OPERATOR) + NAMESPACE_OPERATOR.length)
+        } else {
+            combinedName = "$module$NAMESPACE_OPERATOR$name"
+            simpleName = name
+        }
+        if (combinedName in compiledModules.keys) {
+            importAll(combinedName)
+        } else {
+            declareLocal(simpleName, true)
+            variable(combinedName)
+            checkIfUnidentified()
+        }
     }
 
     private fun module() {
         val name = combineModuleName(consumeVar("Expect identifier for module."))
-        compiledModules += name
+        compiledModules[name] = mutableListOf()
         activeModules.push(name)
         consume(LEFT_BRACE, "Expect '{' to start module.")
         do {
@@ -1670,7 +1692,10 @@ class Compiler {
         return if (activeModules.isEmpty()) {
             name
         } else {
-            "${activeModules.peek()}.$name"
+            val module = activeModules.peek()
+            val combinedName = "$module$NAMESPACE_OPERATOR$name"
+            compiledModules[module]?.add(combinedName)
+            combinedName
         }
     }
 
@@ -2017,14 +2042,9 @@ class Compiler {
     }
 
     private fun checkModuleCompiled(token: Token, name: String) {
-        var compiler: Compiler? = this
-        while (compiler != null) {
-            if (name in compiler.compiledModules) {
-                return
-            }
-            compiler = compiler.enclosing
+        if (name !in compiledModules.keys) {
+            throw error(token, "Undefined module $name.")
         }
-        throw error(token, "Undefined module $name.")
     }
 
     private fun checkIfUnidentified() {
@@ -2181,8 +2201,12 @@ class Compiler {
 
     companion object {
         const val CALL_DEFAULT_JUMP_LOCATION = -1
+        const val NAMESPACE_OPERATOR = "::"
         private const val SCRIPT = "Script"
         private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
+
+        private val activeModules = Stack<String>()
+        private val compiledModules = mutableMapOf<String, MutableList<String>>()
     }
 }

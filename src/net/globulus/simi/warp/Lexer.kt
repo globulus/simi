@@ -7,8 +7,8 @@ import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.api.SimiValue
 
-class Lexer(private val fileName: String, 
-            private val source: String, 
+class Lexer(private val fileName: String,
+            private val source: String,
             private val debugger: Debugger?
 ) {
     private val tokens = mutableListOf<Token>()
@@ -206,7 +206,10 @@ class Lexer(private val fileName: String,
     }
 
     private fun identifier() {
-        while (isAlphaNumeric(peek)) {
+        while (isAlphaNumeric(peek) || peek == ':') {
+            if (peek == ':' && peekNext == ':') {
+                advance()
+            }
             advance()
         }
 
