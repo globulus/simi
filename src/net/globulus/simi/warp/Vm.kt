@@ -84,6 +84,7 @@ class Vm {
                 MIXIN -> mixin()
                 METHOD -> defineMethod(nextString)
                 NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
+                FIELD -> defineField(nextString)
                 INNER_CLASS -> {
                     val kind = SClass.Kind.from(nextByte)
                     val name = nextString
@@ -199,6 +200,9 @@ class Vm {
         val obj = pop()
         if (obj is Instance && !obj.mutable && obj != self) { // obj != self because @a = 3 must still work from inside of object's methods
             throw runtimeError("Attempting to set on an immutable object!")
+        }
+        if (obj is SClass && obj.kind == SClass.Kind.MODULE) {
+            throw runtimeError("Can't set values of a module!")
         }
         if (obj is Instance && obj.klass.overriddenSet != null) {
             fiber.sp++ // Just to compensate for bindMethod's fiber.sp--
@@ -783,6 +787,13 @@ class Vm {
     private fun defineNativeMethod(name: String, method: NativeFunction) {
         val klass = currentNonFinalizedClass
         klass.fields[name] = method
+        applyAnnotations(klass, name)
+    }
+
+    private fun defineField(name: String) {
+        val value = pop()
+        val klass = currentNonFinalizedClass
+        klass.fields[name] = value
         applyAnnotations(klass, name)
     }
 

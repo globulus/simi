@@ -1450,6 +1450,9 @@ Native dependencies are imported with *import native* - check out the TODO LINK 
 Since the compiler doesn't know which code came from which file, it compiles all of it as a part of a single scope. For larger codebases, especially ones that have a multitude of dependencies, this can lead to name collisions. To solve this, Šimi introduces namespaces via *modules*:
 ```ruby
 module MyModule {
+    field = 2 + 2 * 2
+    singleton = [name = "This", method = =_0 + _1]
+
     class Class1
     
     class Class2 {
@@ -1464,93 +1467,80 @@ module MyModule {
         ...
     }
     
-    Constant = [a = 2, b = 3]
-    
     module Submodule {
         def otherFunc = 5
     }
 }
 ```
 
-Modules are defined with the *module* keyword. Within their bodies, they can contain declarations of classes, functions, fibers and constants - just like classes can. However, since modules aren't instantiated, their functions and fibers aren't bound, i.e they won't have *self* defined. Also, module constants are assigned at compile-time, unlike class fields which are assigned during instantiation (in the *init* method). Modules can contain other nested modules.
+Define modules with the *module* keyword. Within their bodies, they can contain declarations of classes, functions, fibers and constants - just like classes can. However, since modules aren't instantiated, their functions and fibers aren't bound, i.e they won't have *self* defined. Also, module constants are assigned at compile-time, unlike class fields which are assigned during instantiation (in the *init* method). Modules can contain other nested modules.
 
-It's important to note that modules are *a compile-time construct* - they don't exist at runtime. The name *MyModule* doesn't exist and trying to use it will throw a compile error.
-
-Modules are only here to introduce implicit name mangling - anything declared inside a module has MODULE_NAME:: prepended to its name, meaning that the realm dsfjslfsdj
-
-
-
-
-You may import two types of files into your Šimi code:
-1. Other Šimi files (must end in ".simi"). Simply put, the entire content of the other file will be loaded in front of the content of the caller file.
-2. Native Java code from JARs (must end in ".jar"). The native module manager will scan the JAR for the JavaApi class and try to instantiate it to be used during runtime. Check out the **Java API** section for more info on using native code.
-
+Reference module's field just as you do with classes, using the dot operator:
 ```ruby
-# The import keyword is followed by a string denoting the absolute
-# or relative path to the imported file.
-import "./code.simi" # Imports Simi code
-import "./../../NativeCode.jar" # Imports a Java API JAR
-import '/Users/gordan/Desktop/awesomeCode.simi'
+someFib = MyModule.SomeFib()
+print MyModuke.Submodule.otherFunc()
 ```
 
-Two files are automatically imported into you file by the interpreter: *Stdlib.simi* and its native companion, *Stdlib-java.jar*. Again, these needn't be imported manually, but make sure that your Stdlib folder (which contains these files) is in your interpreter's root.
+#### On-site imports
+
+You can import fields of a module directly into any scope by an *on-site import*:
+```ruby
+a = 5
+b = 6
+import MyModule for Class1, field
+import MyModule.Submodule for otherFunc
+print a + b + field
+```
+
+On-site import binds the module's fields specified after *for* to their namesake local variables in the current scope. Since Šimi is a dynamic language, and the expression after *import* isn't evaluated at compile-time, importing all the fields from a module isn't possible, instead you have to specify which fields to import.
+
+Since on-site imports can be placed virtually anywhere, they allow you to be judicious with where is a certain name applicable. TODO FIX
 
 ### Java API
 
-If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi Java API and expose "native" Java code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *now()* and *format()* methods.
+If you require a functionality that is not readily available in Šimi, and coding it manually might pose a challenge due to complexity or performance issues, you may use the Šimi JVM API and expose "native" JVM code to the Šimi runtime. Let's examine how this works by checking out the Stdlib *Date* class and its *now()* and *format()* methods.
 
 Here's the Šimi implementation:
 ```ruby
 class Date:
-    # Instances will have a single field, named timestamp
-    def init(timestamp): pass
-
-    # These methods is implemented natively via Java API. Note the
-    # native keyword as the only statement in function body.
-    def now(): native
-    def format(pattern): native
+    native init
+    native at(time = 0)
 end
 ```
 
-A Java project contains the class that'll represent the native equivalent of our Date class:
-```java
-// The @SimiJavaClass annotation tells the annotation processor that this class represents
-// a Simi class. The name parameter may be omitted if the name of the Java class is the
-// same as the one of Simi class.
-@SimiJavaClass(name = "Date")
-public class SimiDate {
+There are three levels of Šimi JVM API:
+1. A *NativeModule* is instantiated when the JAR is loaded at compile time. It serves only to map *NativeClasses* to their names.
+2. A *NativeClass* has to implement a single method which maps a function name to its *NativeFunction* implementation (or null if such a method isn't available).
+3. A *NativeFunction* is the native implementation of a Šimi function. It always returns a value (or null), and takes in an array or objects as its arguments. The first argument will always be the native function's receiver - either an instance or an SClass, depending on how the function was invoked.
+```kotlin
+class Date : NativeModule {
+    override val classes: Map<String, NativeClass> = mapOf(
+            "Date" to object : NativeClass {
+                override fun resolve(funcName: String): NativeFunction? {
+                    return when (funcName) {
+                        Constants.INIT -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            val date = Date()
+                            instance.apply {
+                                fields["_"] = date
+                                fields["time"] = date.time
+                            }
+                        }
+                        "at" -> NativeFunction(1) {
+                            val klass = it[0] as SClass
+                            val time = it[1] as Long
+                            val date = Date(time)
+                            Instance(klass, false).apply {
+                                fields["_"] = date
+                                fields["time"] = date.time
+                            }
+                        }
+                        else -> null
+                    }
+                }
 
-    // Expose the Java methods via the @SimiJavaMethod annotation. The name should be
-    // the same as the name of the Simi method, and the returned value a SimiProperty.
-    // All SimiJavaMethods must have at least two parameters, a SimiObject, and a
-    // BlockInterpreter. After that, you may supply any number of SimiProperty params,
-    // which must correspond to the params in the Simi method declaration.
-
-    // The now() method is meant to be used statically, hence the self param will
-    // in fact be a SimiClass (Date), which can then be used to create a new
-    // Date instance:
-    @SimiJavaMethod
-    public static SimiProperty now(SimiObject self, BlockInterpreter interpreter) {
-        SimiClass clazz = (SimiClass) self;
-        SimiValue timestamp = new SimiValue.Number(System.currentTimeMillis());
-        return clazz.init(interpreter, Collections.singletonList(timestamp));
-    }
-
-    // The format method is meant to be used non-statically, meaning that its
-    // self parameter will reflect the object on which the method was invoked.
-    // This allows us to get its timestamp field and format based on that.
-    @SimiJavaMethod
-    public static SimiProperty format(SimiObject self, BlockInterpreter interpreter, SimiProperty pattern) {
-        // The self param represents the object which invokes the method. We then use
-        // the get(String, SimiEnvironment) method to get the object's "timestamp" field,
-        // which we know to be a number.
-        long timestamp = self.get("timestamp", interpreter.getEnvironment()).getNumber().longValue();
-
-        // We then use SimpleDateFormat class to format the java.util.Date represented
-        // by the timestamp to the specified format string.
-        // The returned value must then be wrapped in a SimiValue/SimiProperty again.
-        return new SimiValue.String(new SimpleDateFormat(pattern.getString()).format(new java.util.Date(timestamp)));
-    }
+            }
+    )
 }
 ```
 After that, everything's really simple: build the Java project and import its resulting JAR into Šimi code:
@@ -1565,25 +1555,21 @@ print date.timestamp
 ```
 You'll notice that there's no performance degradation associated with using native methods as the code is accessed via reflection only once, when the JAR import is resolved. After that, all native method references are effectively statically typed.
 
-You may also expose *global* methods, i.e methods that aren't linked to a class via the *@SimiJavaGlobal* annotation. These methods needn't have the first two parameters set to SimiObject and SimiEnvironment. Global methods should be used to represent a stateless operation, e.g exposing a math function.
-
-(For Cocoa interop, please check out [the iOS/OSX project readme](https://github.com/globulus/simi-ios).)
-
 ### Annotations
 
-Šimi supports annotations to allow for association of metadata with classes, functions and other fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals or constructor invocations and precede a declaration:
+Šimi supports annotations to allow for association of metadata with classes and their fields. This metadata can then be used at runtime by other parts of the code. Annotations start with **!** and come in form of object literals or constructor invocations and precede a declaration:
 ```ruby
 class Api:
     ![method = "GET", endpoint = "/user"]
-    def getUser(result) { }
+    def getUser(result)
 
     ![method = "GET", endpoint = "/appointments"]
-    def getAppointments(result) = pass
+    def getAppointments(result)
 end
 ```
 You may have as many annotations before a field as you'd like, each in a separate line.
 
-You can get a list of field's annotations using the **!!** operator. It returns a list of objects, or *nil* if no annotations have been associated with a field. Note that annotation objects are evaluated upon the !! invocation, meaning that annotations can contain variables and other expressions. Let's examine a simple class that generates SQL code for creating tables based on a list of model classes.
+You can get a list of field's annotations using the **!** operator. It returns a list of values based on evaluated annotations. Naturally, if the field has no annotations, this list will be empty. Let's examine a simple class that generates SQL code for creating tables based on a list of model classes.
 ```ruby
 # Model superclass. It doesn't have its own table, but contains a primary key field
 # that will be used by all model superclasses.
@@ -1700,8 +1686,6 @@ PRIMARY KEY (id),
 userId varchar(255),
 );
 ```
-
-[Šimi server also makes heavy use of annotations!](https://github.com/globulus/simi-sync/tree/master/web)
 
 ### Metaprogramming and (de)serialization - *gu* and *ivic*
 

@@ -361,10 +361,13 @@ class Compiler {
                     continue
                 }
                 if (match(MODULE, CLASS, CLASS_OPEN, CLASS_FINAL)) {
+                    if (previous.type == MODULE && kind != SClass.Kind.MODULE) {
+                        throw error(previous, "Can't place a module inside a class!")
+                    }
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
-                } else if (match(DEF)) {
-                    val methodName = method()
+                } else if (match(DEF, FIB)) {
+                    val methodName = methodOrFiber(previous.type == FIB)
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
                     val methodName = nativeMethod()
@@ -376,17 +379,23 @@ class Compiler {
                     val fieldName = fieldToken.lexeme
                     currentClass?.declaredFields?.add(fieldName)
                     if (fieldName == Constants.INIT) {
-                        method(fieldName)
+                        methodOrFiber(false, fieldName)
                         hasInit = true
                     } else if (match(EQUAL)) {
-                        currentClass?.initAdditionalTokens?.apply {
-                            addAll(listOf(Token.self(), Token.ofType(DOT), fieldToken, previous))
-                            addAll(consumeNextExpr())
-                            add(consume(NEWLINE, "Expect newline after class field declaration."))
-                            if (annotationCounter > 0) {
-                                emitAnnotateField(fieldName)
-                                resetAnnotationCounter()
+                        if (kind == SClass.Kind.MODULE) {
+                            firstNonAssignment(true)
+                            emitField(fieldName)
+                            consume(NEWLINE, "Expect newline after class field declaration.")
+                        } else {
+                            currentClass?.initAdditionalTokens?.apply {
+                                addAll(listOf(Token.self(), Token.ofType(DOT), fieldToken, previous))
+                                addAll(consumeNextExpr())
+                                add(consume(NEWLINE, "Expect newline after class field declaration."))
                             }
+                        }
+                        if (annotationCounter > 0) {
+                            emitAnnotateField(fieldName)
+                            resetAnnotationCounter()
                         }
                     } else {
                         throw error(previous, "Invalid line in class declaration.")
@@ -397,7 +406,7 @@ class Compiler {
 
             // If the class declares fields but not an init, we need to synthesize one
             if (currentClass?.initAdditionalTokens?.isNotEmpty() == true && !hasInit) {
-                method(Constants.INIT)
+                methodOrFiber(false, Constants.INIT)
             }
         } else {
             consume(NEWLINE, "Expect newline after empty class declaration.")
@@ -409,10 +418,17 @@ class Compiler {
         return returnName
     }
 
-    private fun method(providedName: String? = null): String {
+    private fun methodOrFiber(isFiber: Boolean, providedName: String? = null): String {
         resetAnnotationCounter()
         val name = providedName ?: consumeVar("Expect method name.")
-        val kind = if (name == Constants.INIT) Parser.KIND_INIT else Parser.KIND_METHOD
+        val kind = if (name == Constants.INIT)
+                Parser.KIND_INIT
+            else {
+                if (isFiber)
+                    Parser.KIND_FIBER
+                else
+                    Parser.KIND_METHOD
+            }
         function(kind, name)
         emitMethod(name)
         return name
@@ -436,13 +452,13 @@ class Compiler {
 
     private fun import() {
         // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
-        val module = consumeVar("Expect identifier for on-site import.")
+        firstNonAssignment(true)
+        val moduleLocal = declareLocal(nextImplicitVarName("module"))
         consume(FOR, "Expect 'for' after module name.")
         do {
             val field = consumeVar("Expect identifier to specify imported field.")
             declareLocal(field, true)
-            variable(module)
-            checkIfUnidentified()
+            emitGetLocal(moduleLocal.name, moduleLocal)
             emitId(field)
             finishGet(false)
         } while (match(COMMA))
@@ -1735,6 +1751,14 @@ class Compiler {
         val funIdx = constIndex(nativeFunction)
         size += byteCode.putInt(funIdx)
         pushLastChunk(Chunk(opCode, size, name, nameIdx, funIdx))
+    }
+
+    private fun emitField(name: String) {
+        val opCode = FIELD
+        var size = byteCode.put(opCode)
+        val constIdx = constIndex(name)
+        size += byteCode.putInt(constIdx)
+        pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
     private fun emitAnnotateField(name: String) {

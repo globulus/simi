@@ -557,8 +557,10 @@ test("two fibers", 8, def {
     return res
 })
 
-test("onsite import", "innerA innerB 3 3", def {
+test("onsite import", "6 innerA innerB 3 3", def {
     module ModuleClass {
+        field = 2 + 2 * 2
+
         class InnerA {
             def toString = "innerA"
         }
@@ -571,8 +573,8 @@ test("onsite import", "innerA innerB 3 3", def {
         }
     }
     def moduleTest {
-        import ModuleClass for InnerA, InnerB, InnerModule
-        return InnerA() + " " + InnerB() + " " + InnerModule.InnerModuleDef() + " " + ModuleClass.InnerModule.InnerModuleDef()
+        import ModuleClass for field, InnerA, InnerB, InnerModule
+        return field + " " + InnerA() + " " + InnerB() + " " + InnerModule.InnerModuleDef() + " " + ModuleClass.InnerModule.InnerModuleDef()
     }
     return moduleTest()
 })
