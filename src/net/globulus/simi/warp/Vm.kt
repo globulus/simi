@@ -5,12 +5,14 @@ import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
+import java.util.*
 import kotlin.math.round
 
 class Vm {
     private lateinit var fiber: Fiber
     private var openUpvalues = mutableMapOf<String, Upvalue>()
     private val annotationBuffer = mutableListOf<Any>()
+    private var nonFinalizedClasses = Stack<Int>()
 
     fun interpret(input: Fiber) {
         fiber = input
@@ -37,7 +39,7 @@ class Vm {
                 }
                 DUPLICATE -> push(peek())
                 SET_LOCAL -> setVar()
-                GET_LOCAL -> getVar()
+                GET_LOCAL -> getVar(nextInt)
                 SET_UPVALUE -> fiber.frame.closure.upvalues[nextInt]!!.location = WeakReference(fiber.sp - 1) // -1 because we need to point at an actual slot
                 GET_UPVALUE -> push(readUpvalue(fiber.frame.closure.upvalues[nextInt]!!))
                 SET_PROP -> setProp()
@@ -86,22 +88,19 @@ class Vm {
                     val kind = SClass.Kind.from(nextByte)
                     val name = nextString
                     val klass = SClass(name, kind, true)
-                    var outerClass: SClass
-                    var outerCount = 0
-                    // Inner classes also live on the stack (which might be a mistake), so we need to find the actual
-                    // outer class up the stack to attach this inner class to
-                    do {
-                        outerClass = peek(outerCount) as SClass
-                        outerCount++
-                    } while (outerClass.isInner)
+                    val outerClass = currentNonFinalizedClass
                     // Inner classes have qualified names such as Range.Iterator, but we want to store the
                     // field with the last component name only
                     val innerName = name.lastNameComponent()
                     outerClass.fields[innerName] = klass
+                    nonFinalizedClasses.push(fiber.sp)
                     push(klass)
                     applyAnnotations(outerClass, innerName)
                 }
-                CLASS_DECLR_DONE -> (peek() as SClass).finalizeDeclr()
+                CLASS_DECLR_DONE -> {
+                    (peek() as SClass).finalizeDeclr()
+                    nonFinalizedClasses.pop()
+                }
                 SUPER -> {
                     val superclass = nextString
                     val klass = (self as? Instance)?.klass ?: self as SClass
@@ -190,8 +189,8 @@ class Vm {
         fiber.stack[fiber.frame.sp + nextInt] = pop()
     }
 
-    private fun getVar() {
-        push(fiber.stack[fiber.frame.sp + nextInt]!!)
+    private fun getVar(sp: Int) {
+        push(fiber.stack[fiber.frame.sp + sp]!!)
     }
 
     private fun setProp() {
@@ -455,6 +454,9 @@ class Vm {
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
+                if (callee.kind == SClass.Kind.MODULE) {
+                    throw runtimeError("Can't call a module!")
+                }
                 fiber.stack[spRelativeToArgCount] = Instance(callee, callee.kind == SClass.Kind.OPEN)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
@@ -729,6 +731,7 @@ class Vm {
         } else if (listClass == null && name == Constants.CLASS_LIST) {
             listClass = klass
         }
+        nonFinalizedClasses.push(fiber.sp)
         push(klass)
         applyAnnotations(klass, klass.name)
     }
@@ -740,6 +743,10 @@ class Vm {
         }
         if (superclass.kind == SClass.Kind.FINAL) {
             throw runtimeError("Can't inherit from a final superclass ${superclass.name}")
+        }
+
+        if (superclass.kind == SClass.Kind.MODULE) {
+            throw runtimeError("Can't inherit from a module ${superclass.name}")
         }
         val subclass = peek()
         (subclass as SClass).let {
@@ -755,6 +762,9 @@ class Vm {
         }
         val klass = peek()
         (klass as SClass).let {
+            if (it.kind == SClass.Kind.MODULE) {
+                throw runtimeError("Can't mixin a module!")
+            }
             for (field in mixin.fields) {
                 if (!field.key.startsWith(Constants.PRIVATE)) { // Add public fields only
                     it.fields[field.key] = field.value
@@ -764,14 +774,14 @@ class Vm {
     }
 
     private fun defineMethod(name: String) {
-        val method = pop() as Closure
-        val klass = peek() as SClass
+        val method = pop()
+        val klass = currentNonFinalizedClass
         klass.fields[name] = method
         applyAnnotations(klass, name)
     }
 
     private fun defineNativeMethod(name: String, method: NativeFunction) {
-        val klass = peek() as SClass
+        val klass = currentNonFinalizedClass
         klass.fields[name] = method
         applyAnnotations(klass, name)
     }
@@ -940,6 +950,7 @@ class Vm {
 
     private val buffer: ByteBuffer get() = fiber.frame.buffer
     private val currentFunction: Function get() = fiber.frame.closure.function
+    private val currentNonFinalizedClass: SClass get() = fiber.stack[nonFinalizedClasses.peek()] as SClass
     private val self: Any? get() = fiber.stack[fiber.frame.sp] // self is always at 0
 
     private val nextCode: OpCode get() = OpCode.from(nextByte)

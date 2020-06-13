@@ -566,13 +566,13 @@ test("onsite import", "innerA innerB 3 3", def {
             def toString = "innerB"
         }
         module InnerModule {
-            def InnerModuleDef = InnerModuleClass()
             class InnerModuleClass
+            def InnerModuleDef = 3
         }
     }
     def moduleTest {
         import ModuleClass for InnerA, InnerB, InnerModule
-        return InnerA() + " " + InnerB() + " " + InnerModuleDef() + " " + ModuleClass::InnerModule::InnerModuleDef()
+        return InnerA() + " " + InnerB() + " " + InnerModule.InnerModuleDef() + " " + ModuleClass.InnerModule.InnerModuleDef()
     }
     return moduleTest()
 })

@@ -66,7 +66,6 @@ class Lexer(private val fileName: String,
                     addToken(DOT)
                 }
             }
-            ':' -> addToken(COLON)
             '@' -> {
                 tokens.add(Token(SELF, Constants.SELF, null, line, fileName))
                 addToken(DOT)
@@ -206,10 +205,7 @@ class Lexer(private val fileName: String,
     }
 
     private fun identifier() {
-        while (isAlphaNumeric(peek) || peek == ':') {
-            if (peek == ':' && peekNext == ':') {
-                advance()
-            }
+        while (isAlphaNumeric(peek)) {
             advance()
         }
 

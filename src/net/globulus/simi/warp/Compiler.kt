@@ -133,57 +133,45 @@ class Compiler {
 
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek)
-        return if (match(CLASS, CLASS_FINAL, CLASS_OPEN)) {
+        return if (match(MODULE, CLASS, CLASS_FINAL, CLASS_OPEN)) {
             classDeclaration(false)
             false
         } else if (match(IMPORT)) {
             checkAnnotationCounter()
             import()
             false
-        } else if (match(MODULE)) {
-            checkAnnotationCounter()
-            module()
-            false
         } else if (match(DEF)) {
             checkAnnotationCounter()
             funDeclaration()
             false
-        } else if (match(TokenType.FIB)) {
+        } else if (match(FIB)) {
             checkAnnotationCounter()
             fiber()
             false
         } else if (match(BANG)) {
             annotation()
             false
-        }
-//        if (match(TokenType.IMPORT)) {
-//            val keyword = previous()
-//            if (match(TokenType.IDENTIFIER)) {
-//                return Stmt.Import(keyword, Expr.Variable(previous()))
-//            }
-//        }
-        else {
+        } else {
             checkAnnotationCounter()
             statement(isExpr, lambda = false)
         }
     }
 
-    private fun funDeclaration() {
+    private fun funDeclaration(): String {
         val function = function(Parser.KIND_FUNCTION)
         declareLocal(function.name, true)
+        return function.name
     }
 
-    private fun fiber() {
+    private fun fiber(): String {
         val fiber = function(Parser.KIND_FIBER)
         declareLocal(fiber.name, true)
+        return fiber.name
     }
 
     private fun function(kind: String, providedName: String? = null): Function {
         val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
         var name = providedName ?: consumeVar("Expected an identifier for function name")
-        if (kind == Parser.KIND_FUNCTION || kind == Parser.KIND_FIBER) {
-            name = combineModuleName(name)
-        }
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         // the init method also initializes all the fields declard in the class
@@ -306,6 +294,7 @@ class Compiler {
         resetAnnotationCounter()
         val opener = previous
         val kind = when (opener.type) {
+            MODULE -> SClass.Kind.MODULE
             CLASS_FINAL -> SClass.Kind.FINAL
             CLASS -> SClass.Kind.REGULAR
             CLASS_OPEN -> SClass.Kind.OPEN
@@ -315,11 +304,9 @@ class Compiler {
         val returnName = name // it's different because inner classes have the name prepended
         if (inner) {
             name = "${currentClass!!.name}.$name"
-        } else {
-            name = combineModuleName(name)
         }
         declareLocal(name, true)
-        emitClass(name, inner, kind)
+        emitClass(name, kind, inner)
         val superclasses = mutableListOf<String>()
         currentClass = ClassCompiler(previous.lexeme, currentClass)
 
@@ -334,7 +321,8 @@ class Compiler {
                 }
             } while (match(COMMA))
         }
-        if (superclasses.isEmpty()
+        if (kind != SClass.Kind.MODULE
+                && superclasses.isEmpty()
                 && name != Constants.CLASS_OBJECT
                 && name != Constants.CLASS_FUNCTION
                 && name != Constants.CLASS_CLASS) {
@@ -372,7 +360,7 @@ class Compiler {
                 if (match(NEWLINE)) {
                     continue
                 }
-                if (match(CLASS, CLASS_OPEN, CLASS_FINAL)) {
+                if (match(MODULE, CLASS, CLASS_OPEN, CLASS_FINAL)) {
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
                 } else if (match(DEF)) {
@@ -449,53 +437,16 @@ class Compiler {
     private fun import() {
         // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
         val module = consumeVar("Expect identifier for on-site import.")
-        checkModuleCompiled(previous, module)
-        if (match(FOR)) {
-            do {
-                importModuleItem(module, consumeVar("Expect identifier to specify imported field."))
-            } while (match(COMMA))
-        } else {
-            importAll(module)
-        }
-        consume(NEWLINE, "Expect newline after on-site import.")
-    }
-
-    private fun importAll(module: String) {
-        for (name in compiledModules[module]!!) {
-            importModuleItem(module, name)
-        }
-    }
-
-    private fun importModuleItem(module: String, name: String) {
-        val simpleName: String
-        val combinedName: String
-        if ("$module$NAMESPACE_OPERATOR" in name) {
-            combinedName = name
-            simpleName = name.substring(name.lastIndexOf(NAMESPACE_OPERATOR) + NAMESPACE_OPERATOR.length)
-        } else {
-            combinedName = "$module$NAMESPACE_OPERATOR$name"
-            simpleName = name
-        }
-        if (combinedName in compiledModules.keys) {
-            importAll(combinedName)
-        } else {
-            declareLocal(simpleName, true)
-            variable(combinedName)
-            checkIfUnidentified()
-        }
-    }
-
-    private fun module() {
-        val name = combineModuleName(consumeVar("Expect identifier for module."))
-        compiledModules[name] = mutableListOf()
-        activeModules.push(name)
-        consume(LEFT_BRACE, "Expect '{' to start module.")
+        consume(FOR, "Expect 'for' after module name.")
         do {
-            matchAllNewlines()
-            declaration(false)
-            matchAllNewlines()
-        } while (!match(RIGHT_BRACE))
-        activeModules.pop()
+            val field = consumeVar("Expect identifier to specify imported field.")
+            declareLocal(field, true)
+            variable(module)
+            checkIfUnidentified()
+            emitId(field)
+            finishGet(false)
+        } while (match(COMMA))
+        consume(NEWLINE, "Expect newline after on-site import.")
     }
 
     private fun annotation() {
@@ -1688,17 +1639,6 @@ class Compiler {
         return "[\"${token.file}\" line ${token.line}] At ${token.type}: $message\n"
     }
 
-    private fun combineModuleName(name: String): String {
-        return if (activeModules.isEmpty()) {
-            name
-        } else {
-            val module = activeModules.peek()
-            val combinedName = "$module$NAMESPACE_OPERATOR$name"
-            compiledModules[module]?.add(combinedName)
-            combinedName
-        }
-    }
-
     private fun constIndex(c: Any): Int {
         return constTable[c] ?: run {
             constTable[c] = constCount++
@@ -1770,7 +1710,7 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, constIdx, f))
     }
 
-    private fun emitClass(name: String, inner: Boolean, kind: SClass.Kind) {
+    private fun emitClass(name: String, kind: SClass.Kind, inner: Boolean) {
         val opCode = if (inner) INNER_CLASS else OpCode.CLASS
         var size = byteCode.put(opCode)
         size += byteCode.put(kind.byte)
@@ -2041,12 +1981,6 @@ class Compiler {
         }
     }
 
-    private fun checkModuleCompiled(token: Token, name: String) {
-        if (name !in compiledModules.keys) {
-            throw error(token, "Undefined module $name.")
-        }
-    }
-
     private fun checkIfUnidentified() {
         if (lastChunk?.opCode == CONST_ID) {
             throw error(previous, "Unable to resolve identifier: ${lastChunk!!.data[1]}")
@@ -2201,12 +2135,8 @@ class Compiler {
 
     companion object {
         const val CALL_DEFAULT_JUMP_LOCATION = -1
-        const val NAMESPACE_OPERATOR = "::"
         private const val SCRIPT = "Script"
         private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
-
-        private val activeModules = Stack<String>()
-        private val compiledModules = mutableMapOf<String, MutableList<String>>()
     }
 }
