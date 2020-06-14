@@ -355,6 +355,16 @@ test("arg type check second Exception", "tme", funcWithArgTypeCheck("", Exceptio
 test("arg type check third nil", "tme", funcWithArgTypeCheck("", "", nil).message)
 test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception("a")))
 
+def safeGetAndCall(arg) = arg?.field?()
+test("safe get and call pass", 0, safeGetAndCall([field = =0]))
+test("safe get fail", "NilReferenceException instance", "" + safeGetAndCall(nil))
+test("safe call fail", "NilReferenceException instance", "" + safeGetAndCall([]))
+test("safe get fail and catch", 1, def {
+    return safeGetAndCall(nil) ?! {
+        return 1
+    }
+})
+
 def funcWithReturnTypeCheckCorrect is String {
     return ""
 }

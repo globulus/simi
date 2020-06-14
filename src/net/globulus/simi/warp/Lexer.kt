@@ -79,6 +79,10 @@ class Lexer(private val fileName: String,
                     }
                 } else if (match('!')) {
                     addToken(QUESTION_BANG)
+                } else if (match('.')) {
+                    addToken(QUESTION_DOT)
+                } else if (match('(')) {
+                    addToken(QUESTION_LEFT_PAREN)
                 } else {
                     addToken(QUESTION)
                 }
@@ -139,8 +143,6 @@ class Lexer(private val fileName: String,
             '$' -> {
                 if (match('=')) {
                     addToken(DOLLAR_EQUAL)
-                } else if (match('(')) {
-                    addToken(DOLLAR_LEFT_PAREN)
                 } else if (match('[')) {
                     addToken(DOLLAR_LEFT_BRACKET)
                 } else {

@@ -1169,9 +1169,16 @@ class Compiler {
         while (true) {
             superCount--
             val wasSuper = superCount > 0
-            if (match(LEFT_PAREN, DOLLAR_LEFT_PAREN)) {
+            if (match(LEFT_PAREN, QUESTION_LEFT_PAREN)) {
+                if (previous.type == QUESTION_LEFT_PAREN) {
+                    emitCode(NIL_CHECK)
+                }
                 finishCall()
-            } else if (match(DOT)) {
+            } else if (match(DOT, QUESTION_DOT)) {
+                val wasSafeGet = previous.type == QUESTION_DOT
+                if (wasSafeGet) {
+                    emitCode(NIL_CHECK)
+                }
                 if (match(CLASS)) {
                     emitId(Constants.CLASS)
                 } else if (match(LEFT_PAREN)) {
@@ -1183,7 +1190,7 @@ class Compiler {
                     primary(irsoa = false, checkImplicitSelf = false)
                 }
 
-                if (match(LEFT_PAREN)) { // Check invoke
+                if (!wasSafeGet && match(LEFT_PAREN)) { // Check invoke, currently disabled for safe getter calls
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
                     val argCount = argList()
@@ -1365,7 +1372,7 @@ class Compiler {
             matchAllNewlines()
         }
         consume(RIGHT_BRACKET, "Expect ']' at the end of object.")
-        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList!!, count)
+        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList == true, count)
     }
 
     /**

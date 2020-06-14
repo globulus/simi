@@ -400,9 +400,9 @@ button.performClick()
 ```
 It also forces the programmer to explicitly use *return nil* if they want for nil to be returned, therefore listing out all the possible values a function can return.
 
-##### Implicit parameters
+##### Implicit arguments
 
-While using the shorthand function definition syntax, you can use **implicit parameters**. Implicit params' names start with *_* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
+While using the shorthand function definition syntax, you can use **implicit aruments**. Implicit params' names start with *_* and are followed by digits: *_0, _1, _2, ...*, with _0 being the first parameter, _1 the second, etc:
 
 ```ruby
 sumThree = =_1 + _0 + _2
@@ -423,7 +423,7 @@ arr = [1, 2, 3]\
     .sorted(def (l, r) = r.compareTo(l))
 ```
 
-abbreviated by using implicit params:
+abbreviated by using implicit args:
 
 ```ruby
 arr = [1, 2, 3]\
@@ -432,20 +432,7 @@ arr = [1, 2, 3]\
     .sorted(=_1.compareTo(_0))
 ```
 
-Of course, the implicit params syntax can be used with any shorthand lambda, but improvements to conciseness shouldn't be made at the expense of readability.
-
-##### Closure vs. environment invocation
-
-Šimi functions (and any blocks for that matter) are closures that capture the environment as it was when they were created. When invoking a function, it created a new environment based on its closure, and defines *self* and *super*, if necessary. This is intentional and makes it so that functions shouldn't rely on external data to run their code - their parameters and closure environment should be enough.
-
-There are, however, rare instances where a function can take an unknown number of parameters that can't be nicely set during invocation; the [SMT's *run* function](#smt) is an example of that: it relies on an external environment that defines the values it is to inject into the template. This is so-called **environment invocation** - a function's execution environment won't be its closure, but the current environment in which it was invoked. Environment invocation uses **$()** instead of ().
-```ruby
-func() # closure invocation
-func$() # environment invocation
-```
-
-Environment invocations should seldom be used and can be viewed as an advanced feature of the langauge. It's also worth noting that doing environment invocations needs to be a deliberate effort within the code, as, presumably, *all nested function invocations should use $() as well*. Check out the [SMT class' run method implementation](stdlib/Smt.simi) for more details.
-
+Of course, the implicit args syntax can be used with any shorthand lambda, but improvements to conciseness shouldn't be made at the expense of readability.
 
 #### Objects
 Objects are an extremely powerful construct that combine expressiveness and flexibility. At the most basic level, every object is pair of a collection of key-value pairs, where key is a string, and value can be any of 4 Šimi values outlined above, and an indexed array, which also can contain any Šimi value. **Nils are not permitted as object values, and associating a nil with a key or index will delete that key from the object.** This allows the Objects to serve any of the purposes that are, in other languages, split between:
@@ -1424,6 +1411,54 @@ print "Is potato round: " + potato.isRound() # true
 print "Is cucumber round: " + Veggies.CUCUMBER.isRound() # false
 ```
 Overall, that should satisfy most, if not all the needs that a developer has when leveraging enums in their code. If you go as far as creating enums that have both value objects and functions associated with them, the legibility of *Enum.of()* usage starts to deteriorate and would better be served with a dedicated language construct. Also make sure to check out its implementation in Stdlib to learn more on metaprogramming in Šimi!
+
+### The safety package
+
+Šimi is a primarily a dynamically typed language, meaning that its syntax and behavior are tailed towards maximal flexibility at runtime. Examples of this is the ability to assign any value to any variable, pass any value as a parameter, freely call any value or perform gets and invoked on a *nil*.
+
+However, nobody is denying the advantages of strong typing, especially for larger and more serious codebases. Because of this, Šimi includes a set of features dubbed "the safety package", which allow for runtime type and null-checks to make sure that the code does exactly what you want it to under all circumstainces.
+
+#### Argument and return type checks
+
+You can add runtime type checks to function args and return types:
+```ruby
+def func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
+    ...
+}
+```
+
+1. You specify the type by putting *is* behind the argument name, followed by the type.
+    a. Types are non-nullable by default, i.e "a is String" will fail if *nil* is provided for *a*. To specify that the type is nullable, add *?* at the end of the type: "a is String?".
+2. The function return type is checked by putting the *is TYPE* check after the arguments.
+    a. The nullability rule applies here as well.
+    b. If your function TODO LINK exceptions returns exceptions instead of nil, you can mark the return type as being either it or exception with *!*: "def func() is String!" means that this function should return either a String or an Exception.
+
+Again, these checks are performed at runtime, and will return *TypeMismatchException* if something is off.
+
+#### Nil-safe gets and calls
+
+Šimi permits operations on *nil*, such as getters, setters and calls. All of those return nil and don't produce an exception:
+```ruby
+a = nil
+a.something # nil
+a() # nil
+```
+
+While being a normal feature of a nullable dynamically-typed language, such code can produce errors that are difficult to trace and fix. To combat this, Šimi has nil-safe gets and calls: *?.* and *?(*. You might've seen this in some statically-typed languages, where they're used on nullable values and return null if the value really is null. In Šimi, it's *the other way around* - normal calls return nil if the value is nil, while safe calls return a *NilReferenceException*:
+```ruby
+a = nil
+a?.something # Safe get, the result is a NilReferenceException instance
+a?() # Safe call, the result is a NilReferenceException instance
+# You can chain safe and unsafe calls and gets in any order you want
+obj.nullableProp?(1, 2, 3).funcThatMayReturnNil("a")?.nullableFunc?()
+```
+
+The returned NilReferenceException can be handled with a TODO LINK rescue block, just like any other exception:
+```ruby
+value = a?.something().that?() ?! {
+    return 2
+}
+```
 
 ### Code organization and modularity
 

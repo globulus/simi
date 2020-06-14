@@ -135,6 +135,11 @@ class Vm {
                 }
                 GU -> gu()
                 YIELD -> yield(pop())
+                NIL_CHECK -> {
+                    if (peek() == Nil) {
+                        fiber.stack[fiber.sp - 1] = Instance(nilReferenceExceptionClass!!, false)
+                    }
+                }
             }
         }
     }
@@ -721,6 +726,8 @@ class Vm {
             funcClass = klass
         } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
             exceptionClass = klass
+        } else if (nilReferenceExceptionClass == null && name == Constants.EXCEPTION_NIL_REFERENCE) {
+            nilReferenceExceptionClass = klass
         } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
             objectClass = klass
         } else if (listClass == null && name == Constants.CLASS_LIST) {
@@ -978,6 +985,8 @@ class Vm {
         var funcClass: SClass? = null
             internal set
         var exceptionClass: SClass? = null
+            internal set
+        var nilReferenceExceptionClass: SClass? = null
             internal set
         var objectClass: SClass? = null
             internal set
