@@ -16,13 +16,12 @@ class_ Class
 class Exception {
     init(@message)
 }
-
 class TypeMismatchException is Exception {
     init {
         super.init("tme")
     }
 }
-
+class NilReferenceException is Exception
 class IllegalArgumentException is Exception
 
 class Range {
@@ -160,9 +159,9 @@ test("when", "3 or 4", def {
         else { return "else " + i }
     }
 })
-test("if expr", 2, if 0 {
+test("if expr", 2, if false {
     5
-} else if 0 {
+} else if false {
     6
 } else {
     2
@@ -329,16 +328,16 @@ test("rescue function with value assign", "exception \(someExceptionMessage)", r
 def funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
 def rescueFunctionWithTwoExceptions() {
     s = ""
-    s += funcReturningExceptionIfTrue(0) + funcReturningExceptionIfTrue(0) ?! {
+    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(false) ?! {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(1) + funcReturningExceptionIfTrue(0) ?! {
+    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(false) ?! {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(0) + funcReturningExceptionIfTrue(1) ?! {
+    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(true) ?! {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(1) + funcReturningExceptionIfTrue(1) ?! {
+    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(true) ?! {
         s += "error"
     }
     return s

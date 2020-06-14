@@ -171,7 +171,7 @@ class Compiler {
 
     private fun function(kind: String, providedName: String? = null): Function {
         val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
-        var name = providedName ?: consumeVar("Expected an identifier for function name")
+        val name = providedName ?: consumeVar("Expected an identifier for function name")
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         // the init method also initializes all the fields declard in the class
@@ -350,7 +350,7 @@ class Compiler {
             // Reverse the mixins for the same reason we did with superclasses
             mixins.reversed().forEach {
                 variable(it)
-                emitCode(OpCode.MIXIN)
+                emitCode(MIXIN)
             }
         }
 
@@ -497,7 +497,7 @@ class Compiler {
             printStatement()
             false
         } else if (match(TokenType.RETURN)) {
-            returnStatement(lambda)
+            returnStatement()
             true
         } else if (match(TokenType.YIELD)) {
             yieldStatement()
@@ -519,7 +519,7 @@ class Compiler {
 //            return yieldStatement(lambda)
 //        }
         else {
-            return expressionStatement(lambda)
+            return expressionStatement()
         }
     }
 
@@ -746,7 +746,7 @@ class Compiler {
         emitCode(OpCode.PRINT)
     }
 
-    private fun returnStatement(lambda: Boolean) {
+    private fun returnStatement() {
         if (kind == Parser.KIND_INIT) {
             throw error(previous, "Can't return from init!")
         }
@@ -896,7 +896,7 @@ class Compiler {
         emitJump(JUMP, loops.peek().start)
     }
 
-    private fun expressionStatement(lambda: Boolean): Boolean {
+    private fun expressionStatement(): Boolean {
         return try {
             val shouldPop = expression()
             if (shouldPop) {
@@ -1233,10 +1233,10 @@ class Compiler {
     }
 
     private fun primary(irsoa: Boolean, checkImplicitSelf: Boolean) {
-        if (match(FALSE)) {
-            emitInt(0)
-        } else if (match(TRUE)) {
-            emitInt(1)
+        if (match(TokenType.FALSE)) {
+            emitCode(OpCode.FALSE)
+        } else if (match(TokenType.TRUE)) {
+            emitCode(OpCode.TRUE)
         } else if (match(NIL)) {
             emitCode(OpCode.NIL)
         } else if (match(NUMBER, STRING)) {
@@ -1541,8 +1541,8 @@ class Compiler {
 
     private fun consumeValue(message: String): Any {
         return when {
-            match(FALSE) -> 0L
-            match(TRUE) -> 1L
+            match(TokenType.FALSE) -> false
+            match(TokenType.TRUE) -> true
             match(NIL) -> Nil
             match(NUMBER) -> {
                 val num = previous.literal.number
@@ -1696,15 +1696,6 @@ class Compiler {
         emitIdOrConst(CONST, c)
     }
 
-    private fun emitConstWithIndex(c: Const) {
-        var size = byteCode.put(CONST)//if (c.level == -1) CONST else CONST_OUTER)
-        if (c.level != -1) {
-            size += byteCode.putInt(c.level)
-        }
-        size += byteCode.putInt(c.index)
-        pushLastChunk(Chunk(CONST, size, c.index, c.level))
-    }
-
     private fun emitIdOrConst(opCode: OpCode, c: Any) {
         var size = byteCode.put(opCode)
         val constIdx = constIndex(c)
@@ -1713,7 +1704,7 @@ class Compiler {
     }
 
     private fun emitClosure(f: Function, funcCompiler: Compiler, isFiber: Boolean) {
-        val opCode = if (isFiber) OpCode.FIBER else CLOSURE
+        val opCode = if (isFiber) FIBER else CLOSURE
         var size = byteCode.put(opCode)
         val constIdx = constIndex(f)
         size += byteCode.putInt(constIdx)

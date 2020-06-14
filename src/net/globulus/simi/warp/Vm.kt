@@ -26,6 +26,8 @@ class Vm {
         loop@ while (predicate?.invoke() != false) {
             val code = nextCode
             when (code) {
+                TRUE -> push(true)
+                FALSE -> push(false)
                 CONST_INT -> push(nextLong)
                 CONST_FLOAT -> push(nextDouble)
                 CONST_ID -> push(nextString)
@@ -257,22 +259,13 @@ class Vm {
         }
     }
 
-    private fun getOuterFrame(): CallFrame {
-        return fiber.callFrames[nextInt]!!
-    }
-
     private fun isFalsey(o: Any): Boolean {
-        return when (unbox(o)) {
-            Nil -> true
-            is Long -> o == 0L
-            is Double -> o == 0.0
-            else -> false
-        }
+        return o == false
     }
 
     private fun invert() {
         val a = unbox(pop())
-        push(if (isFalsey(a)) 1L else 0L)
+        push(isFalsey(a))
     }
 
     private fun negate() {
@@ -328,10 +321,10 @@ class Vm {
             DIVIDE -> intIfPossible(a * 1.0 / b)
             DIVIDE_INT -> a / b
             MOD -> a % b
-            LT -> boolToLong(a < b)
-            LE -> boolToLong(a <= b)
-            GE -> boolToLong(a >= b)
-            GT -> boolToLong(a > b)
+            LT -> a < b
+            LE -> a <= b
+            GE -> a >= b
+            GT -> a > b
             else -> throw runtimeError("WTF")
         }
     }
@@ -343,10 +336,10 @@ class Vm {
             MULTIPLY -> intIfPossible(a * b)
             DIVIDE -> intIfPossible(a / b)
             MOD ->intIfPossible(a % b)
-            LT -> boolToLong(a < b)
-            LE -> boolToLong(a <= b)
-            GE -> boolToLong(a >= b)
-            GT -> boolToLong(a > b)
+            LT -> a < b
+            LE -> a <= b
+            GE -> a >= b
+            GT -> a > b
             else -> throw runtimeError("WTF")
         }
     }
@@ -360,13 +353,11 @@ class Vm {
         }
     }
 
-    private fun boolToLong(b: Boolean) = if (b) 1L else 0L
-
     private fun checkEquality(code: OpCode) {
         val b = pop()
         val a = pop()
         val r = areEqual(a, b)
-        push(boolToLong(if (code == EQ) r else !r))
+        push(if (code == EQ) r else !r)
     }
 
     private fun areEqual(a: Any, b: Any): Boolean {
@@ -409,7 +400,7 @@ class Vm {
             is SClass -> if (b == classClass) true else a.checkIs(b)
             else -> throw RuntimeException("WTF")
         }
-        push(boolToLong(r))
+        push(r)
     }
 
     private fun jumpIf(predicate: (Any) -> Boolean) {

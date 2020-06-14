@@ -1,6 +1,8 @@
 package net.globulus.simi.warp
 
 enum class OpCode {
+    TRUE,
+    FALSE,
     CONST_INT,
     CONST_FLOAT,
     CONST_ID,
@@ -61,6 +63,7 @@ enum class OpCode {
     GU,
     FIBER,
     YIELD,
+    NIL_CHECK,
     ;
 
     val byte = ordinal.toByte()
