@@ -10,6 +10,7 @@ public enum TokenType implements Codifiable {
   COMMA,
   DOT, DOT_DOT, DOT_DOT_DOT,
   COLON, NEWLINE,
+  HASH,
 
   // One or two character tokens.
   BANG, BANG_BANG, BANG_EQUAL,

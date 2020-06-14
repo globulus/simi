@@ -57,6 +57,8 @@ enum class OpCode {
     SELF_DEF,
     OBJECT,
     LIST,
+    START_COMPREHENSION,
+    ADD_TO_COMPREHENSION,
     ANNOTATE,
     ANNOTATE_FIELD, // has a separate call because class fields are only declared in the init, so we need to trigger the annotation process in the VM manually
     GET_ANNOTATIONS,

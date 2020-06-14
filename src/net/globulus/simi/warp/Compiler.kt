@@ -133,7 +133,10 @@ class Compiler {
 
     private fun declaration(isExpr: Boolean): Boolean {
         updateDebugInfoLines(peek)
-        return if (match(MODULE, CLASS, CLASS_FINAL, CLASS_OPEN)) {
+        return if (match(HASH)) {
+            internalDirective()
+            false
+        } else if (match(MODULE, CLASS, CLASS_FINAL, CLASS_OPEN)) {
             classDeclaration(false)
             false
         } else if (match(IMPORT)) {
@@ -285,6 +288,20 @@ class Compiler {
             consume(RIGHT_PAREN, "Expected )")
         }
         return ArgScanResult(args, prependedTokens, optionalParamsStart, defaultValues)
+    }
+
+    private fun internalDirective() {
+        when (consumeVar("Expect action after #.")) {
+            ADD_TO_COMPREHENSION -> {
+                if (lastChunk?.opCode == POP) {
+                    rollBackLastChunk()
+                    emitCode(OpCode.ADD_TO_COMPREHENSION)
+                } else {
+                    throw error(previous, "Expect adding to comprehension to be preceeded by POP.")
+                }
+            }
+            else -> throw IllegalArgumentException("WTF")
+        }
     }
 
     /**
@@ -467,7 +484,7 @@ class Compiler {
 
     private fun annotation() {
         if (match(LEFT_BRACKET)) {
-            objectLiteral()
+            objectLiteral(previous)
         } else if (peek.type == IDENTIFIER) {
             call(true)
         } else {
@@ -738,6 +755,9 @@ class Compiler {
             }
         }
         compileNested(tokens, false)
+        // Remove the iterator as it isn't needed anymore
+        locals.removeAt(locals.size - 1)
+        emitCode(POP)
     }
 
     private fun printStatement() {
@@ -1282,16 +1302,16 @@ class Compiler {
             }
         } else if (match(LEFT_BRACKET)) {
             if (irsoa) { // object decomp can't be on the left-hand side
-                objectLiteral()
+                objectLiteralOrObjectComprehension()
             } else {
                 scanForObjectDecomp(true)?.let {
                     objectDecomp(it)
                 } ?: run {
-                    objectLiteral()
+                    objectLiteralOrObjectComprehension()
                 }
             }
         } else if (match(DOLLAR_LEFT_BRACKET)) {
-            objectLiteral()
+            objectLiteralOrObjectComprehension()
         } else if (match(DEF) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(DO)) {
@@ -1344,8 +1364,54 @@ class Compiler {
         emitProc(start, end)
     }
 
-    private fun objectLiteral() {
+    private fun objectLiteralOrObjectComprehension() {
         val opener = previous
+        if (match(FOR)) {
+            objectComprehension(opener)
+        } else {
+            objectLiteral(opener)
+        }
+    }
+
+    private fun objectComprehension(opener: Token) {
+        emitCode(START_COMPREHENSION)
+        var isList = true
+        current-- // include the skipped for
+        val tokens = mutableListOf<Token>()
+        val lb = Token.ofType(LEFT_BRACE)
+        val nl = Token.ofType(NEWLINE)
+        val rbnl = listOf(Token.ofType(RIGHT_BRACE), nl)
+        val nlHashDropPop = listOf(nl, Token.ofType(HASH), Token.named(ADD_TO_COMPREHENSION))
+        var hasIf = false
+        tokens += consumeUntilType(IF, DO)
+        tokens += listOf(lb, nl)
+        if (peek.type == IF) {
+            hasIf = true
+            tokens += advance()
+            tokens += consumeUntilType(DO)
+            tokens += listOf(lb, nl)
+        }
+        advance() // skip the DO, it's just there to make the syntax nicer
+        var restOfTokens = consumeUntilType(RIGHT_BRACKET)
+        val equalityIndex = restOfTokens.indexOfFirst { it.type == EQUAL }
+        if (equalityIndex != -1) {
+            isList = false
+            tokens += restOfTokens.subList(0, equalityIndex)
+            tokens += nlHashDropPop
+            restOfTokens = restOfTokens.subList(equalityIndex + 1, restOfTokens.size)
+        }
+        tokens += restOfTokens
+        tokens += nlHashDropPop
+        if (hasIf) {
+            tokens += rbnl // close the if block
+        }
+        tokens += rbnl // close the for block
+        consume(RIGHT_BRACKET, "Expect ']' at the end of object comprehension.")
+        compileNested(tokens, false)
+        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList, -1)
+    }
+
+    private fun objectLiteral(opener: Token) {
         var count = 0
         var isList: Boolean? = null
         if (!check(RIGHT_BRACKET)) {
@@ -2160,5 +2226,6 @@ class Compiler {
         private const val SCRIPT = "Script"
         private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
+        private const val ADD_TO_COMPREHENSION = "addToComprehension"
     }
 }

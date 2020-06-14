@@ -631,3 +631,12 @@ print myFiber(5, 3, 5)
 print myFiber(6, 3, 10)
 print myFiber(8, 3, 20)
 print myFiber(5, 10, 0)
+
+ooo = [for i in 1..5 do "key\(i)" = i + 10]
+print ooo
+oooif = [for i in 1..5 if i > 3 do "key\(i)" = i * i]
+print oooif
+oo = [for i in 1..5 do i + 1]
+print oo
+ooif = [for i in 1..5 if i % 2 == 0 do i]
+print ooif

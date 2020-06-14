@@ -116,6 +116,12 @@ class Vm {
                 SELF_DEF -> push(fiber.frame.closure.function)
                 OBJECT -> objectLiteral(nextByte == 1.toByte(), nextInt)
                 LIST -> listLiteral(nextByte == 1.toByte(), nextInt)
+                START_COMPREHENSION -> push(ObjectComprehension())
+                ADD_TO_COMPREHENSION -> {
+                    val value = pop()
+                    // offset is 2 as at 1 is the iterable value, and at offset 0 lies the iterator
+                    (peek(2) as ObjectComprehension).values += value
+                }
                 ANNOTATE -> {
                     val annotation = pop()
                     if (annotation == Nil) {
@@ -584,22 +590,38 @@ class Vm {
 
     private fun objectLiteral(isMutable: Boolean, propCount: Int) {
         push(Instance(objectClass!!, isMutable).apply {
-            var i = propCount - 1
-            while (i >= 0) {
-                val value = pop()
-                val key = pop() as String
-                fields[key] = value
-                i--
+            if (propCount == -1) {
+                val comprehension = pop() as ObjectComprehension
+                var i = 0
+                while (i < comprehension.values.size) {
+                    fields[comprehension.values[i] as String] = comprehension.values[i + 1]
+                    i += 2
+                }
+            } else {
+                var i = propCount - 1
+                while (i >= 0) {
+                    val value = pop()
+                    val key = pop() as String
+                    fields[key] = value
+                    i--
+                }
             }
         })
     }
 
     private fun listLiteral(isMutable: Boolean, propCount: Int) {
-        val items = mutableListOf<Any>()
-        for (i in 0 until propCount) {
-            items += pop()
+        val items: List<Any>
+        if (propCount == -1) {
+            val comprehension = pop() as ObjectComprehension
+            items = comprehension.values
+        } else {
+            items = mutableListOf()
+            for (i in 0 until propCount) {
+                val value = pop()
+                items += value
+            }
+            items.reverse()
         }
-        items.reverse()
         push(ListInstance(isMutable, items))
     }
 
@@ -970,6 +992,10 @@ class Vm {
     private val nextString: String get() = currentFunction.constants[nextInt] as String
 
     private class Yield : RuntimeException("Yield")
+
+    private class ObjectComprehension {
+        val values = mutableListOf<Any>()
+    }
 
     companion object {
         internal const val INITIAL_STACK_SIZE = 256
