@@ -290,14 +290,20 @@ class Compiler {
         return ArgScanResult(args, prependedTokens, optionalParamsStart, defaultValues)
     }
 
+    /**
+     * Parses internal directives left for the compiler by the compiler, usually by synthesizing HASH tokens in a token
+     * list meant to be compiled with [compileNested].
+     */
     private fun internalDirective() {
         when (consumeVar("Expect action after #.")) {
             ADD_TO_COMPREHENSION -> {
+                // The last line was (or should've been) a statement line, meaning it ends in a POP. Roll that pop back
+                // and replace it with an ADD_TO_COMPREHENSION, which also pops.
                 if (lastChunk?.opCode == POP) {
                     rollBackLastChunk()
                     emitCode(OpCode.ADD_TO_COMPREHENSION)
                 } else {
-                    throw error(previous, "Expect adding to comprehension to be preceeded by POP.")
+                    throw error(previous, "Expect adding to comprehension to be preceded by a POP.")
                 }
             }
             else -> throw IllegalArgumentException("WTF")
@@ -770,15 +776,8 @@ class Compiler {
         if (kind == Parser.KIND_INIT) {
             throw error(previous, "Can't return from init!")
         }
-        val from = if (match(LEFT_PAREN)) {
-            val name = consumeVar("Expect function name for return specifier.")
-            consume(RIGHT_PAREN, "Expect ')' after return specifier.")
-            name
-        } else {
-            null
-        }
         consumeReturnValue(false)
-        emitReturn(false, from) { }
+        emitReturn(false) { }
         // After return is emitted, we need to close the scope, so we emit the number of additional
         // instructions to interpret before we actually return from call frame
         val pos = byteCode.size
@@ -1373,23 +1372,32 @@ class Compiler {
         }
     }
 
+    /**
+     * The algorithm is as follows:
+     *  1. Take the for part of the comprehension as-is. Add a { and newline after it.
+     *  2. Check if there's an if part. If so, add it as-is and append { and newline.
+     *  3. Check if there's an = in the tokens between DO and ].
+     *  4. Repeat for both sides of the =, or just once if there's no =: Emit the tokens as a statement, add a newline,
+     *      then insert a #addToComprehension internal compiler directive.
+     *  5. Close the if (if it exists) and the for with } and newlines.
+     *  6. Compile the synthesized for internally.
+     */
     private fun objectComprehension(opener: Token) {
-        emitCode(START_COMPREHENSION)
         var isList = true
         current-- // include the skipped for
         val tokens = mutableListOf<Token>()
-        val lb = Token.ofType(LEFT_BRACE)
         val nl = Token.ofType(NEWLINE)
+        val lbnl = listOf(Token.ofType(LEFT_BRACE), nl)
         val rbnl = listOf(Token.ofType(RIGHT_BRACE), nl)
-        val nlHashDropPop = listOf(nl, Token.ofType(HASH), Token.named(ADD_TO_COMPREHENSION))
+        val nlHashAddToComprehension = listOf(nl, Token.ofType(HASH), Token.named(ADD_TO_COMPREHENSION))
         var hasIf = false
         tokens += consumeUntilType(IF, DO)
-        tokens += listOf(lb, nl)
+        tokens += lbnl
         if (peek.type == IF) {
             hasIf = true
-            tokens += advance()
+            tokens += advance() // add the IF
             tokens += consumeUntilType(DO)
-            tokens += listOf(lb, nl)
+            tokens += lbnl
         }
         advance() // skip the DO, it's just there to make the syntax nicer
         var restOfTokens = consumeUntilType(RIGHT_BRACKET)
@@ -1397,18 +1405,28 @@ class Compiler {
         if (equalityIndex != -1) {
             isList = false
             tokens += restOfTokens.subList(0, equalityIndex)
-            tokens += nlHashDropPop
+            tokens += nlHashAddToComprehension
             restOfTokens = restOfTokens.subList(equalityIndex + 1, restOfTokens.size)
         }
         tokens += restOfTokens
-        tokens += nlHashDropPop
+        tokens += nlHashAddToComprehension
         if (hasIf) {
             tokens += rbnl // close the if block
         }
         tokens += rbnl // close the for block
+        tokens += Token.ofType(EOF)
         consume(RIGHT_BRACKET, "Expect ']' at the end of object comprehension.")
-        compileNested(tokens, false)
-        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList, -1)
+        val compiler = Compiler()
+        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+            declareLocal(nextImplicitVarName("objCompr"), true)
+            emitCode(START_COMPREHENSION)
+            compileInternal(false)
+            emitObjectLiteral(opener, isList, -1)
+            emitCode(OpCode.RETURN)
+            byteCode.putInt(0) // 0 pops after return
+        }
+        emitClosure(f, compiler, false)
+        emitCall(0)
     }
 
     private fun objectLiteral(opener: Token) {
@@ -1438,7 +1456,7 @@ class Compiler {
             matchAllNewlines()
         }
         consume(RIGHT_BRACKET, "Expect ']' at the end of object.")
-        emitObjectLiteral(opener.type == DOLLAR_LEFT_BRACKET, isList == true, count)
+        emitObjectLiteral(opener, isList == true, count)
     }
 
     /**
@@ -1567,6 +1585,9 @@ class Compiler {
     private fun consumeUntilType(vararg types: TokenType): List<Token> {
         val start = current
         while (!isAtEnd() && !check(*types)) {
+            if (peek.type == NEWLINE) {
+                throw error(peek, "Unreachable token types: ${types.joinToString()}.")
+            }
             current++
         }
         return tokens.subList(start, current)
@@ -1924,20 +1945,18 @@ class Compiler {
     }
 
     private fun emitReturn(value: () -> Unit) {
-        emitReturn(true, null, value)
+        emitReturn(true, value)
     }
 
-    private fun emitReturn(emitSkipZero: Boolean, from: String?, value: () -> Unit) {
+    private fun emitReturn(emitSkipZero: Boolean, value: () -> Unit) {
         value()
         emitReturnTypeVerification()
         val opCode = OpCode.RETURN
         var size = byteCode.put(opCode)
-        val constIdx = constIndex(from ?: "")
-        size += byteCode.putInt(constIdx)
         if (emitSkipZero) {
-            byteCode.putInt(0) // No additional instructions to skip
+            size += byteCode.putInt(0) // No additional instructions to skip
         }
-        pushLastChunk(Chunk(opCode, size, constIdx))
+        pushLastChunk(Chunk(opCode, size))
     }
 
     private fun emitReturnNil() {
@@ -1954,7 +1973,8 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, start, end))
     }
 
-    private fun emitObjectLiteral(isMutable: Boolean, isList: Boolean, propCount: Int) {
+    private fun emitObjectLiteral(opener: Token, isList: Boolean, propCount: Int) {
+        val isMutable = opener.type == DOLLAR_LEFT_BRACKET
         val opCode = if (isList) LIST else OBJECT
         var size = byteCode.put(opCode)
         size += byteCode.put(if (isMutable) 1.toByte() else 0.toByte())
@@ -2226,6 +2246,7 @@ class Compiler {
         private const val SCRIPT = "Script"
         private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
+
         private const val ADD_TO_COMPREHENSION = "addToComprehension"
     }
 }

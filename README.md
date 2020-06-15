@@ -730,86 +730,52 @@ Car = Car.builder()\
     .year(2009)\
     .build()
 ```
-* The fact that Šimi has composite objects allows for so-called *array subclasses*:
+
+#### List and object comprehensions
+
+Comprehensions make generating lists and object based on other data quicker to write, read and execute. Imagine you're tasked with generating a list of squares of even numbers up to 10. One route you might take is to use a for loop:
 ```ruby
-class FixedSizeArray {
-    _MAX = 3
-
-    def append(item) {
-        super.append(item)
-        @_trim()
-    }
-
-    def addAll(other) {
-        super.addAll(other)
-        @_trim()
-    }
-
-    def _trim() {
-        d = @len() - @_MAX
-        if d <= 0 {
-            return
-        }
-        for _ in d.times() {
-            @0 = nil
-        }
+list = List()
+for i in 1..10 {
+    if i % 2 == 0 {
+        list.add(i * i)
     }
 }
 ```
 
-#### Using classes as modules
-
-TODO more to a separate section named MODULARITY
-
-Classes can be used to define namespaces and prevent naming collisions when working on a larger project. Just define a (preferably final) class and define classes, methods and fields that you want to modularize inside it:
+A list comprehension makes this much more concise:
 ```ruby
-class_ ModuleClass {
-
-    class ModuleClassA {
-        a = 5
-    }
-
-    class ModuleClassB {
-        b = 6
-    }
-}
-
-class_ AnotherModuleClass {
-
-    class ModuleClassA {
-        a = 5
-    }
-
-    class ModuleClassB {
-        b = 6
-    }
-}
-a = ModuleClass.ModuleClassA()
-anotherA = AnotherModuleClass.ModuleClassA()
+list = [for i in 1..10 if i % 2 == 0 do i * i]
 ```
 
-##### On-site import
-
-You can also use the *import* statement to statically bind values of the supplied class into the current scope. The syntax is as following:
+The *if* part is optional:
 ```ruby
-import CLASS for FIELD1, FIELD2, FIELD3...
-```
-The interpreter will take the class fields and assign them to same-named local variables. Note that all the fields must be present, otherwise an error will be raised - the variables binding these fields will never be nil.
+list = [for item in otherList do item + " something"]
 
-```ruby
-class_ ModuleClass {
-    class InnerA {
-        def toString = "innerA"
-    }
-    class InnerB {
-        def toString = "innerB"
-    }
-}
-def moduleTest {
-    import ModuleClass for InnerA, InnerB
-    return InnerA() + " " + InnerB()
-}
+# You can create both mutable and immutable lists with comprehensions,
+# just put $ in front:
+mutableList = $[for item in otherList if item > 10 do item] 
 ```
+
+An object comprehension has to provide a key-value pair, separated by *=*:
+```ruby
+object = [for i in 1..5 do "key\(i)" = i]
+# Just like in regular for-loops, object decomposition can be used here as well
+object2 = $[for [k, v] in otherObject if k not in ForbiddenKeys and v < 10 do k = v * 10]
+```
+
+In most cases when mapping a list or an object from another list or object, the list comprehension is semantically equal to a filtering followed by mapping:
+```ruby
+list = other.where(=_0 < 10).map(=_0 * 2)
+# this is exactly the same as
+list = [for i in other if i < 10 do i * 2]
+```
+
+The comprehensions have a few advatanges, though:
+1. You can specify if the created list/object is mutable or not.
+2. Objects can filter and map keys and values at the same time.
+3. They're easier to read and type.
+4. They're much faster to execute due to the way they're compiled.
 
 ### Operators
 
@@ -1477,6 +1443,8 @@ Imports are resolved between lexing and compiling phases - each Šimi code file 
 Files specified for external import are assumed to be Šimi files (.simi), so you needn't specify the extension. If the full path to the file isn't provided, it's assumed to live in the same directory as the file it's being imported to.
 
 After all the files have been lexed and all the imports resolved, the entire imported codebase will be compiled as a single file.
+
+The *Core* file and its native companion are implicity imported into every Šimi code file, so they don't have to be specified manually.
 
 Native dependencies are imported with *import native* - check out the TODO LINK native API guide for that.
 

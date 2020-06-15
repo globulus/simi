@@ -77,7 +77,7 @@ class Vm {
                 PROC -> push(Proc(nextInt, nextInt))
                 CLOSE_UPVALUE -> closeUpvalue()
                 RETURN -> {
-                    if (doReturn(nextString, breakAtFp)) {
+                    if (doReturn(breakAtFp)) {
                         break@loop
                     }
                 }
@@ -560,7 +560,7 @@ class Vm {
             }
             else -> {
                 if (checkError) {
-                    throw runtimeError("Undefined method $name.")
+                    throw runtimeError("Undefined Undefined method $name.")
                 } else {
                     false
                 }
@@ -703,25 +703,21 @@ class Vm {
     /**
      * @return true if the program should terminate
      */
-    private fun doReturn(from: String, breakAtFp: Int): Boolean {
+    private fun doReturn(breakAtFp: Int): Boolean {
         val result = pop()
-        val frameToReturnFrom = if (from.isEmpty()) fiber.frame.name else from
-        var returningFrame: CallFrame
-        do {
-            returningFrame = fiber.frame
-            closeUpvalues(returningFrame.sp, fiber.name)
-            val numberOfPops = nextInt
-            for (i in 0 until numberOfPops) {
-                val code = nextCode
-                when (code) { // TODO move somewhere else, reuse existing code
-                    POP -> fiber.sp--
-                    CLOSE_UPVALUE -> closeUpvalue()
-                    POP_UNDER -> fiber.sp -= nextInt + 1 // + 1 is to pop the value on the fiber.stack as well
-                    else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
-                }
+        val returningFrame = fiber.frame
+        closeUpvalues(returningFrame.sp, fiber.name)
+        val numberOfPops = nextInt
+        for (i in 0 until numberOfPops) {
+            val code = nextCode
+            when (code) { // TODO move somewhere else, reuse existing code
+                POP -> fiber.sp--
+                CLOSE_UPVALUE -> closeUpvalue()
+                POP_UNDER -> fiber.sp -= nextInt + 1 // + 1 is to pop the value on the fiber.stack as well
+                else -> throw IllegalArgumentException("Unexpected code in return scope closing patch: $code!")
             }
-            fiber.fp--
-        } while (returningFrame.name != frameToReturnFrom)
+        }
+        fiber.fp--
         return if (fiber.fp == 0) { // Returning from top-level func
             fiber.sp = 0
             if (fiber.caller != null) {

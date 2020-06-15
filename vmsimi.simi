@@ -614,6 +614,10 @@ test("proc do else", 20, def {
     j = p()
     return j
 })
+test("list comprehension", "[2, 3, 4, 5]", "" + [for i in 1..5 do i + 1])
+test("mutable list comprehension with if", "$[2, 4]", "" + $[for i in 1..5 if i % 2 == 0 do i])
+test("mutable obj comprehension", "$[key1 = 11, key2 = 12, key3 = 13, key4 = 14]", "" + $[for i in 1..5 do "key\(i)" = i + 10])
+test("obj comprehension with if", "[key4 = 16]", "" + [for i in 1..5 if i > 3 do "key\(i)" = i * i])
 
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
@@ -631,12 +635,3 @@ print myFiber(5, 3, 5)
 print myFiber(6, 3, 10)
 print myFiber(8, 3, 20)
 print myFiber(5, 10, 0)
-
-ooo = [for i in 1..5 do "key\(i)" = i + 10]
-print ooo
-oooif = [for i in 1..5 if i > 3 do "key\(i)" = i * i]
-print oooif
-oo = [for i in 1..5 do i + 1]
-print oo
-ooif = [for i in 1..5 if i % 2 == 0 do i]
-print ooif
