@@ -147,7 +147,6 @@ else { # Multiline block
 ```
 
 #### Scoping
-
 Šimi uses lexical scoping, i.e a variable is valid in the block it was declared in and its parent blocks:
 ```ruby
 a = 5

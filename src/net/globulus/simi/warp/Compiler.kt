@@ -762,8 +762,7 @@ class Compiler {
         }
         compileNested(tokens, false)
         // Remove the iterator as it isn't needed anymore
-        locals.removeAt(locals.size - 1)
-        emitCode(POP)
+        discardLastLocal()
     }
 
     private fun printStatement() {
@@ -2042,6 +2041,11 @@ class Compiler {
             i--
         }
         return popCount
+    }
+
+    private fun discardLastLocal() {
+        locals.removeAt(locals.size - 1)
+        emitCode(POP)
     }
 
     private fun resolveUpvalue(compiler: Compiler, name: String): Pair<Upvalue, Int>? {
