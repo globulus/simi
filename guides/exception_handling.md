@@ -15,7 +15,7 @@ A rescue block sits at the end of a statement and waits for an exception to be r
 
 A rescue blocks starts with *?!* (you can read this as "if exception"), followed by a block. This is a hard block, and not an expression one, and you can thing of it as sitting *below* the statement it rescues, and not inline with it.
 
-If an exception is returned, it will be bound inside the rescue block as *it*, so that you may access it.
+If the rescue block triggers when a call returns an exception, it will be bound inside the rescue block as *it*, so that you may access it.
 
 TODO SOME EXAMPLES
 

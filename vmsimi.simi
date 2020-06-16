@@ -23,6 +23,7 @@ class TypeMismatchException is Exception {
 }
 class NilReferenceException is Exception
 class IllegalArgumentException is Exception
+class AbstractMethodException is Exception
 
 class Range {
     init(@min, @max)

@@ -34,7 +34,7 @@ ___abc123_345a__b54___
 #### Newlines
 Line breaks separate Šimi statements and as such are meaningful. E.g, an assignment statement must be terminated with a newline. The compiler will usually warn you if a newline is missing.
 
-If your line is very long, you can break it into multiple lines by ending each line with a backslash *\* for readability purposes.
+If your line is very long, you can break it into multiple lines by ending each line with a backslash *\\* for readability purposes.
 ```ruby
 a = 5 # This is a line
 # Here are two lines, the first one nicely formatted by using \
@@ -46,7 +46,7 @@ arr = [1, 2, 3]\
     .sorted(def (l, r) = r.compareTo(l))
 ```
 
-On the other hand, if you wish to pack multiple short statements onto a single line, you can separate them with a semicolon (;). To the lexer, a newline and a semicolon are the same token.
+On the other hand, if you wish to pack multiple short statements onto a single line, you can separate them with a semicolon *;*. To the lexer, a newline and a semicolon are the same token.
 ```ruby
 print arr; print a # And here are two print statements separated by ;
 ```

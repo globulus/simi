@@ -731,7 +731,6 @@ Car = Car.builder()\
 ```
 
 #### List and object comprehensions
-
 Comprehensions make generating lists and object based on other data quicker to write, read and execute. Imagine you're tasked with generating a list of squares of even numbers up to 10. One route you might take is to use a for loop:
 ```ruby
 list = List()
