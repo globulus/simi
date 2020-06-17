@@ -118,3 +118,7 @@ a = 5
     a = 6 # Compile error, a was already declared in an outer block
 }
 ```
+
+#### Printing
+
+TODO fill

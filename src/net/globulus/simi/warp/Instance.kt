@@ -6,6 +6,21 @@ import net.globulus.simi.TokenType
 open class Instance(val klass: SClass, val mutable: Boolean) : Fielded {
     override val fields: MutableMap<String, Any> = mutableMapOf()
 
+    operator fun get(key: String) = fields[key]
+
+    operator fun set(key: String, value: Any) {
+        if (value == Nil) {
+            fields.remove(key)
+        } else {
+            fields[key] = value
+        }
+        updateCount()
+    }
+
+    internal open fun updateCount() {
+        fields[Constants.COUNT] = fields.size
+    }
+
     internal open fun stringify(vm: Vm): String {
         return StringBuilder()
                 .append(if (mutable) TokenType.DOLLAR_LEFT_BRACKET.toCode() else TokenType.LEFT_BRACKET.toCode())
@@ -24,7 +39,7 @@ open class Instance(val klass: SClass, val mutable: Boolean) : Fielded {
 }
 
 class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instance(Vm.listClass!!, mutable) {
-    private val items = providedItems ?: mutableListOf()
+    internal val items = providedItems ?: mutableListOf()
 
     init {
         updateCount()
@@ -41,7 +56,7 @@ class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instanc
         updateCount()
     }
 
-    private fun updateCount() {
+    override fun updateCount() {
         fields[Constants.COUNT] = items.size
     }
 

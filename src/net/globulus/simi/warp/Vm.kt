@@ -750,6 +750,8 @@ class Vm {
             objectClass = klass
         } else if (listClass == null && name == Constants.CLASS_LIST) {
             listClass = klass
+        } else if (rangeClass == null && name == Constants.CLASS_RANGE) {
+            rangeClass = klass
         }
         nonFinalizedClasses.push(fiber.sp)
         push(klass)
@@ -1013,6 +1015,8 @@ class Vm {
         var objectClass: SClass? = null
             internal set
         var listClass: SClass? = null
+            internal set
+        var rangeClass: SClass? = null
             internal set
     }
 }

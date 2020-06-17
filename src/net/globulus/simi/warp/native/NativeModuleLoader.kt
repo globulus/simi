@@ -10,13 +10,17 @@ object NativeModuleLoader {
     fun load(path: String, moduleName: String, useCustomLoader: Boolean = false) {
         try {
             val apiClassName = getApiClassName(moduleName)
-            val module = if (useCustomLoader) {
-                val url = URL(path)
-                val loader: ClassLoader = URLClassLoader.newInstance(arrayOf(url), javaClass.classLoader)
-                Class.forName(apiClassName, true, loader).newInstance()
+            val module = if (moduleName == "Core") {
+                Core
             } else {
-                Class.forName(apiClassName).newInstance()
-            } as NativeModule
+                if (useCustomLoader) {
+                    val url = URL(path)
+                    val loader: ClassLoader = URLClassLoader.newInstance(arrayOf(url), javaClass.classLoader)
+                    Class.forName(apiClassName, true, loader).newInstance()
+                } else {
+                    Class.forName(apiClassName).newInstance()
+                } as NativeModule
+            }
             classes.putAll(module.classes)
         } catch (e: Exception) {
             e.printStackTrace()

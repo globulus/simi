@@ -1,0 +1,82 @@
+import native "Core"
+
+class Object {
+    native keys
+    native values
+    native zip
+    native isEmpty
+    native clear
+    native iterate
+
+    native merge(with)
+
+    def isNotEmpty = not isEmpty()
+    def has(key) = key in keys()
+}
+
+class_ String
+
+class_ List {
+    native init
+    native get(key)
+    native set(key, value)
+    native add(value)
+    native addAll(from)
+    native isEmpty
+    native clear
+    native iterate
+}
+
+class_ Function
+
+class_ Class
+
+class Exception {
+    init(@message)
+}
+class TypeMismatchException is Exception {
+    init {
+        super.init("tme")
+    }
+}
+class NilReferenceException is Exception
+class IllegalArgumentException is Exception
+class AbstractMethodException is Exception
+
+class Range {
+    init(@min, @max)
+
+    def iterate() = Range.Iterator(self)
+
+    def has(o) = o >= @min and o <= @max
+
+    class Iterator {
+        init(@range) {
+            self.current = range.min
+        }
+
+        def next() = if @current <= @range.max {
+                @current = @current + 1
+                @current - 1
+            } else {
+                nil
+            }
+    }
+}
+
+class_ Num {
+
+    def rangeTo(lim) = Range(@_, lim)
+
+    def rangeUntil(lim) = Range(@_, lim - 1)
+
+    def equals(o) = (o is Num and @_ == o._)
+
+    def matches(o) = if self == o {
+        @_
+    } else {
+        nil
+    }
+
+    def iterate = rangeTo(self).iterate()
+}

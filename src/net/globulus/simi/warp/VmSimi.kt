@@ -49,7 +49,10 @@ private fun run(source: String) {
         print("Scanning and resolving imports...")
         val lexer = Lexer(FILE_SIMI, source, null)
         val tokens = mutableListOf<Token>()
-        scanImports(lexer.scanTokens(true), tokens, mutableListOf())
+        val lo = lexer.scanTokens(true).apply {
+            simiImports += "./warp_nacelles/core"
+        }
+        scanImports(lo, tokens, mutableListOf())
         println(" " + (System.currentTimeMillis() - time) + " ms")
         time = System.currentTimeMillis()
         println("Compiling...")

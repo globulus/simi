@@ -429,7 +429,7 @@ class Lexer(private val fileName: String,
     class LexError(message: String) : RuntimeException(message)
 
     data class LexerOutput(val tokens: List<Token>,
-                           val simiImports: List<String>,
+                           val simiImports: MutableList<String>,
                            val nativeImports: List<String>
     )
 
