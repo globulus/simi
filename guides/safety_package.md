@@ -8,7 +8,7 @@ However, nobody is denying the advantages of strong typing, especially for large
 
 You can add runtime type checks to function args and return types:
 ```ruby
-def func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
+fn func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
     ...
 }
 ```
@@ -17,7 +17,7 @@ def func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
     a. Types are non-nullable by default, i.e "a is String" will fail if *nil* is provided for *a*. To specify that the type is nullable, add *?* at the end of the type: "a is String?".
 2. The function return type is checked by putting the *is TYPE* check after the arguments.
     a. The nullability rule applies here as well.
-    b. If your function TODO LINK exceptions returns exceptions instead of nil, you can mark the return type as being either it or exception with *!*: "def func() is String!" means that this function should return either a String or an Exception.
+    b. If your function TODO LINK exceptions returns exceptions instead of nil, you can mark the return type as being either it or exception with *!*: "fn func() is String!" means that this function should return either a String or an Exception.
 
 Again, these checks are performed at runtime, and will return *TypeMismatchException* if something is off.
 

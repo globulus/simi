@@ -85,7 +85,7 @@ a = when b {
 
 Naturally, functions with an implicit return of their single expression work with *if* and *when* expressions as well:
 ```ruby
-def extractValue(obj) = when obj {
+fn extractValue(obj) = when obj {
     is A = obj.aValue()
     is B or is C = obj.bOrCValue()
     else = obj.otherValue()
@@ -289,7 +289,7 @@ Control flow in functions happens via *return* and *yield* statements.
 
 The *return* statement behaves as it does in other languages - the control immediately returns to whence the function was called, and can either pass or not pass a value:
  ```ruby
- def f(x) {
+ fn f(x) {
     if x < 5 {
         return 0
     }

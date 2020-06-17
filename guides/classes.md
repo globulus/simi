@@ -17,8 +17,8 @@ You can omit braces if the class doesn't have a body. Classes are constants, i.e
 If you want to have at least runtime assurance that a method will be overridden before it's used, have it return *AbstractMethodException*:
 ```ruby
 class AbstractClass {
-    def pleaseOverrideMe(a, b, c) = AbstractMethodException()
-    def meToo(a, b) = AbstractMethodException()
+    fn pleaseOverrideMe(a, b, c) = AbstractMethodException()
+    fn meToo(a, b) = AbstractMethodException()
 }
 ```
 
@@ -31,7 +31,7 @@ instance = MyClass()
 Class instances are immutable-to-the-ouside objects initialized according to the class spec ([open classes](#final-and-open-classes) create mutable instances, though). This means that instance fields can be modified from within, via *self*, but not elsewhere:
 ```ruby
 class MyClass {
-    def setter {
+    fn setter {
         @field = 5
     }
 }
@@ -52,7 +52,7 @@ date = MyDate(100505050)
 ```
 
 Some notes on *init*:
-* Since it's such an oft-used construct, you don't have to put *def* before *init*, as that'd be tiresome. Of course, if that's your thing, you're more than welcome to write *def init* every time.
+* Since it's such an oft-used construct, you don't have to put *fn* before *init*, as that'd be tiresome. Of course, if that's your thing, you're more than welcome to write *fn init* every time.
 * *init* is just a regular method, meaning it can have any number of arguments, including default arguments and type checks. It also has access to *self* and *super*.
 * *init* can't return early (that's a compile error) and always implicitly returns the instance at the end.
 
@@ -78,7 +78,7 @@ class Range {
 If a class defines any initialized fields, they're assigned in the *init* body, after any bound arguments are set (with compiler synthesizing the code). This allows you to use *self* and *super* when assigning fields. Field assignments happen in the order in which they were typed.
 
 #### Native methods
-Methods can be native, with their implementation left to the system Šimi's running on. Methods are defined with *native* keyword instead of *def*, and have empty bodies:
+Methods can be native, with their implementation left to the system Šimi's running on. Methods are defined with *native* keyword instead of *fn*, and have empty bodies:
 ```ruby
 native method(a, b, c = 3)
 native another()
@@ -116,7 +116,7 @@ If you don't want your class to be inherited, [mark it final](#final-and-open-cl
 You can access the superclass(es) and their fields with the *super* keyword. The super expression can have a specifier in parentheses to indicate which superclass should it refer to:
 ```ruby
 class Subclass is Superclass1, Superclass2 {
-    def method {
+    fn method {
         super # the Superclass1 class
         super.superClassMethod() # invokes the superclass method on Superclass1
         super(Superclass2).superClassMethod() # specifier specifies that we're looking for Superclass2 method

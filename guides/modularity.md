@@ -31,7 +31,7 @@ module MyModule {
         ...
     }
     
-    def someFunc() {
+    fn someFunc() {
         ...
     }
     
@@ -40,7 +40,7 @@ module MyModule {
     }
     
     module Submodule {
-        def otherFunc = 5
+        fn otherFunc = 5
     }
 }
 ```

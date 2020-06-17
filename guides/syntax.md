@@ -5,7 +5,7 @@ For the most part, Šimi is a C-like language, so most devs should feel at home 
 #### Keywords
 Šimi has 26 reserved keywords:
 ```ruby
-and break class continue def do else false fib for gu if import in 
+and break class continue fn do else false fib for gu if import in 
 is ivic native nil not or print return self super true when while yield
 ```
 
@@ -41,9 +41,9 @@ a = 5 # This is a line
 arr = [1, 2, 3]\
     .reversed()\
     .joined(with = [5, 6, 7])\
-    .where(def i = i <= 5)\
-    .map(def i = i * 2)\
-    .sorted(def (l, r) = r.compareTo(l))
+    .where(fn i = i <= 5)\
+    .map(fn i = i * 2)\
+    .sorted(fn (l, r) = r.compareTo(l))
 ```
 
 On the other hand, if you wish to pack multiple short statements onto a single line, you can separate them with a semicolon *;*. To the lexer, a newline and a semicolon are the same token.
@@ -89,7 +89,7 @@ Some variables are real constants and using $= with them will result in a compil
 THIS_IS_A_CONST = 5
 THIS_IS_A_CONST $= "error"
 
-def func() {
+fn func() {
     return 2
 }
 func $= "this is also an error"

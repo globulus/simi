@@ -31,7 +31,7 @@ The equality operator checks if two values are, well, equal. The thing is, it's 
 class Range {
     # ... rest of implementation omitted ...
 
-    def equals(other) = start == other.start and stop == other.stop
+    fn equals(other) = start == other.start and stop == other.stop
 }
 ```
 
@@ -109,7 +109,7 @@ Again, this method can be overriden in any class. See, for example, how it's don
 class Range {
     # ... rest of implementation omitted ...
 
-    def has(val) = if start < stop {
+    fn has(val) = if start < stop {
             val >= start and val < stop
         } else {
             val <= start and val > stop

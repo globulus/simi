@@ -58,7 +58,7 @@ class Range {
 
     ... rest of implementation omitted ...
 
-    def toString = String.builder()\
+    fn toString = String.builder()\
             .add("Range from ").add(@start)\
             .add(" to ").add(@stop)\
             .add(" by ").add(@step)\
@@ -70,5 +70,5 @@ class Range {
 Boxed numbers and strings are objects with two fields, a class being Num or String, respectively, and a private field "_" that represents the raw value. The raw value can only be accessed by methods and functions that extend the Stdlib classes, and is read-only. Using the raw value alongside the @ operator results in the so-called *snail* lexeme:
 ```ruby
 # Implementation of times() method from Number class
-def times = ife(@_ < 0, =Range(@_, 0), =Range(0, @_)).iterate()
+fn times = ife(@_ < 0, =Range(@_, 0), =Range(0, @_)).iterate()
 ```
