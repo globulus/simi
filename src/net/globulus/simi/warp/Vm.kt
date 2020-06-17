@@ -295,6 +295,14 @@ class Vm {
         val a = unbox(pop())
         push(when (a) {
             is String -> a + stringify(b)
+            is ListInstance -> {
+                if (a.mutable) {
+                    a += b
+                    a
+                } else {
+                    mutabilityLockException()
+                }
+            }
             else -> {
                 if (b is String) {
                     stringify(a) + b

@@ -100,12 +100,12 @@ class_ Stream {
     }
 
     fn where(predicate) {
-        @ops.add([op = OP_WHERE, arg = predicate])
+        @ops = @ops + [op = OP_WHERE, arg = predicate]
         return self
     }
 
     fn map(transformation) {
-        @ops.add([op = OP_MAP, arg = transformation])
+        @ops = @ops + [op = OP_MAP, arg = transformation]
         return self
     }
 
@@ -128,7 +128,7 @@ class_ Stream {
                 }
             }
             if dst != nil {
-                list.add(dst)
+                list += dst
             }
         }
         return list
