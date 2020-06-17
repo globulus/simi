@@ -4,6 +4,7 @@ import net.globulus.simi.Constants
 import net.globulus.simi.warp.Instance
 import net.globulus.simi.warp.ListInstance
 import net.globulus.simi.warp.Vm
+import net.globulus.simi.warp.mutabilityLockException
 
 object Core : NativeModule {
     val keys = NativeFunction(0) {
@@ -13,7 +14,7 @@ object Core : NativeModule {
 
     val listIterate = NativeFunction(0) {
         val instance = it[0] as ListInstance
-        val count = instance.fields[Constants.COUNT] as Int
+        val count = (instance.fields[Constants.COUNT] as Long).toInt()
         var i = 0
         Instance(Vm.objectClass!!, false).apply {
             fields[Constants.NEXT] = NativeFunction(0) {
@@ -27,6 +28,7 @@ object Core : NativeModule {
             }
         }
     }
+
     override val classes: Map<String, NativeClass> = mapOf(
             Constants.CLASS_OBJECT to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
@@ -49,14 +51,27 @@ object Core : NativeModule {
                         }
                         "clear" -> NativeFunction(0) {
                             val instance = it[0] as Instance
-                            instance.fields.clear()
+                            if (instance.mutable) {
+                                instance.fields.clear()
+                                instance
+                            } else {
+                                mutabilityLockException()
+                            }
+                        }
+                        "lock" -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            instance.mutable = false
                             instance
                         }
                         "merge" -> NativeFunction(1) {
                             val instance = it[0] as Instance
-                            val from = it[1] as Instance
-                            instance.fields.putAll(from.fields)
-                            instance
+                            if (instance.mutable) {
+                                val from = it[1] as Instance
+                                instance.fields.putAll(from.fields)
+                                instance
+                            } else {
+                                mutabilityLockException()
+                            }
                          }
                         else -> null
                     }
@@ -86,22 +101,34 @@ object Core : NativeModule {
                         }
                         Constants.SET -> NativeFunction(2) {
                             val instance = it[0] as ListInstance
-                            val key = it[1] as Long
-                            val value = it[2] as Any
-                            instance[key.toInt()] = value
-                            null
+                            if (instance.mutable) {
+                                val key = it[1] as Long
+                                val value = it[2] as Any
+                                instance[key.toInt()] = value
+                                null
+                            } else {
+                                mutabilityLockException()
+                            }
                         }
                         "add" -> NativeFunction(1) {
                             val instance = it[0] as ListInstance
-                            val value = it[1] as Any
-                            instance += value
-                            instance
+                            if (instance.mutable) {
+                                val value = it[1] as Any
+                                instance += value
+                                instance
+                            } else {
+                                mutabilityLockException()
+                            }
                         }
                         "addAll" -> NativeFunction(1) {
                             val instance = it[0] as ListInstance
-                            val from = it[1] as ListInstance
-                            instance.items.addAll(from.items)
-                            instance
+                            if (instance.mutable) {
+                                val from = it[1] as ListInstance
+                                instance.items.addAll(from.items)
+                                instance
+                            } else {
+                                mutabilityLockException()
+                            }
                         }
                         "isEmpty" -> NativeFunction(0) {
                             val instance = it[0] as ListInstance
@@ -109,8 +136,12 @@ object Core : NativeModule {
                         }
                         "clear" -> NativeFunction(0) {
                             val instance = it[0] as ListInstance
-                            instance.items.clear()
-                            instance
+                            if (instance.mutable) {
+                                instance.items.clear()
+                                instance
+                            } else {
+                                mutabilityLockException()
+                            }
                         }
                         Constants.ITERATE -> listIterate
                         else -> null

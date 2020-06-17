@@ -3,7 +3,14 @@ package net.globulus.simi.warp
 import net.globulus.simi.Constants
 import net.globulus.simi.TokenType
 
-open class Instance(val klass: SClass, val mutable: Boolean) : Fielded {
+open class Instance(val klass: SClass) : Fielded {
+    constructor(klass: SClass, mutable: Boolean) : this(klass) {
+        this.mutable = mutable
+    }
+
+    var mutable = false
+        internal set
+
     override val fields: MutableMap<String, Any> = mutableMapOf()
 
     operator fun get(key: String) = fields[key]
@@ -18,7 +25,7 @@ open class Instance(val klass: SClass, val mutable: Boolean) : Fielded {
     }
 
     internal open fun updateCount() {
-        fields[Constants.COUNT] = fields.size
+        fields[Constants.COUNT] = fields.size.toLong()
     }
 
     internal open fun stringify(vm: Vm): String {
@@ -57,7 +64,7 @@ class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instanc
     }
 
     override fun updateCount() {
-        fields[Constants.COUNT] = items.size
+        fields[Constants.COUNT] = items.size.toLong()
     }
 
     override fun stringify(vm: Vm): String {

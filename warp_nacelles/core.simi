@@ -7,6 +7,7 @@ class Object {
     native isEmpty
     native clear
     native iterate
+    native lock
 
     native merge(with)
 
@@ -42,9 +43,18 @@ class TypeMismatchException is Exception {
 class NilReferenceException is Exception
 class IllegalArgumentException is Exception
 class AbstractMethodException is Exception
+class MutabilityLockException is Exception
+
+Math _= [
+    min = def(a, b) = if (a < b) a else b,
+    max = def(a, b) = if (a > b) a else b
+]
 
 class Range {
-    init(@min, @max)
+    init(@from, @to) {
+        @min = Math.min(from, to)
+        @max = Math.max(from, to)
+    }
 
     def iterate() = Range.Iterator(self)
 
@@ -79,4 +89,50 @@ class_ Num {
     }
 
     def iterate = rangeTo(self).iterate()
+}
+
+class_ Stream {
+    OP_WHERE = "where"
+    OP_MAP = "map"
+
+    init(@src) {
+        @ops = List()
+    }
+
+    def where(predicate) {
+        @ops.add([op = OP_WHERE, arg = predicate])
+        return self
+    }
+
+    def map(transformation) {
+        @ops.add([op = OP_MAP, arg = transformation])
+        return self
+    }
+
+    def toMutableList {
+        list = List()
+        for item in @src {
+            dst = item
+            for operation in @ops {
+                op = operation.op
+                when op {
+                    OP_WHERE {
+                        if not operation.arg(dst) {
+                            dst $= nil
+                            break
+                        }
+                    }
+                    OP_MAP {
+                        dst $= operation.arg(dst)
+                    }
+                }
+            }
+            if dst != nil {
+                list.add(dst)
+            }
+        }
+        return list
+    }
+
+    def toList = toMutableList().lock()
 }

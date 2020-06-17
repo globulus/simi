@@ -15,11 +15,13 @@ class Vm {
     private var nonFinalizedClasses = Stack<Int>()
 
     fun interpret(input: Fiber) {
+        instance = this
         fiber = input
         push(input)
         try {
             await(true, 0)
         } catch (ignored: IllegalStateException) { } // Silently abort the program
+        instance = null
     }
 
     private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
@@ -746,6 +748,8 @@ class Vm {
             exceptionClass = klass
         } else if (nilReferenceExceptionClass == null && name == Constants.EXCEPTION_NIL_REFERENCE) {
             nilReferenceExceptionClass = klass
+        } else if (mutabilityLockExceptionClass == null && name == Constants.EXCEPTION_MUTABILITY_LOCK) {
+            mutabilityLockExceptionClass = klass
         } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
             objectClass = klass
         } else if (listClass == null && name == Constants.CLASS_LIST) {
@@ -897,6 +901,7 @@ class Vm {
         } else if (value is String) {
             val boxedStr = Instance(strClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
+                fields[Constants.COUNT] = value.length.toLong()
             }
             fiber.stack[loc] = boxedStr
             return boxedStr
@@ -1000,6 +1005,8 @@ class Vm {
         private const val STACK_GROWTH_FACTOR = 4
         internal const val MAX_FRAMES = 64
 
+        internal var instance: Vm? = null
+
         var numClass: SClass? = null
             internal set
         var strClass: SClass? = null
@@ -1011,6 +1018,8 @@ class Vm {
         var exceptionClass: SClass? = null
             internal set
         var nilReferenceExceptionClass: SClass? = null
+            internal set
+        var mutabilityLockExceptionClass: SClass? = null
             internal set
         var objectClass: SClass? = null
             internal set

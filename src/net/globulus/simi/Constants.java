@@ -38,6 +38,7 @@ public final class Constants {
     public static final String CLASS_EXCEPTION = "Exception";
     public static final String CLASS_LIST = "List";
     public static final String CLASS_RANGE = "Range";
+    public static final String CLASS_STREAM = "Stream";
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
     static final String CLASS_DEBUGGER = "Debugger";
 
@@ -46,6 +47,7 @@ public final class Constants {
     public static final String EXCEPTION_INTERPRETER = "InterpreterException";
     public static final String EXCEPTION_NUMBER_FORMAT = "NumberFormatException";
     public static final String EXCEPTION_NIL_REFERENCE = "NilReferenceException";
+    public static final String EXCEPTION_MUTABILITY_LOCK = "MutabilityLockException";
     public static final String EXCEPTION_TYPE_MISMATCH = "TypeMismatchException";
 
     private Constants() { }
