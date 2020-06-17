@@ -115,7 +115,7 @@ class Vm {
                 }
                 GET_SUPER -> getSuper()
                 SUPER_INVOKE -> invokeSuper(nextString, nextInt)
-                SELF_DEF -> push(fiber.frame.closure.function)
+                SELF_FN -> push(fiber.frame.closure.function)
                 OBJECT -> objectLiteral(nextByte == 1.toByte(), nextInt)
                 LIST -> listLiteral(nextByte == 1.toByte(), nextInt)
                 START_COMPREHENSION -> push(ObjectComprehension())

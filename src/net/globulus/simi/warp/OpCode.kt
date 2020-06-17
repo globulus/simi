@@ -54,7 +54,7 @@ enum class OpCode {
     SUPER,
     GET_SUPER,
     SUPER_INVOKE,
-    SELF_DEF,
+    SELF_FN,
     OBJECT,
     LIST,
     START_COMPREHENSION,

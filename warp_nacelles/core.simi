@@ -11,8 +11,8 @@ class Object {
 
     native merge(with)
 
-    def isNotEmpty = not isEmpty()
-    def has(key) = key in keys()
+    fn isNotEmpty = not isEmpty()
+    fn has(key) = key in keys()
 }
 
 class_ String
@@ -46,8 +46,8 @@ class AbstractMethodException is Exception
 class MutabilityLockException is Exception
 
 Math _= [
-    min = def(a, b) = if (a < b) a else b,
-    max = def(a, b) = if (a > b) a else b
+    min = fn(a, b) = if (a < b) a else b,
+    max = fn(a, b) = if (a > b) a else b
 ]
 
 class Range {
@@ -56,16 +56,16 @@ class Range {
         @max = Math.max(from, to)
     }
 
-    def iterate() = Range.Iterator(self)
+    fn iterate() = Range.Iterator(self)
 
-    def has(o) = o >= @min and o <= @max
+    fn has(o) = o >= @min and o <= @max
 
     class Iterator {
         init(@range) {
             self.current = range.min
         }
 
-        def next() = if @current <= @range.max {
+        fn next() = if @current <= @range.max {
                 @current = @current + 1
                 @current - 1
             } else {
@@ -76,19 +76,19 @@ class Range {
 
 class_ Num {
 
-    def rangeTo(lim) = Range(@_, lim)
+    fn rangeTo(lim) = Range(@_, lim)
 
-    def rangeUntil(lim) = Range(@_, lim - 1)
+    fn rangeUntil(lim) = Range(@_, lim - 1)
 
-    def equals(o) = (o is Num and @_ == o._)
+    fn equals(o) = (o is Num and @_ == o._)
 
-    def matches(o) = if self == o {
+    fn matches(o) = if self == o {
         @_
     } else {
         nil
     }
 
-    def iterate = rangeTo(self).iterate()
+    fn iterate = rangeTo(self).iterate()
 }
 
 class_ Stream {
@@ -99,17 +99,17 @@ class_ Stream {
         @ops = List()
     }
 
-    def where(predicate) {
+    fn where(predicate) {
         @ops.add([op = OP_WHERE, arg = predicate])
         return self
     }
 
-    def map(transformation) {
+    fn map(transformation) {
         @ops.add([op = OP_MAP, arg = transformation])
         return self
     }
 
-    def toMutableList {
+    fn toMutableList {
         list = List()
         for item in @src {
             dst = item
@@ -134,5 +134,5 @@ class_ Stream {
         return list
     }
 
-    def toList = toMutableList().lock()
+    fn toList = toMutableList().lock()
 }

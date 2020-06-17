@@ -143,7 +143,7 @@ class Compiler {
             checkAnnotationCounter()
             import()
             false
-        } else if (match(DEF)) {
+        } else if (match(FN)) {
             checkAnnotationCounter()
             funDeclaration()
             false
@@ -390,7 +390,7 @@ class Compiler {
                     }
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
-                } else if (match(DEF, FIB)) {
+                } else if (match(FN, FIB)) {
                     val methodName = methodOrFiber(previous.type == FIB)
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
@@ -1290,8 +1290,8 @@ class Compiler {
             }
             emitSuper(superclass)
         } else if (match(SELF)) {
-            if (peekSequence(LEFT_PAREN, DEF, RIGHT_PAREN)) {
-                emitCode(SELF_DEF)
+            if (peekSequence(LEFT_PAREN, FN, RIGHT_PAREN)) {
+                emitCode(SELF_FN)
                 advance(); advance(); advance()
             } else {
                 if (currentClass == null) {
@@ -1311,7 +1311,7 @@ class Compiler {
             }
         } else if (match(DOLLAR_LEFT_BRACKET)) {
             objectLiteralOrObjectComprehension()
-        } else if (match(DEF) || peekSequence(EQUAL)) {
+        } else if (match(FN) || peekSequence(EQUAL)) {
             function(Parser.KIND_LAMBDA, nextLambdaName())
         } else if (match(DO)) {
             proc()

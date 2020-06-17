@@ -12,7 +12,7 @@ class Date {
 
 SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]
-def test(title, expected, proc) {
+fn test(title, expected, proc) {
     r = proc()
     testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
     msg = "Testing \(title): " + testResult
@@ -36,21 +36,21 @@ test("if", "a", =if a < 2 or a < 10 {
 } else {
     "both are false"
 })
-test("nil coalescence", 5, def {
+test("nil coalescence", 5, fn {
     v = nil
     return v ?? 5
 })
-test("nil coalescence assign", 5, def {
+test("nil coalescence assign", 5, fn {
     v = nil
     v ??= 5
     return v
 })
-test("nil coalescence assign again", 5, def {
+test("nil coalescence assign again", 5, fn {
     v = 5
     v ??= 6
     return v
 })
-test("while", "5again43again2", def {
+test("while", "5again43again2", fn {
     i = 5
     s = ""
     while i > 1 {
@@ -66,7 +66,7 @@ test("while", "5again43again2", def {
     }
     return s
 })
-test("do-while", "123", def {
+test("do-while", "123", fn {
     i = 1
     s = ""
     do {
@@ -75,7 +75,7 @@ test("do-while", "123", def {
     } while i < 4
     return s
 })
-test("do-while one too many", "4", def {
+test("do-while one too many", "4", fn {
     i = 4
     s = ""
     do {
@@ -84,7 +84,7 @@ test("do-while one too many", "4", def {
     } while i < 4
     return s
 })
-test("when", "3 or 4", def {
+test("when", "3 or 4", fn {
     i = 3
     when i {
         2 { return "2" }
@@ -104,38 +104,38 @@ test("when expr", 5, when b {
   4 = 5
   else = 6
 })
-def funcWithOptionals(what = "func", smth = 6) {
+fn funcWithOptionals(what = "func", smth = 6) {
     return what + smth
 }
 test("func with 2 params", "aa", funcWithOptionals("a", "a"))
 test("func with 1 optional", "a6", funcWithOptionals("a"))
 test("func with 2 optionals", "func6", funcWithOptionals())
 
-def retFunc() {
+fn retFunc() {
     return 5
     print "this shouldn't be printed"
 }
 test("func with return", 5, retFunc())
 
-def outer() {
+fn outer() {
   x = "outside"
-  def inner() {
+  fn inner() {
     return x
   }
   return inner
 }
-test("closure", "outside", def {
+test("closure", "outside", fn {
     closure = outer()
     return closure()
 })
 
-def selfReturning() {
-    return self(def)
+fn selfReturning() {
+    return self(fn)
 }
-test("self(def)", selfReturning, selfReturning)
+test("self(fn)", selfReturning, selfReturning)
 
 class Brioche {
-    def eat(a, b) {
+    fn eat(a, b) {
         return "ate \(a) and \(b)"
     }
 }
@@ -147,23 +147,23 @@ test("class is", true, Brioche is Class)
 class Pair {
     init(@first = 5, @second = 6)
 }
-test("class init with autoset", 3, def {
+test("class init with autoset", 3, fn {
     pair = Pair(1, 2)
     return pair.first + pair.second
 })
-test("class init with autoset one default", 7, def {
+test("class init with autoset one default", 7, fn {
     pair = Pair(1)
     return pair.first + pair.second
 })
-test("class init with autoset two defaults", 11, def {
+test("class init with autoset two defaults", 11, fn {
     pair = Pair()
     return pair.first + pair.second
 })
 
 class Nested {
   ichBin = "Kuhlen"
-  def method() {
-    def function() {
+  fn method() {
+    fn function() {
       return @ichBin
     }
     return function()
@@ -172,14 +172,14 @@ class Nested {
 test("nested self access", "Kuhlen", Nested().method())
 
 class Superclass {
-    def methodToInherit() {
+    fn methodToInherit() {
         return "superclass method"
     }
 }
 class Subclass is Superclass {
     superClassStr = "my superclass is " + super
 
-    def methodToInherit() {
+    fn methodToInherit() {
         return super.methodToInherit() + " overridden"
     }
 }
@@ -193,28 +193,28 @@ test("in", true, 2 in 1..4)
 test("not in", true, 2 not in 3..4)
 test("rangeUntil", true, 4 not in 1..4)
 test("rangeTo", true, 4 in 1...4)
-test("for loop", "1 2 3 4 5 ", def {
+test("for loop", "1 2 3 4 5 ", fn {
     s = ""
     for i in 1...5 {
         s += "\(i) "
     }
     return s
 })
-test("for loop with obj decomp", "1a2b3c", def {
+test("for loop with obj decomp", "1a2b3c", fn {
     s = ""
     for [k, v] in [[1, "a"], [2, "b"], [3, "c"]] {
         s += k + v
     }
     return s
 })
-test("for else with else triggering", "for else", def {
+test("for else with else triggering", "for else", fn {
     for g in nil {
         return "nope"
     } else {
         return "for else"
     }
 })
-test("for else with else not triggering", "yep", def {
+test("for else with else not triggering", "yep", fn {
     for g in 1 {
         return "yep"
     } else {
@@ -222,7 +222,7 @@ test("for else with else not triggering", "yep", def {
     }
 })
 
-test("lambda with two implicit params", 3, def {
+test("lambda with two implicit params", 3, fn {
     return _0 + _1
 }(1, 2))
 test("shorthand lambda with three implicit params", 3, (=_0+_1+_2)(1, 1, 1))
@@ -231,16 +231,16 @@ test("native init", true, Date() != nil)
 test("static native function", 1, Date.at(1).time)
 test("static native function default arg", 0, Date.at(0).time)
 
-def funcForBoxing
+fn funcForBoxing
 test("function boxing", "funcForBoxing0", funcForBoxing.name + funcForBoxing.arity)
 test("function is", true, funcForBoxing is Function)
 
 class SomeException is Exception
 someExceptionMessage = "Some exception"
-def funcReturningException = SomeException(someExceptionMessage)
+fn funcReturningException = SomeException(someExceptionMessage)
 test("returning exception", someExceptionMessage, funcReturningException().message)
 test("rescue alternative value", "alternative", =funcReturningException() ?! { return "alternative"} )
-def rescueFunctionWithValueAssign {
+fn rescueFunctionWithValueAssign {
     value = funcReturningException() ?! {
         s = "exception \(it.message)"
         return s
@@ -249,7 +249,7 @@ def rescueFunctionWithValueAssign {
     return 1
 }
 test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithValueAssign())
-def rescueFunctionWithoutValueAssign {
+fn rescueFunctionWithoutValueAssign {
     funcReturningException() ?! {
         s = "exception \(it.message)"
         return s
@@ -258,8 +258,8 @@ def rescueFunctionWithoutValueAssign {
     return 1
 }
 test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithoutValueAssign())
-def funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
-def rescueFunctionWithTwoExceptions() {
+fn funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
+fn rescueFunctionWithTwoExceptions() {
     s = ""
     s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(false) ?! {
         s += "error"
@@ -277,7 +277,7 @@ def rescueFunctionWithTwoExceptions() {
 }
 test("rescue function with multiple exception calls", "2errorerrorerror", rescueFunctionWithTwoExceptions())
 
-def funcWithArgTypeCheck(a0 is String, a1 is String?, a2 is String!) {
+fn funcWithArgTypeCheck(a0 is String, a1 is String?, a2 is String!) {
     return 1
 }
 test("arg type check proper type passed", 1, funcWithArgTypeCheck("", "", ""))
@@ -288,26 +288,26 @@ test("arg type check second Exception", "tme", funcWithArgTypeCheck("", Exceptio
 test("arg type check third nil", "tme", funcWithArgTypeCheck("", "", nil).message)
 test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception("a")))
 
-def safeGetAndCall(arg) = arg?.field?()
+fn safeGetAndCall(arg) = arg?.field?()
 test("safe get and call pass", 0, safeGetAndCall([field = =0]))
 test("safe get fail", "NilReferenceException instance", "" + safeGetAndCall(nil))
 test("safe call fail", "NilReferenceException instance", "" + safeGetAndCall([]))
-test("safe get fail and catch", 1, def {
+test("safe get fail and catch", 1, fn {
     return safeGetAndCall(nil) ?! {
         return 1
     }
 })
 
-def funcWithReturnTypeCheckCorrect is String {
+fn funcWithReturnTypeCheckCorrect is String {
     return ""
 }
 test("return type check proper type", "", funcWithReturnTypeCheckCorrect())
-def funcWithReturnTypeCheckIncorrect is String {
+fn funcWithReturnTypeCheckIncorrect is String {
     return 1
 }
 test("return type check incorrect type", "tme", funcWithReturnTypeCheckIncorrect().message)
 
-def basicDoBlockTest {
+fn basicDoBlockTest {
     s = ""
     do {
         s += "in do block"
@@ -316,7 +316,7 @@ def basicDoBlockTest {
     return s
 }
 test("basic do block", "in do block yup yup", basicDoBlockTest())
-def basicDoElseBlockTest {
+fn basicDoElseBlockTest {
     s = ""
     do {
         s += "another do"
@@ -327,7 +327,7 @@ def basicDoElseBlockTest {
 }
 test("basic do block", "another do", basicDoElseBlockTest())
 
-def doElseBreakIt {
+fn doElseBreakIt {
     s = ""
     do {
         ab = 2
@@ -348,7 +348,7 @@ def doElseBreakIt {
 }
 test("do else break it", "SomeException instance66exception SomeException instance6", doElseBreakIt())
 
-def doElseBreakNil {
+fn doElseBreakNil {
     s = ""
     do {
         s += "3rd do"
@@ -364,12 +364,12 @@ def doElseBreakNil {
 }
 test("do else break nil", "3rd doyup, nil == nil6nil", doElseBreakNil())
 
-def testImplicitSelf {
+fn testImplicitSelf {
     class SelfTesting {
         q = 5
-        def r = 3
-        def _p = 2
-        def w {
+        fn r = 3
+        fn _p = 2
+        fn w {
             s = "" + q
             q = 6
             s += q
@@ -385,19 +385,19 @@ test("implicit self", "5623", testImplicitSelf())
 
 test("obj literal", 5, =[a = 1, b = 3, c = 5].c)
 test("mut list literal", "$[1, 2, 3, 4, 5]", ="" + $[1, 2, 3, 4, 5])
-test("mut list value change", 10, def {
+test("mut list value change", 10, fn {
     lst = $[1, 2, 3, 4, 5]
     lst.2 = 10
     return lst.2
 })
-test("list for iteration", "123", def {
+test("list for iteration", "123", fn {
     s = ""
     for i in [1, 2, 3] {
         s += i
     }
     return s
 })
-test("obj decomp", "nilnil5", def {
+test("obj decomp", "nilnil5", fn {
     obj = [a = 1, b = 3, c = 5]
     [d, e, c] = obj
     s = "" + d
@@ -406,19 +406,19 @@ test("obj decomp", "nilnil5", def {
     return s
 })
 
-test("custom toString", "10", def {
+test("custom toString", "10", fn {
     class ToString {
         init(@val)
-        def toString = "\(@val)"
+        fn toString = "\(@val)"
     }
     return "" + ToString(10)
 })
 
-test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructor annot], field = [Annotation field annot], a = [[a = fun annot]], b = [[a = 2nd fun annot]]]", def {
+test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructor annot], field = [Annotation field annot], a = [[a = fun annot]], b = [[a = 2nd fun annot]]]", fn {
     class AnnotationClass {
         init(@msg)
 
-        def toString = "Annotation \(@msg)"
+        fn toString = "Annotation \(@msg)"
     }
 
     ![a = "class annot"]
@@ -428,12 +428,12 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
         field = 5
 
         ![a = "fun annot"]
-        def a() {
+        fn a() {
             print "55"
         }
 
         ![a = "2nd fun annot"]
-        def b() {
+        fn b() {
             print "66"
         }
     }
@@ -441,22 +441,22 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
 })
 
 test("gu", 6, gu "2 + 2 * 2")
-test("gu with lexer exception", "lex", def {
+test("gu with lexer exception", "lex", fn {
     return gu "2 ++ 2" ?! { return "lex" }
 })
-test("gu with compile exception", "comp", def {
+test("gu with compile exception", "comp", fn {
     return gu "for 2 in 3" ?! { return "comp" }
 })
 
-test("fiber yield from foreach", "121232453564785906", def {
-    def foreach(it, fun) {
+test("fiber yield from foreach", "121232453564785906", fn {
+    fn foreach(it, fun) {
         for i in it {
             fun(i)
         }
     }
 
     fib Fiber(p1, p2) {
-        foreach(1..10, def (i){
+        foreach(1..10, fn (i){
             yield "" + p1 + p2 + i
         })
     }
@@ -471,14 +471,14 @@ test("fiber yield from foreach", "121232453564785906", def {
     s += fajber(9, 0)
     return s
 })
-def foreach(it, fun) {
+fn foreach(it, fun) {
     for i in it {
         fun(i)
     }
 }
-test("two fibers", 8, def {
+test("two fibers", 8, fn {
     fib F1(p) {
-        foreach(p..5, def (i){
+        foreach(p..5, fn (i){
             yield i
         })
     }
@@ -499,29 +499,29 @@ test("two fibers", 8, def {
     return res
 })
 
-test("onsite import", "6 innerA innerB 3 3", def {
+test("onsite import", "6 innerA innerB 3 3", fn {
     module ModuleClass {
         field = 2 + 2 * 2
 
         class InnerA {
-            def toString = "innerA"
+            fn toString = "innerA"
         }
         class InnerB {
-            def toString = "innerB"
+            fn toString = "innerB"
         }
         module InnerModule {
             class InnerModuleClass
-            def InnerModuleDef = 3
+            fn InnerModuleDef = 3
         }
     }
-    def moduleTest {
+    fn moduleTest {
         import ModuleClass for field, InnerA, InnerB, InnerModule
         return field + " " + InnerA() + " " + InnerB() + " " + InnerModule.InnerModuleDef() + " " + ModuleClass.InnerModule.InnerModuleDef()
     }
     return moduleTest()
 })
 
-test("proc do", 5, def {
+test("proc do", 5, fn {
     i = 10
     p = do {
         if i < 20 {
@@ -533,7 +533,7 @@ test("proc do", 5, def {
     j = p()
     return j
 })
-test("proc do else", 20, def {
+test("proc do else", 20, fn {
     i = 10
     p = do {
         if i < 20 {
@@ -558,7 +558,7 @@ for failure in testResults.failures {
 }
 
 fib MyFiber(a, b, c) {
-    foreach(a..b, def (i) {
+    foreach(a..b, fn (i) {
         yield i + c
     })
 }

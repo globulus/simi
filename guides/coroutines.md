@@ -9,13 +9,13 @@ Let's illustrate all of this with an example.
 The first step towards your first fiber is to write a *fiber class*:
 ```ruby
 fib MyFiber(a, b, c) {
-    foreach(a..b, def (i) { # foreach is a function that iterates through first arg and calls second arg with the iteration value
+    foreach(a..b, fn (i) { # foreach is a function that iterates through first arg and calls second arg with the iteration value
         yield i + c
     })
 }
 ```
 
-The syntax looks awfully like that of functions, because ultimately all a fiber does, code-wise, is wrap a single function (do note the keyword *fib* as opposed to *def*). However, in order to use a Fiber, you have to instantiate it:
+The syntax looks awfully like that of functions, because ultimately all a fiber does, code-wise, is wrap a single function (do note the keyword *fib* as opposed to *fn*). However, in order to use a Fiber, you have to instantiate it:
 ```ruby
 myFiber = MyFiber()
 ```
