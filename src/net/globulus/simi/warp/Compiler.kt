@@ -496,7 +496,7 @@ class Compiler {
         } else if (peek.type == IDENTIFIER) {
             call(true)
         } else {
-            throw error(peek, "Annotation must include either an object literal or a constructor invocaton!")
+            throw error(peek, "Annotation must include either an object literal or a constructor invocation!")
         }
         consume(NEWLINE, "Expect newline after annotation.")
         emitCode(ANNOTATE)
@@ -1011,35 +1011,38 @@ class Compiler {
                     firstNonAssignment(true) // push the value on the stack
                 }
             } else {
-                val variable: Any = when (lastChunk?.opCode) {
-                    GET_LOCAL -> lastChunk!!.data[1] as Local
-                    GET_UPVALUE -> lastChunk!!.data[1] as Int
-                    else -> throw error(equals, "Assigning to undeclared var!")
-                }
-                val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
-                if (isConst) {
-                    throw error(previous, "Can't assign to a const!")
-                }
-                if (equals.type == QUESTION_QUESTION_EQUAL) {
-                    nilCoalescenceWithKnownLeft { firstNonAssignment(true) }
-                } else {
-                    if (equals.type == DOLLAR_EQUAL) {
-                        rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
+                if (lastChunk?.opCode == GET_PROP) {
+                    rollBackLastChunk() // this isn't a get but an update, roll back
+                    val op = when (equals.type) {
+                        DOLLAR_EQUAL -> throw error(equals, "Don't use $= with setters, = works just fine.")
+                        QUESTION_QUESTION_EQUAL -> throw error(equals, "??= doesn't work with setters, sorry. Use @prop = prop ?? smth instead.")
+                        else -> opCodeForCompoundAssignment(equals.type)
                     }
                     firstNonAssignment(true) // right-hand side
-                    if (equals.type != DOLLAR_EQUAL) {
-                        emitCode(when (equals.type) {
-                            PLUS_EQUAL -> ADD
-                            MINUS_EQUAL -> SUBTRACT
-                            STAR_EQUAL -> MULTIPLY
-                            SLASH_EQUAL -> DIVIDE
-                            SLASH_SLASH_EQUAL -> DIVIDE_INT
-                            MOD_EQUAL -> OpCode.MOD
-                            else -> throw IllegalArgumentException("WTF")
-                        })
+                    emitUpdateProp(op)
+                } else {
+                    val variable: Any = when (lastChunk?.opCode) {
+                        GET_LOCAL -> lastChunk!!.data[1] as Local
+                        GET_UPVALUE -> lastChunk!!.data[1] as Int
+                        else -> throw error(equals, "Assigning to undeclared var!")
                     }
+                    val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
+                    if (isConst) {
+                        throw error(previous, "Can't assign to a const!")
+                    }
+                    if (equals.type == QUESTION_QUESTION_EQUAL) {
+                        nilCoalescenceWithKnownLeft { firstNonAssignment(true) }
+                    } else {
+                        if (equals.type == DOLLAR_EQUAL) {
+                            rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
+                        }
+                        firstNonAssignment(true) // right-hand side
+                        if (equals.type != DOLLAR_EQUAL) {
+                            emitCode(opCodeForCompoundAssignment(equals.type))
+                        }
+                    }
+                    emitSet(variable)
                 }
-                emitSet(variable)
             }
             return false
         }
@@ -1896,11 +1899,19 @@ class Compiler {
         size += byteCode.putInt(local.sp)
         pushLastChunk(Chunk(opCode, size, local))
     }
+
     private fun emitSetUpvalue(index: Int) {
         val opCode = SET_UPVALUE
         var size = byteCode.put(opCode)
         size += byteCode.putInt(index)
         pushLastChunk(Chunk(opCode, size, index, upvalues[index]))
+    }
+
+    private fun emitUpdateProp(op: OpCode) {
+        val opCode = UPDATE_PROP
+        var size = byteCode.put(opCode)
+        size += byteCode.put(op)
+        pushLastChunk(Chunk(opCode, size, op))
     }
 
     private fun emitJump(opCode: OpCode, location: Int? = null): Chunk {
@@ -2094,6 +2105,18 @@ class Compiler {
         val upvalue = Upvalue(sp, isLocal, name, isConst, fiberName)
         compiler.upvalues += upvalue
         return upvalue to compiler.upvalues.size - 1
+    }
+
+    private fun opCodeForCompoundAssignment(type: TokenType): OpCode {
+        return when (type) {
+            PLUS_EQUAL -> ADD
+            MINUS_EQUAL -> SUBTRACT
+            STAR_EQUAL -> MULTIPLY
+            SLASH_EQUAL -> DIVIDE
+            SLASH_SLASH_EQUAL -> DIVIDE_INT
+            MOD_EQUAL -> OpCode.MOD
+            else -> throw IllegalArgumentException("WTF")
+        }
     }
 
     private fun printChunks(name: String) {

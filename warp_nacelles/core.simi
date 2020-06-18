@@ -66,7 +66,7 @@ class Range {
         }
 
         fn next() = if current <= range.max {
-                @current = current + 1
+                @current += 1
                 current - 1
             } else {
                 nil
@@ -100,12 +100,12 @@ class_ Stream {
     }
 
     fn where(predicate) {
-        @ops = ops + [op = OP_WHERE, arg = predicate]
+        @ops += [op = OP_WHERE, arg = predicate]
         return self
     }
 
     fn map(transformation) {
-        @ops = ops + [op = OP_MAP, arg = transformation]
+        @ops += [op = OP_MAP, arg = transformation]
         return self
     }
 

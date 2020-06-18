@@ -17,6 +17,7 @@ enum class OpCode {
     GET_UPVALUE,
     SET_PROP,
     GET_PROP,
+    UPDATE_PROP,
     LT,
     LE,
     GT,

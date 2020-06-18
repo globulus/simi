@@ -16,10 +16,10 @@ fn test(title, expected, proc) {
     r = proc()
     testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
     msg = "Testing \(title): " + testResult
-    testResults.total = testResults.total + 1
+    testResults.total += 1
     if testResult != SUCCESS {
-        testResults.failureCount = testResults.failureCount + 1
-        testResults.failures.add(msg)
+        testResults.failureCount += 1
+        testResults.failures += msg
     }
 }
 

@@ -48,6 +48,7 @@ class Vm {
                 GET_UPVALUE -> push(readUpvalue(fiber.frame.closure.upvalues[nextInt]!!))
                 SET_PROP -> setProp()
                 GET_PROP -> getProp()
+                UPDATE_PROP -> updateProp()
                 INVERT -> invert()
                 NEGATE -> negate()
                 ADD -> add()
@@ -260,6 +261,29 @@ class Vm {
         if (prop != null) {
             bindMethod(obj, getSClass(obj), prop, name)
         }
+    }
+
+    /**
+     * The algorithm is as follows:
+     * 1. At the beginning, the top contains the right-hand side value and the prepared, unexecuted getter. Pop the value and keep references to object and prop for setting.
+     * 2. getProp() to convert the prop and obj to a single value.
+     * 3. Add the value again to the top, then invoke a single run with the next code, which the the op data of UPDATE_PROP. It'll pop the value and the prop and combine them into a single value.
+     * 4. Pop this combined value and prepare for a setter - push the object, the prop and finally the combined value again.
+     * 5. Invoke setProp() to store it where it belongs.
+     */
+    private fun updateProp() {
+        var value = pop()
+        val prop = peek()
+        val obj = peek(1)
+        getProp()
+        push(value)
+        val nextBufferPos = buffer.position() + 1
+        run(fiber.fp) { buffer.position() < nextBufferPos }
+        value = pop()
+        push(obj)
+        push(prop)
+        push(value)
+        setProp()
     }
 
     private fun getSuper() {
