@@ -156,7 +156,7 @@ class Compiler {
             false
         } else {
             checkAnnotationCounter()
-            statement(isExpr, lambda = false)
+            statement()
         }
     }
 
@@ -241,6 +241,7 @@ class Compiler {
         }
         current = funcCompiler.current
         emitClosure(f, funcCompiler, kind == Parser.KIND_FIBER)
+
         return f
     }
 
@@ -502,7 +503,7 @@ class Compiler {
         annotationCounter++
     }
 
-    private fun statement(isExpr: Boolean, lambda: Boolean): Boolean {
+    private fun statement(): Boolean {
         return if (match(LEFT_BRACE)) {
             beginScope()
             block(false)
@@ -585,7 +586,7 @@ class Compiler {
                 throw error(opener, "An if expression must have a return value.")
             }
         } else {
-            statement(isExpr = false, lambda = true)
+            statement()
         }
     }
 
@@ -812,7 +813,7 @@ class Compiler {
         emitCode(POP)
         patchJump(skipPop)
         loops.push(ActiveLoop(start, scopeDepth))
-        statement(isExpr = false, lambda = true)
+        statement()
         consume(WHILE, "Expect 'while' after the statement in a do-while.")
         expression()
         emitCode(INVERT) // Cuz we're lazy and don't want to implement JUMP_IF_TRUE
@@ -866,7 +867,7 @@ class Compiler {
         expression()
         val skipChunk = emitJump(JUMP_IF_FALSE)
         emitCode(POP)
-        statement(isExpr = false, lambda = true)
+        statement()
         emitJump(JUMP, start)
         val end = patchJump(skipChunk)
         val breaksToPatch = loops.pop().breaks
@@ -978,8 +979,20 @@ class Compiler {
             if (equals.type == EQUAL || equals.type == UNDERSCORE_EQUAL) {
                 val isConst = (equals.type == UNDERSCORE_EQUAL)
                 if (lastChunk?.opCode == GET_PROP) {
+                    /* What happens here is as follows:
+                    1. Remove the GET_PROP chunk as it'll get replaced with SET_PROP down the line.
+                    2. If we're in an INIT and we're looking at setting a new var (CONST_ID), store that into declaredField.
+                    3. Emit the value to set to.
+                    4. Add the declaredField (if it exists) to declaredFields of enclosing compiler (as its the one that's compiling the class). The reason why that's done here is to prevent false self. markings in the setting expression, e.g, @from = from would wrongly be identified as @from = @from if we added declaredField to declaredFields immediately.
+                     */
                     rollBackLastChunk()
+                    val declaredField = if (lastChunk?.opCode == CONST_ID && kind == Parser.KIND_INIT) {
+                        lastChunk!!.data[1] as String
+                    } else {
+                        null
+                    }
                     firstNonAssignment(true)
+                    declaredField?.let { enclosing?.currentClass?.declaredFields?.add(it) }
                     emitCode(SET_PROP)
                 } else {
                     if (lastChunk?.opCode == GET_UPVALUE) {
@@ -2224,7 +2237,7 @@ class Compiler {
         var firstSuperclass: String? = null
         var superclasses = emptyList<String>()
         var initAdditionalTokens = mutableListOf<Token>()
-        val declaredFields = mutableListOf<String>()
+        val declaredFields = mutableSetOf<String>()
     }
 
     private data class ArgScanResult(val args: MutableList<String>,

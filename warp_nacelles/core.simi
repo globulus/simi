@@ -58,16 +58,16 @@ class Range {
 
     fn iterate() = Range.Iterator(self)
 
-    fn has(o) = o >= @min and o <= @max
+    fn has(o) = o >= min and o <= max
 
     class Iterator {
         init(@range) {
-            self.current = range.min
+            @current = range.min
         }
 
-        fn next() = if @current <= @range.max {
-                @current = @current + 1
-                @current - 1
+        fn next() = if current <= range.max {
+                @current = current + 1
+                current - 1
             } else {
                 nil
             }
@@ -100,20 +100,20 @@ class_ Stream {
     }
 
     fn where(predicate) {
-        @ops = @ops + [op = OP_WHERE, arg = predicate]
+        @ops = ops + [op = OP_WHERE, arg = predicate]
         return self
     }
 
     fn map(transformation) {
-        @ops = @ops + [op = OP_MAP, arg = transformation]
+        @ops = ops + [op = OP_MAP, arg = transformation]
         return self
     }
 
     fn toMutableList {
         list = List()
-        for item in @src {
+        for item in src {
             dst = item
-            for operation in @ops {
+            for operation in ops {
                 op = operation.op
                 when op {
                     OP_WHERE {
