@@ -1182,7 +1182,7 @@ class Compiler {
     }
 
     private fun unary(irsoa: Boolean) {
-        if (match(NOT, MINUS, STAR, TokenType.GU)) {
+        if (match(NOT, MINUS, /*STAR,*/ TokenType.GU)) {
             val operator = previous
             unary(irsoa)
             if (operator.type == STAR) {
