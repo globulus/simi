@@ -168,20 +168,21 @@ class Compiler {
     }
 
     private fun funDeclaration(): String {
-        val function = function(Parser.KIND_FUNCTION)
-        declareLocal(function.name, true)
+        val function = function(Parser.KIND_FUNCTION, true)
         return function.name
     }
 
     private fun fiber(): String {
-        val fiber = function(Parser.KIND_FIBER)
-        declareLocal(fiber.name, true)
+        val fiber = function(Parser.KIND_FIBER, true)
         return fiber.name
     }
 
-    private fun function(kind: String, providedName: String? = null): Function {
+    private fun function(kind: String, declareLocal: Boolean, providedName: String? = null): Function {
         val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
         val name = providedName ?: consumeVar("Expected an identifier for function name")
+        if (declareLocal) {
+            declareLocal(name, true)
+        }
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         // the init method also initializes all the fields declard in the class
@@ -504,7 +505,7 @@ class Compiler {
                 else
                     Parser.KIND_METHOD
             }
-        function(kind, name)
+        function(kind, false, name)
         emitMethod(name)
         return name
     }
@@ -814,7 +815,7 @@ class Compiler {
         }
         compileNested(tokens, false)
         // Remove the iterator as it isn't needed anymore
-        discardLastLocal()
+        discardLastLocal(true)
     }
 
     private fun printStatement() {
@@ -1387,7 +1388,7 @@ class Compiler {
         } else if (match(DOLLAR_LEFT_BRACKET)) {
             objectLiteralOrObjectComprehension()
         } else if (match(FN) || peekSequence(EQUAL)) {
-            function(Parser.KIND_LAMBDA, nextLambdaName())
+            function(Parser.KIND_LAMBDA, false, nextLambdaName())
         } else if (match(DO)) {
             proc()
         } else if (match(IDENTIFIER)) {
@@ -2153,9 +2154,11 @@ class Compiler {
         return popCount
     }
 
-    private fun discardLastLocal() {
+    private fun discardLastLocal(pop: Boolean) {
         locals.removeAt(locals.size - 1)
-        emitCode(POP)
+        if (pop) {
+            emitCode(POP)
+        }
     }
 
     private fun resolveUpvalue(compiler: Compiler, name: String): Pair<Upvalue, Int>? {

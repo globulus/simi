@@ -1085,7 +1085,7 @@ class Vm {
     companion object {
         internal const val INITIAL_STACK_SIZE = 256
         private const val STACK_GROWTH_FACTOR = 4
-        internal const val MAX_FRAMES = 64
+        internal const val MAX_FRAMES = 1024
 
         internal var instance: Vm? = null
 
