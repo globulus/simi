@@ -136,3 +136,11 @@ class_ Stream {
 
     fn toList = toMutableList().lock()
 }
+
+class_ StreamMixin {
+    fn where(predicate) = Stream(self).where(predicate).toList()
+    fn map(transformation) = Stream(self).map(transformation).toList()
+}
+
+extend Object import StreamMixin
+extend List import StreamMixin

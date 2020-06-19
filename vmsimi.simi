@@ -603,3 +603,5 @@ extend Pair {
 par = Pair(1, 2)
 print par.sum()
 
+print [1, 2, 3].where(=_0 < 3).map(=_0 * 2)
+

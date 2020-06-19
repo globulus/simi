@@ -846,7 +846,7 @@ class Vm {
             for (field in mixin.fields) {
                 if (!field.key.startsWith(Constants.PRIVATE)) { // Add public fields only
                     if (isExtension && field.key in it.fields.keys) {
-                        throw runtimeError("Extension mixin issue: ${field.key} is already present in ${klass.name}.")
+                        continue
                     }
                     it.fields[field.key] = field.value
                 }
