@@ -8,7 +8,7 @@ class CallFrame(val closure: Closure,
     val buffer: ByteBuffer = ByteBuffer.wrap(closure.function.code)
     val name = closure.function.name
 
-    private fun getCurrentLine(): Int {
+    internal fun getCurrentLine(): Int {
         var line = 0
         val pos = buffer.position()
         for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.key }) {

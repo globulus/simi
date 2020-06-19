@@ -67,6 +67,7 @@ enum class OpCode {
     FIBER,
     YIELD,
     NIL_CHECK,
+    SPREAD,
     ;
 
     val byte = ordinal.toByte()

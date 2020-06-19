@@ -1,5 +1,7 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.warp.debug.DebugInfo
+
 class Function(
         val name: String,
         override val arity: Int,

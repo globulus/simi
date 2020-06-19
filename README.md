@@ -762,6 +762,8 @@ object = [for i in 1..5 do "key\(i)" = i]
 object2 = $[for [k, v] in otherObject if k not in ForbiddenKeys and v < 10 do k = v * 10]
 ```
 
+Comprehensions are also expressions, meaning that they can be inlined anywhere, unlike regular for loops.
+
 In most cases when mapping a list or an object from another list or object, the list comprehension is semantically equal to a filtering followed by mapping:
 ```ruby
 list = other.where(=_0 < 10).map(=_0 * 2)
@@ -769,7 +771,7 @@ list = other.where(=_0 < 10).map(=_0 * 2)
 list = [for i in other if i < 10 do i * 2]
 ```
 
-The comprehensions have a few advatanges, though:
+The comprehensions have a few advantages, though:
 1. You can specify if the created list/object is mutable or not.
 2. Objects can filter and map keys and values at the same time.
 3. They're easier to read and type.

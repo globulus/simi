@@ -1,6 +1,7 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
+import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
@@ -26,6 +27,9 @@ class Vm {
 
     private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
         loop@ while (predicate?.invoke() != false) {
+//            if (currentFunction.debugInfo.breakpoints.contains(buffer.position())) {
+//                triggerBreakpoint()
+//            }
             val code = nextCode
             when (code) {
                 TRUE -> push(true)
@@ -148,6 +152,13 @@ class Vm {
                     if (peek() == Nil) {
                         fiber.stack[fiber.sp - 1] = Instance(nilReferenceExceptionClass!!, false)
                     }
+                }
+                SPREAD -> {
+                    (pop() as? ListInstance)?.let {
+                        for (item in it.items) {
+                            push(item)
+                        }
+                    } ?: throw runtimeError("Can only spread lists.")
                 }
             }
         }
@@ -1011,6 +1022,26 @@ class Vm {
     private fun printCallStack() {
         for (i in fiber.fp - 1 downTo 0) {
             println(fiber.callFrames[i])
+        }
+    }
+
+    private fun triggerBreakpoint() {
+        val debugInfo = currentFunction.debugInfo
+        val currentLine = fiber.frame.getCurrentLine()
+        println("BREAKPOINT")
+        val highlightTokenIndexMinus1 = debugInfo.tokens.indexOfFirst { it.line == currentLine + 1 } // the first one is the newline
+        println(TokenPatcher.patch(debugInfo.tokens, debugInfo.tokens[highlightTokenIndexMinus1 + 1])) // we want to show the second one
+        println("===================")
+        println("Call stack:")
+        printCallStack()
+        printLocalsForFrame(fiber.frame)
+    }
+
+    private fun printLocalsForFrame(frame: CallFrame) {
+        println("===================")
+        println("Locals:")
+        for ((sp, name) in frame.closure.function.debugInfo.locals) {
+            println("$name = ${stringify(fiber.stack[sp]!!)}")
         }
     }
 

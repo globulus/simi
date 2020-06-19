@@ -189,7 +189,7 @@ class Lexer(private val fileName: String,
             while (peek != '\n' && !isAtEnd) {
                 advance()
             }
-            if (debugger != null) {
+//            if (debugger != null) {
                 val comment = source.substring(start + 1, current)
                 if (comment.trim { it <= ' ' }.startsWith(Debugger.BREAKPOINT_LEXEME)) {
                     val size = tokens.size
@@ -202,7 +202,7 @@ class Lexer(private val fileName: String,
                         }
                     }
                 }
-            }
+//            }
         }
     }
 

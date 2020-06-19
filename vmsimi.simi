@@ -537,7 +537,7 @@ test("proc do else", 20, fn {
     i = 10
     p = do {
         if i < 20 {
-            break 20
+            break 20 # BP
         }
         5
     } else {
@@ -562,7 +562,7 @@ fib MyFiber(a, b, c) {
         yield i + c
     })
 }
-myFiber = MyFiber()
+myFiber = MyFiber() # BP
 print myFiber(0, 3, 1)
 print myFiber(5, 3, 5)
 print myFiber(6, 3, 10)
@@ -570,3 +570,16 @@ print myFiber(8, 3, 20)
 print myFiber(5, 10, 0)
 
 print Stream([1, 2, 3, 4, 5]).where(=_0 < 5).map(=_0 * 2).where(=_0 < 5).map(=_0 * 3).toList()
+
+oo = $[]
+oo.a = 3
+oo.a += 4
+
+#def threeArg(a, b, c) {
+#    print a
+#    print b
+#    print c
+#}
+#ls = [1, 2, 3]
+#threeArg(*ls)
+

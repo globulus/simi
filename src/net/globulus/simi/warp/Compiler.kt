@@ -13,6 +13,7 @@ import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
+import net.globulus.simi.warp.debug.DebugInfo
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
@@ -37,6 +38,8 @@ class Compiler {
     private var implicitVarCounter = 0
     private var returnVerificationVarCounter = 0
     private var annotationCounter = 0 // counts the number of emitted annotations to see if they're placed properly
+    private var callArgumentsCounter = 0 // counts the number of started call arguments lists, to track if * can be used to spread an object
+    private val totalCallArgumentCounter: Int get() = callArgumentsCounter + (enclosing?.totalCallArgumentCounter ?: 0)
 
     private var currentClass: ClassCompiler? = null
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
@@ -52,6 +55,7 @@ class Compiler {
 
     // Debug info
     private val debugInfoLines = mutableMapOf<Int, Int>()
+    private val debugInfoBreakpoints = mutableListOf<Int>()
 
     private val numberOfEnclosingCompilers: Int by lazy {
         var count = 0
@@ -86,9 +90,12 @@ class Compiler {
         locals += Local(selfName, 0, 0, isCaptured = false) // Stores the top-level function
         beginScope()
         this.within()
+        val debugInfoLocals = locals.map { it.sp to it.name }.toMap()
         endScope()
 //        printChunks(name)
-        return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(), DebugInfo(debugInfoLines))
+        return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
+                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoBreakpoints, tokens)
+        )
     }
 
     /**
@@ -132,7 +139,7 @@ class Compiler {
     }
 
     private fun declaration(isExpr: Boolean): Boolean {
-        updateDebugInfoLines(peek)
+        updateDebugInfo(peek)
         return if (match(HASH)) {
             internalDirective()
             false
@@ -1175,15 +1182,22 @@ class Compiler {
     }
 
     private fun unary(irsoa: Boolean) {
-        if (match(NOT, MINUS, TokenType.GU)) {
+        if (match(NOT, MINUS, STAR, TokenType.GU)) {
             val operator = previous
             unary(irsoa)
-            emitCode(when (operator.type) {
-                NOT -> INVERT
-                MINUS -> NEGATE
-                TokenType.GU -> OpCode.GU
-                else -> throw IllegalArgumentException("WTF")
-            })
+            if (operator.type == STAR) {
+                if (totalCallArgumentCounter == 0) {
+                    throw error(operator, "Can't use the spread operator * outside a call!")
+                }
+                emitCode(SPREAD)
+            } else {
+                emitCode(when (operator.type) {
+                    NOT -> INVERT
+                    MINUS -> NEGATE
+                    TokenType.GU -> OpCode.GU
+                    else -> throw IllegalArgumentException("WTF")
+                })
+            }
         }
         /*return if (match(IVIC)) {
             Ivic(unary())
@@ -1228,7 +1242,7 @@ class Compiler {
                 if (!wasSafeGet && match(LEFT_PAREN)) { // Check invoke, currently disabled for safe getter calls
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
-                    val argCount = argList()
+                    val argCount = callArgList()
                     emitInvoke(name, argCount, wasSuper)
                 } else {
                     if (lastChunk?.opCode == GET_LOCAL || lastChunk?.opCode == GET_UPVALUE) {
@@ -1246,11 +1260,12 @@ class Compiler {
 
     private fun finishCall() {
         checkIfUnidentified()
-        val argCount = argList()
+        val argCount = callArgList()
         emitCall(argCount)
     }
 
-    private fun argList(): Int {
+    private fun callArgList(): Int {
+        callArgumentsCounter++
         var count = 0
         if (!check(RIGHT_PAREN)) {
             do {
@@ -1260,6 +1275,7 @@ class Compiler {
             } while (match(COMMA))
         }
         consume(RIGHT_PAREN, "Expect ')' after arguments.")
+        callArgumentsCounter--
         return count
     }
 
@@ -2012,8 +2028,11 @@ class Compiler {
         chunks += chunk
     }
 
-    private fun updateDebugInfoLines(token: Token) {
+    private fun updateDebugInfo(token: Token) {
         debugInfoLines.putIfAbsent(token.line, byteCode.size)
+        if (token.hasBreakpoint) {
+            debugInfoBreakpoints += byteCode.size
+        }
     }
 
     private fun declareLocal(name: String, isConst: Boolean = false): Local {
