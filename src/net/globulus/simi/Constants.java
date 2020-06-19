@@ -28,6 +28,7 @@ public final class Constants {
     public static final String IT = "it";
     public static final String COUNT = "count";
     public static final String MESSAGE = "message";
+    public static final String ENUM_INIT = "#enumInit";
 
     public static final String CLASS_OBJECT = "Object";
     public static final String CLASS_FUNCTION = "Function";

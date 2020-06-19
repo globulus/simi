@@ -583,3 +583,13 @@ oo.a += 4
 #ls = [1, 2, 3]
 #threeArg(*ls)
 
+enum Enum {
+    RED(1, 2), BLUE(3, 4), GREEN(5, 6)
+    init(@a, @b)
+}
+print Enum.RED
+blu = Enum.BLUE
+print blu == Enum.RED
+print blu == Enum.BLUE
+Enum(2, 3)
+

@@ -52,6 +52,7 @@ enum class OpCode {
     INNER_CLASS,
     FIELD,
     CLASS_DECLR_DONE,
+    INIT_ENUM,
     SUPER,
     GET_SUPER,
     SUPER_INVOKE,

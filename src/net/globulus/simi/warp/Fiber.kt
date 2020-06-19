@@ -24,7 +24,7 @@ class Fiber(val closure: Closure) {
     val name: String = closure.function.name
 
     override fun toString(): String {
-        return "<fiber ${closure.function.name}>"
+        return "<fiber $name>"
     }
 
     internal enum class State {

@@ -97,7 +97,7 @@ class Vm {
                 INNER_CLASS -> {
                     val kind = SClass.Kind.from(nextByte)
                     val name = nextString
-                    val klass = SClass(name, kind, true)
+                    val klass = SClass(name, kind)
                     val outerClass = currentNonFinalizedClass
                     // Inner classes have qualified names such as Range.Iterator, but we want to store the
                     // field with the last component name only
@@ -111,6 +111,7 @@ class Vm {
                     (peek() as SClass).finalizeDeclr()
                     nonFinalizedClasses.pop()
                 }
+                INIT_ENUM -> initEnum()
                 SUPER -> {
                     val superclass = nextString
                     val klass = (self as? Instance)?.klass ?: self as SClass
@@ -508,6 +509,9 @@ class Vm {
                 if (callee.kind == SClass.Kind.MODULE) {
                     throw runtimeError("Can't call a module!")
                 }
+                if (callee.kind == SClass.Kind.ENUM && callee != self) { // when callee == self, we're inside #initEnum method
+                    throw runtimeError("Can't instantiate enums!")
+                }
                 fiber.stack[spRelativeToArgCount] = Instance(callee, callee.kind == SClass.Kind.OPEN)
                 val init = callee.fields[Constants.INIT]
                 when (init) {
@@ -778,7 +782,7 @@ class Vm {
     }
 
     private fun declareClass(kind: SClass.Kind, name: String) {
-        val klass = SClass(name, kind, false)
+        val klass = SClass(name, kind)
         if (numClass == null && name == Constants.CLASS_NUM) {
             numClass = klass
         } else if (strClass == null && name == Constants.CLASS_STRING) {
@@ -860,6 +864,21 @@ class Vm {
         val klass = currentNonFinalizedClass
         klass.fields[name] = value
         applyAnnotations(klass, name)
+    }
+
+    /**
+     * 1. The enum class was just finalized and it's at the top of the stack.
+     * 2. Get its #initEnum method.
+     * 3. Prepare the call by pushing the class again so that it is "self" in the function's body.
+     * 4. Invoke the function, clean up the Nil, and remove the method from the fields list.
+     */
+    private fun initEnum() {
+        val klass = peek() as SClass
+        val initEnumMethod = klass.fields[Constants.ENUM_INIT] as Closure
+        push(klass) // as receiver
+        callClosure(initEnumMethod, 0)
+        fiber.sp-- // pop the NIL left by the function return
+        klass.fields.remove(Constants.ENUM_INIT)
     }
 
     private fun resizeStackIfNecessary() {

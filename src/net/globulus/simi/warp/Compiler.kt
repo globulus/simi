@@ -143,7 +143,7 @@ class Compiler {
         return if (match(HASH)) {
             internalDirective()
             false
-        } else if (match(MODULE, CLASS, CLASS_FINAL, CLASS_OPEN)) {
+        } else if (matchClassOpener()) {
             classDeclaration(false)
             false
         } else if (match(IMPORT)) {
@@ -326,6 +326,7 @@ class Compiler {
         val opener = previous
         val kind = when (opener.type) {
             MODULE -> SClass.Kind.MODULE
+            ENUM -> SClass.Kind.ENUM
             CLASS_FINAL -> SClass.Kind.FINAL
             CLASS -> SClass.Kind.REGULAR
             CLASS_OPEN -> SClass.Kind.OPEN
@@ -387,12 +388,16 @@ class Compiler {
         }
 
         if (match(LEFT_BRACE)) {
+            if (kind == SClass.Kind.ENUM) {
+                compileEnumValues()
+                consume(NEWLINE, "Expect newline after enum values.")
+            }
             var hasInit = false
             while (!isAtEnd() && !check(RIGHT_BRACE)) {
                 if (match(NEWLINE)) {
                     continue
                 }
-                if (match(MODULE, CLASS, CLASS_OPEN, CLASS_FINAL)) {
+                if (matchClassOpener()) {
                     if (previous.type == MODULE && kind != SClass.Kind.MODULE) {
                         throw error(previous, "Can't place a module inside a class!")
                     }
@@ -441,13 +446,51 @@ class Compiler {
                 methodOrFiber(false, Constants.INIT)
             }
         } else {
-            consume(NEWLINE, "Expect newline after empty class declaration.")
+            when (kind) {
+                SClass.Kind.ENUM -> throw error(peek, "Enum must have a body.")
+                SClass.Kind.MODULE -> throw error(peek, "This is kind of a useless module, don't you think?")
+                else -> consume(NEWLINE, "Expect newline after empty class declaration.")
+            }
         }
 
         emitCode(CLASS_DECLR_DONE)
+        if (kind == SClass.Kind.ENUM) {
+            emitCode(INIT_ENUM)
+        }
         compiledClasses[name] = currentClass!!
         currentClass = currentClass?.enclosing
         return returnName
+    }
+
+    private fun compileEnumValues() {
+        val tokens = mutableListOf<Token>()
+        val selfDot = listOf(Token.self(), Token.ofType(DOT))
+        val lprp = listOf(Token.ofType(LEFT_PAREN), Token.ofType(RIGHT_PAREN))
+        val equalsSelf = listOf(Token.ofType(EQUAL), Token.self())
+        val nl = Token.ofType(NEWLINE)
+        do {
+            matchAllNewlines()
+            val id = consume(IDENTIFIER, "Expect identifier for enum value.")
+            tokens += selfDot
+            tokens += id
+            tokens += equalsSelf
+            tokens += if (peek.type == LEFT_PAREN) { // Found an constructor invocation
+                consumeArgList()
+            } else {
+                lprp
+            }
+            tokens += nl
+        } while (match(COMMA))
+        val compiler = Compiler().also {
+            it.enclosing = this
+            it.currentClass = currentClass
+        }
+        val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, Parser.KIND_METHOD) {
+            compileInternal(false)
+            emitReturnNil()
+        }
+        emitClosure(f, compiler, false)
+        emitMethod(Constants.ENUM_INIT)
     }
 
     private fun methodOrFiber(isFiber: Boolean, providedName: String? = null): String {
@@ -1570,6 +1613,27 @@ class Compiler {
         }
     }
 
+    private fun consumeArgList(): List<Token> {
+        val start = current
+        var parenCount = 0
+        var end = 0
+        loop@ for (i in start until tokens.size) {
+            when (tokens[i].type) {
+                LEFT_PAREN -> parenCount++
+                RIGHT_PAREN -> {
+                    parenCount--
+                    if (parenCount == 0) {
+                        end = i
+                        break@loop
+                    }
+                }
+            }
+        }
+        current = end + 1
+        val sublist = tokens.subList(start, current)
+        return sublist
+    }
+
     private fun scanNextExpr(): List<Token> {
         val start = current
         var end = 0
@@ -1655,6 +1719,8 @@ class Compiler {
         }
         return false
     }
+
+    private fun matchClassOpener() = match(MODULE, ENUM, CLASS, CLASS_FINAL, CLASS_OPEN)
 
     private fun consume(type: TokenType, message: String): Token {
         if (check(type)) return advance()
