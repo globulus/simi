@@ -90,9 +90,9 @@ class Vm {
                 }
                 CLASS -> declareClass(SClass.Kind.from(nextByte), nextString)
                 INHERIT -> inherit()
-                MIXIN -> mixin()
-                METHOD -> defineMethod(nextString)
-                NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction)
+                MIXIN, EXTEND_MIXIN -> mixin(code == EXTEND_MIXIN)
+                METHOD, EXTEND_METHOD -> defineMethod(nextString, code == EXTEND_METHOD)
+                NATIVE_METHOD, EXTEND_NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction, code == EXTEND_NATIVE_METHOD)
                 FIELD -> defineField(nextString)
                 INNER_CLASS -> {
                     val kind = SClass.Kind.from(nextByte)
@@ -110,6 +110,11 @@ class Vm {
                 CLASS_DECLR_DONE -> {
                     (peek() as SClass).finalizeDeclr()
                     nonFinalizedClasses.pop()
+                }
+                EXTEND -> nonFinalizedClasses.push(fiber.sp - 1) // class being extended is already at the top of the stack
+                EXTEND_DONE -> {
+                    nonFinalizedClasses.pop()
+                    fiber.sp-- // remove the extended class from stack
                 }
                 INIT_ENUM -> initEnum()
                 SUPER -> {
@@ -828,7 +833,7 @@ class Vm {
         }
     }
 
-    private fun mixin() {
+    private fun mixin(isExtension: Boolean) {
         val mixin = pop()
         if (mixin !is SClass) {
             throw runtimeError("Mixin must be a class.")
@@ -840,21 +845,30 @@ class Vm {
             }
             for (field in mixin.fields) {
                 if (!field.key.startsWith(Constants.PRIVATE)) { // Add public fields only
+                    if (isExtension && field.key in it.fields.keys) {
+                        throw runtimeError("Extension mixin issue: ${field.key} is already present in ${klass.name}.")
+                    }
                     it.fields[field.key] = field.value
                 }
             }
         }
     }
 
-    private fun defineMethod(name: String) {
+    private fun defineMethod(name: String, isExtension: Boolean) {
         val method = pop()
         val klass = currentNonFinalizedClass
+        if (isExtension && name in klass.fields.keys) {
+            throw runtimeError("Extension method issue: $name is already present in ${klass.name},")
+        }
         klass.fields[name] = method
         applyAnnotations(klass, name)
     }
 
-    private fun defineNativeMethod(name: String, method: NativeFunction) {
+    private fun defineNativeMethod(name: String, method: NativeFunction, isExtension: Boolean) {
         val klass = currentNonFinalizedClass
+        if (isExtension && name in klass.fields.keys) {
+            throw runtimeError("Extension method issue: $name is already present in ${klass.name},")
+        }
         klass.fields[name] = method
         applyAnnotations(klass, name)
     }

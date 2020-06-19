@@ -109,7 +109,7 @@ class Compiler {
             if (isExpr) {
                 expression()
             } else {
-                declaration(false)
+                declaration()
             }
         }
     }
@@ -138,7 +138,7 @@ class Compiler {
         return popCount
     }
 
-    private fun declaration(isExpr: Boolean): Boolean {
+    private fun declaration(): Boolean {
         updateDebugInfo(peek)
         return if (match(HASH)) {
             internalDirective()
@@ -160,6 +160,10 @@ class Compiler {
             false
         } else if (match(BANG)) {
             annotation()
+            false
+        } else if (match(TokenType.EXTEND)) {
+            checkAnnotationCounter()
+            extension()
             false
         } else {
             checkAnnotationCounter()
@@ -405,10 +409,10 @@ class Compiler {
                     val className = classDeclaration(true)
                     currentClass?.declaredFields?.add(className)
                 } else if (match(FN, FIB)) {
-                    val methodName = methodOrFiber(previous.type == FIB)
+                    val methodName = methodOrFiber(previous.type == FIB, false)
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(NATIVE)) {
-                    val methodName = nativeMethod()
+                    val methodName = nativeMethod(false)
                     currentClass?.declaredFields?.add(methodName)
                 } else if (match(BANG)) {
                     annotation()
@@ -417,7 +421,7 @@ class Compiler {
                     val fieldName = fieldToken.lexeme
                     currentClass?.declaredFields?.add(fieldName)
                     if (fieldName == Constants.INIT) {
-                        methodOrFiber(false, fieldName)
+                        methodOrFiber(isFiber = false, isExtension = false, providedName = fieldName)
                         hasInit = true
                     } else if (match(EQUAL)) {
                         if (kind == SClass.Kind.MODULE) {
@@ -444,7 +448,7 @@ class Compiler {
 
             // If the class declares fields but not an init, we need to synthesize one
             if (currentClass?.initAdditionalTokens?.isNotEmpty() == true && !hasInit) {
-                methodOrFiber(false, Constants.INIT)
+                methodOrFiber(isFiber = false, isExtension = false, providedName = Constants.INIT)
             }
         } else {
             when (kind) {
@@ -491,10 +495,10 @@ class Compiler {
             emitReturnNil()
         }
         emitClosure(f, compiler, false)
-        emitMethod(Constants.ENUM_INIT)
+        emitMethod(Constants.ENUM_INIT, false)
     }
 
-    private fun methodOrFiber(isFiber: Boolean, providedName: String? = null): String {
+    private fun methodOrFiber(isFiber: Boolean, isExtension: Boolean, providedName: String? = null): String {
         resetAnnotationCounter()
         val name = providedName ?: consumeVar("Expect method name.")
         val kind = if (name == Constants.INIT)
@@ -506,11 +510,11 @@ class Compiler {
                     Parser.KIND_METHOD
             }
         function(kind, false, name)
-        emitMethod(name)
+        emitMethod(name, isExtension)
         return name
     }
 
-    private fun nativeMethod(): String {
+    private fun nativeMethod(isExtension: Boolean): String {
         resetAnnotationCounter()
         val name = consumeVar("Expect method name.")
         val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
@@ -522,7 +526,7 @@ class Compiler {
         if (nativeFunction.arity != args.size) {
             throw error(previous, "Native function $name expects ${nativeFunction.arity} args but got ${args.size}.")
         }
-        emitNativeMethod(name, nativeFunction)
+        emitNativeMethod(name, nativeFunction, isExtension)
         return name
     }
 
@@ -552,6 +556,51 @@ class Compiler {
         consume(NEWLINE, "Expect newline after annotation.")
         emitCode(ANNOTATE)
         annotationCounter++
+    }
+
+    private fun extension() {
+        val name = consumeVar("Expected the name of the class being extended.")
+        variable(name)
+        checkIfUnidentified()
+        currentClass = compiledClasses[name]?.apply {
+            enclosing = currentClass
+        } ?: throw error(previous, "Class not previously compiled: $name.")
+        emitCode(OpCode.EXTEND)
+        if (match(IMPORT)) { // Mixins
+            val mixins = mutableListOf<String>()
+            do {
+                val mixinName = consumeVar("Expect mixin name.")
+                if (mixinName == name) {
+                    throw error(previous, "A class cannot mix itself in!")
+                }
+                mixins += mixinName
+            } while (match(COMMA))
+            // Reverse the mixins for the same reason we did with superclasses
+            mixins.reversed().forEach {
+                variable(it)
+                emitCode(EXTEND_MIXIN)
+            }
+        }
+        if (match(LEFT_BRACE)) {
+            while (!isAtEnd() && !check(RIGHT_BRACE)) {
+                if (match(NEWLINE)) {
+                    continue
+                }
+                if (match(FN)) {
+                    val methodName = methodOrFiber(isFiber = false, isExtension = true)
+                    currentClass?.declaredFields?.add(methodName)
+                } else if (match(NATIVE)) {
+                    nativeMethod(true)
+                } else if (match(BANG)) {
+                    annotation()
+                } else {
+                    throw error(previous, "Invalid line in extension declaration.")
+                }
+            }
+            consume(RIGHT_BRACE, "\"Expect '}' after extension body.\"")
+        }
+        currentClass = currentClass?.enclosing
+        emitCode(EXTEND_DONE)
     }
 
     private fun statement(): Boolean {
@@ -603,7 +652,7 @@ class Compiler {
         var lastLineIsExpr = false
         while (!check(RIGHT_BRACE)) {
             matchAllNewlines()
-            lastLineIsExpr = declaration(isExpr)
+            lastLineIsExpr = declaration()
             matchAllNewlines()
         }
         consume(RIGHT_BRACE, "Expect '}' after block!")
@@ -1919,16 +1968,16 @@ class Compiler {
         pushLastChunk(Chunk(opCode, size, kind, constIdx, name))
     }
 
-    private fun emitMethod(name: String) {
-        val opCode = METHOD
+    private fun emitMethod(name: String, isExtension: Boolean) {
+        val opCode = if (isExtension) EXTEND_METHOD else METHOD
         var size = byteCode.put(opCode)
         val constIdx = constIndex(name)
         size += byteCode.putInt(constIdx)
         pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
-    private fun emitNativeMethod(name: String, nativeFunction: NativeFunction) {
-        val opCode = NATIVE_METHOD
+    private fun emitNativeMethod(name: String, nativeFunction: NativeFunction, isExtension: Boolean) {
+        val opCode = if (isExtension) EXTEND_NATIVE_METHOD else NATIVE_METHOD
         var size = byteCode.put(opCode)
         val nameIdx = constIndex(name)
         size += byteCode.putInt(nameIdx)
@@ -2343,7 +2392,7 @@ class Compiler {
     }
 
     private class ClassCompiler(val name: String,
-                                val enclosing: ClassCompiler?
+                                var enclosing: ClassCompiler?
     ) {
         var firstSuperclass: String? = null
         var superclasses = emptyList<String>()

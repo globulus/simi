@@ -596,3 +596,10 @@ print Enum.RED
 blu = Enum.BLUE
 print blu == Enum.RED
 print blu == Enum.BLUE
+
+extend Pair {
+    fn sum = first + second
+}
+par = Pair(1, 2)
+print par.sum()
+

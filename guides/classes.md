@@ -147,3 +147,30 @@ class$ OpenClassNoticeTheDollarSignAfterClass
 ```
 
 All three of those have their time and place, but you'll spend most time with regular classes for the most part.
+
+#### Implicit @ for getters
+
+By now you know that setters always have @ before the field name - that's how the compiler knows that we're setting a field here instead of declaring/assigning to a local variable.
+
+When it comes to getter, however, the compiler is a bit smarter and allows you to omit the @ when referring to instance fields. More specifically, when encountering an identifier that might either be a variable, or an instance field (a getter, just without @), it looks up its list of declared fields for this class. The list contains:
+1. Any field, method, fiber or inner class declared *up to this point*.
+2. All setters in the *init* method, including bound args.
+
+Check out the Core class Stream and how it omits @ for getters, since the compiler knows what identifiers point to prior listed instance fields:
+```ruby
+class_ Stream {
+    # ....
+
+    init(@src) {
+        @ops = List()
+    }
+
+    fn toMutableList {
+        list = List()
+        for item in src { # src is implicitly converted to @src
+            dst = item
+            for operation in ops { # ops is implicitly converted to @ops
+       ### ... more code omitted
+    }
+}
+```
