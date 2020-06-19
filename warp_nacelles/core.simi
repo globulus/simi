@@ -92,20 +92,22 @@ class_ Num {
 }
 
 class_ Stream {
-    OP_WHERE = "where"
-    OP_MAP = "map"
+
+    enum Op {
+        WHERE, MAP
+    }
 
     init(@src) {
         @ops = List()
     }
 
     fn where(predicate) {
-        @ops += [op = OP_WHERE, arg = predicate]
+        @ops += [op = Op.WHERE, arg = predicate]
         return self
     }
 
     fn map(transformation) {
-        @ops += [op = OP_MAP, arg = transformation]
+        @ops += [op = Op.MAP, arg = transformation]
         return self
     }
 
@@ -116,13 +118,13 @@ class_ Stream {
             for operation in ops {
                 op = operation.op
                 when op {
-                    OP_WHERE {
+                    Op.WHERE {
                         if not operation.arg(dst) {
                             dst $= nil
                             break
                         }
                     }
-                    OP_MAP {
+                    Op.MAP {
                         dst $= operation.arg(dst)
                     }
                 }

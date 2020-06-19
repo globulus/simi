@@ -39,7 +39,6 @@ public final class Constants {
     public static final String CLASS_EXCEPTION = "Exception";
     public static final String CLASS_LIST = "List";
     public static final String CLASS_RANGE = "Range";
-    public static final String CLASS_STREAM = "Stream";
     public static final String CLASS_GLOBALS = net.globulus.simi.api.Constants.GLOBALS_CLASS_NAME;
     static final String CLASS_DEBUGGER = "Debugger";
 

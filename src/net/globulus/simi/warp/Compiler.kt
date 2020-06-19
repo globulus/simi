@@ -361,7 +361,6 @@ class Compiler {
         if (kind != SClass.Kind.MODULE
                 && superclasses.isEmpty()
                 && name != Constants.CLASS_OBJECT
-                && name != Constants.CLASS_STREAM
                 && name != Constants.CLASS_FUNCTION
                 && name != Constants.CLASS_CLASS) {
             superclasses += Constants.CLASS_OBJECT
