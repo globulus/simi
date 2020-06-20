@@ -1,6 +1,5 @@
 package net.globulus.simi.warp
 
-import net.globulus.simi.Constants
 import net.globulus.simi.TokenType
 
 open class Instance(val klass: SClass) : Fielded {
@@ -21,11 +20,6 @@ open class Instance(val klass: SClass) : Fielded {
         } else {
             fields[key] = value
         }
-        updateCount()
-    }
-
-    internal open fun updateCount() {
-        fields[Constants.COUNT] = fields.size.toLong()
     }
 
     internal open fun stringify(vm: Vm): String {
@@ -48,10 +42,6 @@ open class Instance(val klass: SClass) : Fielded {
 class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instance(Vm.listClass!!, mutable) {
     internal val items = providedItems ?: mutableListOf()
 
-    init {
-        updateCount()
-    }
-
     operator fun get(index: Int) = items[index]
 
     operator fun set(index: Int, value: Any) {
@@ -60,11 +50,6 @@ class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instanc
 
     operator fun plusAssign(item: Any) {
         items += item
-        updateCount()
-    }
-
-    override fun updateCount() {
-        fields[Constants.COUNT] = items.size.toLong()
     }
 
     override fun stringify(vm: Vm): String {

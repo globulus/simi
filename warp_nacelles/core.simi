@@ -1,9 +1,11 @@
 import native "Core"
 
 class Object {
+    native len
     native keys
     native values
-    native zip
+    native zip # Returns an iterable that goes through key-value pairs
+    native zipped # Returns a List of key-value pairs
     native isEmpty
     native clear
     native iterate
@@ -15,9 +17,12 @@ class Object {
     fn has(key) = key in keys()
 }
 
-class_ String
+class_ String {
+    native len
+}
 
 class_ List {
+    native len
     native init
     native get(key)
     native set(key, value)
@@ -92,7 +97,6 @@ class_ Num {
 }
 
 class_ Stream {
-
     enum Op {
         WHERE, MAP
     }
@@ -115,16 +119,16 @@ class_ Stream {
         list = List()
         for item in src {
             dst = item
-            for operation in ops {
-                when operation.op {
+            for [op, arg] in ops.zip() {
+                when op {
                     Op.WHERE {
-                        if not operation.arg(dst) {
+                        if not arg(dst) {
                             dst $= nil
                             break
                         }
                     }
                     Op.MAP {
-                        dst $= operation.arg(dst)
+                        dst $= arg(dst)
                     }
                 }
             }

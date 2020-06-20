@@ -14,17 +14,15 @@ object Core : NativeModule {
 
     val listIterate = NativeFunction(0) {
         val instance = it[0] as ListInstance
-        val count = (instance.fields[Constants.COUNT] as Long).toInt()
+        val count = instance.items.size
         var i = 0
-        Instance(Vm.objectClass!!, false).apply {
-            fields[Constants.NEXT] = NativeFunction(0) {
-                if (i == count) {
-                    null
-                } else {
-                    val value = instance[i]
-                    i++
-                    value
-                }
+        iterator {
+            if (i == count) {
+                null
+            } else {
+                val value = instance[i]
+                i++
+                value
             }
         }
     }
@@ -33,6 +31,10 @@ object Core : NativeModule {
             Constants.CLASS_OBJECT to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
+                        "len" -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            instance.fields.size.toLong()
+                        }
                         "keys" -> keys
                         "values" -> NativeFunction(0) {
                             val instance = it[0] as Instance
@@ -40,7 +42,16 @@ object Core : NativeModule {
                         }
                         "zip" -> NativeFunction(0) {
                             val instance = it[0] as Instance
-                            ListInstance(false, instance.fields.map { (k, v) -> ListInstance(false, mutableListOf(k, v)) }.toMutableList())
+                            val zipped = instance.zipped()
+                            Instance(Vm.objectClass!!, false).apply {
+                                fields[Constants.ITERATE] = NativeFunction(0) {
+                                    listIterate.func(listOf(zipped))
+                                }
+                            }
+                        }
+                        "zipped" -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            instance.zipped()
                         }
                         "isEmpty" -> NativeFunction(0) {
                             val instance = it[0] as Instance
@@ -110,6 +121,10 @@ object Core : NativeModule {
                                 mutabilityLockException()
                             }
                         }
+                        "len" -> NativeFunction(0) {
+                            val instance = it[0] as ListInstance
+                            instance.items.size.toLong()
+                        }
                         "add" -> NativeFunction(1) {
                             val instance = it[0] as ListInstance
                             if (instance.mutable) {
@@ -147,6 +162,31 @@ object Core : NativeModule {
                         else -> null
                     }
                 }
+            },
+            Constants.CLASS_STRING to object : NativeClass {
+                override fun resolve(funcName: String): NativeFunction? {
+                    return when (funcName) {
+                        "len" -> NativeFunction(0) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.IMPLICIT] as String
+                            string.length.toLong()
+                        }
+                        else -> null
+                    }
+                }
             }
     )
+
+    private fun iterator(next: () -> Any?): Instance {
+        return Instance(Vm.objectClass!!, false).apply {
+            fields[Constants.NEXT] = NativeFunction(0) {
+                next()
+            }
+        }
+    }
+
+    private fun Instance.zipped() = ListInstance(false,
+            fields.map { (k, v) -> ListInstance(false, mutableListOf(k, v)) }.toMutableList()
+    )
+
 }
