@@ -810,6 +810,9 @@ class Compiler {
             }
         } else {
             compileNested(whenTokens, isExpr)
+            if (usesTempVar) {
+                discardLastLocal(true) // pop the temp var
+            }
         }
     }
 

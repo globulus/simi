@@ -168,7 +168,7 @@ object Core : NativeModule {
                     return when (funcName) {
                         "len" -> NativeFunction(0) {
                             val instance = it[0] as Instance
-                            val string = instance.fields[Constants.IMPLICIT] as String
+                            val string = instance.fields[Constants.PRIVATE] as String
                             string.length.toLong()
                         }
                         else -> null

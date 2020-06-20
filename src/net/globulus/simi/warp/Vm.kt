@@ -977,7 +977,6 @@ class Vm {
         } else if (value is String) {
             val boxedStr = Instance(strClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
-                fields[Constants.COUNT] = value.length.toLong()
             }
             fiber.stack[loc] = boxedStr
             return boxedStr
