@@ -725,10 +725,23 @@ class Compiler {
      */
     private fun whenSomething(isExpr: Boolean) {
         val origin = previous
-        val id = consume(IDENTIFIER, "Expected an identifier after 'when'")
+        val whenTokens = mutableListOf<Token>()
+        var usesTempVar = false
+        val id = if (peekSequence(IDENTIFIER, LEFT_BRACE, NEWLINE)) {
+            advance()
+        } else {
+            if (isExpr) {
+                throw error(peek, "Can't use when expressions with complex expressions yet!")
+            }
+            usesTempVar = true
+            val tempId = Token.named(nextImplicitVarName("when"))
+            whenTokens += listOf(tempId, Token.ofType(EQUAL))
+            whenTokens += consumeUntilType(LEFT_BRACE)
+            whenTokens += Token.ofType(NEWLINE)
+            tempId
+        }
         var first = true
         var wroteElse = false
-        val whenTokens = mutableListOf<Token>()
         consume(LEFT_BRACE, "Expect a '{' after when")
         consume(NEWLINE, "Expect a newline after when '{'")
         val consumeConditionBlock: () -> List<Token> = if (isExpr) {
@@ -794,6 +807,9 @@ class Compiler {
         }
         consume(RIGHT_BRACE, "Expect '}' at the end of when")
         compileNested(whenTokens, isExpr)
+        if (usesTempVar) {
+            discardLastLocal(true)
+        }
     }
 
     private fun forStatement() {

@@ -116,8 +116,7 @@ class_ Stream {
         for item in src {
             dst = item
             for operation in ops {
-                op = operation.op
-                when op {
+                when operation.op {
                     Op.WHERE {
                         if not operation.arg(dst) {
                             dst $= nil
