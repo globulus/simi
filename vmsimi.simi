@@ -605,3 +605,9 @@ print par.sum()
 
 print [1, 2, 3].where(=_0 < 3).map(=_0 * 2)
 
+print when par.sum() {
+    1 = 1
+    3 = 3
+    else = 5
+}
+

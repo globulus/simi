@@ -730,9 +730,6 @@ class Compiler {
         val id = if (peekSequence(IDENTIFIER, LEFT_BRACE, NEWLINE)) {
             advance()
         } else {
-            if (isExpr) {
-                throw error(peek, "Can't use when expressions with complex expressions yet!")
-            }
             usesTempVar = true
             val tempId = Token.named(nextImplicitVarName("when"))
             whenTokens += listOf(tempId, Token.ofType(EQUAL))
@@ -806,9 +803,13 @@ class Compiler {
             matchAllNewlines()
         }
         consume(RIGHT_BRACE, "Expect '}' at the end of when")
-        compileNested(whenTokens, isExpr)
-        if (usesTempVar) {
-            discardLastLocal(true)
+        if (isExpr && usesTempVar) {
+            whenTokens += Token.ofType(EOF)
+            compileAsCalledLambdaWithSingleReturn(whenTokens, 1) {
+                compileInternal(true)
+            }
+        } else {
+            compileNested(whenTokens, isExpr)
         }
     }
 
@@ -1556,17 +1557,12 @@ class Compiler {
         tokens += rbnl // close the for block
         tokens += Token.ofType(EOF)
         consume(RIGHT_BRACKET, "Expect ']' at the end of object comprehension.")
-        val compiler = Compiler()
-        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+        compileAsCalledLambdaWithSingleReturn(tokens, 0) {
             declareLocal(nextImplicitVarName("objCompr"), true)
             emitCode(START_COMPREHENSION)
             compileInternal(false)
             emitObjectLiteral(opener, isList, -1)
-            emitCode(OpCode.RETURN)
-            byteCode.putInt(0) // 0 pops after return
         }
-        emitClosure(f, compiler, false)
-        emitCall(0)
     }
 
     private fun objectLiteral(opener: Token) {
@@ -1838,6 +1834,27 @@ class Compiler {
             canException = true
         }
         return DynamicTypeCheck(type, canNil, canException)
+    }
+
+    /**
+     * Wraps the prepared tokens in a lambda that returns a single value, and is immediately called.
+     * Used for when expressions and object comprehensions because they have sideeffect vars that can't
+     * live in the same scope as the expression they're transpiled from.
+     */
+    private fun compileAsCalledLambdaWithSingleReturn(tokens: List<Token>, popsAfterReturn: Int, block: Compiler.() -> Unit) {
+        val compiler = Compiler().apply {
+            enclosing = this@Compiler
+        }
+        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+            this.block()
+            emitCode(OpCode.RETURN)
+            byteCode.putInt(popsAfterReturn)
+            for (i in 0 until popsAfterReturn) {
+                emitCode(POP)
+            }
+        }
+        emitClosure(f, compiler, false)
+        emitCall(0)
     }
 
     private fun check(vararg tokenTypes: TokenType): Boolean {
