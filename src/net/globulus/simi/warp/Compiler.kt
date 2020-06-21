@@ -520,6 +520,12 @@ class Compiler {
                 "\nelse = nil\n" +
                 "}\n"
         )
+
+        synthesizeMethod("ordinal = when self {\n" +
+                ids.withIndex().joinToString("\n") { "$className.${it.value} = ${it.index}" } +
+                "\nelse = nil\n" +
+                "}\n"
+        )
     }
 
     private fun methodOrFiber(isFiber: Boolean, isExtension: Boolean, providedName: String? = null): String {

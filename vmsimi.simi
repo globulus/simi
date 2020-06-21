@@ -387,6 +387,13 @@ fn testImplicitSelf {
 }
 test("implicit self", "5623", testImplicitSelf())
 
+test("compound assignment with setters", 7, fn {
+    oo = $[]
+    oo.a = 3
+    oo.a += 4
+    return oo.a
+})
+
 test("obj literal", 5, =[a = 1, b = 3, c = 5].c)
 test("mut list literal", "$[1, 2, 3, 4, 5]", ="" + $[1, 2, 3, 4, 5])
 test("mut list value change", 10, fn {
@@ -556,6 +563,41 @@ test("mutable list comprehension with if", "$[2, 4]", "" + $[for i in 1..5 if i 
 test("mutable obj comprehension", "$[key1 = 11, key2 = 12, key3 = 13, key4 = 14]", "" + $[for i in 1..5 do "key\(i)" = i + 10])
 test("obj comprehension with if", "[key4 = 16]", "" + [for i in 1..5 if i > 3 do "key\(i)" = i * i])
 
+enum Enum {
+    RED(1, 2), BLUE(3, 4), GREEN(5, 6)
+    init(@a, @b)
+}
+test("enum same", true, fn {
+    blu = Enum.BLUE
+    return blu == Enum.BLUE
+})
+test("enum different", true, fn {
+    blu = Enum.BLUE
+    return blu != Enum.RED
+})
+test("enum values and toString", "[RED, BLUE, GREEN]", "" + Enum.values)
+test("enum ordinal", 2, Enum.GREEN.ordinal())
+
+test("stream", "[6, 12]", "" + Stream([1, 2, 3, 4, 5]).where(=_0 < 5).map(=_0 * 2).where(=_0 < 5).map(=_0 * 3).toList())
+test("stream without collect", "[2, 4]", "" + [1, 2, 3].where(=_0 < 3).map(=_0 * 2))
+
+test("when expression with complex expression", 3, fn {
+    par = Pair(1, 2)
+    return when par.first + par.second {
+        1 = 1
+        3 = 3
+        else = 5
+    }
+})
+
+extend Pair {
+    fn sum = first + second
+}
+test("extensions", 3, fn {
+    par = Pair(1, 2)
+    return par.sum()
+})
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure
@@ -573,12 +615,6 @@ print myFiber(6, 3, 10)
 print myFiber(8, 3, 20)
 print myFiber(5, 10, 0)
 
-print Stream([1, 2, 3, 4, 5]).where(=_0 < 5).map(=_0 * 2).where(=_0 < 5).map(=_0 * 3).toList()
-
-oo = $[]
-oo.a = 3
-oo.a += 4
-
 #def threeArg(a, b, c) {
 #    print a
 #    print b
@@ -586,29 +622,4 @@ oo.a += 4
 #}
 #ls = [1, 2, 3]
 #threeArg(*ls)
-
-
-enum Enum {
-    RED(1, 2), BLUE(3, 4), GREEN(5, 6)
-    init(@a, @b)
-}
-print Enum.values
-print Enum.RED
-blu = Enum.BLUE
-print blu == Enum.RED
-print blu == Enum.BLUE
-
-extend Pair {
-    fn sum = first + second
-}
-par = Pair(1, 2)
-print par.sum()
-
-print [1, 2, 3].where(=_0 < 3).map(=_0 * 2)
-
-print when par.sum() {
-    1 = 1
-    3 = 3
-    else = 5
-}
 

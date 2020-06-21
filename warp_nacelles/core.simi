@@ -119,7 +119,7 @@ class_ Stream {
         list = List()
         for item in src {
             dst = item
-            for [op, arg] in ops.zip() {
+            for [op, arg] in ops {
                 when op {
                     Op.WHERE {
                         if not arg(dst) {
