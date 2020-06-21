@@ -329,7 +329,17 @@ class Compiler {
     private fun classDeclaration(inner: Boolean): String {
         resetAnnotationCounter()
         val opener = previous
-        val kind = when (opener.type) {
+        var name = consumeVar("Expect class name.")
+        val returnName = name // it's different because inner classes have the name prepended
+        if (inner) {
+            name = "${currentClass!!.name}.$name"
+        }
+        val kind = if (name == Constants.CLASS_STRING
+                || name == Constants.CLASS_NUM
+                || name == Constants.CLASS_FUNCTION
+                || name == Constants.CLASS_CLASS) {
+            SClass.Kind.META
+        } else when (opener.type) {
             MODULE -> SClass.Kind.MODULE
             ENUM -> SClass.Kind.ENUM
             CLASS_FINAL -> SClass.Kind.FINAL
@@ -337,11 +347,7 @@ class Compiler {
             CLASS_OPEN -> SClass.Kind.OPEN
             else -> throw IllegalStateException("WTF")
         }
-        var name = consumeVar("Expect class name.")
-        val returnName = name // it's different because inner classes have the name prepended
-        if (inner) {
-            name = "${currentClass!!.name}.$name"
-        }
+
         declareLocal(name, true)
         emitClass(name, kind, inner)
         val superclasses = mutableListOf<String>()

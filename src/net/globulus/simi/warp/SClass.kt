@@ -65,7 +65,7 @@ class SClass(val name: String, val kind: Kind) : Fielded {
     }
 
     enum class Kind {
-        MODULE, ENUM, FINAL, REGULAR, OPEN;
+        MODULE, ENUM, META, FINAL, REGULAR, OPEN;
 
         val byte = ordinal.toByte()
 

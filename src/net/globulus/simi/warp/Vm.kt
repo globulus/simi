@@ -15,6 +15,8 @@ class Vm {
     private val annotationBuffer = mutableListOf<Any>()
     private var nonFinalizedClasses = Stack<Int>()
 
+    private val scanner = Scanner(System.`in`)
+
     fun interpret(input: Fiber) {
         instance = this
         fiber = input
@@ -27,9 +29,10 @@ class Vm {
 
     private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
         loop@ while (predicate?.invoke() != false) {
-//            if (currentFunction.debugInfo.breakpoints.contains(buffer.position())) {
-//                triggerBreakpoint()
-//            }
+            if (currentFunction.debugInfo.breakpoints.contains(buffer.position())) {
+                triggerBreakpoint()
+                scanner.nextLine()
+            }
             val code = nextCode
             when (code) {
                 TRUE -> push(true)
@@ -267,7 +270,7 @@ class Vm {
         }
     }
 
-    private fun getPropRaw(obj: Any?, name: String) {
+    internal fun getPropRaw(obj: Any?, name: String) {
         val prop = when (obj) {
             Nil -> null
             is Instance -> obj.fields[name] ?: obj.klass.fields[name]
@@ -511,6 +514,9 @@ class Vm {
             }
             is NativeFunction -> callNative(callee, argCount)
             is SClass -> {
+                if (callee.kind == SClass.Kind.META) { // Metaclasses (Num, String, Function, Class) can't be directly instantiated
+                    throw runtimeError("Can't instantiate ${callee.name}!")
+                }
                 if (callee.kind == SClass.Kind.MODULE) {
                     throw runtimeError("Can't call a module!")
                 }
@@ -591,10 +597,10 @@ class Vm {
             return true
         }
         return (receiver.fields[name])?.let {
-            val callee = if (it is NativeFunction) {
-                BoundNativeMethod(receiver, it)
-            } else {
-                it
+            val callee = when (it) {
+                is Closure -> BoundMethod(receiver, it)
+                is NativeFunction -> BoundNativeMethod(receiver, it)
+                else -> it
             }
             fiber.stack[fiber.sp - argCount - 1] = callee
             call(callee, argCount)
@@ -802,6 +808,8 @@ class Vm {
             nilReferenceExceptionClass = klass
         } else if (mutabilityLockExceptionClass == null && name == Constants.EXCEPTION_MUTABILITY_LOCK) {
             mutabilityLockExceptionClass = klass
+        } else if (illegalArgumentException == null && name == Constants.EXCEPTION_ILLEGAL_ARGUMENT) {
+            illegalArgumentException = klass
         } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
             objectClass = klass
         } else if (listClass == null && name == Constants.CLASS_LIST) {
@@ -909,7 +917,7 @@ class Vm {
         fiber.sp++
     }
 
-    private fun pop(): Any {
+    internal fun pop(): Any {
         fiber.sp--
         return fiber.stack[fiber.sp]!!
     }
@@ -977,6 +985,7 @@ class Vm {
         } else if (value is String) {
             val boxedStr = Instance(strClass!!, false).apply {
                 fields[Constants.PRIVATE] = value
+                fields["len"] = value.length.toLong()
             }
             fiber.stack[loc] = boxedStr
             return boxedStr
@@ -1010,6 +1019,7 @@ class Vm {
                 when (o.klass) {
                     objectClass -> o.stringify(this)
                     listClass -> o.stringify(this)
+                    strClass -> o.fields[Constants.PRIVATE] as String
                     else -> {
                         when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
                             is Closure, is NativeFunction -> {
@@ -1073,7 +1083,7 @@ class Vm {
         println("===================")
         println("Locals:")
         for ((sp, name) in frame.closure.function.debugInfo.locals) {
-            println("$name = ${stringify(fiber.stack[sp]!!)}")
+            println("$name = ${stringify(fiber.stack[frame.sp + sp]!!)}")
         }
     }
 
@@ -1115,6 +1125,8 @@ class Vm {
         var nilReferenceExceptionClass: SClass? = null
             internal set
         var mutabilityLockExceptionClass: SClass? = null
+            internal set
+        var illegalArgumentException: SClass? = null
             internal set
         var objectClass: SClass? = null
             internal set

@@ -1,7 +1,7 @@
 import native "Core"
 
 class Object {
-    native len
+    native size
     native keys
     native values
     native zip # Returns an iterable that goes through key-value pairs
@@ -17,83 +17,16 @@ class Object {
     fn has(key) = key in keys()
 }
 
-class_ String {
-    native len
-}
-
 class_ List {
-    native len
     native init
     native get(key)
     native set(key, value)
+    native size
     native add(value)
     native addAll(from)
     native isEmpty
     native clear
     native iterate
-}
-
-class_ Function
-
-class_ Class
-
-class Exception {
-    init(@message)
-}
-class TypeMismatchException is Exception {
-    init {
-        super.init("tme")
-    }
-}
-class NilReferenceException is Exception
-class IllegalArgumentException is Exception
-class AbstractMethodException is Exception
-class MutabilityLockException is Exception
-
-Math _= [
-    min = fn(a, b) = if (a < b) a else b,
-    max = fn(a, b) = if (a > b) a else b
-]
-
-class Range {
-    init(@from, @to) {
-        @min = Math.min(from, to)
-        @max = Math.max(from, to)
-    }
-
-    fn iterate() = Range.Iterator(self)
-
-    fn has(o) = o >= min and o <= max
-
-    class Iterator {
-        init(@range) {
-            @current = range.min
-        }
-
-        fn next() = if current <= range.max {
-                @current += 1
-                current - 1
-            } else {
-                nil
-            }
-    }
-}
-
-class_ Num {
-
-    fn rangeTo(lim) = Range(@_, lim)
-
-    fn rangeUntil(lim) = Range(@_, lim - 1)
-
-    fn equals(o) = (o is Num and @_ == o._)
-
-    fn matches(o) = if self == o {
-        @_
-    } else {
-        nil
-    }
-
-    fn iterate = rangeTo(self).iterate()
 }
 
 class_ Stream {
@@ -149,3 +82,76 @@ class_ StreamMixin {
 
 extend Object import StreamMixin
 extend List import StreamMixin
+
+class_ String {
+    native get(key)
+    fn iterate {
+        len = @len
+        str = self
+        return [i = 0, next = fn = if @i == len nil else {
+            c = str.(@i)
+            @i += 1
+            c
+        }]
+    }
+}
+
+class_ Function
+
+class_ Class
+
+class Exception {
+    init(@message)
+}
+class TypeMismatchException is Exception {
+    init {
+        super.init("tme")
+    }
+}
+class NilReferenceException is Exception
+class IllegalArgumentException is Exception
+class AbstractMethodException is Exception
+class MutabilityLockException is Exception
+
+Math _= [
+    min = fn(a, b) = if (a < b) a else b,
+    max = fn(a, b) = if (a > b) a else b
+]
+
+class Range {
+    init(@from, @to) {
+        @min = Math.min(from, to)
+        @max = Math.max(from, to)
+    }
+
+    fn iterate() = Range.Iterator(self)
+
+    fn has(o) = o >= min and o <= max
+
+    class Iterator {
+        init(@range) {
+            @current = range.min
+        }
+
+        fn next() = if current <= range.max {
+                @current += 1
+                current - 1
+            } else {
+                nil
+            }
+    }
+}
+
+class_ Num {
+    fn rangeTo(lim) = Range(@_, lim)
+    fn rangeUntil(lim) = Range(@_, lim - 1)
+
+    fn equals(o) = (o is Num and @_ == o._)
+    fn matches(o) = if self == o {
+        @_
+    } else {
+        nil
+    }
+
+    fn iterate = rangeTo(self).iterate()
+}

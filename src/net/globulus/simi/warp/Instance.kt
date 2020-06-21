@@ -42,7 +42,13 @@ open class Instance(val klass: SClass) : Fielded {
 class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instance(Vm.listClass!!, mutable) {
     internal val items = providedItems ?: mutableListOf()
 
-    operator fun get(index: Int) = items[index]
+    operator fun get(index: Int): Any {
+        return if (index >= 0) {
+            items[index]
+        } else {
+            items[items.size + index]
+        }
+    }
 
     operator fun set(index: Int, value: Any) {
         items[index] = value
@@ -50,6 +56,22 @@ class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instanc
 
     operator fun plusAssign(item: Any) {
         items += item
+    }
+
+    internal fun sublist(from: Long, to: Long): Any {
+        val len = items.size.toLong()
+        val start = if (from < 0) len + from else from
+        val end = if (to < 0) len + to else to
+        if (start >= end) {
+            return illegalArgumentException("start >= end, $start, $end")
+        }
+        if (start < 0) {
+            return illegalArgumentException("start < 0, $start")
+        }
+        if (end > len) {
+            return illegalArgumentException("end > len, $end, $len")
+        }
+        return ListInstance(mutable, items.subList(start.toInt(), end.toInt()))
     }
 
     override fun stringify(vm: Vm): String {

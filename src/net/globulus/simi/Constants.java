@@ -47,6 +47,7 @@ public final class Constants {
     public static final String EXCEPTION_NUMBER_FORMAT = "NumberFormatException";
     public static final String EXCEPTION_NIL_REFERENCE = "NilReferenceException";
     public static final String EXCEPTION_MUTABILITY_LOCK = "MutabilityLockException";
+    public static final String EXCEPTION_ILLEGAL_ARGUMENT = "IllegalArgumentException";
     public static final String EXCEPTION_TYPE_MISMATCH = "TypeMismatchException";
 
     private Constants() { }

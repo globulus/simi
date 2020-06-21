@@ -31,7 +31,7 @@ object Core : NativeModule {
             Constants.CLASS_OBJECT to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
-                        "len" -> NativeFunction(0) {
+                        "size" -> NativeFunction(0) {
                             val instance = it[0] as Instance
                             instance.fields.size.toLong()
                         }
@@ -98,12 +98,10 @@ object Core : NativeModule {
                             val instance = it[0] as ListInstance
                             when (val key = it[1]) {
                                 is Long -> instance[key.toInt()]
-                                is String -> instance.fields[key]
+                                is String -> getRawProp(instance, key)
                                 is Instance -> {
                                     when (key.klass) {
-                                        Vm.rangeClass -> {
-
-                                        }
+                                        Vm.rangeClass -> instance.sublist(key.fields["from"] as Long, key.fields["to"] as Long)
                                         else -> null
                                     }
                                 }
@@ -121,7 +119,7 @@ object Core : NativeModule {
                                 mutabilityLockException()
                             }
                         }
-                        "len" -> NativeFunction(0) {
+                        "size" -> NativeFunction(0) {
                             val instance = it[0] as ListInstance
                             instance.items.size.toLong()
                         }
@@ -166,10 +164,20 @@ object Core : NativeModule {
             Constants.CLASS_STRING to object : NativeClass {
                 override fun resolve(funcName: String): NativeFunction? {
                     return when (funcName) {
-                        "len" -> NativeFunction(0) {
+                        Constants.GET -> NativeFunction(1) {
                             val instance = it[0] as Instance
                             val string = instance.fields[Constants.PRIVATE] as String
-                            string.length.toLong()
+                            when (val key = it[1]) {
+                                is Long -> string[key.toInt()].toString()
+                                is String -> getRawProp(instance, key)
+                                is Instance -> {
+                                    when (key.klass) {
+//                                        Vm.rangeClass -> instance.sublist(key.fields["from"] as Long, key.fields["to"] as Long)
+                                        else -> null
+                                    }
+                                }
+                                else -> null
+                            }
                         }
                         else -> null
                     }
@@ -189,4 +197,8 @@ object Core : NativeModule {
             fields.map { (k, v) -> ListInstance(false, mutableListOf(k, v)) }.toMutableList()
     )
 
+    private fun getRawProp(instance: Instance, name: String): Any? {
+        Vm.instance?.getPropRaw(instance, name)
+        return Vm.instance?.pop()
+    }
 }
