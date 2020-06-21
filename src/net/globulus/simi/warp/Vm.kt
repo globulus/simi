@@ -503,7 +503,10 @@ class Vm {
     private fun call(callee: Any, argCount: Int) {
         val spRelativeToArgCount = fiber.sp - argCount - 1
         when (callee) {
-            is Closure -> callClosure(callee, argCount)
+            is Closure -> {
+                fiber.stack[spRelativeToArgCount] = self
+                callClosure(callee, argCount)
+            }
             is BoundMethod -> {
                 fiber.stack[spRelativeToArgCount] = callee.receiver
                 callClosure(callee.method, argCount)
@@ -620,7 +623,7 @@ class Vm {
             }
             else -> {
                 if (checkError) {
-                    throw runtimeError("Undefined Undefined method $name.")
+                    throw runtimeError("Undefined method $name.")
                 } else {
                     false
                 }

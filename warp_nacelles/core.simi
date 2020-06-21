@@ -94,6 +94,7 @@ class_ String {
             c
         }
    ]
+   fn chars = $[for c in self do c]
 }
 
 class_ Function
@@ -127,19 +128,13 @@ class Range {
 
     fn iterate() = [
         src = self,
-        i = @min,
-        next = fn = if @src.ascending {
-            res = if @i > @src.to nil else {
-                @i += 1
-                @i - 1
-            }
-            res
-        } else {
-            res = if @i < @src.to nil else {
-                @i -= 1
-                @i + 1
-            }
-            res
+        i = @from,
+        next = if @ascending fn = if @i > @src.to nil else {
+            @i += 1
+            @i - 1
+        } else fn = if @i < @src.to nil else {
+            @i -= 1
+            @i + 1
         }
     ]
 
@@ -157,5 +152,5 @@ class_ Num {
         nil
     }
 
-    fn iterate = rangeTo(self).iterate()
+    fn iterate = 0.rangeUntil(self).iterate()
 }
