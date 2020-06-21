@@ -393,7 +393,7 @@ class Compiler {
 
         if (match(LEFT_BRACE)) {
             if (kind == SClass.Kind.ENUM) {
-                compileEnumValues()
+                compileEnumValues(name)
                 consume(NEWLINE, "Expect newline after enum values.")
             }
             var hasInit = false
@@ -445,7 +445,7 @@ class Compiler {
             }
             consume(RIGHT_BRACE, "\"Expect '}' after class body.\"")
 
-            // If the class declares fields but not an init, we need to synthesize one
+            // If the class declares fields but not an "init", we need to synthesize one
             if (currentClass?.initAdditionalTokens?.isNotEmpty() == true && !hasInit) {
                 methodOrFiber(isFiber = false, isExtension = false, providedName = Constants.INIT)
             }
@@ -457,6 +457,7 @@ class Compiler {
             }
         }
 
+        // Finalize the class declaration
         emitCode(CLASS_DECLR_DONE)
         if (kind == SClass.Kind.ENUM) {
             emitCode(INIT_ENUM)
@@ -466,15 +467,25 @@ class Compiler {
         return returnName
     }
 
-    private fun compileEnumValues() {
+    private fun compileEnumValues(className: String) {
         val tokens = mutableListOf<Token>()
+        val ids = mutableListOf<String>()
+        val idTokens = mutableListOf<Token>()
         val selfDot = listOf(Token.self(), Token.ofType(DOT))
+        val classNameDot = listOf(Token.named(className), Token.ofType(DOT))
+        val comma = Token.ofType(COMMA)
         val lprp = listOf(Token.ofType(LEFT_PAREN), Token.ofType(RIGHT_PAREN))
         val equalsSelf = listOf(Token.ofType(EQUAL), Token.self())
         val nl = Token.ofType(NEWLINE)
         do {
             matchAllNewlines()
             val id = consume(IDENTIFIER, "Expect identifier for enum value.")
+            ids += id.lexeme
+            if (idTokens.isNotEmpty()) {
+                idTokens += comma
+            }
+            idTokens += classNameDot
+            idTokens += id
             tokens += selfDot
             tokens += id
             tokens += equalsSelf
@@ -485,6 +496,14 @@ class Compiler {
             }
             tokens += nl
         } while (match(COMMA))
+
+        // Synthesize the values List
+        tokens += selfDot
+        tokens += Token.named("values")
+        tokens += listOf(Token.ofType(EQUAL), Token.ofType(LEFT_BRACKET))
+        tokens += idTokens
+        tokens += listOf(Token.ofType(RIGHT_BRACKET), nl)
+
         val compiler = Compiler().also {
             it.enclosing = this
             it.currentClass = currentClass
@@ -495,6 +514,12 @@ class Compiler {
         }
         emitClosure(f, compiler, false)
         emitMethod(Constants.ENUM_INIT, false)
+
+        synthesizeMethod("toString = when self {\n" +
+                ids.joinToString("\n") { "$className.$it = \"$it\"" } +
+                "\nelse = nil\n" +
+                "}\n"
+        )
     }
 
     private fun methodOrFiber(isFiber: Boolean, isExtension: Boolean, providedName: String? = null): String {
@@ -511,6 +536,17 @@ class Compiler {
         function(kind, false, name)
         emitMethod(name, isExtension)
         return name
+    }
+
+    private fun synthesizeMethod(nameArgsBody: String) {
+        val methodTokens = Lexer(SCRIPT, nameArgsBody, null).scanTokens(true).tokens
+        val compilerTokens = tokens
+        val curr = current
+        tokens = methodTokens
+        current = 0
+        methodOrFiber(isFiber = false, isExtension = false)
+        tokens = compilerTokens
+        current = curr
     }
 
     private fun nativeMethod(isExtension: Boolean): String {
@@ -727,7 +763,9 @@ class Compiler {
         val origin = previous
         val whenTokens = mutableListOf<Token>()
         var usesTempVar = false
-        val id = if (peekSequence(IDENTIFIER, LEFT_BRACE, NEWLINE)) {
+        val id = if (peekSequence(IDENTIFIER, LEFT_BRACE, NEWLINE)
+                || peekSequence(SELF, LEFT_BRACE, NEWLINE)
+                || peekSequence(TokenType.SUPER, LEFT_BRACE, NEWLINE)) {
             advance()
         } else {
             usesTempVar = true
@@ -1845,8 +1883,9 @@ class Compiler {
      * live in the same scope as the expression they're transpiled from.
      */
     private fun compileAsCalledLambdaWithSingleReturn(tokens: List<Token>, popsAfterReturn: Int, block: Compiler.() -> Unit) {
-        val compiler = Compiler().apply {
-            enclosing = this@Compiler
+        val compiler = Compiler().also {
+            it.enclosing = this
+            it.currentClass = currentClass
         }
         val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
             this.block()
@@ -2388,10 +2427,6 @@ class Compiler {
         }
         return false
     }
-
-    private data class Const(val index: Int,
-                             val level: Int
-    )
 
     private data class Local(val name: String,
                              val sp: Int,

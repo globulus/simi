@@ -592,6 +592,7 @@ enum Enum {
     RED(1, 2), BLUE(3, 4), GREEN(5, 6)
     init(@a, @b)
 }
+print Enum.values
 print Enum.RED
 blu = Enum.BLUE
 print blu == Enum.RED
