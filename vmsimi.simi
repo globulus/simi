@@ -604,6 +604,14 @@ test("extensions", 3, fn {
     return par.sum()
 })
 
+test("string iterate", "abcde", fn {
+    s = ""
+    for c in "abcde" {
+        s += c
+    }
+    return s
+})
+
 print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
 for failure in testResults.failures {
     print failure
@@ -628,8 +636,4 @@ print myFiber(5, 10, 0)
 #}
 #ls = [1, 2, 3]
 #threeArg(*ls)
-
-for c in "abcde" {
-    print c
-}
 

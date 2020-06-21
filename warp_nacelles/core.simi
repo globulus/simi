@@ -85,15 +85,15 @@ extend List import StreamMixin
 
 class_ String {
     native get(key)
-    fn iterate {
-        len = @len
-        str = self
-        return [i = 0, next = fn = if @i == len nil else {
-            c = str.(@i)
+    fn iterate = [
+        src = self,
+        i = 0,
+        next = fn = if @i == @src.len nil else {
+            c = @src.(@i)
             @i += 1
             c
-        }]
-    }
+        }
+   ]
 }
 
 class_ Function
@@ -122,24 +122,28 @@ class Range {
     init(@from, @to) {
         @min = Math.min(from, to)
         @max = Math.max(from, to)
+        @ascending = to >= from
     }
 
-    fn iterate() = Range.Iterator(self)
+    fn iterate() = [
+        src = self,
+        i = @min,
+        next = fn = if @src.ascending {
+            res = if @i > @src.to nil else {
+                @i += 1
+                @i - 1
+            }
+            res
+        } else {
+            res = if @i < @src.to nil else {
+                @i -= 1
+                @i + 1
+            }
+            res
+        }
+    ]
 
     fn has(o) = o >= min and o <= max
-
-    class Iterator {
-        init(@range) {
-            @current = range.min
-        }
-
-        fn next() = if current <= range.max {
-                @current += 1
-                current - 1
-            } else {
-                nil
-            }
-    }
 }
 
 class_ Num {
