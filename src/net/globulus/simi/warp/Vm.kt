@@ -689,11 +689,11 @@ class Vm {
     internal fun gu() {
         (pop() as? String)?.let {
             try {
-            val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
-            val func = Compiler().compile(tokens)
-            val closure = Closure(func)
-            push(closure)
-            callClosure(closure, 0)
+                val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
+                val func = Compiler().compile(tokens)
+                val closure = Closure(func)
+                push(closure)
+                callClosure(closure, 0)
             } catch (e: Exception) {
                 push(Instance(exceptionClass!!, false).apply {
                     fields[Constants.MESSAGE] = e.message!!

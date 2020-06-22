@@ -7,7 +7,6 @@ import net.globulus.simi.warp.Vm
 import java.util.*
 
 class Debugger(private val vm: Vm) {
-
     private val scanner = Scanner(System.`in`)
     private var debuggingOff = false
     private val ignoredBreakpoints = mapOf<Function, List<Int>>()
@@ -32,10 +31,10 @@ class Debugger(private val vm: Vm) {
                 if (!isCall) {
                     return
                 }
+                status = StepStatus.BREAKPOINT
             }
             StepStatus.OVER -> {
-                val triggerFrame = triggerFrames.peek()
-                if (vm.fiber.fp != triggerFrame) {
+                if (vm.fiber.fp > triggerFrames.peek()) {
                     return
                 }
                 if (currentCodePoint == triggerPoints.peek()) {
@@ -43,13 +42,14 @@ class Debugger(private val vm: Vm) {
                 }
                 triggerPoints.pop()
                 triggerFrames.pop()
+                status = StepStatus.BREAKPOINT
             }
             StepStatus.OUT -> {
-                val triggerLine = triggerPoints.peek()
-                if (currentCodePoint != triggerLine) {
+                if (currentCodePoint != triggerPoints.peek()) {
                     return
                 }
                 triggerPoints.pop()
+                status = StepStatus.BREAKPOINT
             }
         }
         println("BREAKPOINT")
@@ -113,9 +113,11 @@ class Debugger(private val vm: Vm) {
             }
             'e' -> { // evaluate
                 val expr = input.substring(2)
+                debuggingOff = true
                 vm.push(expr)
                 vm.gu()
                 val res = vm.pop()
+                debuggingOff = false
                 println(res)
                 readInput(frame)
             }
@@ -130,7 +132,6 @@ class Debugger(private val vm: Vm) {
             }
             'o' -> { // step out
                 status = StepStatus.OUT
-                triggerPoints.pop()
             }
             'l' -> { // print all locals
                 printLocalsForFrame(frame, false)
