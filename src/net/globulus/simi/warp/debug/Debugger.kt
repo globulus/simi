@@ -68,8 +68,8 @@ class Debugger(private val vm: Vm) {
         println("===================")
         println("Call stack:")
         printCallStack(focusFrameIndex)
-        printLocalsForFrame(frame, true)
-        readInput(frame)
+        printLocalsForFrame(frame, codePointer, true)
+        readInput(frame, codePointer)
     }
 
     private fun printCallStack(focusFrameIndex: Int) {
@@ -81,12 +81,16 @@ class Debugger(private val vm: Vm) {
         }
     }
 
-    private fun printLocalsForFrame(frame: CallFrame, capped: Boolean) {
+    private fun printLocalsForFrame(frame: CallFrame, codePointer: CodePointer, capped: Boolean) {
         println("===================")
         println("Locals:")
-        val locals = frame.closure.function.debugInfo.locals
+        val di = frame.closure.function.debugInfo
+        val locals = di.locals
         var count = 0
         for ((sp, name) in locals) {
+            if (count == di.localsAtCodePoint[codePointer] ?: 0) {
+                break
+            }
             vm.fiber.stack[frame.sp + sp]?.let {
                 println("$name = ${vm.stringify(it)}")
                 count++
@@ -99,7 +103,7 @@ class Debugger(private val vm: Vm) {
         }
     }
 
-    private fun readInput(frame: CallFrame) {
+    private fun readInput(frame: CallFrame, codePointer: CodePointer) {
         print("šdb> ")
         val input = scanner.nextLine()
         if (input.isEmpty()) {
@@ -119,7 +123,7 @@ class Debugger(private val vm: Vm) {
                 val res = vm.pop()
                 debuggingOff = false
                 println(res)
-                readInput(frame)
+                readInput(frame, codePointer)
             }
             'i' -> { // step into
                 status = StepStatus.INTO
@@ -134,8 +138,8 @@ class Debugger(private val vm: Vm) {
                 status = StepStatus.OUT
             }
             'l' -> { // print all locals
-                printLocalsForFrame(frame, false)
-                readInput(frame)
+                printLocalsForFrame(frame, codePointer, false)
+                readInput(frame, codePointer)
             }
             else -> { // reset the step status
                 status = StepStatus.BREAKPOINT

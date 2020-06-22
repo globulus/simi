@@ -4,8 +4,8 @@ import net.globulus.simi.Token
 
 class DebugInfo(val lines: Map<CodePointer, Int>, // Maps lines to chunk positions - line X starts at position X
                 val locals: Map<Int, String>, // Maps stack pointers to local names
+                val localsAtCodePoint: Map<CodePointer, Int>, // Maps code pointers to number of locals at their time
                 val breakpoints: List<Int>, // List of bytecode positions that trigger breakpoints
-                val breakpointFiles: List<String>, // names of files for all the breakpoints
                 val tokens: List<Token>
 )
 

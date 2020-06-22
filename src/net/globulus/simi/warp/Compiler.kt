@@ -56,8 +56,8 @@ class Compiler {
 
     // Debug info
     private val debugInfoLines = mutableMapOf<CodePointer, Int>()
+    private val debugInfoLocalsAtCodePoint = mutableMapOf<CodePointer, Int>()
     private val debugInfoBreakpoints = mutableListOf<Int>()
-    private val debugInfoBreakpointFiles = mutableListOf<String>()
 
     private val numberOfEnclosingCompilers: Int by lazy {
         var count = 0
@@ -96,7 +96,7 @@ class Compiler {
         endScope()
 //        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
-                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoBreakpoints, debugInfoBreakpointFiles, tokens)
+                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoLocalsAtCodePoint, debugInfoBreakpoints, tokens)
         )
     }
 
@@ -2245,9 +2245,9 @@ class Compiler {
             return
         }
         debugInfoLines[codePointer] = byteCode.size
+        debugInfoLocalsAtCodePoint[codePointer] = locals.size
         if (token.hasBreakpoint) {
             debugInfoBreakpoints += byteCode.size
-            debugInfoBreakpointFiles += token.file
         }
     }
 
