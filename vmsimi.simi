@@ -14,7 +14,7 @@ SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]
 fn test(title, expected, proc) {
 #    print "running \(title)"
-    r = proc()
+    r = proc() # BP
     testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
     msg = "Testing \(title): " + testResult
     testResults.total += 1
@@ -639,17 +639,10 @@ print myFiber(5, 10, 0)
 
 print "three stooges".chars()
 
-for i in [1, 2, 3, 4] {
-    if i % 2 == 0 {
-        continue
-    }
-    print i
-}
-
 for i in 1000 {
     lst = List()
     for j in 1000 {
-        if j % 2 == 0 {
+        if j % 2 == 0 { # BP
             continue
         }
         lst += j

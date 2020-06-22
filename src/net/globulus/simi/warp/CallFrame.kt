@@ -1,5 +1,6 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.warp.debug.CodePointer
 import java.nio.ByteBuffer
 
 class CallFrame(val closure: Closure,
@@ -8,19 +9,22 @@ class CallFrame(val closure: Closure,
     val buffer: ByteBuffer = ByteBuffer.wrap(closure.function.code)
     val name = closure.function.name
 
-    internal fun getCurrentLine(): Int {
-        var line = 0
+    internal fun getCurrentCodePoint(): CodePointer {
+        var pointer: CodePointer? = null
         val pos = buffer.position()
-        for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.key }) {
+        for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.value }) {
             if (v >= pos) {
+                if (pos == 0) {
+                    pointer = k
+                }
                 break
             }
-            line = k
+            pointer = k
         }
-        return line
+        return pointer!!
     }
 
     override fun toString(): String {
-        return "[line ${getCurrentLine()}] in ${closure.function.name}"
+        return "[line ${getCurrentCodePoint()}] in ${closure.function.name}"
     }
 }

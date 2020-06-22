@@ -46,7 +46,11 @@ class Lexer(private val fileName: String,
                     stringInterpolationParentheses--
                     if (stringInterpolationParentheses == 0) {
                         addToken(PLUS)
-                        string(lastStringOpener, true)
+                        val str = string(lastStringOpener, true)
+                        if (str.isEmpty()) { // the interpolation was the last thing in the string, no need for the PLUS and the empty string to take up token space
+                            rollBackToken()
+                            rollBackToken()
+                        }
                     }
                 }
             }
@@ -156,8 +160,8 @@ class Lexer(private val fileName: String,
                 }
             }
             '\n' -> {
-                line++
                 addToken(NEWLINE)
+                line++
             }
             ';' -> addToken(NEWLINE)
             else -> {
@@ -300,7 +304,7 @@ class Lexer(private val fileName: String,
                     advance() // Skip the (
                     addToken(LEFT_PAREN)
                     stringInterpolationParentheses = 1
-                    return ""
+                    return valueSoFar
                 }
             }
             advance()
@@ -420,6 +424,10 @@ class Lexer(private val fileName: String,
     private fun addToken(type: TokenType, literal: SimiValue? = null) {
         val text = source.substring(start, current)
         tokens.add(Token(type, text, literal, line, fileName))
+    }
+
+    private fun rollBackToken() {
+        tokens.removeAt(tokens.size - 1)
     }
 
     private fun error(message: String): Exception {

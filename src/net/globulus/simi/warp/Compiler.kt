@@ -13,6 +13,7 @@ import net.globulus.simi.TokenType.PRINT
 import net.globulus.simi.api.SimiValue
 import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
+import net.globulus.simi.warp.debug.CodePointer
 import net.globulus.simi.warp.debug.DebugInfo
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModuleLoader
@@ -54,8 +55,9 @@ class Compiler {
     private var verifyReturnType: DynamicTypeCheck? = null
 
     // Debug info
-    private val debugInfoLines = mutableMapOf<Int, Int>()
+    private val debugInfoLines = mutableMapOf<CodePointer, Int>()
     private val debugInfoBreakpoints = mutableListOf<Int>()
+    private val debugInfoBreakpointFiles = mutableListOf<String>()
 
     private val numberOfEnclosingCompilers: Int by lazy {
         var count = 0
@@ -94,7 +96,7 @@ class Compiler {
         endScope()
 //        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
-                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoBreakpoints, tokens)
+                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoBreakpoints, debugInfoBreakpointFiles, tokens)
         )
     }
 
@@ -276,7 +278,8 @@ class Compiler {
                         }
                     }
                     val paramName = consumeVar("Expect param name.")
-                    val nameToken = Token.named(paramName)
+                    val tokenFactory = Token.Factory(previous)
+                    val nameToken = tokenFactory.named(paramName)
                     if (match(IS)) {
                         if (!allowPrepend) {
                             throw error(previous, "Argument type specifiers aren't allowed here.")
@@ -293,8 +296,8 @@ class Compiler {
                     }
                     args += paramName
                     if (initAutoset) {
-                        prependedTokens += listOf(Token.self(), Token.ofType(DOT), nameToken,
-                                Token.ofType(EQUAL), nameToken, Token.ofType(NEWLINE))
+                        prependedTokens += listOf(tokenFactory.self(), tokenFactory.ofType(DOT), nameToken,
+                                tokenFactory.ofType(EQUAL), nameToken, tokenFactory.ofType(NEWLINE))
                     }
                 } while (match(COMMA))
             }
@@ -399,7 +402,7 @@ class Compiler {
 
         if (match(LEFT_BRACE)) {
             if (kind == SClass.Kind.ENUM) {
-                compileEnumValues(name)
+                compileEnumValues(opener, name)
                 consume(NEWLINE, "Expect newline after enum values.")
             }
             var hasInit = false
@@ -435,7 +438,8 @@ class Compiler {
                             consume(NEWLINE, "Expect newline after class field declaration.")
                         } else {
                             currentClass?.initAdditionalTokens?.apply {
-                                addAll(listOf(Token.self(), Token.ofType(DOT), fieldToken, previous))
+                                val tokenFactory = Token.Factory(fieldToken)
+                                addAll(listOf(tokenFactory.self(), tokenFactory.ofType(DOT), fieldToken, previous))
                                 addAll(consumeNextExpr())
                                 add(consume(NEWLINE, "Expect newline after class field declaration."))
                             }
@@ -473,16 +477,17 @@ class Compiler {
         return returnName
     }
 
-    private fun compileEnumValues(className: String) {
+    private fun compileEnumValues(opener: Token, className: String) {
+        val factory = Token.Factory(opener)
         val tokens = mutableListOf<Token>()
         val ids = mutableListOf<String>()
         val idTokens = mutableListOf<Token>()
-        val selfDot = listOf(Token.self(), Token.ofType(DOT))
-        val classNameDot = listOf(Token.named(className), Token.ofType(DOT))
-        val comma = Token.ofType(COMMA)
-        val lprp = listOf(Token.ofType(LEFT_PAREN), Token.ofType(RIGHT_PAREN))
-        val equalsSelf = listOf(Token.ofType(EQUAL), Token.self())
-        val nl = Token.ofType(NEWLINE)
+        val selfDot = listOf(factory.self(), factory.ofType(DOT))
+        val classNameDot = listOf(factory.named(className), factory.ofType(DOT))
+        val comma = factory.ofType(COMMA)
+        val lprp = listOf(factory.ofType(LEFT_PAREN), factory.ofType(RIGHT_PAREN))
+        val equalsSelf = listOf(factory.ofType(EQUAL), factory.self())
+        val nl = factory.ofType(NEWLINE)
         do {
             matchAllNewlines()
             val id = consume(IDENTIFIER, "Expect identifier for enum value.")
@@ -505,10 +510,10 @@ class Compiler {
 
         // Synthesize the values List
         tokens += selfDot
-        tokens += Token.named("values")
-        tokens += listOf(Token.ofType(EQUAL), Token.ofType(LEFT_BRACKET))
+        tokens += factory.named("values")
+        tokens += listOf(factory.ofType(EQUAL), factory.ofType(LEFT_BRACKET))
         tokens += idTokens
-        tokens += listOf(Token.ofType(RIGHT_BRACKET), nl)
+        tokens += listOf(factory.ofType(RIGHT_BRACKET), nl)
 
         val compiler = Compiler().also {
             it.enclosing = this
@@ -773,6 +778,7 @@ class Compiler {
      */
     private fun whenSomething(isExpr: Boolean) {
         val origin = previous
+        val factory = Token.Factory(origin)
         val whenTokens = mutableListOf<Token>()
         var usesTempVar = false
         val id = if (peekSequence(IDENTIFIER, LEFT_BRACE, NEWLINE)
@@ -781,10 +787,10 @@ class Compiler {
             advance()
         } else {
             usesTempVar = true
-            val tempId = Token.named(nextImplicitVarName("when"))
-            whenTokens += listOf(tempId, Token.ofType(EQUAL))
+            val tempId = factory.named(nextImplicitVarName("when"))
+            whenTokens += listOf(tempId, factory.ofType(EQUAL))
             whenTokens += consumeUntilType(LEFT_BRACE)
-            whenTokens += Token.ofType(NEWLINE)
+            whenTokens += factory.ofType(NEWLINE)
             tempId
         }
         var first = true
@@ -854,7 +860,7 @@ class Compiler {
         }
         consume(RIGHT_BRACE, "Expect '}' at the end of when")
         if (isExpr && usesTempVar) {
-            whenTokens += Token.ofType(EOF)
+            whenTokens += factory.ofType(EOF)
             compileAsCalledLambdaWithSingleReturn(whenTokens, 1) {
                 compileInternal(true)
             }
@@ -868,6 +874,7 @@ class Compiler {
 
     private fun forStatement() {
         val opener = previous
+        val factory = Token.Factory(opener)
         val assignmentTokens = mutableListOf<Token>()
         val ids = if (match(IDENTIFIER)) {
             assignmentTokens += previous
@@ -876,7 +883,7 @@ class Compiler {
             val start = current - 1
             scanForObjectDecomp(false)?.let {
                 assignmentTokens += tokens.subList(start, current)
-                it.map { id -> Token.named(id) }
+                it.map { id -> factory.named(id) }
             } ?: throw error(previous, "Expect object decomposition in for loop.")
         } else {
             throw error(previous, "Expect identifier or object decomp after 'for'.")
@@ -895,38 +902,38 @@ class Compiler {
             elseBlockTokens = consumeNextBlock(false)
         }
         val tokens = mutableListOf<Token>().apply {
-            val iterator = Token.named(nextImplicitVarName("iterator"))
-            val eq = Token.ofType(EQUAL)
-            val lp = Token.ofType(LEFT_PAREN)
-            val rp = Token.ofType(RIGHT_PAREN)
-            val dot = Token.ofType(DOT)
-            val nl = Token.ofType(NEWLINE)
-            val ifToken = Token.ofType(IF)
-            val eqEq = Token.ofType(EQUAL_EQUAL)
-            val nil = Token.ofType(NIL)
+            val iterator = factory.named(nextImplicitVarName("iterator"))
+            val eq = factory.ofType(EQUAL)
+            val lp = factory.ofType(LEFT_PAREN)
+            val rp = factory.ofType(RIGHT_PAREN)
+            val dot = factory.ofType(DOT)
+            val nl = factory.ofType(NEWLINE)
+            val ifToken = factory.ofType(IF)
+            val eqEq = factory.ofType(EQUAL_EQUAL)
+            val nil = factory.ofType(NIL)
             val checkTokens = mutableListOf<Token>()
             for ((i, id) in ids.withIndex()) {
                 if (i > 0) {
-                    checkTokens.add(Token.ofType(AND))
+                    checkTokens.add(factory.ofType(AND))
                 }
                 checkTokens.addAll(listOf(id, eqEq, nil))
             }
             addAll(listOf(iterator, eq, lp)); addAll(iterableTokens); addAll(listOf(rp, dot,
-                Token.named(Constants.ITERATE), lp, rp, nl))
+                factory.named(Constants.ITERATE), lp, rp, nl))
             if (elseBlockTokens != null) {
                 addAll(listOf(ifToken, iterator, eqEq, nil))
                 addAll(elseBlockTokens)
-                add(Token.ofType(ELSE))
+                add(factory.ofType(ELSE))
             }
-            addAll(listOf(Token.ofType(WHILE), iterator))
+            addAll(listOf(factory.ofType(WHILE), iterator))
             for ((i, blockToken) in blockTokens.withIndex()) {
                 add(blockToken)
                 if (i == 0) {
                     add(nl)
                     addAll(assignmentTokens)
-                    addAll(listOf(eq, iterator, dot, Token.named(Constants.NEXT), lp, rp, nl, ifToken))
+                    addAll(listOf(eq, iterator, dot, factory.named(Constants.NEXT), lp, rp, nl, ifToken))
                     addAll(checkTokens)
-                    add(Token.ofType(BREAK))
+                    add(factory.ofType(BREAK))
                     add(nl)
                 }
             }
@@ -1579,11 +1586,12 @@ class Compiler {
     private fun objectComprehension(opener: Token) {
         var isList = true
         current-- // include the skipped for
+        val factory = Token.Factory(opener)
         val tokens = mutableListOf<Token>()
-        val nl = Token.ofType(NEWLINE)
-        val lbnl = listOf(Token.ofType(LEFT_BRACE), nl)
-        val rbnl = listOf(Token.ofType(RIGHT_BRACE), nl)
-        val nlHashAddToComprehension = listOf(nl, Token.ofType(HASH), Token.named(ADD_TO_COMPREHENSION))
+        val nl = factory.ofType(NEWLINE)
+        val lbnl = listOf(factory.ofType(LEFT_BRACE), nl)
+        val rbnl = listOf(factory.ofType(RIGHT_BRACE), nl)
+        val nlHashAddToComprehension = listOf(nl, factory.ofType(HASH), factory.named(ADD_TO_COMPREHENSION))
         var hasIf = false
         tokens += consumeUntilType(IF, DO)
         tokens += lbnl
@@ -1608,7 +1616,7 @@ class Compiler {
             tokens += rbnl // close the if block
         }
         tokens += rbnl // close the for block
-        tokens += Token.ofType(EOF)
+        tokens += factory.ofType(EOF)
         consume(RIGHT_BRACKET, "Expect ']' at the end of object comprehension.")
         compileAsCalledLambdaWithSingleReturn(tokens, 0) {
             declareLocal(nextImplicitVarName("objCompr"), true)
@@ -1681,17 +1689,18 @@ class Compiler {
     private fun objectDecomp(ids: List<String>) {
         val tempVarName = nextImplicitVarName("objDecomp")
         declareLocal(tempVarName)
+        val factory = Token.Factory(previous)
         firstNonAssignment(true)
         consume(NEWLINE, "Expect newline after object decomposition.")
         val tokens = mutableListOf<Token>()
-        val eq = Token.ofType(EQUAL)
-        val tempVarToken = Token.named(tempVarName)
-        val dot = Token.ofType(DOT)
-        val nilCoal = Token.ofType(QUESTION_QUESTION)
-        val nl = Token.ofType(NEWLINE)
+        val eq = factory.ofType(EQUAL)
+        val tempVarToken = factory.named(tempVarName)
+        val dot = factory.ofType(DOT)
+        val nilCoal = factory.ofType(QUESTION_QUESTION)
+        val nl = factory.ofType(NEWLINE)
         for ((i, id) in ids.withIndex()) {
-            val idToken = Token.named(id)
-            tokens.addAll(listOf(idToken, eq, tempVarToken, dot, idToken, nilCoal, tempVarToken, dot, Token.ofLong(i.toLong()), nl))
+            val idToken = factory.named(id)
+            tokens.addAll(listOf(idToken, eq, tempVarToken, dot, idToken, nilCoal, tempVarToken, dot, factory.ofLong(i.toLong()), nl))
         }
         compileNested(tokens, false)
         throw StatementDeepDown() // unwind all the way to the top and prevent emitting of expressionStatement POP
@@ -2181,7 +2190,7 @@ class Compiler {
             verifyReturnType = null // to prevent infinite recursion due to checks when returning TypeMismatchException
             val name = "__returnVerification_${numberOfEnclosingCompilers}_${returnVerificationVarCounter++}__"
             declareLocal(name)
-            compileNested(getTypeVerificationTokens(Token.named(name), type), false)
+            compileNested(getTypeVerificationTokens(Token.Factory(previous).named(name), type), false)
             verifyReturnType = type // assign it back as there could be multiple returns in a body
         }
     }
@@ -2231,9 +2240,14 @@ class Compiler {
     }
 
     private fun updateDebugInfo(token: Token) {
-        debugInfoLines.putIfAbsent(token.line, byteCode.size)
+        val codePointer = CodePointer(token.line, token.file)
+        if (debugInfoLines.containsKey(codePointer)) {
+            return
+        }
+        debugInfoLines[codePointer] = byteCode.size
         if (token.hasBreakpoint) {
             debugInfoBreakpoints += byteCode.size
+            debugInfoBreakpointFiles += token.file
         }
     }
 
@@ -2378,19 +2392,20 @@ class Compiler {
     }
 
     private fun getTypeVerificationTokens(name: Token, type: DynamicTypeCheck): List<Token> {
-        val list = mutableListOf(Token.ofType(IF), Token.ofType(LEFT_PAREN), name,
-                Token.ofType(ISNOT), Token.named(type.type))
+        val factory = Token.Factory(name)
+        val list = mutableListOf(factory.ofType(IF), factory.ofType(LEFT_PAREN), name,
+                factory.ofType(ISNOT), factory.named(type.type))
         if (type.canException) {
-            list += listOf(Token.ofType(AND), name, Token.ofType(ISNOT),
-                    Token.named(Constants.CLASS_EXCEPTION), Token.ofType(RIGHT_PAREN))
+            list += listOf(factory.ofType(AND), name, factory.ofType(ISNOT),
+                    factory.named(Constants.CLASS_EXCEPTION), factory.ofType(RIGHT_PAREN))
         } else {
-            list += Token.ofType(RIGHT_PAREN)
+            list += factory.ofType(RIGHT_PAREN)
         }
         if (!type.canNil) {
-            list += listOf(Token.ofType(OR), name, Token.ofType(EQUAL_EQUAL), Token.ofType(NIL))
+            list += listOf(factory.ofType(OR), name, factory.ofType(EQUAL_EQUAL), factory.ofType(NIL))
         }
-        list += listOf(Token.ofType(TokenType.RETURN), Token.named(Constants.EXCEPTION_TYPE_MISMATCH),
-                Token.ofType(LEFT_PAREN), Token.ofType(RIGHT_PAREN), Token.ofType(NEWLINE)
+        list += listOf(factory.ofType(TokenType.RETURN), factory.named(Constants.EXCEPTION_TYPE_MISMATCH),
+                factory.ofType(LEFT_PAREN), factory.ofType(RIGHT_PAREN), factory.ofType(NEWLINE)
         ) // TODO fix
         return list
     }

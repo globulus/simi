@@ -1,8 +1,8 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
-import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
+import net.globulus.simi.warp.debug.Debugger
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
@@ -10,12 +10,12 @@ import java.util.*
 import kotlin.math.round
 
 class Vm {
-    private lateinit var fiber: Fiber
+    internal lateinit var fiber: Fiber
     private var openUpvalues = mutableMapOf<String, Upvalue>()
     private val annotationBuffer = mutableListOf<Any>()
     private var nonFinalizedClasses = Stack<Int>()
 
-    private val scanner = Scanner(System.`in`)
+    private val debugger = Debugger(this)
 
     fun interpret(input: Fiber) {
         instance = this
@@ -29,10 +29,7 @@ class Vm {
 
     private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
         loop@ while (predicate?.invoke() != false) {
-            if (currentFunction.debugInfo.breakpoints.contains(buffer.position())) {
-                triggerBreakpoint()
-                scanner.nextLine()
-            }
+            debugger.triggerBreakpoint()
             val code = nextCode
             when (code) {
                 TRUE -> push(true)
@@ -565,6 +562,7 @@ class Vm {
         }
         fiber.callFrames[fiber.fp] = CallFrame(closure, fiber.sp - f.arity - 1)
         fiber.fp++
+        debugger.triggerBreakpoint(true)
         runLocal()
     }
 
@@ -688,7 +686,7 @@ class Vm {
         push(ListInstance(isMutable, items))
     }
 
-    private fun gu() {
+    internal fun gu() {
         (pop() as? String)?.let {
             try {
             val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
@@ -914,7 +912,7 @@ class Vm {
         }
     }
 
-    private fun push(o: Any) {
+    internal fun push(o: Any) {
         resizeStackIfNecessary()
         fiber.stack[fiber.sp] = o
         fiber.sp++
@@ -1070,28 +1068,8 @@ class Vm {
         }
     }
 
-    private fun triggerBreakpoint() {
-        val debugInfo = currentFunction.debugInfo
-        val currentLine = fiber.frame.getCurrentLine()
-        println("BREAKPOINT")
-        val highlightTokenIndexMinus1 = debugInfo.tokens.indexOfFirst { it.line == currentLine + 1 } // the first one is the newline
-        println(TokenPatcher.patch(debugInfo.tokens, debugInfo.tokens[highlightTokenIndexMinus1 + 1])) // we want to show the second one
-        println("===================")
-        println("Call stack:")
-        printCallStack()
-        printLocalsForFrame(fiber.frame)
-    }
-
-    private fun printLocalsForFrame(frame: CallFrame) {
-        println("===================")
-        println("Locals:")
-        for ((sp, name) in frame.closure.function.debugInfo.locals) {
-            println("$name = ${stringify(fiber.stack[frame.sp + sp]!!)}")
-        }
-    }
-
-    private val buffer: ByteBuffer get() = fiber.frame.buffer
-    private val currentFunction: Function get() = fiber.frame.closure.function
+    internal val buffer: ByteBuffer get() = fiber.frame.buffer
+    internal val currentFunction: Function get() = fiber.frame.closure.function
     private val currentNonFinalizedClass: SClass get() = fiber.stack[nonFinalizedClasses.peek()] as SClass
     private val self: Any? get() = fiber.stack[fiber.frame.sp] // self is always at 0
 
