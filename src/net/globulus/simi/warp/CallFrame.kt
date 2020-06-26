@@ -13,7 +13,7 @@ class CallFrame(val closure: Closure,
         var pointer: CodePointer? = null
         val pos = buffer.position()
         for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.value }) {
-            if (v >= pos) {
+            if (v > pos) {
                 if (pointer == null) {
                     pointer = k
                 }

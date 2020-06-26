@@ -104,10 +104,15 @@ class Compiler {
             updateCurrentCodePoint(tokens[0])
         }
         this.within()
+        val keptLocals = mutableListOf<Local>().apply {
+            addAll(locals)
+        }
         endScope()
 //        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
-                DebugInfo(this, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
+                DebugInfo(this.apply {
+                    locals = keptLocals
+                }, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
         )
     }
 

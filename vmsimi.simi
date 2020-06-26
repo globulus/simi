@@ -637,17 +637,17 @@ print myFiber(5, 10, 0)
 #ls = [1, 2, 3]
 #threeArg(*ls)
 
-print "three stooges".chars()
+print "three stooges".chars() # BP
 
-#for i in 1000 {
-#    lst = List()
-#    for j in 1..1000 {
-#        print j
-#        if j % 2 == 0 {
-#            continue
-#        }
-#        lst += j
-#    }
-##    [for j in 1000 do j]
-#}
+for i in 1000 {
+    lst = List()
+    for j in 1000 {
+        print j
+        if j % 2 == 0 {
+            continue
+        }
+        lst += j
+    }
+#    [for j in 1000 do j]
+}
 

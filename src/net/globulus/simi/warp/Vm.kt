@@ -23,7 +23,9 @@ class Vm {
         push(input)
         try {
             await(true, 0)
-        } catch (ignored: IllegalStateException) { } // Silently abort the program
+        } catch (ignored: IllegalStateException) {
+            val a = 5
+        } // Silently abort the program
         instance = null
     }
 

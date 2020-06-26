@@ -68,6 +68,7 @@ class Debugger(private val vm: Vm) {
         val tokens = di.compiler.tokens.filter { it.file == codePointer.file }
         val highlightTokenIndex = tokens.indexOfFirst { it.line == codePointer.line }
         val table = AsciiTable()
+        table.addRule()
         table.addRow(null, null, "BREAKPOINT")
         table.addRule()
         table.addRow("Call stack", "Source code", "Locals").setTextAlignment(TextAlignment.CENTER)
@@ -77,6 +78,7 @@ class Debugger(private val vm: Vm) {
         val locals = getLocalsForFrame(frame, codePointer, true)
         table.renderer.cwc = CWC_LongestLine()
         table.addRow(callStack.replaceNewlines(), source.replaceNewlines(), locals.replaceNewlines()).setTextAlignment(TextAlignment.LEFT)
+        table.addRule()
         println(table.render())
         readInput(frame, codePointer)
     }
@@ -124,8 +126,16 @@ class Debugger(private val vm: Vm) {
         return sb.toString()
     }
 
+    private fun getStackForFrame(frame: CallFrame): String {
+        val sb = StringBuilder()
+        for (i in frame.sp until vm.fiber.sp) {
+            sb.appendln("[$i] ${vm.stringify(vm.fiber.stack[i]!!)}")
+        }
+        return sb.toString()
+    }
+
     private fun readInput(frame: CallFrame, codePointer: CodePointer) {
-        print("šdb> ")
+        print("šdb ('h' for help)> ")
         val input = scanner.nextLine()
         if (input.isEmpty()) {
             return
@@ -160,6 +170,10 @@ class Debugger(private val vm: Vm) {
             }
             'l' -> { // print all locals
                 println(getLocalsForFrame(frame, codePointer, false))
+                readInput(frame, codePointer)
+            }
+            's' -> { // print the stack for the current frame
+                println(getStackForFrame(frame))
                 readInput(frame, codePointer)
             }
             else -> { // reset the step status
