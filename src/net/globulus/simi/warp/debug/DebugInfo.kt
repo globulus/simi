@@ -1,12 +1,11 @@
 package net.globulus.simi.warp.debug
 
-import net.globulus.simi.Token
+import net.globulus.simi.warp.Compiler
 
-class DebugInfo(val lines: Map<CodePointer, Int>, // Maps lines to chunk positions - line X starts at position X
-                val locals: Map<Int, String>, // Maps stack pointers to local names
-                val localsAtCodePoint: Map<CodePointer, Int>, // Maps code pointers to number of locals at their time
-                val breakpoints: List<Int>, // List of bytecode positions that trigger breakpoints
-                val tokens: List<Token>
+class DebugInfo(val compiler: Compiler,
+                val locals: List<Pair<Compiler.Local, LocalLifetime>>, // list of all the locals ever and when were they discarded (at which line)
+                val lines: Map<CodePointer, Int>, // Maps lines to chunk positions - line X starts at position X
+                val breakpoints: List<Int> // List of bytecode positions that trigger breakpoints
 )
 
 data class CodePointer(val line: Int, val file: String) {
@@ -14,3 +13,5 @@ data class CodePointer(val line: Int, val file: String) {
         return "$file:$line"
     }
 }
+
+data class LocalLifetime(val start: CodePointer, var end: CodePointer?)

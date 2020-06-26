@@ -15,6 +15,7 @@ import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.debug.CodePointer
 import net.globulus.simi.warp.debug.DebugInfo
+import net.globulus.simi.warp.debug.LocalLifetime
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
@@ -23,15 +24,16 @@ import java.util.regex.Pattern
 class Compiler {
     private lateinit var byteCode: MutableList<Byte>
 
-    private lateinit var tokens: List<Token>
+    internal lateinit var tokens: List<Token>
     private var current = 0
 
     private val constTable = mutableMapOf<Any, Int>()
     private val constList = mutableListOf<Any>()
     private var constCount = 0
 
-    private val locals = mutableListOf<Local>()
-    private val upvalues = mutableListOf<Upvalue>()
+    internal var locals = mutableListOf<Local>()
+        private set
+    internal val upvalues = mutableListOf<Upvalue>()
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
     private val loops = Stack<ActiveLoop>()
 
@@ -48,15 +50,16 @@ class Compiler {
     private var lastChunk: Chunk? = null
     private val chunks = mutableListOf<Chunk>()
 
-    private var enclosing: Compiler? = null
+    internal var enclosing: Compiler? = null
     private lateinit var kind: String
     private lateinit var fiberName: String
     // If the function being compiled was marked with "is Type", we need to verify its return statements
     private var verifyReturnType: DynamicTypeCheck? = null
 
     // Debug info
+    private lateinit var currentCodePoint: CodePointer
+    private val debugInfoLocals = mutableMapOf<Local, LocalLifetime>()
     private val debugInfoLines = mutableMapOf<CodePointer, Int>()
-    private val debugInfoLocalsAtCodePoint = mutableMapOf<CodePointer, Int>()
     private val debugInfoBreakpoints = mutableListOf<Int>()
 
     private val numberOfEnclosingCompilers: Int by lazy {
@@ -78,6 +81,12 @@ class Compiler {
         }
     }
 
+    internal fun compileLambdaForGu(tokens: List<Token>): Function {
+        return compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+            compileInternal(false)
+        }
+    }
+
     private fun compileFunction(tokens: List<Token>,
                                 name: String,
                                 arity: Int,
@@ -89,14 +98,16 @@ class Compiler {
         current = 0
         this.kind = kind
         val selfName = if (kind != Parser.KIND_FUNCTION) Constants.SELF else ""
-        locals += Local(selfName, 0, 0, isCaptured = false) // Stores the top-level function
+        locals.add(Local(selfName, 0, 0, isCaptured = false)) // Stores the top-level function
         beginScope()
+        if (tokens.isNotEmpty()) {
+            updateCurrentCodePoint(tokens[0])
+        }
         this.within()
-        val debugInfoLocals = locals.map { it.sp to it.name }.toMap()
         endScope()
 //        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
-                DebugInfo(debugInfoLines, debugInfoLocals, debugInfoLocalsAtCodePoint, debugInfoBreakpoints, tokens)
+                DebugInfo(this, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
         )
     }
 
@@ -1085,8 +1096,8 @@ class Compiler {
             // the whole thing might be confusing from the user's perspective.
             throw error(previous, "Cannot 'continue' in a 'do' block!")
         }
-        // Discards scopes up to the level of loop statement (hence + 2)
-        for (depth in scopeDepth downTo (activeLoop.depth + 2)) {
+        // Discards scopes up to the level of loop statement (hence + 1)
+        for (depth in scopeDepth downTo (activeLoop.depth + 1)) {
             discardLocals(depth, emitPops = true, keepLocals = true)
         }
         emitJump(JUMP, loops.peek().start)
@@ -2239,13 +2250,16 @@ class Compiler {
         chunks += chunk
     }
 
+    private fun updateCurrentCodePoint(token: Token) {
+        currentCodePoint = CodePointer(token.line, token.file)
+    }
+
     private fun updateDebugInfo(token: Token) {
-        val codePointer = CodePointer(token.line, token.file)
-        if (debugInfoLines.containsKey(codePointer)) {
+        updateCurrentCodePoint(token)
+        if (debugInfoLines.containsKey(currentCodePoint)) {
             return
         }
-        debugInfoLines[codePointer] = byteCode.size
-        debugInfoLocalsAtCodePoint[codePointer] = locals.size
+        debugInfoLines[currentCodePoint] = byteCode.size
         if (token.hasBreakpoint) {
             debugInfoBreakpoints += byteCode.size
         }
@@ -2266,7 +2280,8 @@ class Compiler {
         if (isConst) {
             l.isConst = true
         }
-        locals += l
+        locals.add(l)
+        debugInfoLocals[l] = LocalLifetime(currentCodePoint, null)
         return l
     }
 
@@ -2295,6 +2310,7 @@ class Compiler {
                     emitCode(POP)
                 }
             }
+            debugInfoLocals[locals[i]]?.end = currentCodePoint
             if (!keepLocals) {
                 locals.removeAt(i)
             }
@@ -2304,7 +2320,9 @@ class Compiler {
     }
 
     private fun discardLastLocal(pop: Boolean) {
-        locals.removeAt(locals.size - 1)
+        val end = locals.size - 1
+        debugInfoLocals[locals[end]]?.end = currentCodePoint
+        locals.removeAt(end)
         if (pop) {
             emitCode(POP)
         }
@@ -2455,19 +2473,19 @@ class Compiler {
         return false
     }
 
-    private data class Local(val name: String,
-                             val sp: Int,
-                             val depth: Int,
-                             var isCaptured: Boolean
+    data class Local(val name: String,
+                              val sp: Int,
+                              val depth: Int,
+                              var isCaptured: Boolean
     ) {
         var isConst = (name == Constants.SELF || CONST_IDENTIFIER.matcher(name).matches())
     }
 
-    private data class Upvalue(val sp: Int,
-                               val isLocal: Boolean,
-                               val name: String,
-                               val isConst: Boolean,
-                               val fiberName: String
+    internal data class Upvalue(val sp: Int,
+                                val isLocal: Boolean,
+                                val name: String,
+                                val isConst: Boolean,
+                                val fiberName: String
     )
 
     private open class ActiveLoop(val start: Int, val depth: Int) {

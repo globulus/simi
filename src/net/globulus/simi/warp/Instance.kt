@@ -25,6 +25,7 @@ open class Instance(val klass: SClass) : Fielded {
     internal open fun stringify(vm: Vm): String {
         return StringBuilder()
                 .append(if (mutable) TokenType.DOLLAR_LEFT_BRACKET.toCode() else TokenType.LEFT_BRACKET.toCode())
+                .append(if (klass != Vm.objectClass && klass != Vm.listClass) "class = ${klass.name}, " else "")
                 .append(fields.entries
                         // for raw objects, just show their respective fields, ignoring the Object class methods
                         .filter { Vm.objectClass?.fields?.containsKey(it.key) == false }

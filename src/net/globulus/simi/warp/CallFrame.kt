@@ -14,7 +14,7 @@ class CallFrame(val closure: Closure,
         val pos = buffer.position()
         for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.value }) {
             if (v >= pos) {
-                if (pos == 0) {
+                if (pointer == null) {
                     pointer = k
                 }
                 break

@@ -14,7 +14,7 @@ SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]
 fn test(title, expected, proc) {
 #    print "running \(title)"
-    r = proc() # BP
+    r = proc()
     testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
     msg = "Testing \(title): " + testResult
     testResults.total += 1
@@ -295,8 +295,8 @@ test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception
 
 fn safeGetAndCall(arg) = arg?.field?()
 test("safe get and call pass", 0, safeGetAndCall([field = =0]))
-test("safe get fail", "NilReferenceException instance", "" + safeGetAndCall(nil))
-test("safe call fail", "NilReferenceException instance", "" + safeGetAndCall([]))
+test("safe get fail", "[class = NilReferenceException, ]", "" + safeGetAndCall(nil))
+test("safe call fail", "[class = NilReferenceException, ]", "" + safeGetAndCall([]))
 test("safe get fail and catch", 1, fn {
     return safeGetAndCall(nil) ?! {
         return 1
@@ -351,7 +351,7 @@ fn doElseBreakIt {
     }
     return s
 }
-test("do else break it", "SomeException instance66exception SomeException instance6", doElseBreakIt())
+test("do else break it", "[class = SomeException, message = Some exception]66exception [class = SomeException, message = Some exception]6", doElseBreakIt())
 
 fn doElseBreakNil {
     s = ""
@@ -639,14 +639,15 @@ print myFiber(5, 10, 0)
 
 print "three stooges".chars()
 
-for i in 1000 {
-    lst = List()
-    for j in 1000 {
-        if j % 2 == 0 { # BP
-            continue
-        }
-        lst += j
-    }
-#    [for j in 1000 do j]
-}
+#for i in 1000 {
+#    lst = List()
+#    for j in 1..1000 {
+#        print j
+#        if j % 2 == 0 {
+#            continue
+#        }
+#        lst += j
+#    }
+##    [for j in 1000 do j]
+#}
 

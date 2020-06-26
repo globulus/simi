@@ -152,7 +152,7 @@ class Vm {
                         push(it.annotations.toSimiObject())
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
-                GU -> gu()
+                GU -> gu(currentFunction.debugInfo.compiler)
                 YIELD -> yield(pop())
                 NIL_CHECK -> {
                     if (peek() == Nil) {
@@ -686,13 +686,24 @@ class Vm {
         push(ListInstance(isMutable, items))
     }
 
-    internal fun gu() {
+    internal fun gu(enclosingCompiler: Compiler) {
         (pop() as? String)?.let {
             try {
                 val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
-                val func = Compiler().compile(tokens)
-                val closure = Closure(func)
+                val compiler = Compiler().apply {
+                    enclosing = enclosingCompiler
+                }
+                val f = compiler.compileLambdaForGu(tokens)
+                val closure = Closure(f)
                 push(closure)
+                for (i in 0 until f.upvalueCount) {
+                    val upvalue = compiler.upvalues[i]
+                    closure.upvalues[i] = if (upvalue.isLocal) {
+                        captureUpvalue(fiber.frame.sp + upvalue.sp, upvalue.fiberName)
+                    } else {
+                        fiber.frame.closure.upvalues[upvalue.sp]
+                    }
+                }
                 callClosure(closure, 0)
             } catch (e: Exception) {
                 push(Instance(exceptionClass!!, false).apply {
@@ -1028,7 +1039,7 @@ class Vm {
                                 call(getBoundMethod(o, o.klass, toStringField, Constants.TO_STRING)!!, 0)
                                 pop() as String
                             }
-                            else -> o.toString()
+                            else -> o.stringify(this)
                         }
                     }
                 }
