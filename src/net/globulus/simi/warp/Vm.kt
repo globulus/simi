@@ -155,6 +155,7 @@ class Vm {
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu(currentFunction.debugInfo.compiler)
+                IVIC -> push(ivic(pop()))
                 YIELD -> yield(pop())
                 NIL_CHECK -> {
                     if (peek() == Nil) {
@@ -713,6 +714,20 @@ class Vm {
                 })
             }
         } ?: throw runtimeError("'gu' must have a string argument.")
+    }
+
+    internal fun ivic(value: Any): Any {
+        return when (value) {
+            is String, is Long, is Double, is Boolean -> value
+            is Function -> value.ivic()
+            is Closure -> value.function.ivic()
+            is BoundMethod -> value.method.function.ivic()
+            is Fiber -> value.closure.function.ivic()
+            is FiberTemplate -> value.closure.function.ivic()
+//            is NativeFunction -> CANT DO THIS
+            is Instance -> stringify(value)
+            else -> throw IllegalArgumentException("WTF")
+        }
     }
 
     private fun captureUpvalue(sp: Int, fiberName: String): Upvalue {

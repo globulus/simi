@@ -121,4 +121,11 @@ a = 5
 
 #### Printing
 
-TODO fill
+You can print any value to standard output with the **print** keyword. Printing automatically stringified the value:
+```ruby
+print 3
+print "abc"
+print fn (a, b, c) {  }
+```
+
+> *Design note:* Normally, printing to standard output would go in the *Io* class, but since printing is such a common and prevalent operation, I decided to leave it as is for now.

@@ -70,6 +70,7 @@ enum class OpCode {
     ANNOTATE_FIELD, // has a separate call because class fields are only declared in the init, so we need to trigger the annotation process in the VM manually
     GET_ANNOTATIONS,
     GU,
+    IVIC,
     FIBER,
     YIELD,
     NIL_CHECK,

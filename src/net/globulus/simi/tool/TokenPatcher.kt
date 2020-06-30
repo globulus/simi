@@ -38,14 +38,14 @@ object TokenPatcher {
         return sb.toString()
     }
 
-    private fun tokenCode(token: Token) = try {
+    internal fun tokenCode(token: Token) = try {
         token.type.toCode()
     } catch (e: Exception) {
         token.lexeme
     }
 
-    private fun spaceBefore(token: Token) = when (token.type) {
-        DOT, LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET -> ""
+    internal fun spaceBefore(token: Token) = when (token.type) {
+        DOT, DOT_DOT, DOT_DOT_DOT, LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET -> ""
         else -> " "
     }
 }

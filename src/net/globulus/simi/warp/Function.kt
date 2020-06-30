@@ -1,5 +1,6 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.debug.DebugInfo
 
 class Function(
@@ -15,5 +16,9 @@ class Function(
 
     override fun toString(): String {
         return "<def $name $arity>"
+    }
+
+    internal fun ivic(): String {
+        return debugInfo.compiler.tokens.lifetimeTokens(debugInfo.lifetime).joinToString("") { TokenPatcher.spaceBefore(it) + TokenPatcher.tokenCode(it) }
     }
 }

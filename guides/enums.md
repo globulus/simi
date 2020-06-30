@@ -28,4 +28,22 @@ enum Mountain {
     
     init(@height)
 }
+
+print Mountain.K2.height
+```
+
+All the enum values can be accessed via the class method *values*:
+```ruby
+mountains = Mountain.values # [MT_EVEREST, K2, KANGCHENJUNGA, LHTOSE]
+```
+
+Enum instances contain method *ordinal* which returns the index of enum value at declaration and represents natural ordering:
+```ruby
+print Mountain.LHTOSE.ordinal() # prints 3
+print Mountain.MT_EVEREST.ordinal() # prints 0
+```
+
+Enum instances also automatically override the *toString* method match their literal:
+```ruby
+print Mountain.LTHOSE # prints LHTOSE
 ```

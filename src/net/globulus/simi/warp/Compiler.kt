@@ -7,6 +7,7 @@ import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.TokenType.CLASS
 import net.globulus.simi.TokenType.IS
+import net.globulus.simi.TokenType.IVIC
 import net.globulus.simi.TokenType.MOD
 import net.globulus.simi.TokenType.NIL
 import net.globulus.simi.TokenType.PRINT
@@ -15,7 +16,7 @@ import net.globulus.simi.tool.TokenPatcher
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.debug.CodePointer
 import net.globulus.simi.warp.debug.DebugInfo
-import net.globulus.simi.warp.debug.LocalLifetime
+import net.globulus.simi.warp.debug.Lifetime
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
@@ -58,7 +59,7 @@ class Compiler {
 
     // Debug info
     private lateinit var currentCodePoint: CodePointer
-    private val debugInfoLocals = mutableMapOf<Local, LocalLifetime>()
+    private val debugInfoLocals = mutableMapOf<Local, Lifetime>()
     private val debugInfoLines = mutableMapOf<CodePointer, Int>()
     private val debugInfoBreakpoints = mutableListOf<Int>()
 
@@ -74,7 +75,7 @@ class Compiler {
 
     fun compile(tokens: List<Token>): Function {
         val name = SCRIPT + System.currentTimeMillis()
-        return compileFunction(tokens, name, 0, name) {
+        return compileFunction(tokens, name, 0, name, Lifetime.of(tokens)) {
             fiberName = name
             compileInternal(false)
             emitReturnNil()
@@ -82,7 +83,7 @@ class Compiler {
     }
 
     internal fun compileLambdaForGu(tokens: List<Token>): Function {
-        return compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+        return compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA, Lifetime.of(tokens)) {
             compileInternal(false)
         }
     }
@@ -91,6 +92,7 @@ class Compiler {
                                 name: String,
                                 arity: Int,
                                 kind: String,
+                                lifetime: Lifetime,
                                 within: Compiler.() -> Unit
     ): Function {
         byteCode = mutableListOf()
@@ -112,7 +114,7 @@ class Compiler {
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
                 DebugInfo(this.apply {
                     locals = keptLocals
-                }, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
+                }, lifetime, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
         )
     }
 
@@ -241,7 +243,8 @@ class Compiler {
             it.currentClass = currentClass
             it.verifyReturnType = returnType
         }
-        val f = funcCompiler.compileFunction(tokens, name, args.size, kind) {
+        val lifetime = Lifetime(declaration, null)
+        val f = funcCompiler.compileFunction(tokens, name, args.size, kind, lifetime) {
             fiberName = if (kind == Parser.KIND_FIBER) name else this@Compiler.fiberName
             current = curr
             args.forEach { declareLocal(it) }
@@ -255,6 +258,7 @@ class Compiler {
                 if (hasBody) {
                     block(false)
                 }
+                lifetime.end = CodePointer(previous)
                 emitReturn {
                     if (kind == Parser.KIND_INIT) {
                         emitGetLocal(Constants.SELF, null) // Emit self
@@ -535,7 +539,7 @@ class Compiler {
             it.enclosing = this
             it.currentClass = currentClass
         }
-        val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, Parser.KIND_METHOD) {
+        val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, Parser.KIND_METHOD, Lifetime.of(tokens)) {
             compileInternal(false)
             emitReturnNil()
         }
@@ -1367,7 +1371,7 @@ class Compiler {
     }
 
     private fun unary(irsoa: Boolean) {
-        if (match(NOT, MINUS, /*STAR,*/ TokenType.GU)) {
+        if (match(NOT, MINUS, /*STAR,*/ TokenType.GU, IVIC)) {
             val operator = previous
             unary(irsoa)
             if (operator.type == STAR) {
@@ -1380,13 +1384,11 @@ class Compiler {
                     NOT -> INVERT
                     MINUS -> NEGATE
                     TokenType.GU -> OpCode.GU
+                    IVIC -> OpCode.IVIC
                     else -> throw IllegalArgumentException("WTF")
                 })
             }
         }
-        /*return if (match(IVIC)) {
-            Ivic(unary())
-        } */
         else {
             call(irsoa)
         }
@@ -1924,7 +1926,7 @@ class Compiler {
             it.enclosing = this
             it.currentClass = currentClass
         }
-        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA) {
+        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA, Lifetime.of(tokens)) {
             this.block()
             emitCode(OpCode.RETURN)
             byteCode.putInt(popsAfterReturn)
@@ -2286,7 +2288,7 @@ class Compiler {
             l.isConst = true
         }
         locals.add(l)
-        debugInfoLocals[l] = LocalLifetime(currentCodePoint, null)
+        debugInfoLocals[l] = Lifetime(currentCodePoint, null)
         return l
     }
 

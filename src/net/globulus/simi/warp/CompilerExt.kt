@@ -1,5 +1,7 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.Token
+import net.globulus.simi.warp.debug.Lifetime
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
@@ -94,4 +96,10 @@ fun Map<String, Any>.toSimiObject(): Instance {
 
 fun Array<*>.toSimiList(): ListInstance {
     return ListInstance(false, (this as? Array<Any>)?.toMutableList())
+}
+
+fun List<Token>.lifetimeTokens(lifetime: Lifetime): List<Token> {
+    val first = indexOfFirst { it.file == lifetime.start.file && it.line == lifetime.start.line }
+    val last = indexOfFirst { it.file == lifetime.end!!.file && it.line == lifetime.end!!.line }
+    return subList(first, last + 1)
 }
