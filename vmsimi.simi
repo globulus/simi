@@ -637,17 +637,23 @@ print myFiber(5, 10, 0)
 #ls = [1, 2, 3]
 #threeArg(*ls)
 
-print "three stooges".chars() # BP
+print "three stooges".chars()
 
-for i in 1000 {
-    lst = List()
-    for j in 1000 {
-        print j
-        if j % 2 == 0 {
-            continue
-        }
-        lst += j
-    }
-#    [for j in 1000 do j]
+extend String {
+    fn replaceNewlinesWithBreaks = replace("\n", "<br/>")
 }
+
+print "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()
+
+#for i in 1000 {
+#    lst = List()
+#    for j in 1000 {
+#        print j
+#        if j % 2 == 0 {
+#            continue
+#        }
+#        lst += j
+#    }
+##    [for j in 1000 do j]
+#}
 

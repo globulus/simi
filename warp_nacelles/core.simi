@@ -85,6 +85,8 @@ extend List import StreamMixin
 
 class_ String {
     native get(key)
+    native replace(old, new, ignoreCase = false)
+#    native builder
     fn iterate = [
         src = self,
         i = 0,

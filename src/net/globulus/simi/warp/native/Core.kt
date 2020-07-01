@@ -179,6 +179,14 @@ object Core : NativeModule {
                                 else -> null
                             }
                         }
+                        "replace" -> NativeFunction(3) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.PRIVATE] as String
+                            val old = it[1] as String
+                            val new = it[2] as String
+                            val ignoreCase = it[3] as Boolean
+                            string.replace(old, new, ignoreCase)
+                        }
                         else -> null
                     }
                 }

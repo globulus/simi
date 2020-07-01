@@ -11,7 +11,7 @@ Just as you probably guessed, this *does not* unwind the call stack in search of
 
 #### Rescue blocks
 
-A rescue block sits at the end of a statement and waits for an exception to be returned from any of the calls or getters. If this happens, it immediately executes the code within its block. After that (or otherwise, if no exceptions are returned in the statement) life goes on as it did before.
+A rescue block sits at the end of a statement and waits for an exception to be returned from any of the calls or getters. If this happens, it immediately executes the code within its block. After that (or otherwise, if the statement doesn't return any exceptions) life goes on as it did before.
 
 A rescue blocks starts with *?!* (you can read this as "if exception"), followed by a block. This is a hard block, and not an expression one, and you can thing of it as sitting *below* the statement it rescues, and not inline with it.
 

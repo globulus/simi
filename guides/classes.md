@@ -28,7 +28,7 @@ To instantiate a class, just call it as you would a function:
 instance = MyClass()
 ```
 
-Class instances are immutable-to-the-ouside objects initialized according to the class spec ([open classes](#final-and-open-classes) create mutable instances, though). This means that instance fields can be modified from within, via *self*, but not elsewhere:
+Class instances are immutable-to-the-outside objects initialized according to the class spec ([open classes](#final-and-open-classes) create mutable instances, though). This means that instance fields can be modified from within, via *self*, but not elsewhere:
 ```ruby
 class MyClass {
     fn setter {
@@ -78,7 +78,7 @@ class Range {
 If a class defines any initialized fields, they're assigned in the *init* body, after any bound arguments are set (with compiler synthesizing the code). This allows you to use *self* and *super* when assigning fields. Field assignments happen in the order in which they were typed.
 
 #### Native methods
-Methods can be native, with their implementation left to the system Šimi's running on. Methods are defined with *native* keyword instead of *fn*, and have empty bodies:
+Methods can be native, with their implementation left to the system Šimi's running on. Define native methods with *native* keyword instead of *fn*, and leave the body empty:
 ```ruby
 native method(a, b, c = 3)
 native another()
@@ -103,7 +103,7 @@ List the superclasses after the *is* keyword, separated by commas:
 class Subclass is Superclass1, Superclass2, Superclass3
 ```
 
-Superclasses are hierarchical, meaning that the order in which you list them matters. The first one is the most important one, and the last one the least important. This hierarchy comes into play if two superclasses contain the same field - the more important superclass wins, and the subclass will inherit its method by default.
+Superclasses are hierarchical, meaning the order in which you list them matters. The first one is the most important one, and the last one the least important. This hierarchy comes into play if two superclasses contain the same field - the more important superclass wins, and the subclass will inherit its method by default.
 
 Each and every class you type will silently inherit the *Object* class, even if you don't specify it. This means that every instance has access to all the *Object* methods by default.
 
@@ -133,6 +133,18 @@ List the mixins after the superclasses list followed by *import*:
 ```ruby
 class MyClass is Superclass import Mixin1, Mixin2
 ```
+
+A mixin example is Core's *StreamMixin*:
+```ruby
+class_ StreamMixin {
+    fn where(predicate) = Stream(self).where(predicate).toList()
+    fn map(transformation) = Stream(self).map(transformation).toList()
+}
+```
+
+Mixins are generally final since there's really no point in inheriting them, but that's a trivial matter.
+
+The *Object* class contains this mixin, meaning these two methods are available to every object instance and to all of its subclasses. Also, an Object *is not* a StreamMixin.
 
 #### Final and open classes
 For the sake of reference, there are three types of classes in Šimi:
@@ -174,3 +186,27 @@ class_ Stream {
     }
 }
 ```
+
+#### Extensions
+
+Extensions allow for a class to be extended with new methods after its declaration. Every class can be extended, even a final one. For example, see how the Core class *String* can be extended to replace newlines with HTML breaks:
+```ruby
+extend String {
+    fn replaceNewlinesWithBreaks = replace("\n", "<br/>")
+}
+
+# Then, use the method!
+replacedString = "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()
+```
+
+Extensions also take care of the issue of the lack of forward declarations in Šimi.
+
+You can add native methods as well. The methods that you add can be annotated.
+
+Implicit @ for getters works for extensions.
+
+Since mixins just add methods to a class, you can add new mixins when extending:
+
+
+A note about subclasses - since extensions are interpreted as they're encountered, *only subclasses declared after the extension will have the extension methods available*. In other words, if you declare an extension on the Object class, those methods won't magically appear in all other classes - just those that you declare after the extension took place.
+
