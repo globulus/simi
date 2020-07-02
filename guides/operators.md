@@ -1,15 +1,22 @@
 ### Operators
 
+#### Addition
+
+\+
+
+* When both operands are Nums, it performs addition.
+* When either operand is a String, the non-String operand is *stringified* and the two strings are concatenated.
+* When the left-hand operand is a mutable List, the right-hand operand is appended to that List.
+
 #### Arithmetic
 
-+, -, *, /, //, %
+-, *, /, //, %
 
-* \+ can be used to add values and concatenate strings.
-* Other operators work on Numbers only.
+* Only work on numbers.
 * \- Can be used as an unary operator.
 * // is the integer division operator, 3 // 2 == 1, while 3 / 2 == 1.5.
 
-#### Assignment
+#### Assignment and compound assignment
 
 =, $=, +=, -=, *=, /=, //=, %=, ??=
 
@@ -46,10 +53,6 @@ The operator that checks for inequality is *!=*. Since *THIS != THAT* is just *n
 <, <=, >, >=
 
 The usual stuff - less than, less or equal, greater than, greater or equal. All of those operate on numbers only.
-
-#### Matching
-
-<>
 
 #### Range operators
 

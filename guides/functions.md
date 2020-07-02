@@ -49,6 +49,11 @@ secondOrderFn(function)
 
 > *Design note:* You can now see why are parentheses important for calls - otherwise, we wouldn't know if we're passing the function value or invoking it. Of course, there are syntax sugar examples in other languages, where, say, a function with two arguments can be invoked as an infix operator, but that complicates the syntax and negatively affects code readability, especially if you lack a powerful IDE.
 
+When calling functions, you can pass names to parameters to improve readability. These take form of *identifier = value*, but don't affect the call in any way, they're just ignored by the compiler:
+```ruby
+function(a = 3, b = 5, c = 4) # Just adds some readability
+```
+
 #### Returning values
 
 A **return** statement aborts function execution and jumps back to its call site. A return statement may or may not return a value - if no expression is specified after the *return* keyword, the default value is *nil*. Also, all functions have an implicit *return nil* at their bottom:
@@ -145,5 +150,9 @@ print fn {
 }(1, 2) # prints 3
 ```
 
-
 Just remember that improvements to conciseness shouldn't be made at the expense of readability.
+
+#### Closures
+
+All Šimi functions are closures - they have access to variables declared outside their scope and hold onto them. These variables are immutable from within the function
+

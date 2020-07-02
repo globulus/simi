@@ -13,6 +13,20 @@ class ClassWithABody {
 You can omit braces if the class doesn't have a body. Classes are constants, i.e you can't reassign the class' identifier to another value later on. By convention, class names are capitalized.
 
 #### Methods
+Methods are functions bound to an object. You declare them as regular methods within the class body:
+```ruby
+class MyClass {
+    fn method1(a, b, c) {
+        ...
+    }
+
+    fn method2() = self.method1(2, 3, 4)
+}
+```
+
+Again, the main difference is that methods are bound to the object on which they're invoked - be it the class itself or its instance. This means that *self* won't point to the function, but to its caller.
+
+Subclasses can override methods by redeclaring them with the same signature.
 
 If you want to have at least runtime assurance that a method will be overridden before it's used, have it return *AbstractMethodException*:
 ```ruby
@@ -161,7 +175,6 @@ class$ OpenClassNoticeTheDollarSignAfterClass
 All three of those have their time and place, but you'll spend most time with regular classes for the most part.
 
 #### Implicit @ for getters
-
 By now you know that setters always have @ before the field name - that's how the compiler knows that we're setting a field here instead of declaring/assigning to a local variable.
 
 When it comes to getter, however, the compiler is a bit smarter and allows you to omit the @ when referring to instance fields. More specifically, when encountering an identifier that might either be a variable, or an instance field (a getter, just without @), it looks up its list of declared fields for this class. The list contains:
@@ -188,7 +201,6 @@ class_ Stream {
 ```
 
 #### Extensions
-
 Extensions allow for a class to be extended with new methods after its declaration. Every class can be extended, even a final one. For example, see how the Core class *String* can be extended to replace newlines with HTML breaks:
 ```ruby
 extend String {
