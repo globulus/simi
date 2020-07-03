@@ -201,7 +201,7 @@ class_ Stream {
 ```
 
 #### Extensions
-Extensions allow for a class to be extended with new methods after its declaration. Every class can be extended, even a final one. For example, see how the Core class *String* can be extended to replace newlines with HTML breaks:
+Extensions allow for a class to be extended with new methods after its declaration. Any class can be extended, even a final one. For example, see how the Core class *String* can be extended to replace newlines with HTML breaks:
 ```ruby
 extend String {
     fn replaceNewlinesWithBreaks = replace("\n", "<br/>")
@@ -211,14 +211,31 @@ extend String {
 replacedString = "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()
 ```
 
-Extensions also take care of the issue of the lack of forward declarations in Šimi.
-
-You can add native methods as well. The methods that you add can be annotated.
-
-Implicit @ for getters works for extensions.
+To declare an extension, use the **extend** keyword followed by a class name, and then list the new methods you're adding to this class. You can add native methods as well. Also, methods that you add can be annotated. Naturally, implicit @ for getters works as well.
 
 Since mixins just add methods to a class, you can add new mixins when extending:
+```ruby
+class MyMixin {
+    ...
+}
+
+extend MyClass import MyMixin
+```
+
+Of course, you can add as many new mixins as you'd like while extending, and also mix-in some new methods as well (he he he):
+```ruby
+extend MyClass import MyMixin1, MyMixin2, MyMixin3 {
+    fn newFn1 { ... }
+    fn newFn2 { ... }
+
+    !ImAnnotated(1, 2)
+    native newNative { ... }
+}
+```
+
+So, why extensions?
+* They take care of the issue of the lack of forward declarations - in Šimi, you can't use something until you've declared it, and there are legitimate instances where two classes should make use of each other, but you can't because the other one is declared after the first one. Extensions take care of that.
+* You can add convenience methods to existing classes and avoid the nasty syntax of wrapper standalone functions that take the target object as the first parameter. Even further, new methods allow you to change the internal state of an object via TODO LINK *internal mutability*. This is also a reason why extensions are limited to new methods only - you can mutate an object from within, but that has to be done manually. TODO CHANGEEEE
 
 
-A note about subclasses - since extensions are interpreted as they're encountered, *only subclasses declared after the extension will have the extension methods available*. In other words, if you declare an extension on the Object class, those methods won't magically appear in all other classes - just those that you declare after the extension took place.
-
+A note about subclasses - since extensions are interpreted as they're encountered, *only subclasses declared after the extension will have the extension methods available*. In other words, if you declare an extension on the Object class, those methods won't magically appear in all other classes - just those that you declare after the extension took place. There's also a safety component to this.

@@ -885,7 +885,7 @@ class Vm {
                     if (isExtension && field.key in it.fields.keys) {
                         continue
                     }
-                    it.fields[field.key] = field.value
+                    it.fields.putIfAbsent(field.key, field.value)
                 }
             }
         }
