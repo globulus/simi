@@ -301,4 +301,4 @@ The *return* statement behaves as it does in other languages - the control immed
 
  A *return* always returns from the current function, be it a lambda or not. Some languages make a distinction there, but Šimi does not.
 
- The *yield* statement is very similar to *return*, but it's only applicable to [fibers](#fibers). Please check the Fibers section for more info.
+ The *yield* statement is very similar to *return*, but it's only applicable to [fibers](coroutines.md). Please check the Fibers section for more info.

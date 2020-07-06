@@ -5,7 +5,6 @@
 However, nobody is denying the advantages of strong typing, especially for larger and more serious codebases. Because of this, Šimi includes a set of features dubbed "the safety package", which allow for runtime type and null-checks to make sure that the code does exactly what you want it to under all circumstainces.
 
 #### Argument and return type checks
-
 You can add runtime type checks to function args and return types:
 ```ruby
 fn func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
@@ -22,7 +21,6 @@ fn func(a is String, b is Num = 20, c is Range = Range(3, 40)) is Range? {
 Again, these checks are performed at runtime, and will return *TypeMismatchException* if something is off.
 
 #### Nil-safe gets and calls
-
 Šimi permits operations on *nil*, such as getters, setters and calls. All of those return nil and don't produce an exception:
 ```ruby
 a = nil
@@ -39,7 +37,7 @@ a?() # Safe call, the result is a NilReferenceException instance
 obj.nullableProp?(1, 2, 3).funcThatMayReturnNil("a")?.nullableFunc?()
 ```
 
-The returned NilReferenceException can be handled with a TODO LINK rescue block, just like any other exception:
+The returned NilReferenceException can be handled with a [rescue block](exception_handling.md), just like any other exception:
 ```ruby
 value = a?.something().that?() ?! {
     return 2

@@ -17,7 +17,6 @@ populations = $[tokyo = 37_400_068, delhi = 28_514_000, shanghai = 25_582_000] #
 In essence, the Šimi notion of objects is most similar to that of JavaScript, which I like because of its simplicity - people intuitively understand maps/hashes/dictionaries, and presenting objects as such structures demystifies the concept.
 
 #### Accessing object fields
-
 Access object fields with the dot operator **.**, just as in virtually any other language.
 ```ruby
 print myFirstObject.name # Mike
@@ -83,7 +82,7 @@ list = [100, "abc", 300, =_0 * _1 - _2]
 
 Lists are also objects (their base class, "List", inherits the "Object" class). This means that virtually everything that was said earlier about objects works for lists as well.
 
-List elements are accessed by indices:
+Access list elements with an index:
 ```ruby
 print list.0 # 100
 print list.2 # 300
