@@ -249,6 +249,8 @@ class Compiler {
             current = curr
             args.forEach { declareLocal(it) }
             if (isExprFunc) {
+                updateDebugInfo(previous)
+                lifetime.end = lifetime.start
                 expression()
                 emitReturn { }
             } else {
@@ -2435,8 +2437,8 @@ class Compiler {
         return list
     }
 
-    private fun scanForImplicitArgs(opener: Token, isExpr: Boolean): List<String> {
-        val args = mutableListOf<String>()
+    private fun scanForImplicitArgs(opener: Token, isExpr: Boolean): TreeSet<String> {
+        val args = sortedSetOf<String>()
         val curr = current
         val bodyTokens = if (isExpr) {
             scanNextExpr()
@@ -2453,11 +2455,10 @@ class Compiler {
                 }
             }
         }
-        args.sort()
         for (i in 0 until args.size) {
             val expected = "_$i"
-            if (args[i] != expected) {
-                throw error(opener, "Invalid implicit arg order, found ${args[i]} instead of $expected!")
+            if (args.elementAt(i) != expected) {
+                throw error(opener, "Invalid implicit arg order, found ${args.elementAt(i)} instead of $expected!")
             }
         }
         return args

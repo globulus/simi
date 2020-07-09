@@ -95,6 +95,88 @@ i = 2
 print list.(i) # 3
 ```
 
+#### How-to for common object tasks
+Here's a quick overview of some common object tasks.
+
+##### Adding a new field, changing existing fields
+```ruby
+obj.newKey = newValue # For mutable objects only
+obj.newKey = updatedValue # For mutable objects only
+```
+
+##### Removing a field
+```ruby
+obj.key = nil # For mutable objects only
+```
+
+##### Checking if object contains a key
+```ruby
+"key" in obj
+```
+
+##### Object class methods
+* *size* - return the size (number of fields) of this object.
+* *keys* - list of object keys as strings. Order is undefined.
+* *values* - list of values. Order is undefined.
+* *zip* - returns an iterable that returns key-value pairs as two-element lists when you iterate through it.
+* *zipped* - *zip* collected to a list.
+* *isEmpty* - returns true if the object's size is zero. Its counterpart method is *isNotEmpty*.
+* *clear* - removes all fields from the object. Works on mutable objects only.
+* *lock* - irreversibly converts a mutable object to immutable one.
+* *merge* - adds all fields from other object to this one. Works on mutable objects only.
+```ruby
+obj = $[a = 3, b = "str", c = fn = 2]
+obj.size() # 3
+obj.keys() # ["a", "b", "c"]
+obj.values() # [3, "str", fn = 2]
+obj.zipped() # [[a, 3], [b, "str"], [c, fn = 2]]
+obj.isEmpty() # false
+obj.merge([a = 10, d = 20]) # obj is now $[a = 3, b = "str", c = fn = 2, d = 20]
+obj.clear() # obj is now $[]
+obj.lock() # obj is now []
+```
+#### How-to for common object tasks
+Here's a quick overview of some common object tasks.
+
+##### Adding a new field, changing existing fields
+```ruby
+obj.newKey = newValue # For mutable objects only
+obj.newKey = updatedValue # For mutable objects only
+```
+
+##### Removing a field
+```ruby
+obj.key = nil # For mutable objects only
+```
+
+##### Checking if object contains a key
+```ruby
+"key" in obj
+```
+
+##### Object class methods
+* *size* - return the size (number of fields) of this object.
+* *keys* - list of object keys as strings. Order is undefined.
+* *values* - list of values. Order is undefined.
+* *zip* - returns an iterable that returns key-value pairs as two-element lists when you iterate through it.
+* *zipped* - *zip* collected to a list.
+* *isEmpty* - returns true if the object's size is zero. Its counterpart method is *isNotEmpty*.
+* *clear* - removes all fields from the object. Works on mutable objects only.
+* *lock* - irreversibly converts a mutable object to immutable one.
+* *merge* - adds all fields from other object to this one. Works on mutable objects only.
+```ruby
+obj = $[a = 3, b = "str", c = fn = 2]
+obj.size() # 3
+obj.keys() # ["a", "b", "c"]
+obj.values() # [3, "str", fn = 2]
+obj.zipped() # [[a, 3], [b, "str"], [c, fn = 2]]
+obj.isEmpty() # false
+obj.merge([a = 10, d = 20]) # obj is now $[a = 3, b = "str", c = fn = 2, d = 20]
+obj.clear() # obj is now $[]
+obj.lock() # obj is now []
+```
+
+
 #### List and object comprehensions
 Comprehensions make generating lists and object based on other data quicker to write, read and execute. Imagine you're tasked with generating a list of squares of even numbers up to 10. One route you might take is to use a for-loop:
 ```ruby

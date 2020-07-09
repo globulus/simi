@@ -15,6 +15,19 @@ class Object {
 
     fn isNotEmpty = not isEmpty()
     fn has(key) = key in keys()
+
+    fn reduce(initialValue, reducer) {
+        val = initialValue
+        for i in self {
+            val $= reducer(val, i)
+        }
+        return val
+    }
+
+    fn joinToString(separator = ", ", prefix = "", suffix = "") = \
+        prefix + reduce("", =_0 + (if _0.isEmpty() "" else separator) + _1) + suffix
+
+    fn mutableCopy = $[for k in self do k = @(k)]
 }
 
 class_ List {
@@ -80,13 +93,19 @@ class_ StreamMixin {
     fn map(transformation) = Stream(self).map(transformation).toList()
 }
 
-extend Object import StreamMixin
 extend List import StreamMixin
+extend Object {
+    fn where(predicate) = $[for k in self if predicate(k) do k = @(k)]
+    fn map(transformKey, transformValue = nil) = \
+        $[for k in self do transformKey(k) = \
+         if transformValue != nil transformValue(@(k)) else @(k)]
+}
 
 class_ String {
+    len = 0
     native get(key)
     native replace(old, new, ignoreCase = false)
-#    native builder
+    native builder
     fn iterate = [
         src = self,
         i = 0,
@@ -97,6 +116,8 @@ class_ String {
         }
    ]
    fn chars = $[for c in self do c]
+   fn isEmpty = len == 0
+   fn isNotEmpty = not isEmpty()
 }
 
 class_ Function

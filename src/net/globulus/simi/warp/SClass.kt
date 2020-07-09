@@ -60,6 +60,15 @@ class SClass(val name: String, val kind: Kind) : Fielded {
         return false
     }
 
+    val mergedAnnotations: MutableMap<String, Array<Any>> get() {
+        val merge = mutableMapOf<String, Array<Any>>()
+        for (superclass in superclasses.values) {
+            merge.putAll(superclass.mergedAnnotations)
+        }
+        merge.putAll(annotations)
+        return merge
+    }
+
     override fun toString(): String {
         return name
     }

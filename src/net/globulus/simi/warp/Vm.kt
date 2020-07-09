@@ -151,7 +151,7 @@ class Vm {
                 }
                 GET_ANNOTATIONS -> {
                     (pop() as? SClass)?.let {
-                        push(it.annotations.toSimiObject())
+                        push(it.mergedAnnotations.toSimiObject())
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
                 GU -> gu(currentFunction.debugInfo.compiler)

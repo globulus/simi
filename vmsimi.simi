@@ -645,6 +645,84 @@ extend String {
 
 print "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()
 
+class DbTable {
+    init(@name)
+}
+class DbField {
+    init(@type, @name = nil, @primaryKey = false)
+}
+
+class Model {
+    !DbField(Num, nil, true)
+    id = 0
+}
+!DbTable("Users")
+class User is Model {
+    !DbField(String, "first_name")
+    firstName = ""
+
+    !DbField(String, "last_name")
+    lastName = ""
+}
+!DbTable("Appointments")
+class Appointment is Model {
+    !DbField(String)
+    userId = ""
+
+    !DbField(Date, "timeslot")
+    time = Date()
+}
+
+class DbLib {
+    init(tables) {
+        sqlBuilder = String.builder()
+        for table in tables {
+            @sqlForTable(table, sqlBuilder)
+        }
+        @sql = sqlBuilder.build()
+    }
+
+    fn sqlForTable(table, sqlBuilder) {
+        ans = table!
+        tableName = "" + table
+        for tableAn in ans.(tableName).where(=_0 is DbTable) {
+            name = tableAn.name ?? tableName
+            sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n")
+            @sqlForFields(ans.where(=_0 != tableName), sqlBuilder)
+            sqlBuilder.add(");\n")
+        }
+    }
+
+    fn sqlForFields(ans, sqlBuilder) {
+        for [field, fieldAns] in ans.zip() {
+            dbFieldAn = fieldAns.where(=_0 is DbField).0 ?! {
+                continue
+            }
+            name = dbFieldAn.name ?? field
+            type = when dbFieldAn.type {
+                Num = "int"
+                String = "varchar(255)"
+                Date = "date"
+                else = nil
+            }
+            sqlBuilder.add(name).add(" ").add(type)
+            if dbFieldAn.primaryKey {
+                if type == "int" {
+                    sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                }
+                sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
+            } else {
+                sqlBuilder.add(",")
+            }
+            sqlBuilder.add("\n")
+        }
+    }
+}
+
+print DbLib([Model, User, Appointment]).sql
+
+print ["a", "b", "c"].joinToString()
+
 #for i in 1000 {
 #    lst = List()
 #    for j in 1000 {

@@ -187,6 +187,18 @@ object Core : NativeModule {
                             val ignoreCase = it[3] as Boolean
                             string.replace(old, new, ignoreCase)
                         }
+                        "builder" -> NativeFunction(0) {
+                            Instance(Vm.objectClass!!, false).apply {
+                                val builder = StringBuilder()
+                                fields["add"] = NativeFunction(1) {
+                                    builder.append(it[1])
+                                    this
+                                }
+                                fields["build"] = NativeFunction(0) {
+                                    builder.toString()
+                                }
+                            }
+                        }
                         else -> null
                     }
                 }
