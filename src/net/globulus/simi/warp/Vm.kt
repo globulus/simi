@@ -15,10 +15,13 @@ class Vm {
     private val annotationBuffer = mutableListOf<Any>()
     private var nonFinalizedClasses = Stack<Int>()
 
-    private val debugger = Debugger(this)
+    private var debugger: Debugger? = null
 
-    fun interpret(input: Fiber) {
+    fun interpret(input: Fiber, debugMode: Boolean) {
         instance = this
+        if (debugMode) {
+            debugger = Debugger(this)
+        }
         fiber = input
         push(input)
         try {
@@ -31,7 +34,7 @@ class Vm {
 
     private fun run(breakAtFp: Int, predicate: (() -> Boolean)? = null) {
         loop@ while (predicate?.invoke() != false) {
-            debugger.triggerBreakpoint()
+            debugger?.triggerBreakpoint()
             val code = nextCode
             when (code) {
                 TRUE -> push(true)
@@ -154,7 +157,7 @@ class Vm {
                         push(it.mergedAnnotations.toSimiObject())
                     } ?: throw runtimeError("Getting annotations only works on a Class!")
                 }
-                GU -> gu(currentFunction.debugInfo.compiler)
+                GU -> gu(currentFunction.debugInfo?.compiler)
                 IVIC -> push(ivic(pop()))
                 YIELD -> yield(pop())
                 NIL_CHECK -> {
@@ -565,7 +568,7 @@ class Vm {
         }
         fiber.callFrames[fiber.fp] = CallFrame(closure, fiber.sp - f.arity - 1)
         fiber.fp++
-        debugger.triggerBreakpoint(true)
+        debugger?.triggerBreakpoint(true)
         runLocal()
     }
 
@@ -689,31 +692,31 @@ class Vm {
         push(ListInstance(isMutable, items))
     }
 
-    internal fun gu(enclosingCompiler: Compiler) {
-        (pop() as? String)?.let {
-            try {
-                val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
-                val compiler = Compiler().apply {
-                    enclosing = enclosingCompiler
-                }
-                val f = compiler.compileLambdaForGu(tokens)
-                val closure = Closure(f)
-                push(closure)
-                for (i in 0 until f.upvalueCount) {
-                    val upvalue = compiler.upvalues[i]
-                    closure.upvalues[i] = if (upvalue.isLocal) {
-                        captureUpvalue(fiber.frame.sp + upvalue.sp, upvalue.fiberName)
-                    } else {
-                        fiber.frame.closure.upvalues[upvalue.sp]
+    internal fun gu(enclosingCompiler: Compiler?) {
+        enclosingCompiler?.let { enclosing ->
+            (pop() as? String)?.let {
+                try {
+                    val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
+                    val compiler = Compiler(enclosing)
+                    val f = compiler.compileLambdaForGu(tokens)
+                    val closure = Closure(f)
+                    push(closure)
+                    for (i in 0 until f.upvalueCount) {
+                        val upvalue = compiler.upvalues[i]
+                        closure.upvalues[i] = if (upvalue.isLocal) {
+                            captureUpvalue(fiber.frame.sp + upvalue.sp, upvalue.fiberName)
+                        } else {
+                            fiber.frame.closure.upvalues[upvalue.sp]
+                        }
                     }
+                    callClosure(closure, 0)
+                } catch (e: Exception) {
+                    push(Instance(exceptionClass!!, false).apply {
+                        fields[Constants.MESSAGE] = e.message!!
+                    })
                 }
-                callClosure(closure, 0)
-            } catch (e: Exception) {
-                push(Instance(exceptionClass!!, false).apply {
-                    fields[Constants.MESSAGE] = e.message!!
-                })
-            }
-        } ?: throw runtimeError("'gu' must have a string argument.")
+            } ?: throw runtimeError("'gu' must have a string argument.")
+        } ?: throw runtimeError("'gu' can only be used in debug mode.")
     }
 
     internal fun ivic(value: Any): Any {
@@ -727,7 +730,7 @@ class Vm {
 //            is NativeFunction -> CANT DO THIS
             is Instance -> stringify(value)
             else -> throw IllegalArgumentException("WTF")
-        }
+        } ?: throw runtimeError("'ivic' can only be used in debug mode.")
     }
 
     private fun captureUpvalue(sp: Int, fiberName: String): Upvalue {

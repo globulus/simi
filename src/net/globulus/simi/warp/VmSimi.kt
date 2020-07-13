@@ -1,7 +1,5 @@
 package net.globulus.simi.warp
 
-import net.globulus.simi.Debugger
-import net.globulus.simi.Debugger.ConsoleInterface
 import net.globulus.simi.Token
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.io.IOException
@@ -10,19 +8,23 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    if (args.size == 1) {
-        runFile(args[0])
+    val sourceFile = args[0]
+    var debugMode = true
+    for (i in 1 until args.size) {
+        when (args[i]) {
+            "-r" -> debugMode = false
+        }
+    }
+    runFile(sourceFile, debugMode)
 //    } else if (args.size == 2) {
 //        if (args[0] == "-k") {
 //            runKotlin(args[1])
 //        } else if (args[0] == "-kc") {
 //            runKomplier(args[1])
 //        }
-    }
 }
 
 private const val FILE_SIMI = "Simi"
-private val debugger = Debugger(ConsoleInterface())
 
 @Throws(IOException::class)
 private fun readFile(path: String, prepend: Boolean): String {
@@ -35,15 +37,15 @@ private fun readFile(path: String, prepend: Boolean): String {
 }
 
 @Throws(IOException::class)
-private fun runFile(path: String) {
-    run(readFile(path, true))
+private fun runFile(path: String, debugMode: Boolean) {
+    run(readFile(path, true), debugMode)
     //
 //    if (hadError) System.exit(65);
 //    if (hadRuntimeError) System.exit(70);
 }
 
 @Throws(IOException::class)
-private fun run(source: String) {
+private fun run(source: String, debugMode: Boolean) {
     try {
         var time = System.currentTimeMillis()
         print("Scanning and resolving imports...")
@@ -56,12 +58,12 @@ private fun run(source: String) {
         println(" " + (System.currentTimeMillis() - time) + " ms")
         time = System.currentTimeMillis()
         println("Compiling...")
-        val compiler = Compiler()
+        val compiler = Compiler(debugMode)
         val co = compiler.compile(tokens)
         println((System.currentTimeMillis() - time).toString() + " ms")
         time = System.currentTimeMillis()
         val vm = Vm()
-        vm.interpret(Fiber(Closure(co)))
+        vm.interpret(Fiber(Closure(co)), debugMode)
         println("Running... " + (System.currentTimeMillis() - time) + " ms")
     } catch (e: Exception) { // handles lexer and compiler errors
         println(e.message)

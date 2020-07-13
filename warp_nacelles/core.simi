@@ -94,7 +94,7 @@ class_ StreamMixin {
 }
 
 extend List import StreamMixin
-extend Object {
+extend Object { # Doing it here because otherwise List import StreamMixin wouldn't work
     fn where(predicate) = $[for k in self if predicate(k) do k = @(k)]
     fn map(transformKey, transformValue = nil) = \
         $[for k in self do transformKey(k) = \

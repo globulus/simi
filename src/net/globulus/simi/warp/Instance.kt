@@ -1,5 +1,6 @@
 package net.globulus.simi.warp
 
+import net.globulus.simi.Constants
 import net.globulus.simi.TokenType
 
 open class Instance(val klass: SClass) : Fielded {
@@ -44,7 +45,11 @@ class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instanc
     internal val items = providedItems ?: mutableListOf()
 
     operator fun get(index: Int): Any {
-        return if (index >= 0) {
+        return if (index >= items.size) {
+            Instance(Vm.illegalArgumentException!!, false).apply {
+                fields[Constants.MESSAGE] = "index: $index, size: ${items.size}"
+            }
+        } else if (index >= 0) {
             items[index]
         } else {
             items[items.size + index]

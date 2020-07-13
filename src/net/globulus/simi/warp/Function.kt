@@ -9,7 +9,7 @@ class Function(
         val upvalueCount: Int,
         val code: ByteArray,
         val constants: Array<Any>,
-        val debugInfo: DebugInfo
+        val debugInfo: DebugInfo?
 ) : OptionalParamsFunc {
     override var optionalParamsStart: Int = OptionalParamsFunc.DEFAULT_PARAMS_START
     override var defaultValues: Array<Any>? = null
@@ -18,7 +18,7 @@ class Function(
         return "<def $name $arity>"
     }
 
-    internal fun ivic(): String {
-        return debugInfo.compiler.tokens.lifetimeTokens(debugInfo.lifetime).joinToString("") { TokenPatcher.spaceBefore(it) + TokenPatcher.tokenCode(it) }
+    internal fun ivic(): String? {
+        return debugInfo?.compiler?.tokens?.lifetimeTokens(debugInfo.lifetime)?.joinToString("") { TokenPatcher.spaceBefore(it) + TokenPatcher.tokenCode(it) }
     }
 }

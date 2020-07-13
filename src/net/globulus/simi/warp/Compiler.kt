@@ -22,7 +22,7 @@ import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
 import java.util.regex.Pattern
 
-class Compiler {
+class Compiler(val debugMode: Boolean) {
     private lateinit var byteCode: MutableList<Byte>
 
     internal lateinit var tokens: List<Token>
@@ -32,7 +32,7 @@ class Compiler {
     private val constList = mutableListOf<Any>()
     private var constCount = 0
 
-    internal var locals = mutableListOf<Local>()
+    private var locals = mutableListOf<Local>()
         private set
     internal val upvalues = mutableListOf<Upvalue>()
     private var scopeDepth = -1 // Will be set to 0 with first beginScope()
@@ -51,7 +51,7 @@ class Compiler {
     private var lastChunk: Chunk? = null
     private val chunks = mutableListOf<Chunk>()
 
-    internal var enclosing: Compiler? = null
+    private var enclosing: Compiler? = null
     private lateinit var kind: String
     private lateinit var fiberName: String
     // If the function being compiled was marked with "is Type", we need to verify its return statements
@@ -59,9 +59,9 @@ class Compiler {
 
     // Debug info
     private lateinit var currentCodePoint: CodePointer
-    private val debugInfoLocals = mutableMapOf<Local, Lifetime>()
-    private val debugInfoLines = mutableMapOf<CodePointer, Int>()
-    private val debugInfoBreakpoints = mutableListOf<Int>()
+    private val debugInfoLocals = if (debugMode) mutableMapOf<Local, Lifetime>() else null
+    private val debugInfoLines = if (debugMode) mutableMapOf<CodePointer, Int>() else null
+    private val debugInfoBreakpoints = if (debugMode) mutableListOf<Int>() else null
 
     private val numberOfEnclosingCompilers: Int by lazy {
         var count = 0
@@ -71,6 +71,10 @@ class Compiler {
             compiler = compiler.enclosing
         }
         count
+    }
+
+    internal constructor(enclosing: Compiler) : this(enclosing.debugMode) {
+        this.enclosing = enclosing
     }
 
     fun compile(tokens: List<Token>): Function {
@@ -112,9 +116,13 @@ class Compiler {
         endScope()
 //        printChunks(name)
         return Function(name, arity, upvalues.size, byteCode.toByteArray(), constList.toTypedArray(),
-                DebugInfo(this.apply {
-                    locals = keptLocals
-                }, lifetime, debugInfoLocals.toList(), debugInfoLines, debugInfoBreakpoints)
+                if (debugMode) {
+                    DebugInfo(this.apply {
+                        locals = keptLocals
+                    }, lifetime, debugInfoLocals!!.toList(), debugInfoLines!!, debugInfoBreakpoints!!)
+                } else {
+                    null
+                }
         )
     }
 
@@ -238,8 +246,7 @@ class Compiler {
         }
 
         val curr = current
-        val funcCompiler = Compiler().also {
-            it.enclosing = this
+        val funcCompiler = Compiler(this).also {
             it.currentClass = currentClass
             it.verifyReturnType = returnType
         }
@@ -537,8 +544,7 @@ class Compiler {
         tokens += idTokens
         tokens += listOf(factory.ofType(RIGHT_BRACKET), nl)
 
-        val compiler = Compiler().also {
-            it.enclosing = this
+        val compiler = Compiler(this).also {
             it.currentClass = currentClass
         }
         val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, Parser.KIND_METHOD, Lifetime.of(tokens)) {
@@ -947,7 +953,7 @@ class Compiler {
                 addAll(elseBlockTokens)
                 add(factory.ofType(ELSE))
             }
-            addAll(listOf(factory.ofType(WHILE), iterator))
+            addAll(listOf(factory.ofType(WHILE), iterator, factory.ofType(BANG_EQUAL), nil))
             for ((i, blockToken) in blockTokens.withIndex()) {
                 add(blockToken)
                 if (i == 0) {
@@ -1924,8 +1930,7 @@ class Compiler {
      * live in the same scope as the expression they're transpiled from.
      */
     private fun compileAsCalledLambdaWithSingleReturn(tokens: List<Token>, popsAfterReturn: Int, block: Compiler.() -> Unit) {
-        val compiler = Compiler().also {
-            it.enclosing = this
+        val compiler = Compiler(this).also {
             it.currentClass = currentClass
         }
         val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA, Lifetime.of(tokens)) {
@@ -2260,17 +2265,21 @@ class Compiler {
     }
 
     private fun updateCurrentCodePoint(token: Token) {
-        currentCodePoint = CodePointer(token.line, token.file)
+        if (debugMode) {
+            currentCodePoint = CodePointer(token.line, token.file)
+        }
     }
 
     private fun updateDebugInfo(token: Token) {
-        updateCurrentCodePoint(token)
-        if (debugInfoLines.containsKey(currentCodePoint)) {
-            return
-        }
-        debugInfoLines[currentCodePoint] = byteCode.size
-        if (token.hasBreakpoint) {
-            debugInfoBreakpoints += byteCode.size
+        if (debugMode) {
+            updateCurrentCodePoint(token)
+            if (debugInfoLines!!.containsKey(currentCodePoint)) {
+                return
+            }
+            debugInfoLines[currentCodePoint] = byteCode.size
+            if (token.hasBreakpoint) {
+                debugInfoBreakpoints!!.add(byteCode.size)
+            }
         }
     }
 
@@ -2290,7 +2299,7 @@ class Compiler {
             l.isConst = true
         }
         locals.add(l)
-        debugInfoLocals[l] = Lifetime(currentCodePoint, null)
+        debugInfoLocals?.put(l, Lifetime(currentCodePoint, null))
         return l
     }
 
@@ -2309,7 +2318,7 @@ class Compiler {
      */
     private fun discardLocals(depth: Int, emitPops: Boolean = true, keepLocals: Boolean = false): Int {
         var popCount = 0
-        var i = locals.size - 1
+        var i = locals.indexOfLast { it.depth == depth }
         while (i >= 0 && locals[i].depth == depth) {
             if (emitPops) {
                 popCount++
@@ -2319,7 +2328,7 @@ class Compiler {
                     emitCode(POP)
                 }
             }
-            debugInfoLocals[locals[i]]?.end = currentCodePoint
+            debugInfoLocals?.get(locals[i])?.end = currentCodePoint
             if (!keepLocals) {
                 locals.removeAt(i)
             }
@@ -2330,7 +2339,7 @@ class Compiler {
 
     private fun discardLastLocal(pop: Boolean) {
         val end = locals.size - 1
-        debugInfoLocals[locals[end]]?.end = currentCodePoint
+        debugInfoLocals?.get(locals[end])?.end = currentCodePoint
         locals.removeAt(end)
         if (pop) {
             emitCode(POP)

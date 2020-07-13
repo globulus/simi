@@ -10,21 +10,23 @@ class CallFrame(val closure: Closure,
     val name = closure.function.name
 
     internal fun getCurrentCodePoint(): CodePointer {
-        var pointer: CodePointer? = null
-        val pos = buffer.position()
-        for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.value }) {
-            if (v > pos) {
-                if (pointer == null) {
-                    pointer = k
+        return closure.function.debugInfo?.let {
+            var pointer: CodePointer? = null
+            val pos = buffer.position()
+            for ((k, v) in closure.function.debugInfo.lines.entries.sortedBy { it.value }) {
+                if (v > pos) {
+                    if (pointer == null) {
+                        pointer = k
+                    }
+                    break
                 }
-                break
+                pointer = k
             }
-            pointer = k
-        }
-        return pointer!!
+            pointer!!
+        } ?: CodePointer.UNKNOWN
     }
 
     override fun toString(): String {
-        return "[line ${getCurrentCodePoint()}] in ${closure.function.name}"
+        return "[${getCurrentCodePoint()}] in ${closure.function.name}"
     }
 }

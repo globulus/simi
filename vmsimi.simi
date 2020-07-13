@@ -646,7 +646,7 @@ extend String {
 print "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()
 
 class DbTable {
-    init(@name)
+    init(@name = nil)
 }
 class DbField {
     init(@type, @name = nil, @primaryKey = false)
@@ -671,6 +671,9 @@ class Appointment is Model {
 
     !DbField(Date, "timeslot")
     time = Date()
+
+    !DbTable()
+    fake = 0
 }
 
 class DbLib {
@@ -695,7 +698,9 @@ class DbLib {
 
     fn sqlForFields(ans, sqlBuilder) {
         for [field, fieldAns] in ans.zip() {
+            print "inspecting \(field)" # B
             dbFieldAn = fieldAns.where(=_0 is DbField).0 ?! {
+                print "don't have one"
                 continue
             }
             name = dbFieldAn.name ?? field

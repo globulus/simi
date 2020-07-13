@@ -20,6 +20,7 @@ data class CodePointer(val line: Int, val file: String) {
 
     companion object {
         val EMPTY = CodePointer(-1, "")
+        val UNKNOWN = CodePointer(-1, "Unknown (enable debug mode)")
     }
 }
 

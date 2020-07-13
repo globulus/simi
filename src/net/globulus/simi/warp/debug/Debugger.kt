@@ -27,7 +27,7 @@ class Debugger(private val vm: Vm) {
         when (status) {
             StepStatus.BREAKPOINT -> {
                 val pos = currentPosition
-                val posHasBreakpoint = vm.currentFunction.debugInfo.breakpoints.contains(pos) || addedBreakpoints[vm.currentFunction]?.contains(pos) == true
+                val posHasBreakpoint = vm.currentFunction.debugInfo!!.breakpoints.contains(pos) || addedBreakpoints[vm.currentFunction]?.contains(pos) == true
                 if (posHasBreakpoint && isBreakpointIgnored() || !posHasBreakpoint) {
                     return
                 }
@@ -64,7 +64,7 @@ class Debugger(private val vm: Vm) {
     private fun printFocusFrame() {
         val focusFrameIndex = vm.fiber.fp - 1 - focusFrame
         val frame = vm.fiber.callFrames[focusFrameIndex]!!
-        val di = frame.closure.function.debugInfo
+        val di = frame.closure.function.debugInfo!!
         val codePointer = frame.getCurrentCodePoint()
         val tokens = di.compiler.tokens.filter { it.file == codePointer.file }
         val highlightTokenIndex = tokens.indexOfFirst { it.line == codePointer.line }
@@ -99,7 +99,7 @@ class Debugger(private val vm: Vm) {
 
     private fun getLocalsForFrame(frame: CallFrame, codePointer: CodePointer, capped: Boolean): String {
         val sb = StringBuilder()
-        val di = frame.closure.function.debugInfo
+        val di = frame.closure.function.debugInfo!!
         val locals = di.locals.sortedByDescending { it.second.start.line }
         if (locals.isEmpty()) { // Print the stack instead
             for (i in frame.sp until vm.fiber.sp) {
@@ -132,7 +132,7 @@ class Debugger(private val vm: Vm) {
     private fun getStackForFrame(frame: CallFrame, capped: Boolean): String {
         val sb = StringBuilder()
         var count = 0
-        for (i in frame.sp until vm.fiber.sp) {
+        for (i in vm.fiber.sp - 1 downTo frame.sp) {
             sb.appendln("[$i] ${vm.stringify(vm.fiber.stack[i]!!)}")
             count++
             if (capped && count == MAX_STACK_ITEMS) {
@@ -160,7 +160,7 @@ class Debugger(private val vm: Vm) {
                 val expr = line.substring(2)
                 debuggingOff = true
                 vm.push(expr)
-                vm.gu(frame.closure.function.debugInfo.compiler)
+                vm.gu(frame.closure.function.debugInfo!!.compiler)
                 val res = vm.stringify(vm.pop())
                 debuggingOff = false
                 println(res)

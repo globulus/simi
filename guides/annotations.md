@@ -73,3 +73,111 @@ It tells you that:
 3. Methods "a" and "b" have objects as their annotations as well.
 
 Again, to recap, you get an object back where keys are class/field/method names, and values are lists of annotations for that particular key.
+
+Note that you also get all the annotations for all the superclasses and their fields as well.
+
+Consider the following example that generates SQL based on annotated model classes.
+
+First, define two classes that we'll use for annotations: DbTable and DbField:
+```ruby
+class DbTable {
+    init(@name = nil) # A table is just defined by a name
+}
+class DbField {
+    init(@type, @name = nil, @primaryKey = false) # A column has a type, inferrable name and can be a primary key
+}
+```
+
+Next, add a "Model" superclass (because all the models will have an "id" primary key), and two table classes:
+```ruby
+class Model {
+    !DbField(Num, nil, true)
+    id = 0
+}
+
+!DbTable("Users")
+class User is Model {
+    !DbField(String, "first_name")
+    firstName = ""
+
+    !DbField(String, "last_name")
+    lastName = ""
+}
+
+!DbTable("Appointments")
+class Appointment is Model {
+    !DbField(String)
+    userId = ""
+
+    !DbField(Date, "timeslot")
+    time = Date()
+}
+```
+
+Here's the code for the class that actually generates the SQL. Read through the comments to see how annotations are extracted and parsed:
+```ruby
+class DbLib {
+    init(tables) {
+        sqlBuilder = String.builder() # Use a String.builder() when concatenating a lot of strings together, for performance reasons
+        for table in tables {
+            @sqlForTable(table, sqlBuilder)
+        }
+        @sql = sqlBuilder.build() # Extract the string from the builder with build()
+    }
+
+    fn sqlForTable(table, sqlBuilder) {
+        ans = table! # Get the annotations from the provided class
+        tableName = "" + table # Convert the class name to string
+        for tableAn in ans.(tableName).where(=_0 is DbTable) { # Find the DbTable annotation in the class annotations
+            name = tableAn.name ?? tableName # Infer the table if not provided
+            sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n")
+            @sqlForFields(ans.where(=_0 != tableName), sqlBuilder) # Process all the annotations that don't refer to the table class, but its fields instead
+            sqlBuilder.add(");\n")
+        }
+    }
+
+    fn sqlForFields(ans, sqlBuilder) {
+        for [field, fieldAns] in ans.zip() {
+            dbFieldAn = fieldAns.where(=_0 is DbField).0 ?! {
+                continue
+            }
+            name = dbFieldAn.name ?? field
+            type = when dbFieldAn.type {
+                Num = "int"
+                String = "varchar(255)"
+                Date = "date"
+                else = nil
+            }
+            sqlBuilder.add(name).add(" ").add(type)
+            if dbFieldAn.primaryKey {
+                if type == "int" {
+                    sqlBuilder.add(" NOT NULL AUTO_INCREMENT,")
+                }
+                sqlBuilder.add("\nPRIMARY KEY (").add(name).add("),")
+            } else {
+                sqlBuilder.add(",")
+            }
+            sqlBuilder.add("\n")
+        }
+    }
+}
+```
+
+Let's test the DB lib class on the table classes:
+```ruby
+print DbLib([User, Appointment]).sql
+
+# The output is
+CREATE TABLE Users (
+id int NOT NULL AUTO_INCREMENT,
+PRIMARY KEY (id),
+first_name varchar(255),
+last_name varchar(255),
+);
+CREATE TABLE Appointments (
+id int NOT NULL AUTO_INCREMENT,
+PRIMARY KEY (id),
+userId varchar(255),
+timeslot date,
+);
+```
