@@ -141,6 +141,13 @@ b = 3
 b ??= 5 # b is 3
 ```
 
+#### ?! - exception coalescence
+The *?!* operator works exactly the same as *??*, except it checks if the left-hand side is an Exception instead of *nil*. It's also short-circuit. (Basically, it's the exact same operator, it's just that interpreter applies a different condition.)
+```ruby
+a = b ?! c # is equivalent to a = if b is not Exception b else c, just faster
+```
+Of course, *?!=* works just like *??=* does.
+
 #### @ - self referencing
 *@* isn't a real operator - it maps exactly to *self.*, i.e *@tank* is identical to writing *self.tank*. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.* s).
 

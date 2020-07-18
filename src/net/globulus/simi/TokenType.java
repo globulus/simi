@@ -25,7 +25,8 @@ public enum TokenType implements Codifiable {
   MOD, MOD_MOD, MOD_EQUAL,
   DOLLAR_LEFT_PAREN, DOLLAR_LEFT_BRACKET, DOLLAR_EQUAL,
   QUESTION, QUESTION_DOT, QUESTION_LEFT_PAREN,
-  QUESTION_BANG, QUESTION_QUESTION, QUESTION_QUESTION_EQUAL,
+  QUESTION_BANG, QUESTION_QUESTION,
+  QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL,
 
   // Literals.
   IDENTIFIER, STRING, NUMBER,
@@ -130,6 +131,8 @@ public enum TokenType implements Codifiable {
         return "??";
       case QUESTION_QUESTION_EQUAL:
         return "??=";
+      case QUESTION_BANG_EQUAL:
+        return "?!=";
       case IDENTIFIER:
       case STRING:
       case NUMBER:

@@ -47,6 +47,20 @@ test("nil coalescence assign again", 5, fn {
     v ??= 6
     return v
 })
+test("exception coalescence", 5, fn {
+    v = Exception("")
+    return v ?! 5
+})
+test("exception coalescence assign", 5, fn {
+    v = Exception("")
+    v ?!= 5
+    return v
+})
+test("exception coalescence assign again", 5, fn {
+    v = 5
+    v ?!= 6
+    return v
+})
 test("while", "5again43again2", fn {
     i = 5
     s = ""

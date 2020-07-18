@@ -82,7 +82,11 @@ class Lexer(private val fileName: String,
                         addToken(QUESTION_QUESTION)
                     }
                 } else if (match('!')) {
-                    addToken(QUESTION_BANG)
+                    if (match('=')) {
+                        addToken(QUESTION_BANG_EQUAL)
+                    } else {
+                        addToken(QUESTION_BANG)
+                    }
                 } else if (match('.')) {
                     addToken(QUESTION_DOT)
                 } else if (match('(')) {

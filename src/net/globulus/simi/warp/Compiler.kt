@@ -1198,7 +1198,8 @@ class Compiler(val debugMode: Boolean) {
     private fun assignment(): Boolean {
         firstNonAssignment(false) // left-hand side
         if (match(EQUAL, UNDERSCORE_EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL,
-                        SLASH_EQUAL, SLASH_SLASH_EQUAL, MOD_EQUAL, QUESTION_QUESTION_EQUAL)) {
+                        SLASH_EQUAL, SLASH_SLASH_EQUAL, MOD_EQUAL,
+                        QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL)) {
             val equals = previous
             if (lastChunk?.opCode == GET_SUPER) {
                 throw error(equals, "Setters aren't allowed with 'super'.")
@@ -1242,7 +1243,7 @@ class Compiler(val debugMode: Boolean) {
                     rollBackLastChunk() // this isn't a get but an update, roll back
                     val op = when (equals.type) {
                         DOLLAR_EQUAL -> throw error(equals, "Don't use $= with setters, = works just fine.")
-                        QUESTION_QUESTION_EQUAL -> throw error(equals, "??= doesn't work with setters, sorry. Use @prop = prop ?? smth instead.")
+                        QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL -> throw error(equals, "??= and ?!= don't work with setters, sorry. Use @prop = prop ?? or ?! smth instead.")
                         else -> opCodeForCompoundAssignment(equals.type)
                     }
                     firstNonAssignment(true) // right-hand side
@@ -1257,8 +1258,8 @@ class Compiler(val debugMode: Boolean) {
                     if (isConst) {
                         throw error(previous, "Can't assign to a const!")
                     }
-                    if (equals.type == QUESTION_QUESTION_EQUAL) {
-                        nilCoalescenceWithKnownLeft { firstNonAssignment(true) }
+                    if (equals.type == QUESTION_QUESTION_EQUAL || equals.type == QUESTION_BANG_EQUAL) {
+                        nilOrExceptionCoalescenceWithKnownLeft(equals) { firstNonAssignment(true) }
                     } else {
                         if (equals.type == DOLLAR_EQUAL) {
                             rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
@@ -1371,10 +1372,10 @@ class Compiler(val debugMode: Boolean) {
     }
 
     private fun multiplication(irsoa: Boolean) {
-        nilCoalescence(irsoa)
+        nilOrExceptionCoalescence(irsoa)
         while (match(SLASH, SLASH_SLASH, STAR, MOD)) {
             val operator = previous
-            nilCoalescence(irsoa)
+            nilOrExceptionCoalescence(irsoa)
             emitCode(when (operator.type) {
                 SLASH -> DIVIDE
                 SLASH_SLASH -> DIVIDE_INT
@@ -1385,15 +1386,19 @@ class Compiler(val debugMode: Boolean) {
         }
     }
 
-    private fun nilCoalescence(irsoa: Boolean) {
+    private fun nilOrExceptionCoalescence(irsoa: Boolean) {
         unary(irsoa)
-        while (match(QUESTION_QUESTION)) {
-            nilCoalescenceWithKnownLeft { unary(irsoa) }
+        while (match(QUESTION_QUESTION, QUESTION_BANG)) {
+            nilOrExceptionCoalescenceWithKnownLeft(previous) { unary(irsoa) }
         }
     }
 
-    private fun nilCoalescenceWithKnownLeft(right: () -> Unit) {
-        val elseChunk = emitJump(JUMP_IF_NIL)
+    private fun nilOrExceptionCoalescenceWithKnownLeft(operator: Token, right: () -> Unit) {
+        val elseChunk = emitJump(when (operator.type) {
+            QUESTION_QUESTION, QUESTION_QUESTION_EQUAL -> JUMP_IF_NIL
+            QUESTION_BANG, QUESTION_BANG_EQUAL -> JUMP_IF_EXCEPTION
+            else -> throw error(operator, "WTF")
+        })
         val endChunk = emitJump(JUMP)
         patchJump(elseChunk)
         emitCode(POP)
