@@ -153,9 +153,10 @@ class Vm {
                     applyAnnotations(klass, fieldName)
                 }
                 GET_ANNOTATIONS -> {
-                    (pop() as? SClass)?.let {
+                    val value = pop()
+                    (value as? SClass)?.let {
                         push(it.mergedAnnotations.toSimiObject())
-                    } ?: throw runtimeError("Getting annotations only works on a Class!")
+                    } ?: throw runtimeError("Getting annotations only works on a Class!", value)
                 }
                 GU -> gu(currentFunction.debugInfo?.compiler)
                 IVIC -> push(ivic(pop()))
@@ -166,11 +167,12 @@ class Vm {
                     }
                 }
                 SPREAD -> {
-                    (pop() as? ListInstance)?.let {
+                    val value = pop()
+                    (value as? ListInstance)?.let {
                         for (item in it.items) {
                             push(item)
                         }
-                    } ?: throw runtimeError("Can only spread lists.")
+                    } ?: throw runtimeError("Can only spread lists.", value)
                 }
             }
         }
@@ -238,7 +240,7 @@ class Vm {
         val prop = pop()
         val obj = pop()
         if (obj is Instance && !obj.mutable && obj != self) { // obj != self because @a = 3 must still work from inside of object's methods
-            throw runtimeError("Attempting to set on an immutable object!")
+            throw runtimeError("Attempting to set on an immutable object!", obj)
         }
         if (obj is SClass && obj.kind == SClass.Kind.MODULE) {
             throw runtimeError("Can't set values of a module!")
@@ -278,7 +280,7 @@ class Vm {
             Nil -> null
             is Instance -> obj.fields[name] ?: obj.klass.fields[name]
             is SClass -> obj.fields[name]
-            else -> throw runtimeError("Only instances can have fields!")
+            else -> throw runtimeError("Only instances can have fields!", obj)
         }
         push(prop ?: Nil)
         if (prop != null) {
@@ -323,7 +325,7 @@ class Vm {
         return o == false
     }
 
-    private fun isException(o: Any): Boolean {
+    private fun isException(o: Any?): Boolean {
         return o is Instance && o.klass.checkIs(declaredClasses[Constants.CLASS_EXCEPTION]!!)
     }
 
@@ -616,10 +618,10 @@ class Vm {
             fiber.stack[fiber.sp - argCount - 1] = callee
             call(callee, argCount)
             true
-        } ?: invokeFromClass((receiver as? Instance)?.klass, name, argCount, checkError)
+        } ?: invokeFromClass(receiver, (receiver as? Instance)?.klass, name, argCount, checkError)
     }
 
-    private fun invokeFromClass(klass: SClass?, name: String, argCount: Int, checkError: Boolean = true): Boolean {
+    private fun invokeFromClass(receiver: Any?, klass: SClass?, name: String, argCount: Int, checkError: Boolean = true): Boolean {
         return when (val method = klass?.fields?.get(name)) {
             is Closure -> {
                 callClosure(method, argCount)
@@ -631,7 +633,7 @@ class Vm {
             }
             else -> {
                 if (checkError) {
-                    throw runtimeError("Undefined method $name.")
+                    throw runtimeError("Undefined method $name.", receiver, klass)
                 } else {
                     false
                 }
@@ -656,7 +658,7 @@ class Vm {
             }
         }
         set(argCount, self!!) // bind the super method to self
-        invokeFromClass(superclass, name, argCount)
+        invokeFromClass(superclass, superclass, name, argCount)
     }
 
     private fun objectLiteral(isMutable: Boolean, propCount: Int) {
@@ -948,7 +950,7 @@ class Vm {
         return when (it) {
             is Instance -> it.fields
             is SClass -> it.fields
-            else -> throw runtimeError("Only instances can have fields!")
+            else -> throw runtimeError("Only instances can have fields!", it)
         }
     }
 
@@ -956,7 +958,7 @@ class Vm {
         return when (it) {
             is Instance -> it.klass
             is SClass -> it
-            else -> throw runtimeError("Unable to get SClass for $it!")
+            else -> throw runtimeError("Unable to get SClass for $it!", it)
         }
     }
 
@@ -1012,7 +1014,7 @@ class Vm {
             fiber.stack[loc] = boxedClosure
             return boxedClosure
         } else {
-            throw runtimeError("Unable to box $value!")
+            throw runtimeError("Unable to box $value!", value)
         }
     }
 
@@ -1027,7 +1029,7 @@ class Vm {
         }
     }
 
-    internal fun stringify(o: Any): String {
+    internal fun stringify(o: Any?): String {
         return when (o) {
             is Instance -> {
                 when (o.klass) {
@@ -1068,7 +1070,7 @@ class Vm {
         println(fiber.stack.copyOfRange(0, fiber.sp).joinToString(" "))
     }
 
-    private fun runtimeError(message: String, vararg operands: Any): Exception {
+    private fun runtimeError(message: String, vararg operands: Any?): Exception {
         println()
         println(message)
         for (operand in operands) {

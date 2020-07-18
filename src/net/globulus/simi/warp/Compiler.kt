@@ -1162,7 +1162,7 @@ class Compiler(val debugMode: Boolean) {
     private fun rescue(): Boolean {
         val chunkScanStart = chunks.size
         val shouldPop = assignment()
-        if (match(QUESTION_BANG)) {
+        if (match(CATCH)) {
             val chunkScanEnd = chunks.size
             val elseChunk = emitJump(JUMP_IF_EXCEPTION)
             if (shouldPop) {

@@ -82,7 +82,7 @@ import "warp_nacelles/Io"
 import Io for *
 ```
 
-Šimi comes to the rescue again by allowing a combo import:
+Šimi comes to the rescue again by allowing a combo import, functionally fully equivalent to the example above:
 ```ruby
 import "warp_nacelles/Io" for *
 ```

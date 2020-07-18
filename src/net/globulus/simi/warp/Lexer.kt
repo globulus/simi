@@ -460,6 +460,7 @@ class Lexer(private val fileName: String,
         val keywords = mapOf(
                 "and" to AND,
                 "break" to BREAK,
+                "catch" to CATCH,
                 "class" to CLASS,
                 "class_" to CLASS_FINAL,
                 "class$" to CLASS_OPEN,

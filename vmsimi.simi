@@ -240,9 +240,9 @@ class SomeException is Exception
 someExceptionMessage = "Some exception"
 fn funcReturningException = SomeException(someExceptionMessage)
 test("returning exception", someExceptionMessage, funcReturningException().message)
-test("rescue alternative value", "alternative", =funcReturningException() ?! { return "alternative"} )
+test("rescue alternative value", "alternative", =funcReturningException() catch { return "alternative"} )
 fn rescueFunctionWithValueAssign {
-    value = funcReturningException() ?! {
+    value = funcReturningException() catch {
         s = "exception \(it.message)"
         return s
     }
@@ -251,7 +251,7 @@ fn rescueFunctionWithValueAssign {
 }
 test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithValueAssign())
 fn rescueFunctionWithoutValueAssign {
-    funcReturningException() ?! {
+    funcReturningException() catch {
         s = "exception \(it.message)"
         return s
     }
@@ -262,16 +262,16 @@ test("rescue function with value assign", "exception \(someExceptionMessage)", r
 fn funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
 fn rescueFunctionWithTwoExceptions() {
     s = ""
-    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(false) ?! {
+    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(false) catch {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(false) ?! {
+    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(false) catch {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(true) ?! {
+    s += funcReturningExceptionIfTrue(false) + funcReturningExceptionIfTrue(true) catch {
         s += "error"
     }
-    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(true) ?! {
+    s += funcReturningExceptionIfTrue(true) + funcReturningExceptionIfTrue(true) catch {
         s += "error"
     }
     return s
@@ -294,7 +294,7 @@ test("safe get and call pass", 0, safeGetAndCall([field = =0]))
 test("safe get fail", "[class = NilReferenceException, ]", "" + safeGetAndCall(nil))
 test("safe call fail", "[class = NilReferenceException, ]", "" + safeGetAndCall([]))
 test("safe get fail and catch", 1, fn {
-    return safeGetAndCall(nil) ?! {
+    return safeGetAndCall(nil) catch {
         return 1
     }
 })
@@ -332,7 +332,7 @@ fn doElseBreakIt {
     s = ""
     do {
         ab = 2
-        q = funcReturningException() ?! {
+        q = funcReturningException() catch {
             c = 6
             s += it
             s += c
@@ -455,10 +455,10 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
 
 test("gu", 6, gu "2 + 2 * 2")
 test("gu with lexer exception", "lex", fn {
-    return gu "2 ++ 2" ?! { return "lex" }
+    return gu "2 ++ 2" catch { return "lex" }
 })
 test("gu with compile exception", "comp", fn {
-    return gu "for 2 in 3" ?! { return "comp" }
+    return gu "for 2 in 3" catch { return "comp" }
 })
 
 test("fiber yield from foreach", "121232453564785906", fn {
@@ -695,7 +695,7 @@ class DbLib {
     fn sqlForFields(ans, sqlBuilder) {
         for [field, fieldAns] in ans.zip() {
             print "inspecting \(field)" # B
-            dbFieldAn = fieldAns.where(=_0 is DbField).0 ?! {
+            dbFieldAn = fieldAns.where(=_0 is DbField).0 catch {
                 print "don't have one"
                 continue
             }
