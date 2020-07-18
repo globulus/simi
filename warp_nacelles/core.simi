@@ -134,7 +134,11 @@ class TypeMismatchException is Exception {
 }
 class NilReferenceException is Exception
 class IllegalArgumentException is Exception
-class AbstractMethodException is Exception
+class AbstractMethodException is Exception {
+    init {
+        super.init("Abstract method")
+    }
+}
 class MutabilityLockException is Exception
 
 Math _= [
@@ -176,4 +180,12 @@ class_ Num {
     }
 
     fn iterate = 0.rangeUntil(self).iterate()
+}
+
+class Closable {
+    fn close = AbstractMethodException()
+    fn use(handler) {
+        handler(self)
+        close()
+    }
 }

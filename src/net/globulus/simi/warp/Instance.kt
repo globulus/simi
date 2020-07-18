@@ -26,10 +26,10 @@ open class Instance(val klass: SClass) : Fielded {
     internal open fun stringify(vm: Vm): String {
         return StringBuilder()
                 .append(if (mutable) TokenType.DOLLAR_LEFT_BRACKET.toCode() else TokenType.LEFT_BRACKET.toCode())
-                .append(if (klass != Vm.objectClass && klass != Vm.listClass) "class = ${klass.name}, " else "")
+                .append(if (klass != Vm.declaredClasses[Constants.CLASS_OBJECT] && klass != Vm.declaredClasses[Constants.CLASS_LIST]) "class = ${klass.name}, " else "")
                 .append(fields.entries
                         // for raw objects, just show their respective fields, ignoring the Object class methods
-                        .filter { Vm.objectClass?.fields?.containsKey(it.key) == false }
+                        .filter { Vm.declaredClasses[Constants.CLASS_OBJECT]?.fields?.containsKey(it.key) == false }
                         .joinToString { "${it.key} ${TokenType.EQUAL.toCode()} ${vm.stringify(it.value)}" }
                 )
                 .append(TokenType.RIGHT_BRACKET.toCode())
@@ -41,12 +41,12 @@ open class Instance(val klass: SClass) : Fielded {
     }
 }
 
-class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instance(Vm.listClass!!, mutable) {
+class ListInstance(mutable: Boolean, providedItems: MutableList<Any>?) : Instance(Vm.declaredClasses[Constants.CLASS_LIST]!!, mutable) {
     internal val items = providedItems ?: mutableListOf()
 
     operator fun get(index: Int): Any {
         return if (index >= items.size) {
-            Instance(Vm.illegalArgumentException!!, false).apply {
+            Instance(Vm.declaredClasses[Constants.EXCEPTION_ILLEGAL_ARGUMENT]!!, false).apply {
                 fields[Constants.MESSAGE] = "index: $index, size: ${items.size}"
             }
         } else if (index >= 0) {

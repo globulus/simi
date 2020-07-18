@@ -63,6 +63,28 @@ import MyModule.Submodule for otherFunc
 print a + b + field
 ```
 
-On-site import binds the module's fields specified after *for* to their namesake local variables in the current scope. Since Šimi is a dynamic language, and the expression after *import* isn't evaluated at compile-time, importing all the fields from a module isn't possible, instead you have to specify which fields to import.
+On-site import binds the module's fields specified after *for* to their namesake local variables in the current scope.
+
+If you use a fully qualified name for a module, you can import all its fields with **for \***:
+```ruby
+import MyModule for *
+import MyModule.Submodule for *
+```
+
+The compiler will check if the provided qualified name resolves to a previously compiled module. If it doesn't, you'll get a compile error. If you're not using *for \**, the expression after *import* will be evaluated at compile-time, allowing you to use variables, strings, or whatever else you'd like.
 
 Since on-site imports can be placed virtually anywhere, they allow you to be judicious with where is a certain name applicable. TODO FIX
+
+#### Combo file and on-site imports
+When dealing with modules, it's quite common to have a single module in a file of the same name - e.g, the file *io.simi* contains a module named *Io*. It'd be a hassle to have to import first the file, and then the module one after another in another file:
+```ruby
+import "warp_nacelles/Io"
+import Io for *
+```
+
+Šimi comes to the rescue again by allowing a combo import:
+```ruby
+import "warp_nacelles/Io" for *
+```
+
+The preprocessor will import the code from the file at the provided path, and then the compiler will attempt to compile an on-site import for the module based on the *capitalized last path component* ("warp_nacelles/io" will be come "Io").

@@ -13,6 +13,9 @@ object TokenPatcher {
         var highlightPosition = 0
         var printLineNumber = true
         for (token in tokens) {
+            if (token.file != highlighted.file) {
+                continue
+            }
             val line = token.line
             if (line < targetLine - SURROUNDING_LINES_COUNT) {
                 continue

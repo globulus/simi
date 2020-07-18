@@ -43,7 +43,7 @@ object Core : NativeModule {
                         "zip" -> NativeFunction(0) {
                             val instance = it[0] as Instance
                             val zipped = instance.zipped()
-                            Instance(Vm.objectClass!!, false).apply {
+                            Vm.newObject {
                                 fields[Constants.ITERATE] = NativeFunction(0) {
                                     listIterate.func(listOf(zipped))
                                 }
@@ -101,7 +101,7 @@ object Core : NativeModule {
                                 is String -> getRawProp(instance, key)
                                 is Instance -> {
                                     when (key.klass) {
-                                        Vm.rangeClass -> instance.sublist(key.fields["from"] as Long, key.fields["to"] as Long)
+                                        Vm.declaredClasses[Constants.CLASS_RANGE] -> instance.sublist(key.fields["from"] as Long, key.fields["to"] as Long)
                                         else -> null
                                     }
                                 }
@@ -188,7 +188,7 @@ object Core : NativeModule {
                             string.replace(old, new, ignoreCase)
                         }
                         "builder" -> NativeFunction(0) {
-                            Instance(Vm.objectClass!!, false).apply {
+                            Vm.newObject {
                                 val builder = StringBuilder()
                                 fields["add"] = NativeFunction(1) {
                                     builder.append(it[1])
@@ -206,7 +206,7 @@ object Core : NativeModule {
     )
 
     private fun iterator(next: () -> Any?): Instance {
-        return Instance(Vm.objectClass!!, false).apply {
+        return Vm.newObject {
             fields[Constants.NEXT] = NativeFunction(0) {
                 next()
             }

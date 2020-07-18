@@ -3,12 +3,8 @@
 span
 multiple lines *#
 
-import native "Date"
-
-class Date {
-    native init
-    native at(time = 0)
-}
+import "warp_nacelles/date"
+import "warp_nacelles/io" for *
 
 SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]

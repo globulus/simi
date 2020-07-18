@@ -24,6 +24,8 @@ data class CodePointer(val line: Int, val file: String) {
     }
 }
 
+fun Token.codePointer() = CodePointer(this)
+
 data class Lifetime(val start: CodePointer, var end: CodePointer?) {
 
     constructor(startToken: Token, endToken: Token?)

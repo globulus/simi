@@ -1,0 +1,30 @@
+import native "File"
+
+module Io {
+    class IoException is Exception
+
+    class ReadStream is Closable {
+        native init(file)
+        native read
+        native readLine
+        native reset
+        native skip(n)
+        native close
+    }
+
+    class WriteStream is Closable {
+        native init(file)
+        native write(string)
+        native close
+
+        fn newLine = write("\n")
+    }
+
+    class File {
+        fn init(@path)
+        native isDirectory
+
+        native readLines
+        fn readString = readLines().joinToString()
+    }
+}

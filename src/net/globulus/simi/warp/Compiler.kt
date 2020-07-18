@@ -47,6 +47,7 @@ class Compiler(val debugMode: Boolean) {
 
     private var currentClass: ClassCompiler? = null
     private val compiledClasses = mutableMapOf<String, ClassCompiler>()
+    private val compiledModules = mutableMapOf<String, ClassCompiler>()
 
     private var lastChunk: Chunk? = null
     private val chunks = mutableListOf<Chunk>()
@@ -501,7 +502,11 @@ class Compiler(val debugMode: Boolean) {
         if (kind == SClass.Kind.ENUM) {
             emitCode(INIT_ENUM)
         }
-        compiledClasses[name] = currentClass!!
+        if (kind == SClass.Kind.MODULE) {
+            compiledModules[name] = currentClass!!
+        } else {
+            compiledClasses[name] = currentClass!!
+        }
         currentClass = currentClass?.enclosing
         return returnName
     }
@@ -612,17 +617,35 @@ class Compiler(val debugMode: Boolean) {
 
     private fun import() {
         // match(STRING) imports were resolved at scanning phase, this is only a import _ for _, _
+        val start = current
         firstNonAssignment(true)
         val moduleLocal = declareLocal(nextImplicitVarName("module"))
         consume(FOR, "Expect 'for' after module name.")
-        do {
-            val field = consumeVar("Expect identifier to specify imported field.")
-            declareLocal(field, true)
-            emitGetLocal(moduleLocal.name, moduleLocal)
-            emitId(field)
-            finishGet(false)
-        } while (match(COMMA))
+        if (match(STAR)) {
+            // go back and consume the name to check it as a qualified name
+            val end = current
+            current = start
+            val qualifiedName = consumeQualifiedVar("Expect qualified name.")
+            compiledModules[qualifiedName]?.let {
+                for (field in it.declaredFields) {
+                    importModuleField(moduleLocal, field)
+                }
+            } ?: throw error(previous, "import for * must include a qualified name. Module not found for $qualifiedName.")
+            current = end
+        } else {
+            do {
+                val field = consumeVar("Expect identifier to specify imported field.")
+                importModuleField(moduleLocal, field)
+            } while (match(COMMA))
+        }
         consume(NEWLINE, "Expect newline after on-site import.")
+    }
+
+    private fun importModuleField(moduleLocal: Local, field: String) {
+        declareLocal(field, true)
+        emitGetLocal(moduleLocal.name, moduleLocal)
+        emitId(field)
+        finishGet(false)
     }
 
     private fun annotation() {
@@ -639,10 +662,10 @@ class Compiler(val debugMode: Boolean) {
     }
 
     private fun extension() {
-        val name = consumeVar("Expected the name of the class being extended.")
+        val name = consumeQualifiedVar("Expected the name of the class being extended.")
         variable(name)
         checkIfUnidentified()
-        currentClass = compiledClasses[name]?.apply {
+        currentClass = findCompiledClass(name)?.apply {
             enclosing = currentClass
         } ?: throw error(previous, "Class not previously compiled: $name.")
         emitCode(OpCode.EXTEND)
@@ -1880,6 +1903,17 @@ class Compiler(val debugMode: Boolean) {
         return consume(IDENTIFIER, message).lexeme
     }
 
+    /**
+     * Checks for identifiers with qualified names, like Io.File. Basically consumes IDENTIFIER[DOT IDENTIFIER]*.
+     */
+    private fun consumeQualifiedVar(message: String): String  {
+        var name = consumeVar(message)
+        while (match(DOT)) {
+            name += previous.lexeme + consumeVar("Expected identifier in qualified name.")
+        }
+        return name
+    }
+
     private fun consumeValue(message: String): Any {
         return when {
             match(TokenType.FALSE) -> false
@@ -2482,12 +2516,36 @@ class Compiler(val debugMode: Boolean) {
                 return true
             }
             for (superclass in it.superclasses) {
-                if (validateImplicitSelf(compiledClasses[superclass], name)) {
+                if (validateImplicitSelf(findCompiledClass(superclass), name)) {
                     return true
                 }
             }
         }
         return false
+    }
+
+    private fun findCompiledClass(name: String): ClassCompiler? {
+        var compiler: Compiler? = this
+        while (compiler != null) {
+            val classCompiler = compiledClasses[name]
+            if (classCompiler != null) {
+                return classCompiler
+            }
+            compiler = compiler.enclosing
+        }
+        return null
+    }
+
+    private fun findCompiledModule(name: String): ClassCompiler? {
+        var compiler: Compiler? = this
+        while (compiler != null) {
+            val classCompiler = compiledModules[name]
+            if (classCompiler != null) {
+                return classCompiler
+            }
+            compiler = compiler.enclosing
+        }
+        return null
     }
 
     data class Local(val name: String,

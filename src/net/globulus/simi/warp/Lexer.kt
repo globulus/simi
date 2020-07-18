@@ -240,7 +240,14 @@ class Lexer(private val fileName: String,
                 try {
                     val stringOpener = matchWhiteSpacesUntilStringOpener()
                     start = current - 1
-                    simiImports += string(stringOpener,false)
+                    val importPath = string(stringOpener,false)
+                    simiImports += importPath
+                    if (matchPeek(FOR)) { // compound file and module import
+                        addToken(IMPORT)
+                        val moduleName = importPath.split("/").last().capitalize()
+                        synthesizeIdentifier(moduleName)
+                        synthesizeToken(FOR)
+                    }
                     return
                 } catch (e: Exception) {
                     current = curr
@@ -424,6 +431,14 @@ class Lexer(private val fileName: String,
     private fun addToken(type: TokenType, literal: SimiValue? = null) {
         val text = source.substring(start, current)
         tokens.add(Token(type, text, literal, line, fileName))
+    }
+
+    private fun synthesizeIdentifier(value: String) {
+        tokens.add(Token(IDENTIFIER, value, null, line, fileName))
+    }
+
+    private fun synthesizeToken(type: TokenType) {
+        tokens.add(Token(type, type.toCode(), null, line, fileName))
     }
 
     private fun rollBackToken() {

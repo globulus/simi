@@ -74,7 +74,7 @@ class Vm {
                 JUMP -> buffer.position(nextInt)
                 JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
                 JUMP_IF_NIL -> jumpIf { it == Nil }
-                JUMP_IF_EXCEPTION -> jumpIf { it is Instance && it.klass.checkIs(exceptionClass!!) }
+                JUMP_IF_EXCEPTION -> jumpIf { isException(it) }
                 CALL -> {
                     val argCount = nextInt
                     call(peek(argCount), argCount)
@@ -162,7 +162,7 @@ class Vm {
                 YIELD -> yield(pop())
                 NIL_CHECK -> {
                     if (peek() == Nil) {
-                        fiber.stack[fiber.sp - 1] = Instance(nilReferenceExceptionClass!!, false)
+                        fiber.stack[fiber.sp - 1] = Instance(declaredClasses[Constants.EXCEPTION_NIL_REFERENCE]!!, false)
                     }
                 }
                 SPREAD -> {
@@ -323,6 +323,10 @@ class Vm {
         return o == false
     }
 
+    private fun isException(o: Any): Boolean {
+        return o is Instance && o.klass.checkIs(declaredClasses[Constants.CLASS_EXCEPTION]!!)
+    }
+
     private fun invert() {
         val a = unbox(pop())
         push(isFalsey(a))
@@ -465,7 +469,7 @@ class Vm {
         val r = when (a) {
             Nil -> false
             is Instance -> a.klass.checkIs(b)
-            is SClass -> if (b == classClass) true else a.checkIs(b)
+            is SClass -> if (b == declaredClasses[Constants.CLASS_CLASS]!!) true else a.checkIs(b)
             else -> throw RuntimeException("WTF")
         }
         push(r)
@@ -656,7 +660,7 @@ class Vm {
     }
 
     private fun objectLiteral(isMutable: Boolean, propCount: Int) {
-        push(Instance(objectClass!!, isMutable).apply {
+        push(Instance(declaredClasses[Constants.CLASS_OBJECT]!!, isMutable).apply {
             if (propCount == -1) {
                 val comprehension = pop() as ObjectComprehension
                 var i = 0
@@ -711,7 +715,7 @@ class Vm {
                     }
                     callClosure(closure, 0)
                 } catch (e: Exception) {
-                    push(Instance(exceptionClass!!, false).apply {
+                    push(Instance(declaredClasses[Constants.CLASS_EXCEPTION]!!, false).apply {
                         fields[Constants.MESSAGE] = e.message!!
                     })
                 }
@@ -826,29 +830,7 @@ class Vm {
 
     private fun declareClass(kind: SClass.Kind, name: String) {
         val klass = SClass(name, kind)
-        if (numClass == null && name == Constants.CLASS_NUM) {
-            numClass = klass
-        } else if (strClass == null && name == Constants.CLASS_STRING) {
-            strClass = klass
-        } else if (classClass == null && name == Constants.CLASS_CLASS) {
-            classClass = klass
-        } else if (funcClass == null && name == Constants.CLASS_FUNCTION) {
-            funcClass = klass
-        } else if (exceptionClass == null && name == Constants.CLASS_EXCEPTION) {
-            exceptionClass = klass
-        } else if (nilReferenceExceptionClass == null && name == Constants.EXCEPTION_NIL_REFERENCE) {
-            nilReferenceExceptionClass = klass
-        } else if (mutabilityLockExceptionClass == null && name == Constants.EXCEPTION_MUTABILITY_LOCK) {
-            mutabilityLockExceptionClass = klass
-        } else if (illegalArgumentException == null && name == Constants.EXCEPTION_ILLEGAL_ARGUMENT) {
-            illegalArgumentException = klass
-        } else if (objectClass == null && name == Constants.CLASS_OBJECT) {
-            objectClass = klass
-        } else if (listClass == null && name == Constants.CLASS_LIST) {
-            listClass = klass
-        } else if (rangeClass == null && name == Constants.CLASS_RANGE) {
-            rangeClass = klass
-        }
+        declaredClasses[name] = klass
         nonFinalizedClasses.push(fiber.sp)
         push(klass)
         applyAnnotations(klass, klass.name)
@@ -1009,20 +991,20 @@ class Vm {
         } else if (value is Instance || value is SClass) {
             return value as Fielded
         } else if (value is Long || value is Double) {
-            val boxedNum = Instance(numClass!!, false).apply {
+            val boxedNum = Instance(declaredClasses[Constants.CLASS_NUM]!!, false).apply {
                 fields[Constants.PRIVATE] = value
             }
             fiber.stack[loc] = boxedNum
             return boxedNum
         } else if (value is String) {
-            val boxedStr = Instance(strClass!!, false).apply {
+            val boxedStr = Instance(declaredClasses[Constants.CLASS_STRING]!!, false).apply {
                 fields[Constants.PRIVATE] = value
                 fields["len"] = value.length.toLong()
             }
             fiber.stack[loc] = boxedStr
             return boxedStr
         } else if (value is Closure) {
-            val boxedClosure = Instance(funcClass!!, false).apply {
+            val boxedClosure = Instance(declaredClasses[Constants.CLASS_FUNCTION]!!, false).apply {
                 fields[Constants.PRIVATE] = value
                 fields[Constants.NAME] = value.function.name
                 fields[Constants.ARITY] = value.function.arity
@@ -1037,7 +1019,7 @@ class Vm {
     private fun unbox(o: Any): Any {
         return if (o is Instance) {
             when (o.klass) {
-                numClass, strClass -> o.fields[Constants.PRIVATE]!!
+                declaredClasses[Constants.CLASS_NUM], declaredClasses[Constants.CLASS_STRING] -> o.fields[Constants.PRIVATE]!!
                 else -> o
             }
         } else {
@@ -1049,9 +1031,9 @@ class Vm {
         return when (o) {
             is Instance -> {
                 when (o.klass) {
-                    objectClass -> o.stringify(this)
-                    listClass -> o.stringify(this)
-                    strClass -> o.fields[Constants.PRIVATE] as String
+                    declaredClasses[Constants.CLASS_OBJECT] -> o.stringify(this)
+                    declaredClasses[Constants.CLASS_LIST] -> o.stringify(this)
+                    declaredClasses[Constants.CLASS_STRING] -> o.fields[Constants.PRIVATE] as String
                     else -> {
                         when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
                             is Closure, is NativeFunction -> {
@@ -1086,9 +1068,14 @@ class Vm {
         println(fiber.stack.copyOfRange(0, fiber.sp).joinToString(" "))
     }
 
-    private fun runtimeError(message: String): Exception {
+    private fun runtimeError(message: String, vararg operands: Any): Exception {
         println()
         println(message)
+        for (operand in operands) {
+            if (isException(operand)) {
+                println("Found an unhandled exception: ${stringify(operand)}. Are you missing a 'catch' block?")
+            }
+        }
         printCallStack()
         return IllegalStateException()
     }
@@ -1123,28 +1110,14 @@ class Vm {
         internal const val MAX_FRAMES = 1024
 
         internal var instance: Vm? = null
+        val declaredClasses = mutableMapOf<String, SClass>()
 
-        var numClass: SClass? = null
-            internal set
-        var strClass: SClass? = null
-            internal set
-        var classClass: SClass? = null
-            internal set
-        var funcClass: SClass? = null
-            internal set
-        var exceptionClass: SClass? = null
-            internal set
-        var nilReferenceExceptionClass: SClass? = null
-            internal set
-        var mutabilityLockExceptionClass: SClass? = null
-            internal set
-        var illegalArgumentException: SClass? = null
-            internal set
-        var objectClass: SClass? = null
-            internal set
-        var listClass: SClass? = null
-            internal set
-        var rangeClass: SClass? = null
-            internal set
+        fun newInstance(className: String, init: Instance.() -> Unit): Instance {
+            val instance = Instance(declaredClasses[className]!!, false)
+            instance.init()
+            return instance
+        }
+
+        fun newObject(init: Instance.() -> Unit) = newInstance(Constants.CLASS_OBJECT, init)
     }
 }
