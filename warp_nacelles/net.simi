@@ -1,0 +1,11 @@
+import native "Net"
+
+module Net {
+    native httpRequest(request)
+
+    module Json {
+        class MalformedJsonException is Exception
+#        native fromJson(str)
+#        native toJson(src)
+    }
+}

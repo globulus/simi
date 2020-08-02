@@ -53,3 +53,24 @@ Here are a few takeaway points:
 * If a fiber returns, its reset and the next invocation will resume from the start.
 * You can pass new arguments to the fiber with each invocation, but it's the structure of the fiber code that determines if they have an effect or not.
 * Naturally, you can call fibers from other fibers (remember how your entire program is already in a fiber).
+
+If you need a generator in Šimi, use a fiber:
+```ruby
+class ArithmeticSequence {
+    init(@a0, @d)
+
+    fib Generator(sequence) { # Fibers can't be bound to class instances
+        an = sequence.a0
+        while true {
+            yield an
+            an += sequence.d
+        }
+    }
+
+    fn iterate = [g = Generator(), src = self, next = =@g(@src)]
+}
+
+for i in ArithmeticSequence(1, 5) {
+    print i # 1, 6, 11, 16, etc. - this is an infinite loop after all!
+}
+```

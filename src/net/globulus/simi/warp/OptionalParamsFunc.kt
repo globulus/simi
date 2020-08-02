@@ -1,6 +1,6 @@
 package net.globulus.simi.warp
 
-internal interface OptionalParamsFunc {
+interface OptionalParamsFunc {
     val arity: Int
     var optionalParamsStart: Int
     var defaultValues: Array<Any>?

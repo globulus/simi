@@ -148,6 +148,18 @@ a = b ?! c # is equivalent to a = if b is not Exception b else c, just faster
 ```
 Of course, *?!=* works just like *??=* does.
 
+> *Design note:* If you read up on [exception handling](exception_handling.md), you'll learn that Exceptions are returned in Šimi as opposed to being thrown. This operator therefore handles a particular use case where you wish to set a default value in case an exception occurs. Basically, this:
+```ruby
+a = mightThrowAnException() ?! defaultValue
+```
+> is essentially the same as
+```ruby
+ a = mightThrowAnException() catch {
+    a = defaultValue
+}
+ ```
+> just obviously more concise. However, this is about as much as ?! operator should be used - it is in no way a replacement for proper error handling with the *catch* block.
+
 #### @ - self referencing
 *@* isn't a real operator - it maps exactly to *self.*, i.e *@tank* is identical to writing *self.tank*. It's primarily there to save time and effort when implementing classes (when you really write a lot of *self.* s).
 

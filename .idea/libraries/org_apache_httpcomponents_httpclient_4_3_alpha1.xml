@@ -1,0 +1,21 @@
+<component name="libraryTable">
+  <library name="org.apache.httpcomponents:httpclient:4.3-alpha1" type="repository">
+    <properties maven-id="org.apache.httpcomponents:httpclient:4.3-alpha1" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/httpclient-4.3-alpha1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/httpcore-4.3-alpha1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.6.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.6-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/httpclient-4.3-alpha1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/httpcore-4.3-alpha1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.6-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

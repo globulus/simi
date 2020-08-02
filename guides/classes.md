@@ -256,3 +256,9 @@ So, why extensions?
 * You can add convenience methods to existing classes and avoid the nasty syntax of standalone wrapper functions that take the target object as the first parameter. Furthermore, new methods allow you to change the internal state of an object via *internal mutability*.
 
 A note about subclasses - since extensions are interpreted as they're encountered, *only subclasses declared after the extension will have the extension methods available*. In other words, if you declare an extension on the Object class, those methods won't magically appear in all other classes - just those that you declare after the extension took place. There's also a safety component to this - nobody can inject code into your class via extending its superclass.
+
+#### Classes vs object literals
+TODO revisit
+As you learned by now, there is some overlap in the result of using classes vs object literals - classes are more powerful and allow your code to be nicely structured, but the end result in both cases is an object - the only difference is in its *class* field. So, when should you use which? Iterators often use object literals instead of dedicated classes.
+
+Use classes when you need to superstructure. Use object literals for local objects with obvious functionality, such as class iterators, local return rsults, some annotations.

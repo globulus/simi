@@ -5,6 +5,7 @@ multiple lines *#
 
 import "warp_nacelles/date"
 import "warp_nacelles/io" for *
+import "warp_nacelles/net" for *
 
 SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]
@@ -737,6 +738,26 @@ class DbLib {
 print DbLib([Model, User, Appointment]).sql
 
 print ["a", "b", "c"].joinToString()
+
+class ArithmeticSequence {
+    init(@a0, @d)
+
+    fib Generator(sequence) {
+        an = sequence.a0
+        while true {
+            yield an
+            an += sequence.d
+        }
+    }
+
+    fn iterate = [g = Generator(), src = self, next = =@g(@src)]
+}
+
+print httpRequest([verb = "GET", url = "http://httpbin.org/ip"])
+
+#for i in ArithmeticSequence(1, 5) { # B
+#    print i # 1, 6, 11, 16, etc. - this is an infinite loop after all!
+#}
 
 #for i in 1000 {
 #    lst = List()

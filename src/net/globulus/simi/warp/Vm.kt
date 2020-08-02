@@ -3,10 +3,13 @@ package net.globulus.simi.warp
 import net.globulus.simi.Constants
 import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.debug.Debugger
+import net.globulus.simi.warp.native.AsyncNativeFunction
+import net.globulus.simi.warp.native.NativeFunc
 import net.globulus.simi.warp.native.NativeFunction
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import kotlin.math.round
 
 class Vm {
@@ -97,7 +100,7 @@ class Vm {
                 INHERIT -> inherit()
                 MIXIN, EXTEND_MIXIN -> mixin(code == EXTEND_MIXIN)
                 METHOD, EXTEND_METHOD -> defineMethod(nextString, code == EXTEND_METHOD)
-                NATIVE_METHOD, EXTEND_NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunction, code == EXTEND_NATIVE_METHOD)
+                NATIVE_METHOD, EXTEND_NATIVE_METHOD -> defineNativeMethod(nextString, currentFunction.constants[nextInt] as NativeFunc, code == EXTEND_NATIVE_METHOD)
                 FIELD -> defineField(nextString)
                 INNER_CLASS -> {
                     val kind = SClass.Kind.from(nextByte)
@@ -518,13 +521,13 @@ class Vm {
             }
             is BoundMethod -> {
                 fiber.stack[spRelativeToArgCount] = callee.receiver
-                callClosure(callee.method, argCount)
+                callClosure(callee.callable, argCount)
             }
             is BoundNativeMethod -> {
                 fiber.stack[spRelativeToArgCount] = callee.receiver
-                callNative(callee.method, argCount)
+                callNative(callee.callable, argCount)
             }
-            is NativeFunction -> callNative(callee, argCount)
+            is NativeFunc -> callNative(callee, argCount)
             is SClass -> {
                 if (callee.kind == SClass.Kind.META) { // Metaclasses (Num, String, Function, Class) can't be directly instantiated
                     throw runtimeError("Can't instantiate ${callee.name}!")
@@ -539,7 +542,7 @@ class Vm {
                 val init = callee.fields[Constants.INIT]
                 when (init) {
                     is Closure -> callClosure(init, argCount)
-                    is NativeFunction -> callNative(init, argCount)
+                    is NativeFunc -> callNative(init, argCount)
                 }
             }
             is FiberTemplate -> {
@@ -592,15 +595,27 @@ class Vm {
         }
     }
 
-    private fun callNative(method: NativeFunction, argCount: Int) {
+    private fun callNative(method: NativeFunc, argCount: Int) {
         handleOptionalParams(method, argCount)
         val args = mutableListOf<Any?>()
         for (i in fiber.sp - method.arity - 1 until fiber.sp) {
             args += fiber.stack[i]
         }
-        val result = method.func(args) ?: Nil
+        if (method is AsyncNativeFunction) {
+            val latch = CountDownLatch(1)
+            method.func(args) {
+                handleNativeFuncResult(argCount, it)
+                latch.countDown()
+            }
+            latch.await()
+        } else if (method is NativeFunction) {
+            handleNativeFuncResult(argCount, method.func(args))
+        }
+    }
+
+    private fun handleNativeFuncResult(argCount: Int, result: Any?) {
         fiber.sp -= argCount + 1
-        push(result)
+        push(result ?: Nil)
     }
 
     private fun invoke(name: String, argCount: Int, checkError: Boolean = true): Boolean {
@@ -612,7 +627,7 @@ class Vm {
         return (receiver.fields[name])?.let {
             val callee = when (it) {
                 is Closure -> BoundMethod(receiver, it)
-                is NativeFunction -> BoundNativeMethod(receiver, it)
+                is NativeFunc -> BoundNativeMethod(receiver, it)
                 else -> it
             }
             fiber.stack[fiber.sp - argCount - 1] = callee
@@ -627,7 +642,7 @@ class Vm {
                 callClosure(method, argCount)
                 true
             }
-            is NativeFunction -> {
+            is NativeFunc -> {
                 callNative(method, argCount)
                 true
             }
@@ -730,10 +745,10 @@ class Vm {
             is String, is Long, is Double, is Boolean -> value
             is Function -> value.ivic()
             is Closure -> value.function.ivic()
-            is BoundMethod -> value.method.function.ivic()
+            is BoundMethod -> value.callable.function.ivic()
             is Fiber -> value.closure.function.ivic()
             is FiberTemplate -> value.closure.function.ivic()
-//            is NativeFunction -> CANT DO THIS
+//            is NativeFunc -> CANT DO THIS
             is Instance -> stringify(value)
             else -> throw IllegalArgumentException("WTF")
         } ?: throw runtimeError("'ivic' can only be used in debug mode.")
@@ -888,7 +903,7 @@ class Vm {
         applyAnnotations(klass, name)
     }
 
-    private fun defineNativeMethod(name: String, method: NativeFunction, isExtension: Boolean) {
+    private fun defineNativeMethod(name: String, method: NativeFunc, isExtension: Boolean) {
         val klass = currentNonFinalizedClass
         if (isExtension && name in klass.fields.keys) {
             throw runtimeError("Extension method issue: $name is already present in ${klass.name},")
@@ -969,16 +984,19 @@ class Vm {
         }
     }
 
-    private fun getBoundMethod(receiver: Any, klass: SClass?, prop: Any?, name: String): Any? {
-        return if (prop is NativeFunction) {
-            BoundNativeMethod(receiver, prop)
-        } else {
-            val method = if (prop is Closure) {
-                prop
-            } else {
-                (klass?.fields?.get(name) as? Closure)?.let { it } ?: return null
+    private fun getBoundMethod(receiver: Any, klass: SClass?, prop: Any?, name: String): BoundCallable<*>? {
+        return when (prop) {
+            is NativeFunc -> BoundNativeMethod(receiver, prop)
+//            is FiberTemplate -> BoundFiberTemplate(receiver, prop)
+//            is Fiber -> BoundFiber(receiver, prop)
+            else -> {
+                val method = if (prop is Closure) {
+                    prop
+                } else {
+                    (klass?.fields?.get(name) as? Closure)?.let { it } ?: return null
+                }
+                BoundMethod(receiver, method)
             }
-            BoundMethod(receiver, method)
         }
     }
 
@@ -1038,7 +1056,7 @@ class Vm {
                     declaredClasses[Constants.CLASS_STRING] -> o.fields[Constants.PRIVATE] as String
                     else -> {
                         when (val toStringField = o.fields[Constants.TO_STRING] ?: o.klass.fields[Constants.TO_STRING]) {
-                            is Closure, is NativeFunction -> {
+                            is Closure, is NativeFunc -> {
                                 push(o) // need to push as bound method will replace this index with itself
                                 call(getBoundMethod(o, o.klass, toStringField, Constants.TO_STRING)!!, 0)
                                 pop() as String
@@ -1048,6 +1066,7 @@ class Vm {
                     }
                 }
             }
+//            is String -> "\"$o\""
             else -> o.toString()
         }
     }

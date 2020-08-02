@@ -30,7 +30,7 @@ object NativeModuleLoader {
         }
     }
 
-    fun resolve(className: String, funcName: String): NativeFunction? {
+    fun resolve(className: String, funcName: String): NativeFunc? {
         return classes[className]?.resolve(funcName)
     }
 

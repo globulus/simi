@@ -1,19 +1,28 @@
 package net.globulus.simi.warp
 
-import net.globulus.simi.warp.native.NativeFunction
+import net.globulus.simi.warp.native.NativeFunc
 
-class BoundMethod(val receiver: Any,
-                  val method: Closure
-) {
+abstract class BoundCallable<T> {
+    abstract  val receiver: Any
+    abstract val callable: T
+
     override fun toString(): String {
-        return method.toString()
+        return callable.toString()
     }
 }
 
-class BoundNativeMethod(val receiver: Any,
-                        val method: NativeFunction
-) {
-    override fun toString(): String {
-        return method.toString()
-    }
-}
+class BoundMethod(override val receiver: Any,
+                  override val callable: Closure
+) : BoundCallable<Closure>()
+
+class BoundNativeMethod(override val receiver: Any,
+                        override val callable: NativeFunc
+) : BoundCallable<NativeFunc>()
+
+class BoundFiberTemplate(override val receiver: Any,
+                         override val callable: FiberTemplate
+) : BoundCallable<FiberTemplate>()
+
+class BoundFiber(override val receiver: Any,
+                 override val callable: Fiber
+) : BoundCallable<Fiber>()

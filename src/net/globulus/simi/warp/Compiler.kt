@@ -17,7 +17,7 @@ import net.globulus.simi.warp.OpCode.*
 import net.globulus.simi.warp.debug.CodePointer
 import net.globulus.simi.warp.debug.DebugInfo
 import net.globulus.simi.warp.debug.Lifetime
-import net.globulus.simi.warp.native.NativeFunction
+import net.globulus.simi.warp.native.NativeFunc
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.util.*
 import java.util.regex.Pattern
@@ -2135,7 +2135,7 @@ class Compiler(val debugMode: Boolean) {
         pushLastChunk(Chunk(opCode, size, constIdx, name))
     }
 
-    private fun emitNativeMethod(name: String, nativeFunction: NativeFunction, isExtension: Boolean) {
+    private fun emitNativeMethod(name: String, nativeFunction: NativeFunc, isExtension: Boolean) {
         val opCode = if (isExtension) EXTEND_NATIVE_METHOD else NATIVE_METHOD
         var size = byteCode.put(opCode)
         val nameIdx = constIndex(name)

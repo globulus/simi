@@ -15,7 +15,30 @@ A catch blocks starts with *catch*, followed by a block. This is a hard block, a
 
 If the catches block triggers when a call returns an exception, it will be bound inside the catch block as *it*, so that you may access it.
 
-TODO SOME EXAMPLES
+Let's look at a few examples:
+```ruby
+# Here's a function that can return an exception
+fn validateAmount(a) {
+    return if a >= LIMIT {
+        ValidationException("\(a) is over the limit of \(LIMIT)")
+    } else {
+        a
+    }
+}
+
+validateAmount(someAmount) catch {
+    print "Validation failed: \(it.message)"
+}
+
+result = validateAmount(20) catch {
+    print "Not valid"
+    result = 35 # The catch block is executed "after" the expression before it
+}
+
+doSomething().thenSomethingElse().thenAnotherThing() catch {
+    print it
+}
+```
 
 If you need a common handler for a lot of catch blocks, pair it with a do-else, *break it* in all the catch blocks and see the magic unfold:
 ```ruby
