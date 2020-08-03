@@ -115,15 +115,15 @@ filteredList = list.where(fn (value) = value > 5)
 
 Since everyone knows what does the *where* function expect, you can type this even quicker with *implicit arguments*:
 ```ruby
-filteredList = list.where(=_0 > 5)
+filteredList = list.where(=$0 > 5)
 ```
 
-You can omit the *fn* keyword and the argument list and jump straight to the equals sign that indicates a *return*. Implicit arguments start with an underscore and are sequentially numbered starting from 0: *_0, _1, _2*. The compiler looks the lambda body up and discovers these implicit arguments, checks if they're properly ordered and synthesizes them for you. The number of allowed implicit arguments isn't limited.
+You can omit the *fn* keyword and the argument list and jump straight to the equals sign that indicates a *return*. Implicit arguments start with a dolar sign and are sequentially numbered starting from 0: *$0, $1, $2*. The compiler looks the lambda body up and discovers these implicit arguments, checks if they're properly ordered and synthesizes them for you. The number of allowed implicit arguments isn't limited.
 
 Implicit arguments aren't just for expression lambdas, regular lambdas can use them as well:
 ```ruby
 print fn {
-    return _0 + _1
+    return $0 + $1
 }(1, 2) # prints 3
 ```
 

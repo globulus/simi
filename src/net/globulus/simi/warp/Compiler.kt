@@ -2504,7 +2504,7 @@ class Compiler(val debugMode: Boolean) {
             }
         }
         for (i in 0 until args.size) {
-            val expected = "_$i"
+            val expected = "$$i"
             if (args.elementAt(i) != expected) {
                 throw error(opener, "Invalid implicit arg order, found ${args.elementAt(i)} instead of $expected!")
             }
@@ -2617,7 +2617,7 @@ class Compiler(val debugMode: Boolean) {
     companion object {
         const val CALL_DEFAULT_JUMP_LOCATION = -1
         private const val SCRIPT = "Script"
-        private val IMPLICIT_ARG = Pattern.compile("_[0-9]+")
+        private val IMPLICIT_ARG = Pattern.compile("\\$[0-9]+")
         private val CONST_IDENTIFIER = Pattern.compile("(_)*[A-Z]+((_)*[A-Z]*)*(_)*")
 
         private const val ADD_TO_COMPREHENSION = "addToComprehension"

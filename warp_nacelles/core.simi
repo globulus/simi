@@ -25,7 +25,7 @@ class Object {
     }
 
     fn joinToString(separator = ", ", prefix = "", suffix = "") = \
-        prefix + reduce("", =_0 + (if _0.isEmpty() "" else separator) + _1) + suffix
+        prefix + reduce("", =$0 + (if $0.isEmpty() "" else separator) + $1) + suffix
 
     fn mutableCopy = $[for k in self do k = @(k)]
 }

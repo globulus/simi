@@ -239,9 +239,9 @@ test("for else with else not triggering", "yep", fn {
 })
 
 test("lambda with two implicit params", 3, fn {
-    return _0 + _1
+    return $0 + $1
 }(1, 2))
-test("shorthand lambda with three implicit params", 3, (=_0+_1+_2)(1, 1, 1))
+test("shorthand lambda with three implicit params", 3, (=$0+$1+$2)(1, 1, 1))
 
 test("native init", true, Date() != nil)
 test("static native function", 1, Date.at(1).time)
@@ -595,8 +595,8 @@ test("enum different", true, fn {
 test("enum values and toString", "[RED, BLUE, GREEN]", "" + Enum.values)
 test("enum ordinal", 2, Enum.GREEN.ordinal())
 
-test("stream", "[6, 12]", "" + Stream([1, 2, 3, 4, 5]).where(=_0 < 5).map(=_0 * 2).where(=_0 < 5).map(=_0 * 3).toList())
-test("stream without collect", "[2, 4]", "" + [1, 2, 3].where(=_0 < 3).map(=_0 * 2))
+test("stream", "[6, 12]", "" + Stream([1, 2, 3, 4, 5]).where(=$0 < 5).map(=$0 * 2).where(=$0 < 5).map(=$0 * 3).toList())
+test("stream without collect", "[2, 4]", "" + [1, 2, 3].where(=$0 < 3).map(=$0 * 2))
 
 test("when expression with complex expression", 3, fn {
     par = Pair(1, 2)
@@ -699,10 +699,10 @@ class DbLib {
     fn sqlForTable(table, sqlBuilder) {
         ans = table!
         tableName = "" + table
-        for tableAn in ans.(tableName).where(=_0 is DbTable) {
+        for tableAn in ans.(tableName).where(=$0 is DbTable) {
             name = tableAn.name ?? tableName
             sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n")
-            @sqlForFields(ans.where(=_0 != tableName), sqlBuilder)
+            @sqlForFields(ans.where(=$0 != tableName), sqlBuilder)
             sqlBuilder.add(");\n")
         }
     }
@@ -710,7 +710,7 @@ class DbLib {
     fn sqlForFields(ans, sqlBuilder) {
         for [field, fieldAns] in ans.zip() {
             print "inspecting \(field)" # B
-            dbFieldAn = fieldAns.where(=_0 is DbField).0 catch {
+            dbFieldAn = fieldAns.where(=$0 is DbField).0 catch {
                 print "don't have one"
                 continue
             }
