@@ -45,12 +45,7 @@ class Lexer(private val fileName: String,
                 if (stringInterpolationParentheses > 0) {
                     stringInterpolationParentheses--
                     if (stringInterpolationParentheses == 0) {
-                        addToken(PLUS)
-                        val str = string(lastStringOpener, true)
-                        if (str.isEmpty()) { // the interpolation was the last thing in the string, no need for the PLUS and the empty string to take up token space
-                            rollBackToken()
-                            rollBackToken()
-                        }
+                        continueStringInterpolation()
                     }
                 }
             }
@@ -237,7 +232,7 @@ class Lexer(private val fileName: String,
             if (matchPeek(NATIVE)) {
                 val stringOpener = matchWhiteSpacesUntilStringOpener()
                 start = current - 1
-                nativeImports += string(stringOpener,false)
+                nativeImports += string(stringOpener,false) ?: throw error("String interpolation is forbidden in imports.")
                 return
             } else {
                 val curr = current
@@ -245,10 +240,10 @@ class Lexer(private val fileName: String,
                     val stringOpener = matchWhiteSpacesUntilStringOpener()
                     start = current - 1
                     val importPath = string(stringOpener,false)
-                    simiImports += importPath
+                    simiImports += importPath ?: throw error("String interpolation is forbidden in imports.")
                     if (matchPeek(FOR)) { // compound file and module import
                         addToken(IMPORT)
-                        val moduleName = importPath.split("/").last().capitalize()
+                        val moduleName = importPath!!.split("/").last().capitalize()
                         synthesizeIdentifier(moduleName)
                         synthesizeToken(FOR)
                     }
@@ -299,15 +294,18 @@ class Lexer(private val fileName: String,
         addToken(NUMBER, literal)
     }
 
-    private fun string(opener: Char, addTokenIfNotInterpolation: Boolean): String {
+    private fun string(opener: Char, addTokenIfNotInterpolation: Boolean): String? {
         while (peek != opener && !isAtEnd) {
             if (peek == '\n') {
                 line++
             } else if (peek == '\\') {
+                when (val next = peekNext) {
+                    opener, '$', 'n' -> advance() // TODO fix
+                    else -> throw error("Invalid string escape char: $next.")
+                }
+            } else if (peek == '$') {
                 val next = peekNext
-                if (next == opener) {
-                    advance()
-                } else if (next == '(') { // String interpolation
+                if (next == '(') { // String interpolation
                     val valueSoFar = escapedString(start + 1, current)
                     addToken(STRING, SimiValue.String(valueSoFar))
                     addToken(PLUS)
@@ -316,6 +314,19 @@ class Lexer(private val fileName: String,
                     addToken(LEFT_PAREN)
                     stringInterpolationParentheses = 1
                     return valueSoFar
+                } else if (isAlpha(next)) {
+                    val valueSoFar = escapedString(start + 1, current)
+                    addToken(STRING, SimiValue.String(valueSoFar))
+                    advance()
+                    addToken(PLUS)
+                    start = current
+                    while (isAlphaNumeric(peek)) {
+                        advance()
+                    }
+                    synthesizeIdentifier(source.substring(start, current))
+                    start = current - 1 // we start scanning at -1 because string() normally assumes that it starts with a string opener - otherwise, it'd skip the first char immediately after the $ID
+                    continueStringInterpolation()
+                    return null
                 }
             }
             advance()
@@ -330,7 +341,13 @@ class Lexer(private val fileName: String,
         advance()
 
         // Trim the surrounding quotes.
-        val value = escapedString(start + 1, current - 1)
+        val startAfterQuote = start + 1
+        val endBeforeQuote = current - 1
+        val value = if (startAfterQuote >= endBeforeQuote) {
+            ""
+        } else {
+            escapedString(startAfterQuote, endBeforeQuote)
+        }
         if (addTokenIfNotInterpolation) {
             addToken(STRING, SimiValue.String(value))
         }
@@ -443,6 +460,15 @@ class Lexer(private val fileName: String,
 
     private fun synthesizeToken(type: TokenType) {
         tokens.add(Token(type, type.toCode(), null, line, fileName))
+    }
+
+    private fun continueStringInterpolation() {
+        addToken(PLUS)
+        val str = string(lastStringOpener, true)
+        if (str?.isEmpty() == true) { // the interpolation was the last thing in the string, no need for the PLUS and the empty string to take up token space
+            rollBackToken()
+            rollBackToken()
+        }
     }
 
     private fun rollBackToken() {

@@ -39,13 +39,13 @@ string = "this is a
 anotherString = 'this is another "string"'
 ```
 
-String interpolation is supported by enclosing the nested expressions into *\\(SOMETHING)*:
+String interpolation is supported by enclosing the nested expressions into *$(SOMETHING)*. Single, non-keyword identifiers don't need the parentheses, they can just be preceeded by a *$*:
 
 ```ruby
 a = 2
 b = 3
-print "a doubled is \(a * 2) and b minus 1 halved is \((b - 1) / 2)"
-# Prints: a doubled is 4 and b minus 1 halved is 1
+print "a is $a, and doubled it is $(a * 2) and b, which is $b, minus 1 halved is $((b - 1) / 2)"
+# Prints: a is 2, doubled is 4 and b, which is 3, minus 1 halved is 1
 ```
 
 When used as objects, strings are boxed into an instance of open Core class *String*, which contains useful methods for string manipulation. Since strings are immutable, all of these methods return a new string.

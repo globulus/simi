@@ -10,10 +10,10 @@ import "warp_nacelles/net" for *
 SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = List()]
 fn test(title, expected, proc) {
-#    print "running \(title)"
+#    print "running $(title)"
     r = proc()
-    testResult = if r == expected SUCCESS else "FAIL got \(r) expected \(expected)"
-    msg = "Testing \(title): " + testResult
+    testResult = if r == expected SUCCESS else "FAIL got $r expected $expected"
+    msg = "Testing $title: $testResult"
     testResults.total += 1
     if testResult != SUCCESS {
         testResults.failureCount += 1
@@ -82,7 +82,7 @@ test("do-while", "123", fn {
     i = 1
     s = ""
     do {
-        s += "\(i)"
+        s += "$i"
         i += 1
     } while i < 4
     return s
@@ -91,7 +91,7 @@ test("do-while one too many", "4", fn {
     i = 4
     s = ""
     do {
-        s += "\(i)"
+        s += "$i"
         i += 1
     } while i < 4
     return s
@@ -101,7 +101,7 @@ test("when", "3 or 4", fn {
     when i {
         2 { return "2" }
         3 or 4 { return "3 or 4" }
-        else { return "else " + i }
+        else { return "else $i" }
     }
 })
 test("if expr", 2, if false {
@@ -152,7 +152,7 @@ test("self(fn)", selfReturning, selfReturning)
 
 class Brioche {
     fn eat(a, b) {
-        return "ate \(a) and \(b)"
+        return "ate $a and $b"
     }
 }
 test("class instantiation and invoke", "ate jam and jelly", Brioche().eat("jam", "jelly"))
@@ -193,10 +193,10 @@ class Superclass {
     }
 }
 class Subclass is Superclass {
-    superClassStr = "my superclass is " + super
+    superClassStr = "my superclass is $(super)"
 
     fn methodToInherit() {
-        return super.methodToInherit() + " overridden"
+        return "$(super.methodToInherit()) overridden"
     }
 }
 test("super access", "my superclass is Superclass", Subclass().superClassStr)
@@ -212,7 +212,7 @@ test("rangeTo", true, 4 in 1...4)
 test("for loop", "1 2 3 4 5 ", fn {
     s = ""
     for i in 1...5 {
-        s += "\(i) "
+        s += "$i "
     }
     return s
 })
@@ -258,22 +258,22 @@ test("returning exception", someExceptionMessage, funcReturningException().messa
 test("rescue alternative value", "alternative", =funcReturningException() catch { return "alternative"} )
 fn rescueFunctionWithValueAssign {
     value = funcReturningException() catch {
-        s = "exception \(it.message)"
+        s = "exception $(it.message)"
         return s
     }
     print "nothing happened"
     return 1
 }
-test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithValueAssign())
+test("rescue function with value assign", "exception $someExceptionMessage", rescueFunctionWithValueAssign())
 fn rescueFunctionWithoutValueAssign {
     funcReturningException() catch {
-        s = "exception \(it.message)"
+        s = "exception $(it.message)"
         return s
     }
     print "nothing happened"
     return 1
 }
-test("rescue function with value assign", "exception \(someExceptionMessage)", rescueFunctionWithoutValueAssign())
+test("rescue function with value assign", "exception $someExceptionMessage", rescueFunctionWithoutValueAssign())
 fn funcReturningExceptionIfTrue(arg) = if arg funcReturningException() else 1
 fn rescueFunctionWithTwoExceptions() {
     s = ""
@@ -357,7 +357,7 @@ fn doElseBreakIt {
     } else {
         c = 6
         s += c
-        s += "exception \(it)"
+        s += "exception $it"
         s += c
     }
     return s
@@ -437,7 +437,7 @@ test("obj decomp", "nilnil5", fn {
 test("custom toString", "10", fn {
     class ToString {
         init(@val)
-        fn toString = "\(@val)"
+        fn toString = "$(@val)"
     }
     return "" + ToString(10)
 })
@@ -446,7 +446,7 @@ test("annotations", "[AnnotatedClass = [[a = class annot], Annotation constructo
     class AnnotationClass {
         init(@msg)
 
-        fn toString = "Annotation \(@msg)"
+        fn toString = "Annotation $(@msg)"
     }
 
     ![a = "class annot"]
@@ -577,8 +577,8 @@ test("proc do else", 20, fn {
 })
 test("list comprehension", "[2, 3, 4, 5]", "" + [for i in 1..5 do i + 1])
 test("mutable list comprehension with if", "$[2, 4]", "" + $[for i in 1..5 if i % 2 == 0 do i])
-test("mutable obj comprehension", "$[key1 = 11, key2 = 12, key3 = 13, key4 = 14]", "" + $[for i in 1..5 do "key\(i)" = i + 10])
-test("obj comprehension with if", "[key4 = 16]", "" + [for i in 1..5 if i > 3 do "key\(i)" = i * i])
+test("mutable obj comprehension", "$[key1 = 11, key2 = 12, key3 = 13, key4 = 14]", "" + $[for i in 1..5 do "key$i" = i + 10])
+test("obj comprehension with if", "[key4 = 16]", "" + [for i in 1..5 if i > 3 do "key$i" = i * i])
 
 enum Enum {
     RED(1, 2), BLUE(3, 4), GREEN(5, 6)
@@ -623,7 +623,7 @@ test("string iterate", "abcde", fn {
     return s
 })
 
-print "Testing complete, failed \(testResults.failureCount) / \(testResults.total)"
+print "Testing complete, failed $(testResults.failureCount) / $(testResults.total)"
 for failure in testResults.failures {
     print failure
 }
@@ -709,7 +709,7 @@ class DbLib {
 
     fn sqlForFields(ans, sqlBuilder) {
         for [field, fieldAns] in ans.zip() {
-            print "inspecting \(field)" # B
+            print "inspecting $field" # B
             dbFieldAn = fieldAns.where(=$0 is DbField).0 catch {
                 print "don't have one"
                 continue
@@ -753,7 +753,7 @@ class ArithmeticSequence {
     fn iterate = [g = Generator(), src = self, next = =@g(@src)]
 }
 
-print httpRequest([verb = "GET", url = "http://httpbin.org/ip"])
+#print httpRequest([verb = "GET", url = "http://httpbin.org/ip"])
 
 #for i in ArithmeticSequence(1, 5) { # B
 #    print i # 1, 6, 11, 16, etc. - this is an infinite loop after all!
