@@ -244,7 +244,7 @@ p = do { # Defines a proc
         5
     }
 }
-i $= p() # Call the proc, i will be 20
+i = p() # Call the proc, i will be 20
 j = p() # Call the proc, j will be 5
 ```
 
@@ -262,7 +262,7 @@ p = do { # Defines a proc
     }
     10 # the default return value
 }
-i $= p() # Call the proc, i will be 20
+i = p() # Call the proc, i will be 20
 j = p() # Call the proc, j will be 10
 ```
 
@@ -280,7 +280,7 @@ p = do {
 } else {
     25
 }
-i $= p() + 5 # i will be 30
+i = p() + 5 # i will be 30
 j = p() # j will be 25
 ```
 

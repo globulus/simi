@@ -160,11 +160,12 @@ print b # Compile error, b is not declared in this scope
 
 ```
 
-**Name shadowing is prohibited and results in a compile error.** This is to prevent errors...
+There's no name shadowing - if a variable is declared in an outer block, assigning to it in an inner block will change its value. Otherwise, a new variable will be declared.
 ```ruby
 a = 5
 {
-    a = 6 # Compile error, a was already declared in an outer block
+    a = 6 # a is 6 now
+    b = 3 # b is a new variable in this scope
 }
 ```
 

@@ -19,7 +19,7 @@ class Object {
     fn reduce(initialValue, reducer) {
         val = initialValue
         for i in self {
-            val $= reducer(val, i)
+            val = reducer(val, i)
         }
         return val
     }
@@ -69,12 +69,12 @@ class_ Stream {
                 when op {
                     Op.WHERE {
                         if not arg(dst) {
-                            dst $= nil
+                            dst = nil
                             break
                         }
                     }
                     Op.MAP {
-                        dst $= arg(dst)
+                        dst = arg(dst)
                     }
                 }
             }

@@ -23,7 +23,7 @@ fn test(title, expected, proc) {
 
 a = 5
 b = a + 3
-a $= b - 4 / (2 + 2 * 2)
+a = b - 4 / (2 + 2 * 2)
 b /= 2
 test("a is", 7.333333333333333, a)
 test("b is", 4, b)
@@ -557,7 +557,7 @@ test("proc do", 5, fn {
         }
         5
     }
-    i $= p() + 5
+    i = p() + 5
     j = p()
     return j
 })
@@ -571,7 +571,7 @@ test("proc do else", 20, fn {
     } else {
         25
     }
-    i $= p() + 5
+    i = p() + 5
     j = p()
     return j
 })

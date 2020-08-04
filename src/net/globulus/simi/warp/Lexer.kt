@@ -144,9 +144,7 @@ class Lexer(private val fileName: String,
                 }
             }
             '$' -> {
-                if (match('=')) {
-                    addToken(DOLLAR_EQUAL)
-                } else if (match('[')) {
+                if (match('[')) {
                     addToken(DOLLAR_LEFT_BRACKET)
                 } else {
                     identifier()

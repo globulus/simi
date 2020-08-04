@@ -1197,7 +1197,7 @@ class Compiler(val debugMode: Boolean) {
 
     private fun assignment(): Boolean {
         firstNonAssignment(false) // left-hand side
-        if (match(EQUAL, UNDERSCORE_EQUAL, DOLLAR_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL,
+        if (match(EQUAL, UNDERSCORE_EQUAL, PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL,
                         SLASH_EQUAL, SLASH_SLASH_EQUAL, MOD_EQUAL,
                         QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL)) {
             val equals = previous
@@ -1223,58 +1223,54 @@ class Compiler(val debugMode: Boolean) {
                     declaredField?.let { enclosing?.currentClass?.declaredFields?.add(it) }
                     emitCode(SET_PROP)
                 } else {
-                    if (lastChunk?.opCode == GET_UPVALUE) {
-                        val name = lastChunk!!.data[0] as String
-                        throw error(previous, "Name shadowed: $name.")
-//                        declareLocal(name, isConst)
-//                        rollBackLastChunk()
-                    } else if (lastChunk?.opCode == GET_LOCAL) {
-                        throw error(equals, "Variable redeclared!")
-                    } else if (lastChunk?.opCode != CONST_ID) {
-                        throw error(equals, "Expect an ID for var declaration!")
-                    } else {
+                    if (lastChunk?.opCode == GET_UPVALUE || lastChunk?.opCode == GET_LOCAL) {
+                        reassignment(equals) // Set local/upvalue
+                    } else { // Declare local
                         declareLocal(lastChunk!!.data[1] as String, isConst)
                         rollBackLastChunk()
+                        firstNonAssignment(true) // push the value on the stack
                     }
-                    firstNonAssignment(true) // push the value on the stack
                 }
             } else {
                 if (lastChunk?.opCode == GET_PROP) {
                     rollBackLastChunk() // this isn't a get but an update, roll back
                     val op = when (equals.type) {
-                        DOLLAR_EQUAL -> throw error(equals, "Don't use $= with setters, = works just fine.")
                         QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL -> throw error(equals, "??= and ?!= don't work with setters, sorry. Use @prop = prop ?? or ?! smth instead.")
                         else -> opCodeForCompoundAssignment(equals.type)
                     }
                     firstNonAssignment(true) // right-hand side
                     emitUpdateProp(op)
                 } else {
-                    val variable: Any = when (lastChunk?.opCode) {
-                        GET_LOCAL -> lastChunk!!.data[1] as Local
-                        GET_UPVALUE -> lastChunk!!.data[1] as Int
-                        else -> throw error(equals, "Assigning to undeclared var!")
-                    }
-                    val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
-                    if (isConst) {
-                        throw error(previous, "Can't assign to a const!")
-                    }
-                    if (equals.type == QUESTION_QUESTION_EQUAL || equals.type == QUESTION_BANG_EQUAL) {
-                        nilOrExceptionCoalescenceWithKnownLeft(equals) { firstNonAssignment(true) }
-                    } else {
-                        if (equals.type == DOLLAR_EQUAL) {
-                            rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
-                        }
-                        firstNonAssignment(true) // right-hand side
-                        if (equals.type != DOLLAR_EQUAL) {
-                            emitCode(opCodeForCompoundAssignment(equals.type))
-                        }
-                    }
-                    emitSet(variable)
+                    reassignment(equals)
                 }
             }
             return false
         }
         return true
+    }
+
+    private fun reassignment(equals: Token) {
+        val variable: Any = when (lastChunk?.opCode) {
+            GET_LOCAL -> lastChunk!!.data[1] as Local
+            GET_UPVALUE -> lastChunk!!.data[1] as Int
+            else -> throw error(equals, "Assigning to undeclared var!")
+        }
+        val isConst = if (variable is Local) variable.isConst else upvalues[variable as Int].isConst
+        if (isConst) {
+            throw error(previous, "Can't assign to a const!")
+        }
+        if (equals.type == QUESTION_QUESTION_EQUAL || equals.type == QUESTION_BANG_EQUAL) {
+            nilOrExceptionCoalescenceWithKnownLeft(equals) { firstNonAssignment(true) }
+        } else {
+            if (equals.type == EQUAL) {
+                rollBackLastChunk() // It'll just be a set, set-assigns reuse the already emitted GET_LOCAL
+            }
+            firstNonAssignment(true) // right-hand side
+            if (equals.type != EQUAL) {
+                emitCode(opCodeForCompoundAssignment(equals.type))
+            }
+        }
+        emitSet(variable)
     }
 
     // irsoa = is right side of assignment

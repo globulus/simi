@@ -18,7 +18,7 @@
 
 #### Assignment and compound assignment
 
-=, $=, +=, -=, *=, /=, //=, %=, ??=
+=, _=, +=, -=, *=, /=, //=, %=, ??=
 
 #### Logical
 
@@ -186,5 +186,5 @@ print 12.bitAnd(25) # prints 8
 | 8          | == != is is not in not in   | (in)equality, type tests, inclusion test           | left          |
 | 9          | and                         | logical and                                        | left          |
 | 10         | or                          | logical or                                         | left          |
-| 11         | = $= += -= *= /= //= %= ??= | assignment                                         | right         |
+| 11         | = _= += -= *= /= //= %= ??= | assignment                                         | right         |
 | 12         | ?!                          | rescue                                             | left          |

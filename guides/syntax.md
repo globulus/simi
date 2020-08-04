@@ -62,40 +62,30 @@ else { # Multiline block
 ```
 
 #### Variables
-Declare a variable with the *=* operator:
+Declare a variable and assign a value to it with the *=* operator:
 ```ruby
 a = 5
 b = "string"
 c = true
+a = 6
 ```
-
-To assign a new value to a variable, you need to use *$=* operator instead of *=*:
-```ruby
-a = 5
-a $= 6 # The value of a was changed
-a = 5 # Compile error, variable redeclared
-```
-
-> The reasoning behind is that most variables you declare are effectively constants, i.e they're just temporary placeholders for a value. This premise is present in languages such as Swift and Kotlin, where "let" and "val" are preferred over "var", until you find out that a variable's value indeed needs to change. In Šimi, assignment is even more explicit with $=.
-
-TODO LINK Compound operators (+=, -=, etc.) are invoked with $= by default. Also, $= cannot be used with set expressions as they're mutating by default.
 
 ##### Constants
-Some variables are real constants and using $= with them will result in a compiler error. These are:
+Some variables are real constants and using *=* for a reassignment on them will result in a compiler error. These are:
 1. Variables whose name is in CAPS_SNAKE_CASE.
 2. Declared classes, functions and fibers, regardless of their case.
 3. Variables declared with *_=* instead of *=*. The *_=* operator was introduced primarily to allow the SINGLETON OBJECTS LINK to be declared as constants.
 ```ruby
 THIS_IS_A_CONST = 5
-THIS_IS_A_CONST $= "error"
+THIS_IS_A_CONST = "error"
 
 fn func() {
     return 2
 }
-func $= "this is also an error"
+func = "this is also an error"
 
 realConst _= 10
-realConst $= "again, a compile time error"
+realConst = "again, a compile time error"
 ```
 
 #### Scoping
