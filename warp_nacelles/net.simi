@@ -1,4 +1,4 @@
-import native "Net"
+import native "../Net"
 
 module Net {
     native httpRequest(request)

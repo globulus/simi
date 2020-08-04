@@ -5,6 +5,7 @@ import net.globulus.simi.warp.native.NativeModuleLoader
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
@@ -54,7 +55,7 @@ private fun run(source: String, debugMode: Boolean) {
         val lo = lexer.scanTokens(true).apply {
             simiImports.add(0, "./warp_nacelles/core")
         }
-        scanImports(lo, tokens, mutableListOf())
+        scanImports(Paths.get("").toAbsolutePath(), lo, tokens, mutableListOf())
         println(" " + (System.currentTimeMillis() - time) + " ms")
         time = System.currentTimeMillis()
         println("Compiling...")
@@ -71,33 +72,38 @@ private fun run(source: String, debugMode: Boolean) {
 }
 
 @Throws(IOException::class)
-private fun scanImports(lo: Lexer.LexerOutput,
+private fun scanImports(sourcePath: Path,
+                        lo: Lexer.LexerOutput,
                         allTokens: MutableList<Token>,
                         imports: MutableList<String>) {
     val (tokens, simiImports, nativeImports) = lo
     for (import in nativeImports) {
-        convertImportToLocation(import,"jar", imports)?.let {
-            NativeModuleLoader.load(Paths.get(it).toUri().toURL().toString(), import, true)
+        convertImportToLocation(sourcePath, import,"jar", imports)?.let {
+            NativeModuleLoader.load(Paths.get(it).toUri().toURL().toString(), import.substring(import.indexOf('/') + 1), true)
         }
     }
     for (import in simiImports) {
-        convertImportToLocation(import, "simi", imports)?.let {
-            scanImports(Lexer(import, readFile(it, false), null).scanTokens(false),
-                    allTokens, imports)
+        convertImportToLocation(sourcePath, import, "simi", imports)?.let {
+            scanImports(Paths.get(it).parent,
+                    Lexer(import, readFile(it, false), null).scanTokens(false),
+                    allTokens,
+                    imports
+            )
         }
     }
     allTokens += tokens
 }
 
-private fun convertImportToLocation(import: String, extension: String, imports: MutableList<String>): String? {
-    var location = "$import.$extension"
+private fun convertImportToLocation(sourcePath: Path,
+                                    import: String,
+                                    extension: String,
+                                    imports: MutableList<String>): String? {
+    val fileName = "$import.$extension"
+    val location = if (import.startsWith("./")) fileName else "$sourcePath/$fileName"
     if (location in imports) {
         return null
     }
     imports += location
-    if ('/' !in location) {
-        location = "./$location"
-    }
     return location
 }
 

@@ -1,4 +1,4 @@
-import native "File"
+import native "../File"
 
 module Io {
     class IoException is Exception
