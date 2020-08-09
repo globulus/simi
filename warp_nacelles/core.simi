@@ -48,7 +48,7 @@ class_ Stream {
     }
 
     init(@src) {
-        @ops = List()
+        @ops = $[,]
     }
 
     fn where(predicate) {
@@ -62,7 +62,7 @@ class_ Stream {
     }
 
     fn toMutableList {
-        list = List()
+        list = $[,]
         for item in src {
             dst = item
             for [op, arg] in ops {

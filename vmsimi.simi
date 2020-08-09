@@ -8,7 +8,7 @@ import "warp_nacelles/io" for *
 import "warp_nacelles/net" for *
 
 SUCCESS = "SUCCESS"
-testResults = $[total = 0, failureCount = 0, failures = List()]
+testResults = $[total = 0, failureCount = 0, failures = $[,]]
 fn test(title, expected, proc) {
 #    print "running $(title)"
     r = proc()
