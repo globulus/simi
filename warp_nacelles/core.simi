@@ -44,11 +44,11 @@ class_ List {
 
 class_ Stream {
     enum Op {
-        WHERE, MAP
+        WHERE, MAP, FOR_EACH
     }
 
     init(@src) {
-        @ops = $[,]
+        @ops = $[]
     }
 
     fn where(predicate) {
@@ -61,8 +61,13 @@ class_ Stream {
         return self
     }
 
-    fn toMutableList {
-        list = $[,]
+    fn forEach(handler) {
+        @ops += [op = Op.FOR_EACH, arg = handler]
+        return self
+    }
+
+    fn toList {
+        list = $[]
         for item in src {
             dst = item
             for [op, arg] in ops {
@@ -76,6 +81,9 @@ class_ Stream {
                     Op.MAP {
                         dst = arg(dst)
                     }
+                    Op.FOR_EACH {
+                        arg(dst)
+                    }
                 }
             }
             if dst != nil {
@@ -84,13 +92,12 @@ class_ Stream {
         }
         return list
     }
-
-    fn toList = toMutableList().lock()
 }
 
 class_ StreamMixin {
     fn where(predicate) = Stream(self).where(predicate).toList()
     fn map(transformation) = Stream(self).map(transformation).toList()
+    fn forEach(handler) = Stream(self).forEach(handler).toList()
 }
 
 extend List import StreamMixin

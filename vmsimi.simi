@@ -8,7 +8,7 @@ import "warp_nacelles/io" for *
 import "warp_nacelles/net" for *
 
 SUCCESS = "SUCCESS"
-testResults = $[total = 0, failureCount = 0, failures = $[,]]
+testResults = $[total = 0, failureCount = 0, failures = $[]]
 fn test(title, expected, proc) {
 #    print "running $(title)"
     r = proc()
@@ -307,7 +307,7 @@ test("arg type check third Exception", 1, funcWithArgTypeCheck("", "", Exception
 fn safeGetAndCall(arg) = arg?.field?()
 test("safe get and call pass", 0, safeGetAndCall([field = =0]))
 test("safe get fail", "[class = NilReferenceException, ]", "" + safeGetAndCall(nil))
-test("safe call fail", "[class = NilReferenceException, ]", "" + safeGetAndCall([]))
+test("safe call fail", "[class = NilReferenceException, ]", "" + safeGetAndCall([=]))
 test("safe get fail and catch", 1, fn {
     return safeGetAndCall(nil) catch {
         return 1
@@ -400,7 +400,7 @@ fn testImplicitSelf {
 test("implicit self", "5623", testImplicitSelf())
 
 test("compound assignment with setters", 7, fn {
-    oo = $[]
+    oo = $[=]
     oo.a = 3
     oo.a += 4
     return oo.a
@@ -595,8 +595,8 @@ test("enum different", true, fn {
 test("enum values and toString", "[RED, BLUE, GREEN]", "" + Enum.values)
 test("enum ordinal", 2, Enum.GREEN.ordinal())
 
-test("stream", "[6, 12]", "" + Stream([1, 2, 3, 4, 5]).where(=$0 < 5).map(=$0 * 2).where(=$0 < 5).map(=$0 * 3).toList())
-test("stream without collect", "[2, 4]", "" + [1, 2, 3].where(=$0 < 3).map(=$0 * 2))
+test("stream", "$[6, 12]", "" + Stream([1, 2, 3, 4, 5]).where(=$0 < 5).map(=$0 * 2).where(=$0 < 5).map(=$0 * 3).toList())
+test("stream without collect", "$[2, 4]", "" + [1, 2, 3].where(=$0 < 3).map(=$0 * 2))
 
 test("when expression with complex expression", 3, fn {
     par = Pair(1, 2)

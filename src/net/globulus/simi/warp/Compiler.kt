@@ -1681,33 +1681,31 @@ class Compiler(val debugMode: Boolean) {
     private fun objectLiteral(opener: Token) {
         var count = 0
         var isList: Boolean? = null
-        if (matchSequence(COMMA, RIGHT_BRACKET)) { // empty list literal
+        if (match(RIGHT_BRACKET)) { // empty list literal
             isList = true
         } else if (!matchSequence(EQUAL, RIGHT_BRACKET)) { // [=] is an empty object literal
-            if (!check(RIGHT_BRACKET)) {
+            matchAllNewlines()
+            do {
                 matchAllNewlines()
-                do {
-                    matchAllNewlines()
-                    if (isList == null) { // we still need to determine if it's a list or an object
-                        isList = !(peekSequence(IDENTIFIER, EQUAL) || peekSequence(STRING, EQUAL))
-                    }
-                    if (isList) {
-                        expression()
+                if (isList == null) { // we still need to determine if it's a list or an object
+                    isList = !(peekSequence(IDENTIFIER, EQUAL) || peekSequence(STRING, EQUAL))
+                }
+                if (isList) {
+                    expression()
+                } else {
+                    emitConst(if (match(STRING)) {
+                        previous.literal.string.toString()
                     } else {
-                        emitConst(if (match(STRING)) {
-                            previous.literal.string.toString()
-                        } else {
-                            consumeVar("Expect identifier or string as object key.")
-                        })
-                        consume(EQUAL, "Expect '=' between object key and value pair.")
-                        expression()
-                    }
-                    matchAllNewlines()
-                    count++
-                } while (match(COMMA))
+                        consumeVar("Expect identifier or string as object key.")
+                    })
+                    consume(EQUAL, "Expect '=' between object key and value pair.")
+                    expression()
+                }
                 matchAllNewlines()
-            }
-            consume(RIGHT_BRACKET, "Expect ']' at the end of object.")
+                count++
+            } while (match(COMMA))
+            matchAllNewlines()
+        consume(RIGHT_BRACKET, "Expect ']' at the end of object.")
         }
         emitObjectLiteral(opener, isList == true, count)
     }

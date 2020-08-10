@@ -95,6 +95,22 @@ i = 2
 print list.(i) # 3
 ```
 
+#### Empty object and list literals
+
+Some languages make a distinction between object/map/dictionary and list literals, mostly by enclosing the former in curly braces `{}`, and lists in square brackets `[]`. Šimi makes use of `[]` for both, primarily because we wanted `{}` to always indicate a block of code. This, however, leaves us with a doubt - what does an empty pair of brackets represent - an empty list or an empty object?
+
+A good cue to visually distinct list and objects is to look for an equal sign `=`. If you see one, you're looking at an object. (Admittedly, list literals can have equal signs in them as well, if they contain [shorthand expression functions](functions.md#implicit-arguments-for-lambdas), but that's rarer). Therefore, `[]` is an empty list, while `[=]` is an empty object:
+```ruby
+emptyList = []
+emptyMutableList = $[]
+emptyObject = [=]
+emptyMutableObject = $[=]
+```
+
+There are two smaller reasons that support `[]` vs `[=]`:
+1. Empty lists are generally used more than empty objects, i.e lists are built more often from scratch than objects are.
+2. If you need to, later on, convert an empty object to a non-empty one, you already have a `=` in there. :)
+
 #### How-to for common object tasks
 Here's a quick overview of some common object tasks.
 
