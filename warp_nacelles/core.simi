@@ -42,6 +42,7 @@ class_ List {
     native iterate
     native sorted()
     native has(value)
+    native distinct()
 }
 
 class_ Stream {
@@ -113,11 +114,16 @@ extend Object { # Doing it here because otherwise List import StreamMixin wouldn
 class_ String {
     len = 0
     native get(key)
+    native has(other)
     native replacing(old, new, ignoreCase = false)
+    native replacingRegex(old, new)
     native startsWith(prefix, ignoreCase = false)
     native endsWith(suffix, ignoreCase = false)
     native indexOf(other, startIndex = 0, ignoreCase = false)
     native substring(from, to)
+    native upperCased()
+    native lowerCased()
+    native split(delimiter = "")
     native builder
     fn iterate = [
         src = self,
@@ -132,6 +138,7 @@ class_ String {
    fn isEmpty = len == 0
    fn isNotEmpty = not isEmpty()
    fn substringToIndexOf(other) = substring(0, indexOf(other))
+   fn substringFromIndexOf(other) = substring(indexOf(other) + 1, len)
 }
 
 class_ Function
@@ -202,4 +209,9 @@ class Closable {
         handler(self)
         close()
     }
+}
+
+class Regex {
+    init(@pattern)
+    native find(string)
 }

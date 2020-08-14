@@ -98,6 +98,10 @@ fun Array<*>.toSimiList(): ListInstance {
     return ListInstance(false, (this as? Array<Any>)?.toMutableList())
 }
 
+fun List<Any>.toSimiList(): ListInstance {
+    return ListInstance(false, toMutableList())
+}
+
 fun List<Token>.lifetimeTokens(lifetime: Lifetime): List<Token> {
     val first = indexOfFirst { it.file == lifetime.start.file && it.line == lifetime.start.line }
     val last = indexOfFirst { it.file == lifetime.end!!.file && it.line == lifetime.end!!.line }

@@ -298,7 +298,7 @@ class Lexer(private val fileName: String,
                 line++
             } else if (peek == '\\') {
                 when (val next = peekNext) {
-                    opener, '$', 'n' -> advance() // TODO fix
+                    opener, '$', 'n', '\\' -> advance() // TODO fix
                     else -> throw error("Invalid string escape char: $next.")
                 }
             } else if (peek == '$') {
@@ -360,6 +360,7 @@ class Lexer(private val fileName: String,
                 .replace(backslashBackslashNReplacement, "\\n")
                 .replace("\\t", "\t")
                 .replace("\\\"", "\"")
+                .replace("\\\\", "\\")
     }
 
     private fun keywordString(type: TokenType): String? {
