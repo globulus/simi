@@ -651,7 +651,7 @@ print myFiber(5, 10, 0)
 print "three stooges".chars()
 
 extend String {
-    fn replaceNewlinesWithBreaks = replace("\n", "<br/>")
+    fn replaceNewlinesWithBreaks = replacing("\n", "<br/>")
 }
 
 print "a string\nwith\nnewlines\nyay!".replaceNewlinesWithBreaks()

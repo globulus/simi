@@ -581,22 +581,29 @@ class Vm {
         runLocal()
     }
 
-    private fun handleOptionalParams(f: OptionalParamsFunc, argCount: Int) {
+    /**
+     * @return The number of optional params added
+     */
+    private fun handleOptionalParams(f: OptionalParamsFunc, argCount: Int): Int {
+        var optionalsAddedCount = 0
         if (argCount != f.arity) {
             if (argCount < f.arity
                     && f.optionalParamsStart != -1
                     && argCount >= f.optionalParamsStart) {
                 for (i in argCount until (f.optionalParamsStart + f.defaultValues!!.size)) {
                     push(f.defaultValues!![i - f.optionalParamsStart])
+                    optionalsAddedCount += 1
                 }
             } else {
                 throw runtimeError("Expected ${f.arity} arguments but got $argCount.")
             }
         }
+        return optionalsAddedCount
     }
 
     private fun callNative(method: NativeFunc, argCount: Int) {
-        handleOptionalParams(method, argCount)
+        val addedOptionalsCount = handleOptionalParams(method, argCount)
+        val totalArgCount = argCount + addedOptionalsCount
         val args = mutableListOf<Any?>()
         for (i in fiber.sp - method.arity - 1 until fiber.sp) {
             args += fiber.stack[i]
@@ -604,12 +611,12 @@ class Vm {
         if (method is AsyncNativeFunction) {
             val latch = CountDownLatch(1)
             method.func(args) {
-                handleNativeFuncResult(argCount, it)
+                handleNativeFuncResult(totalArgCount, it)
                 latch.countDown()
             }
             latch.await()
         } else if (method is NativeFunction) {
-            handleNativeFuncResult(argCount, method.func(args))
+            handleNativeFuncResult(totalArgCount, method.func(args))
         }
     }
 

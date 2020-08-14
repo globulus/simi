@@ -23,8 +23,9 @@ module Io {
     class File {
         fn init(@path)
         native isDirectory
+        native list
 
         native readLines
-        fn readString = readLines().joinToString()
+        fn readString = readLines().joinToString("\n")
     }
 }

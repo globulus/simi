@@ -40,6 +40,8 @@ class_ List {
     native isEmpty
     native clear
     native iterate
+    native sorted()
+    native has(value)
 }
 
 class_ Stream {
@@ -111,7 +113,11 @@ extend Object { # Doing it here because otherwise List import StreamMixin wouldn
 class_ String {
     len = 0
     native get(key)
-    native replace(old, new, ignoreCase = false)
+    native replacing(old, new, ignoreCase = false)
+    native startsWith(prefix, ignoreCase = false)
+    native endsWith(suffix, ignoreCase = false)
+    native indexOf(other, startIndex = 0, ignoreCase = false)
+    native substring(from, to)
     native builder
     fn iterate = [
         src = self,
@@ -125,6 +131,7 @@ class_ String {
    fn chars = $[for c in self do c]
    fn isEmpty = len == 0
    fn isNotEmpty = not isEmpty()
+   fn substringToIndexOf(other) = substring(0, indexOf(other))
 }
 
 class_ Function

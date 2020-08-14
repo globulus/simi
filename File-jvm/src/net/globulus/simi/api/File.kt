@@ -7,6 +7,7 @@ import net.globulus.simi.warp.Vm
 import net.globulus.simi.warp.native.NativeClass
 import net.globulus.simi.warp.native.NativeFunction
 import net.globulus.simi.warp.native.NativeModule
+import net.globulus.simi.warp.toSimiList
 import java.io.*
 import java.io.File
 import java.nio.file.Files
@@ -19,6 +20,9 @@ class File : NativeModule {
                     return when (funcName) {
                         "isDirectory" -> NativeFunction(0) {
                             Files.isDirectory(Paths.get(getPath(it, 0)))
+                        }
+                        "list" -> NativeFunction(0) {
+                            File(getPath(it, 0)).list().toSimiList()
                         }
                         "readLines" -> NativeFunction(0) {
                             try {
@@ -42,6 +46,7 @@ class File : NativeModule {
                                 val reader = BufferedReader(FileReader(path))
                                 instance.apply {
                                     fields[Constants.PRIVATE] = reader
+                                    fields["file"] = it[1]!!
                                 }
                             } catch (e: FileNotFoundException) {
                                 raiseIoException(e)
@@ -105,6 +110,7 @@ class File : NativeModule {
                                 val writer = BufferedWriter(FileWriter(path))
                                 instance.apply {
                                     fields[Constants.PRIVATE] = writer
+                                    fields["file"] = it[1]!!
                                 }
                             } catch (e: FileNotFoundException) {
                                 raiseIoException(e)

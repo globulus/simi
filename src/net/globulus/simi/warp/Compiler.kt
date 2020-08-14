@@ -1493,6 +1493,7 @@ class Compiler(val debugMode: Boolean) {
                 count++
                 matchSequence(IDENTIFIER, EQUAL) // allows for named params, e.g substr(start=1,end=2)
                 expression()
+                checkIfUnidentified()
             } while (match(COMMA))
         }
         consume(RIGHT_PAREN, "Expect ')' after arguments.")
@@ -1564,7 +1565,7 @@ class Compiler(val debugMode: Boolean) {
             }
         } else if (match(DOLLAR_LEFT_BRACKET)) {
             objectLiteralOrObjectComprehension()
-        } else if (match(FN) || peekSequence(EQUAL)) {
+        } else if (match(FN) || peekSequence(EQUAL) || peekSequence(LEFT_BRACE)) {
             function(Parser.KIND_LAMBDA, false, nextLambdaName())
         } else if (match(DO)) {
             proc()

@@ -157,6 +157,20 @@ object Core : NativeModule {
                             }
                         }
                         Constants.ITERATE -> listIterate
+                        "sorted" -> NativeFunction(0) {
+                            val instance = it[0] as ListInstance
+                            ListInstance(true, instance.items.sortedWith(Comparator { o1, o2 ->
+                                if (o1 is String && o2 is String) {
+                                    o1.compareTo(o2)
+                                } else {
+                                    throw IllegalArgumentException("Sort not fully implemented.")
+                                }
+                            }).toMutableList())
+                        }
+                        "has" -> NativeFunction(1) {
+                            val instance = it[0] as ListInstance
+                            it[1] in instance.items
+                        }
                         else -> null
                     }
                 }
@@ -179,13 +193,42 @@ object Core : NativeModule {
                                 else -> null
                             }
                         }
-                        "replace" -> NativeFunction(3) {
+                        "replacing" -> NativeFunction(3) {
                             val instance = it[0] as Instance
                             val string = instance.fields[Constants.PRIVATE] as String
                             val old = it[1] as String
                             val new = it[2] as String
                             val ignoreCase = it[3] as Boolean
                             string.replace(old, new, ignoreCase)
+                        }
+                        "startsWith" -> NativeFunction(2) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.PRIVATE] as String
+                            val prefix = it[1] as String
+                            val ignoreCase = it[2] as Boolean
+                            string.startsWith(prefix, ignoreCase)
+                        }
+                        "endsWith" -> NativeFunction(2) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.PRIVATE] as String
+                            val suffix = it[1] as String
+                            val ignoreCase = it[2] as Boolean
+                            string.endsWith(suffix, ignoreCase)
+                        }
+                        "indexOf" -> NativeFunction(3) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.PRIVATE] as String
+                            val other = it[1] as String
+                            val startIndex = it[2] as Long
+                            val ignoreCase = it[3] as Boolean
+                            string.indexOf(other, startIndex.toInt(), ignoreCase).toLong()
+                        }
+                        "substring" -> NativeFunction(2) {
+                            val instance = it[0] as Instance
+                            val string = instance.fields[Constants.PRIVATE] as String
+                            val from = it[1] as Long
+                            val to = it[2] as Long
+                            string.substring(from.toInt(), to.toInt())
                         }
                         "builder" -> NativeFunction(0) {
                             Vm.newObject {

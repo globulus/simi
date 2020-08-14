@@ -133,7 +133,7 @@ class Debugger(private val vm: Vm) {
         val sb = StringBuilder()
         var count = 0
         for (i in vm.fiber.sp - 1 downTo frame.sp) {
-            sb.appendln("[$i] ${vm.stringify(vm.fiber.stack[i]!!)}")
+            sb.appendln("[$i] ${vm.stringify(vm.fiber.stack[i]!!).limitValue()}")
             count++
             if (capped && count == MAX_STACK_ITEMS) {
                 sb.appendln("...${vm.fiber.sp - frame.sp - MAX_STACK_ITEMS} more stack items available, use 's' to print them all.")
@@ -224,6 +224,8 @@ class Debugger(private val vm: Vm) {
 
     private fun String.replaceNewlines() = replace("\n", "<br />")
 
+    private fun String.limitValue() = if (length > MAX_VALUE_LENGTH) substring(0, MAX_VALUE_LENGTH) + "..." else this
+
     private fun <T> MutableMap<Function, MutableSet<T>>.addToSet(key: Function, item: T) {
         (get(key) ?: mutableSetOf<T>().also {
             put(key, it)
@@ -237,6 +239,7 @@ class Debugger(private val vm: Vm) {
     companion object {
         private const val MAX_LOCALS = 5 // maximum number of locals to be printed out in regular mode
         private const val MAX_STACK_ITEMS = 5 // maximum number of stack items to be printed out in regular mode
+        private const val MAX_VALUE_LENGTH = 100
 
         private const val HELP = """
             Commands:

@@ -1,0 +1,25 @@
+import "warp_nacelles/io" for *
+
+DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-ios/.build/documentation/"
+HOME_MD = "Home.md"
+DEFAULT_MD = "default.md"
+home = File(DIR + HOME_MD)
+merge = String.builder().add(home.readString())
+for path in File(DIR).list()\
+            .where(=$0 not in [HOME_MD, DEFAULT_MD, "_Footer.md", "_Sidebar.md"] and $0.endsWith(".md"))\
+            .sorted() {
+    merge.add("\n\n").add(File(DIR + path).readString())
+}
+frontmatter = "---
+title: 'iOS docs'
+visible: true
+anchors:
+    active: true
+---
+
+"
+content = merge.build().replacing("​", "").replacing("x-source-tag://", "#").replacing("](/", "](#")
+WriteStream(File("/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/01.ios/$DEFAULT_MD")).use({
+    $0.write(frontmatter + content)
+    print "Done writing to $($0.file.path)"
+})
