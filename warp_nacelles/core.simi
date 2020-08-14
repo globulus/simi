@@ -120,7 +120,7 @@ class_ String {
     native startsWith(prefix, ignoreCase = false)
     native endsWith(suffix, ignoreCase = false)
     native indexOf(other, startIndex = 0, ignoreCase = false)
-    native substring(from, to)
+    native findAllRegex(pattern)
     native upperCased()
     native lowerCased()
     native split(delimiter = "")
@@ -137,8 +137,10 @@ class_ String {
    fn chars = $[for c in self do c]
    fn isEmpty = len == 0
    fn isNotEmpty = not isEmpty()
-   fn substringToIndexOf(other) = substring(0, indexOf(other))
-   fn substringFromIndexOf(other) = substring(indexOf(other) + 1, len)
+   fn substringFrom(from) = @(from...len)
+   fn substringTo(to) = @(0...to)
+   fn substringToIndexOf(other) = substringTo(indexOf(other))
+   fn substringFromIndexOf(other) = substringFrom(indexOf(other))
 }
 
 class_ Function
@@ -209,9 +211,4 @@ class Closable {
         handler(self)
         close()
     }
-}
-
-class Regex {
-    init(@pattern)
-    native find(string)
 }

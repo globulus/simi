@@ -187,7 +187,8 @@ object Core : NativeModule {
                                 is String -> getRawProp(instance, key)
                                 is Instance -> {
                                     when (key.klass) {
-//                                        Vm.rangeClass -> instance.sublist(key.fields["from"] as Long, key.fields["to"] as Long)
+                                        Vm.declaredClasses[Constants.CLASS_RANGE] ->
+                                            string.substring((key.fields["from"] as Long).toInt(), (key.fields["to"] as Long).toInt())
                                         else -> null
                                     }
                                 }
@@ -195,68 +196,65 @@ object Core : NativeModule {
                             }
                         }
                         Constants.HAS -> NativeFunction(1) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val other = it[1] as String
                             other in string
                         }
                         "replacing" -> NativeFunction(3) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val old = it[1] as String
                             val new = it[2] as String
                             val ignoreCase = it[3] as Boolean
                             string.replace(old, new, ignoreCase)
                         }
                         "replacingRegex" -> NativeFunction(2) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val old = it[1] as String
                             val new = it[2] as String
                             string.replace(Regex(old), new)
                         }
                         "startsWith" -> NativeFunction(2) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val prefix = it[1] as String
                             val ignoreCase = it[2] as Boolean
                             string.startsWith(prefix, ignoreCase)
                         }
                         "endsWith" -> NativeFunction(2) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val suffix = it[1] as String
                             val ignoreCase = it[2] as Boolean
                             string.endsWith(suffix, ignoreCase)
                         }
+                        "findAllRegex" -> NativeFunction(1) {
+                            val string = stringValue(it)
+                            val regex = Regex(it[1] as String)
+                            ListInstance(true, regex.findAll(string).map { result ->
+                                Vm.newObject {
+                                    fields["value"] = result.value
+                                    fields["range"] = Vm.newInstance("Range") {
+                                        fields["from"] = result.range.first.toLong()
+                                        fields["to"] = result.range.last.toLong()
+                                    }
+                                }
+                            }.toMutableList())
+                        }
                         "indexOf" -> NativeFunction(3) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val other = it[1] as String
                             val startIndex = it[2] as Long
                             val ignoreCase = it[3] as Boolean
                             string.indexOf(other, startIndex.toInt(), ignoreCase).toLong()
                         }
-                        "substring" -> NativeFunction(2) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
-                            val from = it[1] as Long
-                            val to = it[2] as Long
-                            string.substring(from.toInt(), to.toInt())
-                        }
                         "upperCased" -> NativeFunction(0) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             string.toUpperCase()
                         }
                         "lowerCased" -> NativeFunction(0) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             string.toLowerCase()
                         }
                         "split" -> NativeFunction(1) {
-                            val instance = it[0] as Instance
-                            val string = instance.fields[Constants.PRIVATE] as String
+                            val string = stringValue(it)
                             val delimiter = it[1] as String
                             string.split(delimiter).toSimiList()
                         }
@@ -275,21 +273,8 @@ object Core : NativeModule {
                         else -> null
                     }
                 }
-            },
-            "Regex" to object : NativeClass {
-                override fun resolve(funcName: String): NativeFunc? {
-                    return when (funcName) {
-                        "find" -> NativeFunction(1) {
-                            val regex = Regex((it[0] as Instance)["pattern"] as String)
-                            val string = it[1] as String
-                            regex.find(string)?.let { result ->
-                                newMatchResult(result)
-                            }
 
-                        }
-                        else -> null
-                    }
-                }
+                fun stringValue(args: List<Any?>) = (args[0] as Instance).fields[Constants.PRIVATE] as String
             }
     )
 
@@ -308,26 +293,5 @@ object Core : NativeModule {
     private fun getRawProp(instance: Instance, name: String): Any? {
         Vm.instance?.getPropRaw(instance, name)
         return Vm.instance?.pop()
-    }
-
-    private fun newMatchResult(result: MatchResult): Instance {
-        return Vm.newObject {
-            fields[Constants.PRIVATE] = result
-            fields["value"] = result.value
-            fields["range"] = Vm.newInstance("Range") {
-                fields["from"] = result.range.first.toLong()
-                fields["to"] = result.range.last.toLong()
-            }
-            fields[Constants.ITERATE] = NativeFunction(0) {
-                this
-            }
-            fields[Constants.NEXT] = NativeFunction(0) {
-                val myResult = (it[0] as Instance)[Constants.PRIVATE] as MatchResult
-                myResult.next()?.let { newResult ->
-                    (it[0] as Instance).fields.put(Constants.PRIVATE, newResult)
-                    newMatchResult(newResult)
-                }
-            }
-        }
     }
 }

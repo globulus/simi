@@ -12,36 +12,37 @@ anchors:
 "
 
 extend String {
-    fn capitalizeFirst = @0.upperCased() + substring(1, @len)
-    fn decapitalizeFirst = @0.lowerCased() + substring(1, @len)
+    fn capitalizeFirst = @0.upperCased() + substringFrom(1)
+    fn decapitalizeFirst = @0.lowerCased() + substringFrom(1)
     fn dashesToCamelCase = split("-").map(=$0.capitalizeFirst()).joinToString("").decapitalizeFirst()
 }
 
 fn ios() {
-    DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-ios/.build/documentation/"
+    SOURCE_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-ios/.build/documentation/"
+    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/01.ios"
     HOME_MD = "Home.md"
-    home = File(DIR + HOME_MD)
-    merge = String.builder().add(home.readString())
-    for path in File(DIR).list()\
+    merge = String.builder().add(File(SOURCE_DIR + HOME_MD).readString())
+    for path in File(SOURCE_DIR).list()\
                 .where(=$0 not in [HOME_MD, DEFAULT_MD, "_Footer.md", "_Sidebar.md"] and $0.endsWith(".md"))\
                 .sorted() {
-        merge.add("\n\n").add(File(DIR + path).readString())
+        merge.add("\n\n").add(File(SOURCE_DIR + path).readString())
     }
     content = merge.build().replacing("​", "").replacing("x-source-tag://", "#").replacing("](/", "](#")
-    WriteStream(File("/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/01.ios/$DEFAULT_MD")).use({
+    WriteStream(File("$TARGET_DIR/$DEFAULT_MD")).use({
         $0.write(frontmatter("iOS") + content)
         print "Done writing to $($0.file.path)"
     })
 }
 
 fn android() {
-    DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-android/ablelib/build/docs/ablelib"
+    SOURCE_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-android/ablelib/build/docs/ablelib"
+    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/02.android"
     INDEX_MD = "index.md"
     fn readFile(file) {
         text = file.readLines()\
             .where(=not $0.startsWith("//"))\
             .joinToString("\n")
-        allMatches = [for match in Regex("(\\(|\\/)[a-z,A-Z,0-9,-]*\\.(md)").find(text) do match.value].distinct()
+        allMatches = text.findAllRegex("(\\(|\\/)[a-z,A-Z,0-9,-]*\\.(md)").map(=$0.value).distinct()
         for match in allMatches {
             text = text.replacing(match, if "index.md" in match "" else\
                         match.dashesToCamelCase()\
@@ -54,28 +55,26 @@ fn android() {
     }
 
     fn scanDirectory(relativePath) {
-        path = "$DIR/$relativePath"
-        home = File("$path/$INDEX_MD")
-        merge = String.builder().add(readFile(home))
+        isRoot = relativePath.isEmpty()
+        path = "$SOURCE_DIR/$relativePath"
+        merge = String.builder().add(readFile(File("$path/$INDEX_MD")))
         for listed in File(path).list()\
                     .where(=$0 not in [INDEX_MD, "package-list"] and not $0.startsWith("."))\
                     .sorted() {
             file = File("$path/$listed")
             if file.isDirectory() {
-                scanDirectory((if relativePath.isEmpty() "" else "$relativePath/") + listed)
+                scanDirectory((if isRoot "" else "$relativePath/") + listed)
             } else {
                 merge.add("\n\n").add(readFile(file))
             }
         }
-        WriteStream(File("/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/02.android/$relativePath/$DEFAULT_MD")).use({
-            $0.write(frontmatter(\
-                if relativePath.isEmpty() "Android" else relativePath.split("/").(-1),\
-                relativePath.isEmpty()\
-            ) + merge.build())
+        WriteStream(File("$TARGET_DIR/$relativePath/$DEFAULT_MD")).use({
+            $0.write(frontmatter(if isRoot "Android" else relativePath.split("/").(-1), isRoot) + merge.build())
             print "Done writing to $($0.file.path)"
         })
     }
     scanDirectory("")
 }
 
+ios()
 android()
