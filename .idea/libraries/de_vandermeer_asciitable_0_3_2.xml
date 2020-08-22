@@ -1,0 +1,38 @@
+<component name="libraryTable">
+  <library name="de.vandermeer:asciitable:0.3.2" type="repository">
+    <properties maven-id="de.vandermeer:asciitable:0.3.2" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/asciitable-0.3.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ascii-utf-themes-0.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/skb-interfaces-0.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ST4-4.0.8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr-runtime-3.5.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr4-4.5.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.12.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/char-translation-0.0.2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/asciitable-0.3.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ascii-utf-themes-0.0.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/skb-interfaces-0.0.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.4-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ST4-4.0.8-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr-runtime-3.5.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr4-4.5.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.12-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/char-translation-0.0.2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/asciitable-0.3.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ascii-utf-themes-0.0.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/skb-interfaces-0.0.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.4-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/ST4-4.0.8-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr-runtime-3.5.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/antlr4-4.5.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.12-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/char-translation-0.0.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

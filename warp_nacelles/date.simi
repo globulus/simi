@@ -1,0 +1,6 @@
+import native "Date"
+
+class Date {
+    native init
+    native at(time = 0)
+}

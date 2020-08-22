@@ -2,16 +2,19 @@ package net.globulus.simi;
 
 import net.globulus.simi.api.Codifiable;
 
-enum TokenType implements Codifiable {
+public enum TokenType implements Codifiable {
   // Single-character tokens.
   LEFT_PAREN, RIGHT_PAREN,
   LEFT_BRACKET, RIGHT_BRACKET,
   LEFT_BRACE, RIGHT_BRACE,
-  COMMA, DOT, COLON, NEWLINE,
+  COMMA,
+  DOT, DOT_DOT, DOT_DOT_DOT,
+  COLON, NEWLINE,
+  HASH,
 
   // One or two character tokens.
   BANG, BANG_BANG, BANG_EQUAL,
-  EQUAL, EQUAL_EQUAL,
+  EQUAL, UNDERSCORE_EQUAL, EQUAL_EQUAL,
   GREATER, GREATER_EQUAL,
   LESS, LESS_EQUAL,
   LESS_GREATER,
@@ -21,16 +24,18 @@ enum TokenType implements Codifiable {
     SLASH, SLASH_SLASH, SLASH_EQUAL, SLASH_SLASH_EQUAL,
   MOD, MOD_MOD, MOD_EQUAL,
   DOLLAR_LEFT_PAREN, DOLLAR_LEFT_BRACKET, DOLLAR_EQUAL,
-  QUESTION, QUESTION_QUESTION, QUESTION_QUESTION_EQUAL,
+  QUESTION, QUESTION_DOT, QUESTION_LEFT_PAREN,
+  QUESTION_BANG, QUESTION_QUESTION,
+  QUESTION_QUESTION_EQUAL, QUESTION_BANG_EQUAL,
 
   // Literals.
   IDENTIFIER, STRING, NUMBER,
 
   // Keywords.
-  AND, BREAK, CLASS, CLASS_FINAL, CLASS_OPEN, CONTINUE, ELSE,
-  FALSE, DEF, FOR, RESCUE, IF, NIL, OR, PRINT, RETURN, SUPER,
-  SELF, TRUE, WHILE, PASS, IN, IS, NOT, ELSIF, ISNOT,
-  NOTIN, NATIVE, IMPORT, YIELD, WHEN,
+  AND, BREAK, CATCH, CLASS, CLASS_FINAL, CLASS_OPEN, CONTINUE, ELSE,
+  ENUM, EXTEND, FALSE, FIB, FN, DEF, DO, FOR, RESCUE, IF, MODULE, NIL,
+  OR, PRINT, RETURN, SUPER, SELF, TRUE, WHILE, PASS, IN, IS, NOT,
+  ELSIF, ISNOT, NOTIN, NATIVE, IMPORT, YIELD, WHEN,
 
   GU, IVIC,
 
@@ -54,6 +59,10 @@ enum TokenType implements Codifiable {
         return ",";
       case DOT:
         return ".";
+      case DOT_DOT:
+        return "..";
+      case DOT_DOT_DOT:
+        return "...";
       case COLON:
         return ":";
       case NEWLINE:
@@ -66,6 +75,8 @@ enum TokenType implements Codifiable {
         return "!=";
       case EQUAL:
         return "=";
+      case UNDERSCORE_EQUAL:
+        return "_=";
       case EQUAL_EQUAL:
         return "==";
       case GREATER:
@@ -114,10 +125,14 @@ enum TokenType implements Codifiable {
         return "$=";
       case QUESTION:
         return "?";
+      case QUESTION_BANG:
+        return "?!";
       case QUESTION_QUESTION:
         return "??";
       case QUESTION_QUESTION_EQUAL:
         return "??=";
+      case QUESTION_BANG_EQUAL:
+        return "?!=";
       case IDENTIFIER:
       case STRING:
       case NUMBER:

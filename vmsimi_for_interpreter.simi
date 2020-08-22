@@ -1,0 +1,36 @@
+a = 5
+b = a + 3
+a $= b - 4 / (2 + 2 * 2)
+b /= 2
+print "a is \(a) == 7.33"
+print "b is \(b) == 4"
+
+print "if test \"a\" =="
+if a < 2 or a > 5 {
+    print "a"
+} elsif b == 4 {
+    print "b"
+} else {
+    print "both are false"
+}
+a $= 5
+while a > 1 {
+    print "a is \(a)"
+    if a == 4 {
+        a -= 1
+        continue
+    } elsif a == 2 {
+        break
+    }
+    print "again"
+    a -= 1
+}
+print "while test 2 == \(a)"
+
+print "when test 2 == "
+a $= 5
+when a {
+    2 { print "2" }
+    3 or 4 { print "3 or 4" }
+    else { print "else" }
+}

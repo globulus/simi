@@ -1,1 +1,4 @@
-java -jar simi.jar $1
+#!/bin/bash
+function simi() {
+  java -jar "$SIMI_HOME"/simi.jar "$1"
+}

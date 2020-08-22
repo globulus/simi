@@ -1,0 +1,214 @@
+import native "Core"
+
+class Object {
+    native size
+    native keys
+    native values
+    native zip # Returns an iterable that goes through key-value pairs
+    native zipped # Returns a List of key-value pairs
+    native isEmpty
+    native clear
+    native iterate
+    native lock
+
+    native merge(with)
+
+    fn isNotEmpty = not isEmpty()
+    fn has(key) = key in keys()
+
+    fn reduce(initialValue, reducer) {
+        val = initialValue
+        for i in self {
+            val = reducer(val, i)
+        }
+        return val
+    }
+
+    fn joinToString(separator = ", ", prefix = "", suffix = "") = \
+        prefix + reduce("", =$0 + (if $0.isEmpty() "" else separator) + $1) + suffix
+
+    fn mutableCopy = $[for k in self do k = @(k)]
+}
+
+class_ List {
+    native init
+    native get(key)
+    native set(key, value)
+    native size
+    native add(value)
+    native addAll(from)
+    native isEmpty
+    native clear
+    native iterate
+    native sorted()
+    native has(value)
+    native distinct()
+}
+
+class_ Stream {
+    enum Op {
+        WHERE, MAP, FOR_EACH
+    }
+
+    init(@src) {
+        @ops = $[]
+    }
+
+    fn where(predicate) {
+        @ops += [op = Op.WHERE, arg = predicate]
+        return self
+    }
+
+    fn map(transformation) {
+        @ops += [op = Op.MAP, arg = transformation]
+        return self
+    }
+
+    fn forEach(handler) {
+        @ops += [op = Op.FOR_EACH, arg = handler]
+        return self
+    }
+
+    fn toList {
+        list = $[]
+        for item in src {
+            dst = item
+            for [op, arg] in ops {
+                when op {
+                    Op.WHERE {
+                        if not arg(dst) {
+                            dst = nil
+                            break
+                        }
+                    }
+                    Op.MAP {
+                        dst = arg(dst)
+                    }
+                    Op.FOR_EACH {
+                        arg(dst)
+                    }
+                }
+            }
+            if dst != nil {
+                list += dst
+            }
+        }
+        return list
+    }
+}
+
+class_ StreamMixin {
+    fn where(predicate) = Stream(self).where(predicate).toList()
+    fn map(transformation) = Stream(self).map(transformation).toList()
+    fn forEach(handler) = Stream(self).forEach(handler).toList()
+}
+
+extend List import StreamMixin
+extend Object { # Doing it here because otherwise List import StreamMixin wouldn't work
+    fn where(predicate) = $[for k in self if predicate(k) do k = @(k)]
+    fn map(transformKey, transformValue = nil) = \
+        $[for k in self do transformKey(k) = \
+         if transformValue != nil transformValue(@(k)) else @(k)]
+}
+
+class_ String {
+    len = 0
+    native get(key)
+    native has(other)
+    native replacing(old, new, ignoreCase = false)
+    native replacingRegex(old, new)
+    native startsWith(prefix, ignoreCase = false)
+    native endsWith(suffix, ignoreCase = false)
+    native indexOf(other, startIndex = 0, ignoreCase = false)
+    native findAllRegex(pattern)
+    native upperCased()
+    native lowerCased()
+    native split(delimiter = "")
+    native builder
+    fn iterate = [
+        src = self,
+        i = 0,
+        next = fn = if @i == @src.len nil else {
+            c = @src.(@i)
+            @i += 1
+            c
+        }
+   ]
+   fn chars = $[for c in self do c]
+   fn isEmpty = len == 0
+   fn isNotEmpty = not isEmpty()
+   fn substringFrom(from) = @(from...len)
+   fn substringTo(to) = @(0...to)
+   fn substringToIndexOf(other) = substringTo(indexOf(other))
+   fn substringFromIndexOf(other) = substringFrom(indexOf(other))
+}
+
+class_ Function
+
+class_ Class
+
+class Exception {
+    init(@message)
+}
+class TypeMismatchException is Exception {
+    init {
+        super.init("tme")
+    }
+}
+class NilReferenceException is Exception
+class IllegalArgumentException is Exception
+class AbstractMethodException is Exception {
+    init {
+        super.init("Abstract method")
+    }
+}
+class MutabilityLockException is Exception
+
+Math _= [
+    min = fn(a, b) = if (a < b) a else b,
+    max = fn(a, b) = if (a > b) a else b
+]
+
+class Range {
+    init(@from, @to) {
+        @min = Math.min(from, to)
+        @max = Math.max(from, to)
+        @ascending = to >= from
+    }
+
+    fn iterate() = [
+        src = self,
+        i = @from,
+        next = if @ascending fn = if @i > @src.to nil else {
+            @i += 1
+            @i - 1
+        } else fn = if @i < @src.to nil else {
+            @i -= 1
+            @i + 1
+        }
+    ]
+
+    fn has(o) = o >= min and o <= max
+}
+
+class_ Num {
+    fn rangeTo(lim) = Range(@_, lim)
+    fn rangeUntil(lim) = Range(@_, lim - 1)
+
+    fn equals(o) = (o is Num and @_ == o._)
+    fn matches(o) = if self == o {
+        @_
+    } else {
+        nil
+    }
+
+    fn iterate = 0.rangeUntil(self).iterate()
+}
+
+class Closable {
+    fn close = AbstractMethodException()
+    fn use(handler) {
+        handler(self)
+        close()
+    }
+}
