@@ -1,6 +1,5 @@
 package net.globulus.simi.warp
 
-import net.globulus.simi.Expr
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
@@ -615,24 +614,6 @@ internal class Kompiler {
 //            }
 //        }
 //        return expr
-    }
-
-    private fun finishCall(callee: Expr) {
-//        val paren = previous()
-//        val arguments: MutableList<Expr> = ArrayList()
-//        if (!check(TokenType.RIGHT_PAREN)) {
-//            do {
-//                matchSequence(TokenType.IDENTIFIER, TokenType.EQUAL) // allows for named params, e.g substr(start=1,end=2)
-//                arguments.add(expression())
-//            } while (match(TokenType.COMMA))
-//        }
-//        consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
-//        if (callee is Variable && callee.backupSelfGet != null) {
-//            // If a variable callee has a backup get, its arity needs to be adjusted because we're dealing with a call
-//            // and not a single variable load.
-//            callee.backupSelfGet.arity = arguments.size
-//        }
-//        return Call(callee, paren, arguments)
     }
 
     private fun primary() {

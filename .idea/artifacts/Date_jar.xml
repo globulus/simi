@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" build-on-make="true" name="Date:jar">
-    <output-path>$PROJECT_DIR$</output-path>
+    <output-path>$PROJECT_DIR$/warp_nacelles</output-path>
     <root id="archive" name="Date.jar">
       <element id="module-output" name="Date-jvm" />
       <element id="module-output" name="simi" />

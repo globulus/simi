@@ -1,8 +1,0 @@
-import "./Stdlib/File.simi"
-import "./Stdlib/Smt.simi"
-
-value = 3
-template = File.readString("testSmt.html.smt")
-smt = Smt.compile(template)
-result = smt.run()
-print result

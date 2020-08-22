@@ -1,7 +1,0 @@
-import "./stdlib/Native-java.jar"
-
-class NativeModulesmanager=
-    def init() = native
-    def loadJar(path) = native
-    def call(className, methodName, args) = native
-end

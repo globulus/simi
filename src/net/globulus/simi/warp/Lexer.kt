@@ -1,15 +1,14 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
-import net.globulus.simi.Debugger
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
 import net.globulus.simi.api.SimiValue
+import net.globulus.simi.warp.debug.Debugger
 
 class Lexer(private val fileName: String,
-            private val source: String,
-            private val debugger: Debugger?
+            private val source: String
 ) {
     private val tokens = mutableListOf<Token>()
     private val simiImports = mutableListOf<String>()

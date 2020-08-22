@@ -1,7 +1,6 @@
 package net.globulus.simi.warp
 
 import net.globulus.simi.Constants
-import net.globulus.simi.Parser
 import net.globulus.simi.Token
 import net.globulus.simi.TokenType
 import net.globulus.simi.TokenType.*
@@ -53,7 +52,7 @@ class Compiler(val debugMode: Boolean) {
     private val chunks = mutableListOf<Chunk>()
 
     private var enclosing: Compiler? = null
-    private lateinit var kind: String
+    private lateinit var kind: FunctionKind
     private lateinit var fiberName: String
     // If the function being compiled was marked with "is Type", we need to verify its return statements
     private var verifyReturnType: DynamicTypeCheck? = null
@@ -80,7 +79,7 @@ class Compiler(val debugMode: Boolean) {
 
     fun compile(tokens: List<Token>): Function {
         val name = SCRIPT + System.currentTimeMillis()
-        return compileFunction(tokens, name, 0, name, Lifetime.of(tokens)) {
+        return compileFunction(tokens, name, 0, FunctionKind.SCRIPT, Lifetime.of(tokens)) {
             fiberName = name
             compileInternal(false)
             emitReturnNil()
@@ -88,7 +87,7 @@ class Compiler(val debugMode: Boolean) {
     }
 
     internal fun compileLambdaForGu(tokens: List<Token>): Function {
-        return compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA, Lifetime.of(tokens)) {
+        return compileFunction(tokens, nextLambdaName(), 0, FunctionKind.LAMBDA, Lifetime.of(tokens)) {
             compileInternal(false)
         }
     }
@@ -96,7 +95,7 @@ class Compiler(val debugMode: Boolean) {
     private fun compileFunction(tokens: List<Token>,
                                 name: String,
                                 arity: Int,
-                                kind: String,
+                                kind: FunctionKind,
                                 lifetime: Lifetime,
                                 within: Compiler.() -> Unit
     ): Function {
@@ -104,7 +103,7 @@ class Compiler(val debugMode: Boolean) {
         this.tokens = tokens
         current = 0
         this.kind = kind
-        val selfName = if (kind != Parser.KIND_FUNCTION) Constants.SELF else ""
+        val selfName = if (kind != FunctionKind.FUNCTION) Constants.SELF else ""
         locals.add(Local(selfName, 0, 0, isCaptured = false)) // Stores the top-level function
         beginScope()
         if (tokens.isNotEmpty()) {
@@ -201,16 +200,16 @@ class Compiler(val debugMode: Boolean) {
     }
 
     private fun funDeclaration(): String {
-        val function = function(Parser.KIND_FUNCTION, true)
+        val function = function(FunctionKind.FUNCTION, true)
         return function.name
     }
 
     private fun fiber(): String {
-        val fiber = function(Parser.KIND_FIBER, true)
+        val fiber = function(FunctionKind.FIBER, true)
         return fiber.name
     }
 
-    private fun function(kind: String, declareLocal: Boolean, providedName: String? = null): Function {
+    private fun function(kind: FunctionKind, declareLocal: Boolean, providedName: String? = null): Function {
         val declaration = if (current > 0) previous else tokens[0] // current can be 0 in a gu expression
         val name = providedName ?: consumeVar("Expected an identifier for function name")
         if (declareLocal) {
@@ -219,15 +218,15 @@ class Compiler(val debugMode: Boolean) {
         val (args, prependedTokens, optionalParamsStart, defaultValues) = scanArgs(kind, true)
 
         // the init method also initializes all the fields declard in the class
-        if (kind == Parser.KIND_INIT) {
+        if (kind == FunctionKind.INIT) {
             prependedTokens += currentClass!!.initAdditionalTokens
         }
 
         var returnType: DynamicTypeCheck? = null
         if (match(IS)) {
             when (kind) {
-                Parser.KIND_LAMBDA -> throw error(previous, "Can't specify return type of lambdas!")
-                Parser.KIND_INIT -> throw error(previous, "Can't specify return type of init!")
+                FunctionKind.LAMBDA -> throw error(previous, "Can't specify return type of lambdas!")
+                FunctionKind.INIT -> throw error(previous, "Can't specify return type of init!")
                 else -> returnType = consumeDynamicTypeCheck("Expect type.")
             }
         }
@@ -241,7 +240,7 @@ class Compiler(val debugMode: Boolean) {
             consume(NEWLINE, "Expect '{', '=' or newline to start func.")
         }
 
-        if (kind == Parser.KIND_LAMBDA && hasBody && args.isEmpty()) {
+        if (kind == FunctionKind.LAMBDA && hasBody && args.isEmpty()) {
             // Scan for implicit args
             args += scanForImplicitArgs(declaration, isExprFunc)
         }
@@ -253,7 +252,7 @@ class Compiler(val debugMode: Boolean) {
         }
         val lifetime = Lifetime(declaration, null)
         val f = funcCompiler.compileFunction(tokens, name, args.size, kind, lifetime) {
-            fiberName = if (kind == Parser.KIND_FIBER) name else this@Compiler.fiberName
+            fiberName = if (kind == FunctionKind.FIBER) name else this@Compiler.fiberName
             current = curr
             args.forEach { declareLocal(it) }
             if (isExprFunc) {
@@ -270,7 +269,7 @@ class Compiler(val debugMode: Boolean) {
                 }
                 lifetime.end = CodePointer(previous)
                 emitReturn {
-                    if (kind == Parser.KIND_INIT) {
+                    if (kind == FunctionKind.INIT) {
                         emitGetLocal(Constants.SELF, null) // Emit self
                     } else {
                         emitCode(OpCode.NIL)
@@ -284,12 +283,12 @@ class Compiler(val debugMode: Boolean) {
             }
         }
         current = funcCompiler.current
-        emitClosure(f, funcCompiler, kind == Parser.KIND_FIBER)
+        emitClosure(f, funcCompiler, kind == FunctionKind.FIBER)
 
         return f
     }
 
-    private fun scanArgs(kind: String, allowPrepend: Boolean): ArgScanResult {
+    private fun scanArgs(kind: FunctionKind, allowPrepend: Boolean): ArgScanResult {
         val args = mutableListOf<String>()
         val prependedTokens = mutableListOf<Token>()
         var optionalParamsStart = -1
@@ -301,7 +300,7 @@ class Compiler(val debugMode: Boolean) {
                     if (matchSequence(SELF, DOT)) {
                         if (!allowPrepend) {
                             throw error(previous, "Autoset arguments aren't allowed here.")
-                        } else if (kind == Parser.KIND_INIT) {
+                        } else if (kind == FunctionKind.INIT) {
                             initAutoset = true
                         } else {
                             throw error(previous, "Autoset arguments are only allowed in initializers!")
@@ -552,7 +551,7 @@ class Compiler(val debugMode: Boolean) {
         val compiler = Compiler(this).also {
             it.currentClass = currentClass
         }
-        val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, Parser.KIND_METHOD, Lifetime.of(tokens)) {
+        val f = compiler.compileFunction(tokens, Constants.ENUM_INIT, 0, FunctionKind.METHOD, Lifetime.of(tokens)) {
             compileInternal(false)
             emitReturnNil()
         }
@@ -576,12 +575,12 @@ class Compiler(val debugMode: Boolean) {
         resetAnnotationCounter()
         val name = providedName ?: consumeVar("Expect method name.")
         val kind = if (name == Constants.INIT)
-                Parser.KIND_INIT
+                FunctionKind.INIT
             else {
                 if (isFiber)
-                    Parser.KIND_FIBER
+                    FunctionKind.FIBER
                 else
-                    Parser.KIND_METHOD
+                    FunctionKind.METHOD
             }
         function(kind, false, name)
         emitMethod(name, isExtension)
@@ -589,7 +588,7 @@ class Compiler(val debugMode: Boolean) {
     }
 
     private fun synthesizeMethod(nameArgsBody: String) {
-        val methodTokens = Lexer(SCRIPT, nameArgsBody, null).scanTokens(true).tokens
+        val methodTokens = Lexer(SCRIPT, nameArgsBody).scanTokens(true).tokens
         val compilerTokens = tokens
         val curr = current
         tokens = methodTokens
@@ -602,7 +601,7 @@ class Compiler(val debugMode: Boolean) {
     private fun nativeMethod(isExtension: Boolean): String {
         resetAnnotationCounter()
         val name = consumeVar("Expect method name.")
-        val (args, _, optionalParamsStart, defaultValues) = scanArgs(Parser.KIND_METHOD, false)
+        val (args, _, optionalParamsStart, defaultValues) = scanArgs(FunctionKind.METHOD, false)
         consume(NEWLINE, "Expect newline after native method declaration.")
         val nativeFunction = NativeModuleLoader.resolve(currentClass!!.name, name)?.also {
             it.optionalParamsStart = optionalParamsStart
@@ -1001,7 +1000,7 @@ class Compiler(val debugMode: Boolean) {
     }
 
     private fun returnStatement() {
-        if (kind == Parser.KIND_INIT) {
+        if (kind == FunctionKind.INIT) {
             throw error(previous, "Can't return from init!")
         }
         consumeReturnValue(false)
@@ -1214,7 +1213,7 @@ class Compiler(val debugMode: Boolean) {
                     4. Add the declaredField (if it exists) to declaredFields of enclosing compiler (as its the one that's compiling the class). The reason why that's done here is to prevent false self. markings in the setting expression, e.g, @from = from would wrongly be identified as @from = @from if we added declaredField to declaredFields immediately.
                      */
                     rollBackLastChunk()
-                    val declaredField = if (lastChunk?.opCode == CONST_ID && kind == Parser.KIND_INIT) {
+                    val declaredField = if (lastChunk?.opCode == CONST_ID && kind == FunctionKind.INIT) {
                         lastChunk!!.data[1] as String
                     } else {
                         null
@@ -1566,7 +1565,7 @@ class Compiler(val debugMode: Boolean) {
         } else if (match(DOLLAR_LEFT_BRACKET)) {
             objectLiteralOrObjectComprehension()
         } else if (match(FN) || peekSequence(EQUAL) || peekSequence(LEFT_BRACE)) {
-            function(Parser.KIND_LAMBDA, false, nextLambdaName())
+            function(FunctionKind.LAMBDA, false, nextLambdaName())
         } else if (match(DO)) {
             proc()
         } else if (match(IDENTIFIER)) {
@@ -1973,7 +1972,7 @@ class Compiler(val debugMode: Boolean) {
         val compiler = Compiler(this).also {
             it.currentClass = currentClass
         }
-        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, Parser.KIND_LAMBDA, Lifetime.of(tokens)) {
+        val f = compiler.compileFunction(tokens, nextLambdaName(), 0, FunctionKind.LAMBDA, Lifetime.of(tokens)) {
             this.block()
             emitCode(OpCode.RETURN)
             byteCode.putInt(popsAfterReturn)
@@ -2614,6 +2613,10 @@ class Compiler(val debugMode: Boolean) {
     private class CompileError(message: String) : RuntimeException(message)
 
     private class StatementDeepDown : RuntimeException("")
+
+    private enum class FunctionKind {
+        SCRIPT, FUNCTION, METHOD, FIBER, INIT, LAMBDA
+    }
 
     companion object {
         const val CALL_DEFAULT_JUMP_LOCATION = -1

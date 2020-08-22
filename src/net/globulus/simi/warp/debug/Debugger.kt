@@ -237,6 +237,7 @@ class Debugger(private val vm: Vm) {
     }
 
     companion object {
+        const val BREAKPOINT_LEXEME = "BP"
         private const val MAX_LOCALS = 5 // maximum number of locals to be printed out in regular mode
         private const val MAX_STACK_ITEMS = 5 // maximum number of stack items to be printed out in regular mode
         private const val MAX_VALUE_LENGTH = 100

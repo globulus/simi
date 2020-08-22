@@ -724,7 +724,7 @@ class Vm {
         enclosingCompiler?.let { enclosing ->
             (pop() as? String)?.let {
                 try {
-                    val tokens = Lexer("gu", "return $it\n", null).scanTokens(true).tokens
+                    val tokens = Lexer("gu", "return $it\n").scanTokens(true).tokens
                     val compiler = Compiler(enclosing)
                     val f = compiler.compileLambdaForGu(tokens)
                     val closure = Closure(f)

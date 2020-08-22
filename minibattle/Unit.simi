@@ -1,9 +1,0 @@
-import "./minibattle/Common.simi"
-
-class Unit(BoardPiece) {
-    def canBePlayedOn(terrain) = true
-}
-
-class EmptyUnit(Unit) {
-   def render() = "X"
-}

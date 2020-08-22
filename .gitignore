@@ -91,3 +91,6 @@ Gson-java/out/production/Gson-java/generated/net/globulus/simi/api/Gson_java.jav
 Mariadb-java/out/production/Mariadb-java/generated/net/globulus/simi/api/JavaApi.java
 Sql-java/out/production/Sql-java/generated/net/globulus/simi/api/JavaApi.java
 out/
+
+build/
+.gradle

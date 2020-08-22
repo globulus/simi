@@ -1,4 +1,4 @@
-import native "../Date"
+import native "Date"
 
 class Date {
     native init

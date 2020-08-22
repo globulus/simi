@@ -1,12 +1,14 @@
-package net.globulus.simi.warp
+package net.globulus.simi
 
-import net.globulus.simi.Token
+import net.globulus.simi.warp.*
 import net.globulus.simi.warp.native.NativeModuleLoader
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+
+private var simiHome: String? = null
 
 fun main(args: Array<String>) {
     val sourceFile = args[0]
@@ -16,6 +18,7 @@ fun main(args: Array<String>) {
             "-r" -> debugMode = false
         }
     }
+    simiHome = System.getenv("SIMI_HOME")
     runFile(sourceFile, debugMode)
 //    } else if (args.size == 2) {
 //        if (args[0] == "-k") {
@@ -50,7 +53,7 @@ private fun run(source: String, debugMode: Boolean) {
     try {
         var time = System.currentTimeMillis()
         print("Scanning and resolving imports...")
-        val lexer = Lexer(FILE_SIMI, source, null)
+        val lexer = Lexer(FILE_SIMI, source)
         val tokens = mutableListOf<Token>()
         val lo = lexer.scanTokens(true).apply {
             simiImports.add(0, "./warp_nacelles/core")
@@ -85,7 +88,7 @@ private fun scanImports(sourcePath: Path,
     for (import in simiImports) {
         convertImportToLocation(sourcePath, import, "simi", imports)?.let {
             scanImports(Paths.get(it).parent,
-                    Lexer(import, readFile(it, false), null).scanTokens(false),
+                    Lexer(import, readFile(it, false)).scanTokens(false),
                     allTokens,
                     imports
             )
@@ -99,7 +102,10 @@ private fun convertImportToLocation(sourcePath: Path,
                                     extension: String,
                                     imports: MutableList<String>): String? {
     val fileName = "$import.$extension"
-    val location = if (import.startsWith("./")) fileName else "$sourcePath/$fileName"
+    var location = if (import.startsWith("./")) fileName else "$sourcePath/$fileName"
+    if (!Files.exists(Paths.get(location))) {
+        location = "$simiHome/$fileName"
+    }
     if (location in imports) {
         return null
     }

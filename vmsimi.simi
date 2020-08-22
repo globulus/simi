@@ -3,9 +3,9 @@
 span
 multiple lines *#
 
-import "warp_nacelles/date"
-import "warp_nacelles/io" for *
-import "warp_nacelles/net" for *
+import "date"
+import "io" for *
+import "net" for *
 
 SUCCESS = "SUCCESS"
 testResults = $[total = 0, failureCount = 0, failures = $[]]
