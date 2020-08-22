@@ -56,7 +56,7 @@ private fun run(source: String, debugMode: Boolean) {
         val lexer = Lexer(FILE_SIMI, source)
         val tokens = mutableListOf<Token>()
         val lo = lexer.scanTokens(true).apply {
-            simiImports.add(0, "./warp_nacelles/core")
+            simiImports.add(0, "core")
         }
         scanImports(Paths.get("").toAbsolutePath(), lo, tokens, mutableListOf())
         println(" " + (System.currentTimeMillis() - time) + " ms")
