@@ -128,17 +128,17 @@ class DbLib {
     fn sqlForTable(table, sqlBuilder) {
         ans = table! # Get the annotations from the provided class
         tableName = "" + table # Convert the class name to string
-        for tableAn in ans.(tableName).where(=_0 is DbTable) { # Find the DbTable annotation in the class annotations
+        for tableAn in ans.(tableName).where(=$0 is DbTable) { # Find the DbTable annotation in the class annotations
             name = tableAn.name ?? tableName # Infer the table if not provided
             sqlBuilder.add("CREATE TABLE ").add(name).add(" (\n")
-            @sqlForFields(ans.where(=_0 != tableName), sqlBuilder) # Process all the annotations that don't refer to the table class, but its fields instead
+            @sqlForFields(ans.where(=$0 != tableName), sqlBuilder) # Process all the annotations that don't refer to the table class, but its fields instead
             sqlBuilder.add(");\n")
         }
     }
 
     fn sqlForFields(ans, sqlBuilder) {
         for [field, fieldAns] in ans.zip() {
-            dbFieldAn = fieldAns.where(=_0 is DbField).0 ?! {
+            dbFieldAn = fieldAns.where(=$0 is DbField).0 ?! {
                 continue
             }
             name = dbFieldAn.name ?? field

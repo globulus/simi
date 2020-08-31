@@ -77,7 +77,7 @@ Using @ instead of *self.* is idiomatic and is used in all code examples. Usage 
 #### List basics and list literals
 You're most likely already familiar with lists from other languages - they are ordered and their values are indexed. In Šimi, Lists can contain mixed values of any type.
 ```ruby
-list = [100, "abc", 300, =_0 * _1 - _2]
+list = [100, "abc", 300, =$0 * $1 - $2]
 ```
 
 Lists are also objects (their base class, "List", inherits the "Object" class). This means that virtually everything that was said earlier about objects works for lists as well.
@@ -93,6 +93,13 @@ If you're supplying a raw integer as the index, the parentheses aren't needed. O
 list = [1, 2, 3, 4, 5]
 i = 2
 print list.(i) # 3
+```
+
+Negative indices are supported, and refer to the list items starting from the read, with -1 being the last item, -2 the one before the last, etc. Note that, since we're using negative numbers, the getter expression must always be parenthesized.
+```ruby
+list = [1, 2, 3, 4, 5]
+print list.(-1) # 5
+print list.(-3) # 3
 ```
 
 #### Empty object and list literals
@@ -227,7 +234,7 @@ object2 = $[for [k, v] in otherObject if k not in ForbiddenKeys and v < 10 do k 
 
 In most cases when mapping a list or an object from another list or object, the list comprehension is semantically equal to a filtering followed by mapping:
 ```ruby
-list = other.where(=_0 < 10).map(=_0 * 2)
+list = other.where(=$0 < 10).map(=$0 * 2)
 # this is exactly the same as
 list = [for i in other if i < 10 do i * 2]
 ```

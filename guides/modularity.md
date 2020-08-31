@@ -23,7 +23,7 @@ Since the compiler doesn't know which code came from which file, it compiles all
 ```ruby
 module MyModule {
     field = 2 + 2 * 2
-    singleton = [name = "This", method = =_0 + _1]
+    singleton = [name = "This", method = =$0 + $1]
 
     class Class1
     
