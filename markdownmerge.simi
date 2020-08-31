@@ -1,4 +1,4 @@
-import "warp_nacelles/io" for *
+import "io" for *
 
 DEFAULT_MD = "default.md"
 
@@ -15,11 +15,12 @@ extend String {
     fn capitalizeFirst = @0.upperCased() + substringFrom(1)
     fn decapitalizeFirst = @0.lowerCased() + substringFrom(1)
     fn dashesToCamelCase = split("-").map(=$0.capitalizeFirst()).joinToString("").decapitalizeFirst()
+    fn lastPathComponent = split("/").(-1)
 }
 
 fn ios() {
     SOURCE_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-ios/.build/documentation/"
-    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/01.ios"
+    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/02.devs/02.docs/01.ios"
     HOME_MD = "Home.md"
     merge = String.builder().add(File(SOURCE_DIR + HOME_MD).readString())
     for path in File(SOURCE_DIR).list()\
@@ -36,8 +37,9 @@ fn ios() {
 
 fn android() {
     SOURCE_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-android/ablelib/build/docs/ablelib"
-    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/03.docs/02.docs/02.android"
+    TARGET_DIR = "/Users/gordanglavas/Desktop/github/CodeCons/able-fe/grav-admin/user/pages/02.devs/02.docs/02.android"
     INDEX_MD = "index.md"
+    
     fn readFile(file) {
         text = file.readLines()\
             .where(=not $0.startsWith("//"))\
@@ -69,12 +71,13 @@ fn android() {
             }
         }
         WriteStream(File("$TARGET_DIR/$relativePath/$DEFAULT_MD")).use({
-            $0.write(frontmatter(if isRoot "Android" else relativePath.split("/").(-1), isRoot) + merge.build())
+            $0.write(frontmatter(if isRoot "Android" else relativePath.lastPathComponent(), isRoot) + merge.build())
             print "Done writing to $($0.file.path)"
         })
     }
+
     scanDirectory("")
 }
 
-ios()
+#ios()
 android()
