@@ -753,6 +753,11 @@ class ArithmeticSequence {
     fn iterate = [g = Generator(), src = self, next = =@g(@src)]
 }
 
+import "json" for *
+json = JsonCoder().encode([a = 3, b = "str", c = fn { 12 }, d = ["a", "b", "c"], e = [obj = 12, obj2 = 13]])
+print json
+JsonCoder().decode(json)
+
 #print httpRequest([verb = "GET", url = "http://httpbin.org/ip"])
 
 #for i in ArithmeticSequence(1, 5) { # B

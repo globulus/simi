@@ -1038,6 +1038,14 @@ class Vm {
             }
             fiber.stack[loc] = boxedClosure
             return boxedClosure
+        } else if (value is BoundMethod) {
+            val boxedClosure = Instance(declaredClasses[Constants.CLASS_FUNCTION]!!, false).apply {
+                fields[Constants.PRIVATE] = value
+                fields[Constants.NAME] = value.callable.function.name
+                fields[Constants.ARITY] = value.callable.function.arity
+            }
+            fiber.stack[loc] = boxedClosure
+            return boxedClosure
         } else {
             throw runtimeError("Unable to box $value!", value)
         }

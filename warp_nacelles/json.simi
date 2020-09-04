@@ -1,0 +1,44 @@
+module Json {
+    class JsonException is Exception
+
+    enum JsonOptions {
+        PRETTY_PRINT, IGNORE_FUNCTIONS
+    }
+
+    class JsonCoder {
+        init(@options = nil) {
+            if options == nil {
+                @options = [JsonOptions.IGNORE_FUNCTIONS]
+            }
+        }
+
+        fn encode(e) = when e {
+           is Num = "$e"
+           is String = "\"$e\""
+           is List = [for i in e do @encode(i)].joinToString(", ", "[", "]")
+           is Object = @_encodeObj(e)
+           is Function = if JsonOptions.IGNORE_FUNCTIONS in options "" else Json.JsonException("Found a function!")
+           else = Json.JsonException("Can't parse $e!")
+       }
+
+       fn _encodeObj(o) {
+           list = $[]
+           for k in o {
+              v = @encode(o.(k)) catch {
+                return it
+              }
+              if v == "" {
+                continue
+              }
+              list += "\"$k\": $v"
+           }
+           return list.joinToString(", ", "{", "}")
+       }
+
+       fn decode(s) {
+           for [c, i] in s.withIndex {
+               print "$c $i"
+           }
+       }
+    }
+}

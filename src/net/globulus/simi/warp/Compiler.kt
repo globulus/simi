@@ -1654,7 +1654,7 @@ class Compiler(val debugMode: Boolean) {
             tokens += lbnl
         }
         advance() // skip the DO, it's just there to make the syntax nicer
-        var restOfTokens = consumeUntilType(RIGHT_BRACKET)
+        var restOfTokens = consumeUntilRightBracket()
         val equalityIndex = restOfTokens.indexOfFirst { it.type == EQUAL }
         if (equalityIndex != -1) {
             isList = false
@@ -1860,6 +1860,25 @@ class Compiler(val debugMode: Boolean) {
         while (!isAtEnd() && !check(*types)) {
             if (peek.type == NEWLINE) {
                 throw error(peek, "Unreachable token types: ${types.joinToString()}.")
+            }
+            current++
+        }
+        return tokens.subList(start, current)
+    }
+
+    private fun consumeUntilRightBracket(): List<Token> {
+        val start = current
+        var bracketCount = 0
+        while (!isAtEnd()) {
+            if (check(LEFT_BRACKET)) {
+                bracketCount++
+            } else if (check(RIGHT_BRACKET)) {
+                bracketCount--
+                if (bracketCount == -1) {
+                    break
+                }
+            } else if (peek.type == NEWLINE) {
+                throw error(peek, "Unreachable token types: ${RIGHT_BRACKET}.")
             }
             current++
         }

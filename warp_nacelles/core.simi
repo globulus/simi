@@ -135,6 +135,7 @@ class_ String {
         }
    ]
    fn chars = $[for c in self do c]
+   fn withIndex = $[for i in @len do [@(i), i]]
    fn isEmpty = len == 0
    fn isNotEmpty = not isEmpty()
    fn substringFrom(from) = @(from...len)
