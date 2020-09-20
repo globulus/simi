@@ -226,14 +226,14 @@ test("for loop with obj decomp", "1a2b3c", fn {
 test("for else with else triggering", "for else", fn {
     for g in nil {
         return "nope"
-    } else {
+    } if nil {
         return "for else"
     }
 })
 test("for else with else not triggering", "yep", fn {
     for g in 1 {
         return "yep"
-    } else {
+    } if nil {
         return "for else"
     }
 })
@@ -754,7 +754,7 @@ class ArithmeticSequence {
 }
 
 import "json" for *
-json = JsonCoder().encode([a = 3, b = "str", c = fn { 12 }, d = ["a", "b", "c"], e = [obj = 12, obj2 = 13]])
+json = JsonCoder().encode([a = 3, b = "str", d = ["a", "b", "c", fn { 12 }], e = [obj = 12, obj2 = 13]])
 print json
 JsonCoder().decode(json)
 

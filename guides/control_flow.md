@@ -123,7 +123,7 @@ do {
 } while a < 3
 ```
 
-#### for-in-else loop
+#### for-in-if nil loop
 Šimi offers a *for-in* loop for looping over iterables (and virtually everything in Šimi is iterable). The first parameter is the value alias, while the second one is an expression to iterate over. The block of the loop will be executed as long as the iterator supplies non-nil values (see section below).
 ```ruby
 for i in 6 {  # Prints 0 1 2 3 4 5
@@ -151,11 +151,11 @@ for [key, value] in object.zip() {
 
 If the expression is *nil*, the loop won't run. However, if it isn't nil and doesn't resolve to an iterator, a runtime error will be thrown.
 
-There are situations in which you want to know that a loop didn't run because its iterator was nil. In such cases, append an *else* block after the for-loop:
+There are situations in which you want to know that a loop didn't run because its iterator was nil. In such cases, append an *if nil* block after the for-loop:
 ```ruby
 for i in something {
     # do your thing
-} else {
+} if nil {
     print "something was nil, the loop didn't run!"
 }
 ```

@@ -944,12 +944,12 @@ class Compiler(val debugMode: Boolean) {
             throw error(opener, "A for loop must include a block.")
         }
         val blockTokens = consumeNextBlock(false)
-        var elseBlockTokens: List<Token>? = null
-        if (match(ELSE)) {
+        var ifNilBlockTokens: List<Token>? = null
+        if (matchSequence(IF, NIL)) {
             if (peek.type != LEFT_BRACE) {
-                throw error(peek, "The for loop else must include a block.")
+                throw error(peek, "The for loop 'if nil' must include a block.")
             }
-            elseBlockTokens = consumeNextBlock(false)
+            ifNilBlockTokens = consumeNextBlock(false)
         }
         val tokens = mutableListOf<Token>().apply {
             val iterator = factory.named(nextImplicitVarName("iterator"))
@@ -970,9 +970,9 @@ class Compiler(val debugMode: Boolean) {
             }
             addAll(listOf(iterator, eq, lp)); addAll(iterableTokens); addAll(listOf(rp, dot,
                 factory.named(Constants.ITERATE), lp, rp, nl))
-            if (elseBlockTokens != null) {
+            if (ifNilBlockTokens != null) {
                 addAll(listOf(ifToken, iterator, eqEq, nil))
-                addAll(elseBlockTokens)
+                addAll(ifNilBlockTokens)
                 add(factory.ofType(ELSE))
             }
             addAll(listOf(factory.ofType(WHILE), iterator, factory.ofType(BANG_EQUAL), nil))
