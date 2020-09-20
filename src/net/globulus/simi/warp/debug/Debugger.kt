@@ -19,7 +19,7 @@ class Debugger(private val vm: Vm) {
     private var triggerPoints = Stack<CodePointer>()
     private var triggerFrames = Stack<Int>()
 
-    fun triggerBreakpoint(isCall: Boolean = false) {
+    fun triggerBreakpoint(isCall: Boolean = false, forced: Boolean = false) {
         if (debuggingOff) {
             return
         }
@@ -28,7 +28,7 @@ class Debugger(private val vm: Vm) {
             StepStatus.BREAKPOINT -> {
                 val pos = currentPosition
                 val posHasBreakpoint = vm.currentFunction.debugInfo!!.breakpoints.contains(pos) || addedBreakpoints[vm.currentFunction]?.contains(pos) == true
-                if (posHasBreakpoint && isBreakpointIgnored() || !posHasBreakpoint) {
+                if (!forced && (posHasBreakpoint && isBreakpointIgnored() || !posHasBreakpoint)) {
                     return
                 }
             }

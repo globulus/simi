@@ -103,12 +103,28 @@ class_ StreamMixin {
     fn forEach(handler) = Stream(self).forEach(handler).toList()
 }
 
-extend List import StreamMixin
+extend List import StreamMixin {
+    fn mapCatching(transform) {
+        lst = $[]
+        for i in self {
+            t = transform(i) catch {
+                return it
+            }
+            lst += t
+        }
+        return lst
+    }
+    fn unzipped = $[for i in self do i.0 = i.1]
+}
 extend Object { # Doing it here because otherwise List import StreamMixin wouldn't work
     fn where(predicate) = $[for k in self if predicate(k) do k = @(k)]
+    fn whereValue(predicate) = $[for k in self if predicate(@(k)) do k = @(k)]
     fn map(transformKey, transformValue = nil) = \
         $[for k in self do transformKey(k) = \
          if transformValue != nil transformValue(@(k)) else @(k)]
+    fn mapValues(transform) = zipped().map(=[$0.0, transform($0.1)]).unzipped()
+    fn mapValuesCatching(transform) = zipped().mapCatching(=[$0.0, transform($0.1)])!.unzipped()
+    fn transform(transformation) = $[for k in self do transformation(k, @(k))]
 }
 
 class_ String {
@@ -121,6 +137,7 @@ class_ String {
     native endsWith(suffix, ignoreCase = false)
     native indexOf(other, startIndex = 0, ignoreCase = false)
     native findAllRegex(pattern)
+    native matchesRegex(pattern)
     native upperCased()
     native lowerCased()
     native split(delimiter = "")

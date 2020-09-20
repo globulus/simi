@@ -238,6 +238,11 @@ object Core : NativeModule {
                                 }
                             }.toMutableList())
                         }
+                        "matchesRegex" -> NativeFunction(1) {
+                            val string = stringValue(it)
+                            val regex = Regex(it[1] as String)
+                            regex.matches(string)
+                        }
                         "indexOf" -> NativeFunction(3) {
                             val string = stringValue(it)
                             val other = it[1] as String

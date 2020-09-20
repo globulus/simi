@@ -13,7 +13,7 @@ public enum TokenType implements Codifiable {
   HASH,
 
   // One or two character tokens.
-  BANG, BANG_BANG, BANG_EQUAL,
+  BANG, BANG_BANG, BANG_DOT, BANG_LEFT_PAREN, BANG_EQUAL,
   EQUAL, UNDERSCORE_EQUAL, EQUAL_EQUAL,
   GREATER, GREATER_EQUAL,
   LESS, LESS_EQUAL,

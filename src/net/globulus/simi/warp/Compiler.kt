@@ -1442,10 +1442,10 @@ class Compiler(val debugMode: Boolean) {
                 if (previous.type == QUESTION_LEFT_PAREN) {
                     emitCode(NIL_CHECK)
                 }
-                finishCall()
-            } else if (match(DOT, QUESTION_DOT)) {
-                val wasSafeGet = previous.type == QUESTION_DOT
-                if (wasSafeGet) {
+                finishCall(previous.type == BANG_LEFT_PAREN)
+            } else if (match(DOT, QUESTION_DOT, BANG_DOT)) {
+                val wasCheckedGet = (previous.type == QUESTION_DOT || previous.type == BANG_DOT)
+                if (previous.type == QUESTION_DOT) {
                     emitCode(NIL_CHECK)
                 }
                 if (match(CLASS)) {
@@ -1453,13 +1453,13 @@ class Compiler(val debugMode: Boolean) {
                 } else if (match(LEFT_PAREN)) {
                     expression()
                     consume(RIGHT_PAREN, "Expect ')' after evaluated getter.")
-                    finishGet(wasSuper)
+                    finishGet(wasSuper, wasCheckedGet)
                     continue // Go the the next iteration to prevent INVOKE shenanigans
                 } else {
                     primary(irsoa = false, checkImplicitSelf = false)
                 }
 
-                if (!wasSafeGet && match(LEFT_PAREN)) { // Check invoke, currently disabled for safe getter calls
+                if (!wasCheckedGet && match(LEFT_PAREN)) { // Check invoke, currently disabled for safe getter calls
                     val name = lastChunk!!.data[if (lastChunk?.opCode == GET_LOCAL) 0 else 1] as String
                     rollBackLastChunk()
                     val argCount = callArgList()
@@ -1470,7 +1470,7 @@ class Compiler(val debugMode: Boolean) {
                         rollBackLastChunk()
                         emitId(name)
                     }
-                    finishGet(wasSuper)
+                    finishGet(wasSuper, wasCheckedGet)
                 }
             } else {
                 break
@@ -1478,10 +1478,10 @@ class Compiler(val debugMode: Boolean) {
         }
     }
 
-    private fun finishCall() {
+    private fun finishCall(exceptionCheck: Boolean) {
         checkIfUnidentified()
         val argCount = callArgList()
-        emitCall(argCount)
+        emitCall(argCount, exceptionCheck)
     }
 
     private fun callArgList(): Int {
@@ -1500,14 +1500,14 @@ class Compiler(val debugMode: Boolean) {
         return count
     }
 
-    private fun finishGet(wasSuper: Boolean) {
+    private fun finishGet(wasSuper: Boolean, exceptionCheck: Boolean = false) {
         if (wasSuper) {
             if (lastChunk?.opCode != CONST_ID) {
                 throw error(previous, "'super' get can only involve an identifier.")
             }
             emitCode(GET_SUPER)
         } else {
-            emitCode(GET_PROP)
+            emitCode(if (exceptionCheck) GET_PROP_EXCEPTION_CHECK else GET_PROP)
         }
     }
 
@@ -2242,8 +2242,8 @@ class Compiler(val debugMode: Boolean) {
         return skip
     }
 
-    private fun emitCall(argCount: Int) {
-        val opCode = CALL
+    private fun emitCall(argCount: Int, exceptionCheck: Boolean = false) {
+        val opCode = if (exceptionCheck) CALL_EXCEPTION_CHECK else CALL
         var size = byteCode.put(opCode)
         size += byteCode.putInt(argCount)
         pushLastChunk(Chunk(opCode, size, argCount))

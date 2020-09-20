@@ -30,7 +30,7 @@ class Vm {
         try {
             await(true, 0)
         } catch (ignored: IllegalStateException) {
-            val a = 5
+            debugger?.triggerBreakpoint(isCall = false, forced = true)
         } // Silently abort the program
         instance = null
     }
@@ -59,7 +59,7 @@ class Vm {
                 SET_UPVALUE -> fiber.frame.closure.upvalues[nextInt]!!.location = WeakReference(fiber.sp - 1) // -1 because we need to point at an actual slot
                 GET_UPVALUE -> push(readUpvalue(fiber.frame.closure.upvalues[nextInt]!!))
                 SET_PROP -> setProp()
-                GET_PROP -> getProp()
+                GET_PROP, GET_PROP_EXCEPTION_CHECK -> getProp(code == GET_PROP_EXCEPTION_CHECK)
                 UPDATE_PROP -> updateProp()
                 INVERT -> invert()
                 NEGATE -> negate()
@@ -78,9 +78,9 @@ class Vm {
                 JUMP_IF_FALSE -> jumpIf { isFalsey(it) }
                 JUMP_IF_NIL -> jumpIf { it == Nil }
                 JUMP_IF_EXCEPTION -> jumpIf { isException(it) }
-                CALL -> {
+                CALL, CALL_EXCEPTION_CHECK -> {
                     val argCount = nextInt
-                    call(peek(argCount), argCount)
+                    call(peek(argCount), argCount, code == CALL_EXCEPTION_CHECK)
                 }
                 INVOKE -> {
                     val name = nextString
@@ -264,9 +264,12 @@ class Vm {
         getFieldsOrThrow(obj)[stringify(prop)] = value
     }
 
-    private fun getProp() {
+    private fun getProp(exceptionCheck: Boolean = false) {
         val nameValue = pop()
         val obj = boxIfNotInstance(0)
+        if (exceptionCheck && isException(obj)) {
+            return // nothing to do, the exception remains on the stack
+        }
         fiber.sp--
         if (obj is Instance && obj.klass.overriddenGet != null) {
             fiber.sp++ // Just to compensate for bindMethod's fiber.sp--
@@ -512,7 +515,7 @@ class Vm {
         fiber.sp--
     }
 
-    private fun call(callee: Any, argCount: Int) {
+    private fun call(callee: Any, argCount: Int, exceptionCheck: Boolean = false) {
         val spRelativeToArgCount = fiber.sp - argCount - 1
         when (callee) {
             is Closure -> {
@@ -521,7 +524,11 @@ class Vm {
             }
             is BoundMethod -> {
                 fiber.stack[spRelativeToArgCount] = callee.receiver
-                callClosure(callee.callable, argCount)
+                if (exceptionCheck && isException(callee.receiver)) {
+                    fiber.sp -= argCount // discard args, keep going as normal
+                } else {
+                    callClosure(callee.callable, argCount)
+                }
             }
             is BoundNativeMethod -> {
                 fiber.stack[spRelativeToArgCount] = callee.receiver

@@ -104,6 +104,10 @@ class Lexer(private val fileName: String,
                     addToken(BANG_BANG)
                 } else if (match('=')) {
                     addToken(BANG_EQUAL)
+                } else if (match('.')) {
+                    addToken(BANG_DOT)
+                } else if (match('(')) {
+                    addToken(BANG_LEFT_PAREN)
                 } else {
                     addToken(BANG)
                 }
